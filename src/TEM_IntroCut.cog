@@ -1,0 +1,455 @@
+# Jones 3D Cog Script
+#
+# TEM_IntroCut.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     entered
+    message     pulse
+    
+    # ** local things **
+    thing       player          local
+    thing       dustThing       local
+    thing       rocks           local
+    thing       indy            local
+    thing       indyTarget      local
+    
+    # ** things **
+    thing       introCam
+    thing       camTarget
+    thing       target0
+    thing       target1
+    thing       target2
+    thing       target3
+    thing       tempCam
+    thing       fader
+    thing       dustPos     # dust cloud origin
+    thing       debrisPos   # debris origin
+    
+    thing       interpPos1
+    thing       interpPos2
+    #thing       lookPos0
+    thing       lookPos1
+    
+    surface     landed          mask=0x004
+    surface     shakeMe
+    
+    template    tplActor=indy_sh_actor      local
+    template	dust=dustcloud              local
+    template    debris0=stoneshrapbm_nc     local
+    template    tplActor=indy_sh_actor      local
+    template    tpl_Debris=+dummy_debris    local
+    template    tpl_Ghost=ghost             local
+    
+    material	dustMat=gen_a4sfx_dustcloud.mat	            local
+    material    mat1=tem_4wall_blocks_broken_imp1.mat       local
+    
+    keyframe    inFall=in_jump_fall.key             local
+    keyframe    inStand1=0in_stand4.key             local
+    keyframe    inThinking=0in_thinking_4_4.key     local
+    keyframe	inStand2=0in_stand1_bd_4.key	    local
+    keyframe    inLand=in_jump_land_soft.key        local
+    
+    # ** voice lines **
+    sound       inIntro=tm01j01.wav     local   # I never saw this place...
+    sound       inHmm=Inxj146.wav       local   # hmm...
+    sound       inOof=inxj016a.wav      local   # ooof...
+    
+    # ** sound fx **
+    sound       sfx_Charge=nub_aethlight_on_c.wav       local   # temp charging sound
+    sound       sfx_Explode=shw_wall_crash.wav          local
+    sound       in_Land=fol_in_landhardecho.wav         local
+    
+    sound       mus_Intro=mus_gen_awesome1.wav  local
+    
+    cog         cameraShake
+    
+    vector      dustStart       local
+    vector      dustEnd         local
+    vector      camFocus        local
+    vector      posOffSet       local
+    vector      angOffset       local
+    vector      vecTemp         local
+    
+    int         falling         local
+    int         speak1          local
+    int         inTrack         local
+    int         i               local
+    int         numDebris=40    local
+    int         shake=0         local
+    int         vibe            local
+#    int         dontPlay=1      local
+
+	int			bSeen=0			local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	player = GetLocalPlayerThing();
+    
+    # Start on black...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+    SetCameraFocus(2, introCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+    # turn on red fog
+    SetFog(1, '0.50 0.05 0.05', 15, 180);
+
+    # switch cam
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+    SetCameraFocus(2, introCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    #AttachThingToThing(fader, introCam);
+    ThingFadeAnim(fader, 1, 0, 2.0, 0);
+    SetCollideType(fader, 0);
+    
+    # turn on camera interp
+    SetCameraInterpSpeed(2, 10.5);
+    SetCameraPosInterp(2, 1);
+    
+    Sleep(0.01);
+    
+    # insure that the player is opaque
+    SetThingAlpha(player, 1.0);
+    
+    # start cutscene and disable player
+    StartCutscene(2);
+    SetActorFlags(player, 0x200000);
+    
+    # make imp1 availble (temp)
+    ChangeInv(player, 14, 1.0);
+    SetInvAvailable(player, 14, 1);
+        
+    # move intro cam towards wall
+    SetCameraFocus(2, interpPos1);
+    
+    MoveToFrame(fader, 1, 2.7);
+    
+    # preload explosion sfx
+    #PlaySoundLocal(sfx_Explode, 0.0, 0.0, 0x0, 0);
+    
+    # play intro music
+    PlaySoundLocal(mus_Intro, 1.0, 0.0, 0x0, 0);
+    
+    Sleep(8.0);
+    
+    # draw imp#1
+    SelectWeapon(player, 14);
+    #SelectWeaponWait(player, 14);
+    
+    # fire up imp1
+    #PlaySoundLocal(sfx_Charge, 1.0, 0.0, 0x0, 0);
+    SetThingLight(dustThing, '0.10 0.10 1.0', 20.0, 2.0);
+    
+    Sleep(1.0);
+    
+    # add some camera shake
+    #SetPulse(0.1);
+    
+    # rest to let imp1 warm up
+    Sleep(2.0);
+    
+    # kill dynamic light
+    SetThingLight(dustThing, '0.0 0.0 0.0', 15.0, 0.5);
+        
+    # create dust cloud
+    dustStart = VectorSet(0.2, 0.2, 0.5);
+    dustEnd	= VectorSet(1.2, 1.2, 0.0);
+    dustThing = CreateThing(dust, dustPos);
+    CaptureThing(dustThing);
+    
+    # animate dust cloud
+    SetMaterialCel(dustMat, 0);
+    MaterialAnim(dustMat, 8.0, 1);
+    AnimateSpriteSize(dustThing, dustStart, dustEnd, 7.0);
+    
+    # alter adjoin
+    #SetFaceGeoMode(shakeMe, 0);     # no draw
+    SetWallCel(shakeMe, 1);        # set back to this when texture is fixed
+    
+    # create debris
+    CreateThing(tpl_Debris, debrisPos);
+    
+    # play explosion sfx
+    PlaySoundLocal(sfx_Explode, 1.0, 0.0, 0x0, 0);
+    
+    # stop cameraShake
+    #SetPulse(0.0);
+    
+    Sleep(1.0);
+    
+    # put away imp#1
+    DeselectWeapon(player);
+    DeselectWeaponWait(player);
+    
+    # create actor at player pos
+    indy = CreateThing(tplActor, player);
+    CaptureThing(indy);
+    
+    # disable actor indy
+    AISetCutsceneMode(indy);
+    
+    # change secondary focus to indy
+    SetCameraSecondaryFocus(2, indy);
+    
+    # outfit actor indy
+    CopyPlayerHolsters(player, indy);
+    
+    # hide player show indy
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # walk indy to ledge
+    AISetMoveSpeed(indy, 1.0);
+    AiSetLookThing(indy, camTarget);
+    AiSetMoveThing(indy, target0, 1);
+    
+    # say hmmm voice line
+    PlayVoice(indy, inHmm, 1.0, 1);
+    
+    Sleep(1.0);
+    
+    # indy jumps down
+    AISetMoveSpeed(indy, 4.0);
+    AiSetLookThing(indy, target2);
+    AiSetMoveThing(indy, target1, 1);
+    
+    # play falling key
+    falling = PlayKey(indy, inFall, 1, 0x14, 0);
+    
+    # move camTarget as he falls
+    SetCameraInterpSpeed(2, 0.9);
+    Sleep(0.01);
+    SetCameraFocus(2, interpPos2);
+    
+    return;
+
+# ========================================================================================
+
+entered:
+
+    if(GetSenderRef() == landed)
+    {
+        AttachThingToSurf(indy, landed);
+        AttachThingToSurf(player, landed);
+        
+        ResetThing(indy);
+        
+        # oof!
+        PlaySoundLocal(inOof, 1.0, 0.0, 0x0, 0);
+        PlaySoundLocal(in_Land, 1.0, 0.0, 0x0, 0);
+        
+        # stop falling
+        SetActorHeadPYR(indy, '0.0 0.0 0.0');
+        StopKey(indy, falling, 0.2);
+        
+        # play land key
+        PlayKey(indy, inLand, 1, 0x12, 1);
+        
+        Sleep(0.5);
+        
+        # move indy to target3
+        AISetMoveSpeed(indy, 1.0);
+        AiSetMoveThing(indy, target3, 1);
+        
+        # move player into position
+        TeleportThing(player, target3);
+        Sleep(0.01);
+        CopyOrient(indy, player);
+        
+        Sleep(0.09);
+        
+        # create target at indy's position
+        camFocus = VectorAdd(VectorTransformToOrient(indy, '0.0 0.0 0.0'), GetThingPos(indy));
+        indyTarget = CreateThingAtPos(tpl_Ghost, GetThingSector(indy), camFocus, '0 0 0');
+        CaptureThing(indyTarget);
+    
+        AttachThingToThing(interpPos2, indyTarget);
+        Sleep(0.01);
+        
+        # turn off pos interp
+        SetCameraPosInterp(2, 0);
+        
+        Rotate(indyTarget, 160.0, 1, 9.0); #6
+        
+        Sleep(0.5);
+        
+        # indy speaks - arms crossed
+        speak1 = PlayVoice(indy, inIntro, 1.0, 0);
+        
+        inTrack = PlayKey(indy, inStand1, 2, 0x0, 0);
+        PlayKey(indy, inStand2, 4, 0x12, 1);
+        
+        SetCameraInterpSpeed(2, 7);   # 5 or 7 was 4.8
+        SetCameraLookInterp(2, 1);
+        Sleep(0.01);
+        SetCameraSecondaryFocus(2, lookPos1);
+        
+        PlayKey(indy, inThinking, 4, 0x12, 1);
+        StopKey(indy, inTrack, 0.5);
+        WaitForSound(speak1);
+        
+        #Sleep(1.0);
+        
+        #CopyOrientAndPos(indy, player);
+        
+        # move player into position
+        #TeleportThing(player, target3);
+        #Sleep(0.01);
+        #CopyOrient(indy, player);
+        
+        # stop any unfinished animations
+        ResetThing(player);
+        #ResetThing(indy);
+        
+        # show player hide indy
+        SetThingFlags(indy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        
+        # turn off camera interp
+        SetCameraPosInterp(2, 0);
+        SetCameraLookInterp(2, 0);
+    
+        #Sleep(0.1);
+        
+        # restore camera
+        SetCameraSecondaryFocus(2, player);
+        Sleep(0.01);
+		ResetCameraFOV(0, 0.0);
+        SetCameraPosition(1, GetThingPos(interpPos2));
+        #SetCameraPosition(1, GetThingPos(target2));
+        SetCurrentCamera(1);
+        
+        # restore player controls
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+    }   
+    
+    return;
+
+# ========================================================================================
+
+pulse:
+
+    shake = shake + 1;
+    vibe = RandBetween(1, 4);
+    
+    if (shake <= 5)
+    {
+        if(vibe == 1)
+        {
+            posOffset = '0.01 -0.01 0.005'; #2
+            angOffset = '0.005 0.00 -0.005';
+        }
+        
+        if(vibe == 2)
+        {
+            posOffset = '0.005 0.01 -0.01'; #3
+			angOffset = '-0.005 0.005 -0.00';
+        }
+        
+        if(vibe == 3)
+        {
+            posOffset = '-0.015 0.00 0.01'; #4 was .01x
+			angOffset = '0.00 0.00 0.01';
+        }
+        
+        if(vibe == 4)
+        {
+            posOffset = '-0.01 0.00 -0.005'; #1
+			angOffset = '0.00 -0.005 0.005';
+        }
+    }
+    
+    else if (shake <= 10)
+    {
+        if(vibe == 1)
+        {
+            posOffset = '-0.02 0.00 0.02'; #4 was .01x
+    		angOffset = '0.00 0.00 0.01';
+        }
+        
+        if(vibe == 2)
+        {
+            posOffset = '0.01 0.02 -0.02'; #3
+            angOffset = '-0.01 0.01 -0.01';
+        }
+        
+        if(vibe == 3)
+        {
+            posOffset = '-0.025 0.00 -0.01'; #1 was .02x
+			angOffset = '0.00 -0.01 0.01';
+        }
+        
+        if(vibe == 4)
+        {
+            posOffset = '0.02 -0.02 0.01'; #2
+			angOffset = '0.01 0.00 -0.01';
+        }
+    }
+    
+    else if (shake <= 30)
+    {
+        if (vibe == 1)
+    	{
+    		posOffset = '-0.05 0.00 -0.02';
+    		angOffset = '0.00 -0.02 0.02';
+    	}
+    	if (vibe == 2)
+    	{
+    		posOffset = '0.05 -0.05 0.02';
+    		angOffset = '0.02 0.00 -0.02';
+    	}
+    	if (vibe == 3)
+    	{
+    		posOffset = '0.02 0.05 -0.05';
+    		angOffset = '-0.02 0.002 -0.02';
+    	}
+    	if (vibe == 4)
+    	{
+    		posOffset = '-0.02 0.0 0.05';
+    		angOffset = '0.00 0.00 0.02';
+    	}
+    }
+    
+    SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+    
+    return;
+
+# ========================================================================================
+
+end
+
