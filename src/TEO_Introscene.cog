@@ -1,0 +1,253 @@
+# Jones 3D Cog Script
+#
+# TEO_IntroScene.cog
+#
+# [SXC & revised by HB]
+#
+# Mini-cutscene at the start of Teotihuacan: 
+#
+# RT 10/5/98: SwapMeshes switched to Set/RestoreThingMesh()
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message     startup
+	message     user0
+	message     timer
+	message     entered
+	message		arrived
+    message     crossed
+    message     callback
+    
+    keyframe	in_handsONhips=0in_stand4.key			local
+    keyframe	in_sideTOhips=0in_stand1_bd_4.key	   	local
+    keyframe	in_rub=0in_rubhead_4_4.key				local # 129x
+    
+    model  		in_head=head_in_goodhair.3do  			local
+    model  		in_hand_hat=hand_in_hat.3do	  			local
+
+    sound       introwav=mus_teo_intro.wav				# defined in Marcus
+    sound       indylines								# defined in Marcus
+    sound       doorsound								# defined in Marcus
+    sound       doorstopsound							# defined in Marcus
+        
+	surface     hitface0							    linkid=3
+	surface     hitface1							    linkid=3
+	surface     hitface2							    linkid=3
+	surface     hitface3							    linkid=3
+    
+    surface     saysurf
+      
+	thing		player                                  local
+
+	thing       mark0
+	thing       door0             
+	thing       camera0									nolink
+    thing       camera1									nolink                        
+	
+    sector      startsector
+    sector      startsector1
+    sector      cutsector
+          
+	vector      forcething
+	vector		v_targetpos								local
+
+    flex        speed=1.0
+	flex        doorSpeed=0.5
+    flex        waittime=3.0	
+    
+    int         cursound	                            local
+    int         enterflag=0                             local
+    int         bnosound=0                              local
+    int         in_track0                               local
+    int         in_track1                               local
+
+    int			bSwapped=0					            local
+	int			swapRefHead								local
+	int			swapRefHat								local
+	int			swapRefHand								local
+
+	int			bSeen=0									local
+        
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	# Start on black...
+	SetCameraLookInterp(2, 0); # no t or p
+	SetCameraPosInterp(2, 0); # no dolly
+	SetCameraFocus(2, camera0);
+	SetCameraSecondaryFocus(2, mark0);
+	SetCurrentCamera(2);
+	SetCameraFOV(35, 0, 0);
+	SetThingAlpha(player, 1.0);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+	player = GetLocalPlayerThing();
+
+    enterflag = 0;
+	ClearThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	SetThingAlpha(player, 1.0);
+	SetTimer(0.01);  # sets a timer to bypass startup camera
+    StartCutscene(2);
+
+	return;
+
+# ..............................................................................
+
+timer:
+
+    if (enterflag == 0)
+    {
+        # Start the opening cutscene action here...
+		ClearThingFlags(player, 0x4000); # shadow off
+	    SetCameraLookInterp(2, 0); # no t or p
+		SetCameraPosInterp(2, 0); # no dolly
+		SetCameraFocus(2, camera0);
+        SetCameraSecondaryFocus(2, mark0);
+		SetThingAlpha(player, 1.0);
+		SetCurrentCamera(2);
+        SetCameraFOV(35, 0, 0);
+	    MoveToFrame(door0, 1, doorSpeed);
+        PlaySoundLocal(introwav, 0.75, 0, 0x0, 0);           
+    }
+    
+    if (enterflag == 1)
+    {
+		# Clean up & end cutscene here...
+		ResetCameraFOV(0, 0.0);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+
+		# Make a camera position near Indy to prep follow-cam...			
+		v_targetpos =
+			VectorAdd(VectorTransformToOrient(player, '0.2 -0.05 0.0'), GetThingPos(player));	
+		SetCameraPosition(1, v_targetpos);
+		Sleep(0.1);
+
+		SetCurrentCamera(1);
+        DeselectWeaponWait(player);
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }
+
+    return;
+    
+# ..............................................................................
+
+arrived:    
+	                                                
+ 	if (GetSenderRef() == door0)
+	{
+		# Continue scene when the door is fully open...
+		SetSectorThrust(startsector, forcething, speed);
+        PlayMode(player, 2, 0);
+		SetCameraPosInterp(2, 1);
+        SetThingAlpha(player, 1.0);
+	}
+
+	return;
+    
+# ..............................................................................
+
+crossed:
+
+    if (GetSenderRef() == saysurf)
+    {
+        Sleep(1);
+        SetSectorThrust(startsector1, forcething, (speed*2));
+    }
+
+    return;
+
+# ..............................................................................
+
+entered:
+
+    if (GetSenderRef() == cutsector)
+    {
+        SetCameraFOV(90, 0, 0);
+        SetCameraFocus(2, camera1);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+    }        
+        
+	if ((GetSenderID() == 3) && (bnosound == 0))
+	{
+        # Indy hits the floor...
+		StopThing(player);
+        CaptureThing(player);
+		SetThingFlags(player, 0x4000); # shadow on
+        bnosound = 1;
+        Sleep(1.0);
+
+		# Indy: "...Pyramid of the Sun...except...not too sunny in here."
+        cursound = PlayVoice(player, indylines, 1.0, 0);
+
+        in_track0 = PlayKey(player, in_handsONhips, 2, 0x0, 0);
+        PlayKey(player, in_sideTOhips, 4, 0x12, 1);
+        in_track1 = PlayKey(player, in_rub, 4, 0x12, 0); # 4.3 sec
+        Sleep(3.9);
+		StopKey(player, in_track0, 0.5);
+		StopKey(player, in_track1, 0.5);
+        SelectWeapon(player, 13);
+		WaitForSound(cursound);
+	    enterflag = 1;
+        SetTimer(2.5);
+	}
+
+	return;
+    
+# ..............................................................................
+
+callback:
+
+    if (!bSwapped)
+	{
+    	swapRefHead = SetThingMesh(player, 8, in_head, 0);
+    	swapRefHat = SetThingMesh(player, 9, in_head, 1);
+    	swapRefHand = SetThingMesh(player, 15, in_hand_hat, 0);
+
+        # RT: Set up no-hat heads...
+		SetThingVoiceHeads(player, "inhead", "head_in_goodhair.3do", "head_in_asound_gh.3do", "head_in_amsound_gh.3do", "head_in_osound_gh.3do");
+	}
+	else
+	{
+        RestoreThingMesh(player, swapRefHead);
+        RestoreThingMesh(player, swapRefHat);
+        RestoreThingMesh(player, swapRefHand);
+
+        # RT: Restore default heads...
+		SetThingVoiceHeads(player, "inhead", "", "head_in_asound.3do", "head_in_amsound.3do", "head_in_osound.3do");
+
+		ReleaseThing(player);
+	}
+
+    bSwapped = 1 - bSwapped;
+
+    return;
+    
+end
+
