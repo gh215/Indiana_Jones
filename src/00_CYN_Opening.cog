@@ -1,0 +1,310 @@
+# Jones 3D Cog Script
+#
+# 00_CYN_Opening.cog
+#
+# Main Title & Indy goes to work...
+#
+# [HB] [CMG] [RT]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		user0
+
+# .................................. KEYFRAMES .................................
+
+	keyframe	in_handsOnHips=0in_stand4.key			local
+	keyframe	in_hatPush=0in_figithat_4_4.key			local
+
+# ................................. MATERIALS ..................................
+
+	material	topMat=pyr_jeep_top.mat					local
+	material	botMat=pyr_jeep_bbmp.mat				local
+
+# .................................. SOUNDS ....................................
+
+	sound       in_gotowork=Cn01j01.wav					local
+	sound		mus_intro=mus_cyn_intro.WAV				local
+
+# ............................... ACTOR THINGS .................................
+
+	thing		player									local
+	thing		indy	    							linkid=0
+
+# .............................. OBJECT THINGS .................................
+
+	thing		fadeplate								nolink
+	thing		fadeplate1								nolink
+	thing		fadeplate2								nolink
+	thing		maintitle								nolink
+	thing		placetime								nolink
+
+# .............................. CAMERA THINGS .................................
+
+	thing		cam_1									nolink
+
+	thing		ct_1									nolink
+	thing		ct_2									nolink
+	thing		dummytarget								nolink
+
+# .............................. TARGET THINGS .................................
+
+	thing		in_mk_1									nolink
+	thing		in_mk_2									nolink
+	thing		in_mk_3									nolink
+	thing		in_mk_4									nolink
+
+# ............................... 3DOs TO BE HIDDEN @ STARTUP ..................
+	thing		object0
+	thing		object1
+	thing		object2
+	thing		object3
+	thing		object4
+	thing		object5
+	thing		object6
+	thing		object7
+	thing		object8
+	thing		object9
+	thing		object10
+	thing		object11
+	thing		object12
+	thing		object13
+	thing		object14
+	thing		object15
+	thing		object16
+	thing		object17
+	thing		object18
+	thing		object19
+	thing		object20
+	thing		object21
+	thing		object22
+	thing		object23
+	thing		object24
+	thing		object25
+	thing		object26
+	thing		object27
+	thing		object28
+	thing		object29
+	thing		object30
+	thing		object31
+	thing		object32
+	thing		object33
+	thing		object34
+	thing		object35
+	thing		object36
+	thing		object37
+	thing		object38
+	thing		object39
+	thing		object40
+	thing		object41
+	thing		object42
+	thing		object43
+	thing		object44
+	thing		object45
+	thing		object46
+	thing		object47
+
+
+# ............................... VARIABLES ....................................
+
+	vector		v_camspot								local
+
+	int			pl_colltype								local
+
+	int			in_keyTrack1							local
+	int			in_keyTrack2							local
+			
+	int			cursound								local
+
+	int			bSeen=0									local
+	
+	int			i_hide3d0=0								local
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	# Prep titles...
+	SetThingAlpha(fadeplate, 1.0);
+	SetThingAlpha(fadeplate1, 1.0);
+	SetThingAlpha(fadeplate2, 1.0);
+	SetThingAlpha(maintitle, 0.0);
+	SetThingAlpha(placetime, 0.0);
+
+	# Start on black...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_1);
+	SetCameraSecondaryFocus(2, ct_1);
+	SetCurrentCamera(2);
+	SetCameraFOV(25, 0, 0);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+    player = GetLocalPlayerThing();
+
+	# Start on black...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+    SetCameraFocus(2, cam_1);
+	
+	# a frame looking at the base of the canyon to force texture load
+	SetCameraSecondaryFocus(2, dummytarget);
+	Sleep(0.1);
+
+	# hide all the 3dos
+	for (i_hide3d0 = 0; i_hide3d0 <= 47; i_hide3d0 = i_hide3d0 + 1) 
+	{
+		SetThingFlags(object0[i_hide3d0], 0x80000);
+	}
+
+	SetCameraSecondaryFocus(2, ct_1);
+	SetCurrentCamera(2);
+	SetCameraFOV(25, 0, 0);
+	pl_colltype = GetCollideType(player);
+	SetCollideType(player, 0);
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x10); # here but invisible 
+
+	# RT: Set up jeep materials
+	SetMaterialCel(topMat, 1);
+	SetMaterialCel(botMat, 1);
+
+	Sleep(0.5); # Let engine generate a frame now
+
+	StartCutScene(2);
+
+	# Prep actor...
+	AISetCutSceneMode(indy);
+	CopyPlayerHolsters(player, indy);
+	ClearThingFlags(indy, 0x80000);
+
+	# Play music...
+	PlaySoundLocal(mus_intro, 1.0, 0.0, 0x0, 0);
+	Sleep(1.0);
+
+	# Fade in sky...
+	ThingFadeAnim(fadeplate, 1.0, 0.0, 1.0, 0);
+	ThingFadeAnim(fadeplate1, 1.0, 0.0, 1.0, 0);
+	ThingFadeAnim(fadeplate2, 1.0, 0.0, 1.0, 0);
+
+	# Fade in main title...
+	ThingFadeAnim(maintitle, 0.0, 1.0, 1.0, 0);
+
+	# Prep camera position...
+	v_camspot = GetThingPos(in_mk_4);
+	SetCameraPosition(1, v_camspot);
+	Sleep(4.0);
+
+	# Fade title out...
+	ThingFadeAnim(maintitle, 1.0, 0.0, 0.5, 0);
+	Sleep(0.5);
+
+	# TO DO: make sure the birds are flying
+
+	# Prep camera...
+	SetCameraInterpSpeed(2, 6.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.1);
+
+	# Tilt down to canyon...
+	SetCameraSecondaryFocus(2, ct_2);
+	SetCameraFOV(85, 1, 6.0);
+	Sleep(6.0);
+
+	# Fade in place & time notice...
+	ThingFadeAnim(placetime, 0.0, 1.0, 0.5, 0);
+	Sleep(3.0);
+
+	# Clear notice...
+	ThingFadeAnim(placetime, 1.0, 0.0, 0.5, 0);
+
+	# Bring Indy on stage...
+	TeleportThing(indy, in_mk_1);
+	AISetMoveSpeed(indy, 1.0);
+	AISetLookThing(indy, in_mk_2);
+	AISetMoveThing(indy, in_mk_2, 0);
+	AIWaitForStop(indy);
+	AISetLookThing(indy, in_mk_4);
+
+	# Indy: "Time to go to work."
+	in_keyTrack1 = PlayKey(indy, in_handsOnHips, 2, 0x10, 0);
+	in_keyTrack2 = PlayKey(indy, in_hatPush, 4, 0x12, 0);
+	Sleep(0.8);
+	cursound = PlayVoice(indy, in_gotowork, 1.0, 0);
+	Sleep(0.7);
+	StopKey(indy, in_keyTrack1, 0.5);
+	StopKey(indy, in_keyTrack2, 0.5);
+	Sleep(0.5);
+	WaitForSound(cursound);
+
+	# Indy slides...
+	AISetMoveSpeed(indy, 1.5); # push him over edge
+	AISetMoveThing(indy, in_mk_3, 1);
+	AISetMoveSpeed(indy, 1.0);
+	AISetLookThing(indy, player);
+	AISetMoveThing(indy, player, 0);
+	AIWaitForStop(indy);
+	Sleep(0.5);
+
+	# Clean up & hand over control to player...
+	DestroyThing(fadeplate);
+	DestroyThing(fadeplate1);
+	DestroyThing(fadeplate2);
+	DestroyThing(maintitle);
+	DestroyThing(placetime);
+
+	# Slam player into place...
+	TeleportThing(player, indy);
+	Sleep(0.01);
+
+	SetThingFlags(indy, 0x80000);
+	ClearThingFlags(player, 0x10); # visible
+	SetCollideType(player, pl_colltype);
+
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);	
+
+	SetCurrentCamera(1);
+	
+	# show all the 3dos
+	for (i_hide3d0 = 0; i_hide3d0 <= 47; i_hide3d0 = i_hide3d0 + 1) 
+	{
+		ClearThingFlags(object0[i_hide3d0], 0x80000);
+	}
+	
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+
+    # RT: Give 'im a snake bite kit...
+	SetInv(player, 46, 1);
+	SetInvAvailable(player, 46, 1);
+
+	return;
+
+end
