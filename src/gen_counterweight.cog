@@ -1,0 +1,41 @@
+# Jones 3D Cog Script
+#
+# gen_CounterWeight.cog
+#
+# A simple counterweight cog.
+# This cog will move two things to frame when one thing is entered. "speed_elvtr" represents the
+# speed of the elevator, while "speed_ctwt" will be the speed of the counterweight. 
+#
+# (PAZ)
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+       message          entered
+   
+
+       thing            elevator
+       thing            counterweight 
+             
+       float            speed_elvtr=5.0
+       float            speed_ctwt=2.0
+       
+       int              up=1                    local
+              
+end
+
+#======================================================================================================
+
+code
+
+entered:
+        if (GetSenderRef() == elevator) 
+                {
+                up=0;
+                MoveToFrame(elevator, 1, speed_elvtr);
+                MoveToFrame(counterweight, 1, speed_ctwt);    
+                }    
+        return;        
+end
+

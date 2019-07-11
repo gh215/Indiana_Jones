@@ -1,0 +1,1462 @@
+# Jones 3D Cog Script
+#
+# 03_SHS_Cinematic_2.cog
+#
+# Indy encounters the Holy Woman
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+# **************************** MESSAGES *****************************
+
+	message		startup
+	message		entered
+    message		activated
+	message		callback
+	message		pulse
+	message		user0
+	message		user1
+	message		user2
+
+# **************************** KEYFRAMES ****************************
+	
+	keyframe	in_pushHat=0in_figithat_4_4.key			local
+	keyframe	in_rtarmup=0in_armsout_1_1.key			local
+	keyframe	in_botharmsup=0in_armsup_1_1.key		local
+	keyframe	in_Think=0in_thinking_4_4.key			local
+	keyframe	in_ltarmup=0in_leftarm_1_1.key			local
+    
+	keyframe	in_handsSide=0in_stand1.key				local
+	keyframe	in_armsCrossed=0in_stand2.key			local
+	keyframe	in_handsOnHips=0in_stand4.key			local
+	keyframe	in_crossArms=0in_stand1_bd_2.key	   	local
+	keyframe	in_handsToHips=0in_stand1_bd_4.key	   	local
+	keyframe	in_handsToSide=0in_stand4_bd_1.key	   	local
+	
+	keyframe	in_plantready=0in_pull_bulb_1_14.key	local
+	keyframe	in_giveplant=0in_giveobj_14_1.key		local
+	keyframe	in_wow=0in_reaction.key					local
+	keyframe	in_takekey=0in_takeobj_1_1.key			local
+
+
+	keyframe	in_pull=in_pull_lever_down.key			local
+	keyframe	lever_down=gen_lever.key				local
+	
+	keyframe	br_fwd=0ri_roll_fwd.key					local
+	keyframe	br_back=0ri_roll_back.key				local
+	
+	keyframe	ol_confused=0ol_lookaround_5_1.key		local
+	keyframe	ol_basicstand=ol_stand.key				local
+	keyframe	ol_altbasicstand=0ol_stand1_nohead.key	local
+	keyframe	ol_put2honcane=0ol_wavecane_1_2.key		local
+	keyframe	ol_stand2honcane=0ol_stand2_nohead.key	local
+	keyframe	ol_standwkey=0ol_stand3_nohead.key		local
+	keyframe	ol_nod=0ol_nod_2_2.key					local
+	keyframe	ol_ltwave=0ol_lefthnd_2_2.key			local
+	keyframe	ol_takeplantA=0ol_getobj_2_parta.key	local
+	keyframe	ol_takeplantB=0ol_getobj_partb_4.key	local
+	keyframe	ol_showkey=0ol_holdupkey_1_3.key		local
+	keyframe	ol_givekey=0ol_handkey_3_2.key			local
+	keyframe	ol_pointcane=0ol_pointcane_1_2.key		local
+	keyframe	ol_wavecane2=0ol_righthnd_2_1.key		local
+	keyframe	ol_lookatbud=0ol_stand4.key				local
+	
+	keyframe	yl_bentover=0yl_stand4.key				local
+	keyframe	yl_transform=0yl_transform_4_2.key		local
+	keyframe	yl_upright=0yl_stand2.key				local
+	keyframe	yl_losecane=0yl_throwcane_2_3.key		local
+	keyframe	yl_standwf=0yl_stand3.key				local
+	keyframe	yl_standnof=0yl_stand1.key				local
+	keyframe	yl_putflower=0yl_placepot_3_1.key		local
+	keyframe	yl_throwbar=0yl_pushbar_1_1.key			local
+	keyframe	yl_opendoors=0yl_opendoors_1_1.key		local
+	keyframe	yl_icedanger=0yl_righthnd_1_1.key		local
+	keyframe	yl_rthandup=0yl_righthnd_1_1.key		local
+	keyframe	yl_lthandup=0yl_left_1_1.key			local # currently rthand (!)
+	keyframe	yl_armspointway=0yl_armsout_1_1.key		local
+	keyframe	yl_armsup=0yl_armsup_1_1.key			local
+
+	keyframe	plant_wait=shs_flower_stand.key			local
+	keyframe	plant_bloom=shs_flower_bloom.key		local
+	keyframe	cane_fly=0yl_cane_throwcane.key			local
+	
+	keyframe	bar_flip=shs_bar_lock.key				local
+	keyframe	ldr_open=shs_door_barl.key				local
+	keyframe	rdr_open=shs_door_barr.key				local
+	
+# ***************************** MODELS ******************************
+		
+    model  		mod_in=gen_in.3do						local
+	model		mod_in_hand_key=hand_in_olkey.3do		local
+	model  		mod_in_hand_bud=hand_in_bud.3do			local
+	
+	model  		mod_ol=shs_ol.3do						local
+	model  		mod_ol_hand_key=hand_ol_key.3do			local
+	model  		mod_ol_hand_bud=hand_ol_bud.3do			local
+	
+	model  		mod_yl=shs_yl.3do						local
+	model  		mod_yl_hand_cane=hand_yl_cane.3do		local
+	model  		mod_yl_hand_bloom=hand_yl_bloom.3do		local
+			
+# ***************************** SOUNDS ******************************
+    
+	sound		ol_rang=Ss05w01.wav						local
+	sound		in_thatsright=Ss05j02.wav				local
+	sound		ol_wanthelp=Ss05w03.wav					local
+	sound		in_lost=Ss05j04.wav						local
+	sound		ol_youhelpme=Ss05w05.wav				local
+	sound		in_showmeway=Ss05j06.wav				local
+	sound		ol_goldtreasure=Ss05w07.wav				local
+	sound		in_whereisit=Ss05j08.wav				local
+	sound		ol_treasury=Ss05w09a.wav				local
+	sound		ol_takekey=Ss05w09b.wav					local
+	sound		ol_hello2=Ss05w10.wav					local
+	sound		in_notfoundyet=Ss05j11.wav				local
+	sound		ol_looktreasury=Ss05w12.wav				local
+	sound		ol_hello3=Ss05w13.wav					local
+	sound		in_foundbulbA=Ss05j14a.wav				local
+	sound		in_foundbulbB=Ss05j14b.wav				local
+	sound		ol_mustbecome=Ss05w15.wav				local
+	sound		ol_snort=Ss05w07a.wav					local
+
+	sound		ol_gottreasure=Ss09w01.wav				local
+	sound		in_bestdo=Ss09j02.wav					local
+	sound		ol_notyet=Ss09w03.wav					local
+	
+	sound		yl_greatgift=Ss09y04.wav				local
+	sound		yl_waytocurse=Ss09y05.wav				local
+	sound		yl_bewareice=Ss09y06.wav				local
+
+	sound		in_nowork=Inxj092.wav					local
+	sound		in_notgoodenough=Inxj093.wav			local
+	sound		in_hmm=inxj269.wav						local
+
+	sound		leverpull=nub_lever_pull_c.wav			local
+	sound		leverback=nub_lever_reset_c.wav			local
+
+	sound		in_doorlocked=Inxj101.wav				local
+	sound		in_notopen=Inxj096.wav					local
+	
+# ***************************** THINGS ******************************
+
+	thing		player									local
+	
+	thing		indy 	    							linkid=0
+    thing		bellringer
+	thing		oldlady
+	thing		younglady
+	thing       lever
+	thing		barlock
+	
+	thing		plant									nolink
+	thing		static_flower							nolink
+	thing		flyingcane								nolink
+
+	thing		leftdoor								nolink
+	thing		rightdoor								nolink
+	thing		barup									nolink
+	thing		ldooropen								nolink
+	thing		rdooropen								nolink
+											
+	thing		cam_1									nolink
+	thing		cam_2									nolink
+	thing		cam_3									nolink
+	thing		cam_4									nolink
+	thing		cam_5									nolink
+	thing		cam_6									nolink
+	thing		cam_7									nolink
+	thing		cam_8									nolink
+	thing		cam_9									nolink
+	thing		cam_10									nolink
+	thing		cam_11									nolink
+	thing		cam_12									nolink
+	thing		cam_13									nolink
+	
+	thing		c_t1									nolink
+	thing		c_t2									nolink
+	thing		c_t3 									nolink
+	thing		c_t4									nolink
+	thing		c_t5									nolink
+	thing		c_t6									nolink
+	thing		c_t7									nolink
+	thing		c_t8									nolink
+	thing		c_t9									nolink
+	thing		c_t10									nolink
+	thing		c_t11									nolink
+	thing		c_t12									nolink
+	thing		c_t13									nolink
+	thing		c_t14									nolink
+	thing		c_t15									nolink
+	
+	thing		c_t2_br									local # created in cog
+	
+	thing		ol_mk1									nolink
+	thing		ol_plantspot							nolink
+
+	thing		yl_mk1									nolink
+	thing		yl_mk2									nolink
+	thing		yl_mk3									nolink
+	thing		yl_mk4									nolink
+	thing		yl_mk5									nolink
+	
+	thing		in_mk2  								nolink
+	thing		in_mk3									nolink
+	thing		in_mk4									nolink
+	thing		in_mk5									nolink
+	thing		in_mk6									nolink
+	thing		in_mk7									nolink
+
+	thing		br_mk1									nolink
+	thing		br_mk2									nolink
+
+	thing		headLookThing							local # var
+	thing		camPosThing								local # var
+
+# ************************ ENGINE WEIRDNESS *************************
+
+	cog			ringercog
+	cog			bellcog
+			
+	sector		trigger
+
+	template    ghost_tpl=ghost							local
+	
+# **************************** VARIABLES ****************************
+	
+	vector		camPos									local
+	vector		interpCamPos							local
+	vector		interpCamLook							local
+	vector		indyHeadAim								local
+	vector		debugVector								local
+
+	vector		ladyPosVec								local
+	vector		indyPosVec								local
+	vector		indyAimVec								local
+	vector		indyNormVec								local
+	
+	flex		oldladyCollSize							local
+	flex		oldladyMass								local
+	flex		ol_rotRate								local
+	flex		in_rotRate								local
+	flex        movespeed=1.0							local
+    flex		indyTrackRate=0.05						local
+
+	flex		tempVX									local
+	flex		tempVY									local
+	flex		tempflex								local
+    						
+	int			cutSceneState=0							local
+	int			leverState=0							local
+	int			ringerState=0							local
+	int         ringerready=0							local
+	int			bellready=0								local
+	int			bellRangAlready=0						local
+	int			belltop=0								local
+	int			plantState=0							local
+	int			doorchat=0								local
+	int			olNowAtSpot=0							local
+
+	int			in_keyTrack1							local
+	int			in_keyTrack2							local
+	int			br_keyTrack1							local
+	int			ol_keyTrack1							local
+	int			yl_keyTrack1							local
+	int			plt_keyTrack1							local
+	int			can_keyTrack1							local
+	int			bar_keyTrack1							local
+	int			ldr_keytrack1							local
+	int			rdr_keyTrack1							local
+		
+	int			sender									local
+	int			curSound								local
+	int			curCam									local
+	int			swapper									local
+	
+	int			in_swapCase=0							local
+	int			ol_swapCase=0							local
+	int			yl_swapCase=0							local
+    					
+	int			oldladyCollType							local
+	
+	int			sealkey=87								local # inventory bin
+	int			plantbulb=104							local # inventory bin
+	int			plantleaf=105							local # inventory bin
+	int			plantbud=106							local # inventory bin
+	
+	int			noRollComment							local
+	int			noRingComment							local
+
+end
+
+# ===================================================================
+
+code
+
+# ...................................................................
+
+startup:
+
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+
+	# Prep Old Holy Woman...
+    SetThingFlags(oldlady, 0x80000);
+	oldladyCollSize = GetThingCollideSize(oldlady);
+	oldladyCollType = GetCollideType(oldlady);
+	oldladyMass = GetThingMass(oldlady);
+	ol_rotRate = GetThingMaxRotVel(oldlady);
+	AISetMode(oldlady, 0x2000); # turn off her AI
+
+	# Prep Young Holy Woman...
+	SetThingFlags(younglady, 0x80000);
+	AISetMode(younglady, 0x2000); # turn off her AI
+
+	# Hide the many objects...
+	SetThingFlags(plant, 0x80000);
+	SetThingFlags(static_flower, 0x80000);
+	SetThingFlags(flyingcane, 0x80000);
+	SetThingFlags(barup, 0x80000);
+	SetThingFlags(ldooropen, 0x80000);
+	SetThingFlags(rdooropen, 0x80000);
+
+	return;
+
+# -------------------------------------------------------------------
+
+entered:
+
+	# NOTE:  use this with a trigger to pop the old lady to a nice convenient spot
+	# near the flower stand when Indy returns...
+	
+	# TO DO:  find a reliable trigger sector
+
+	if (bellRangAlready == 1 && olNowAtSpot == 0)
+	{
+		olNowAtSpot = 1;
+		TeleportThing(oldlady, ol_plantspot);
+	}
+	return;
+
+# ...................................................................
+
+user0:
+
+	# NOTE: Sent by whatever attached cogs know the overall readiness 
+	# states of the bellringer and the bell to signify NOT READY...
+
+	if (GetSenderRef() == ringercog)
+	{
+		ringerready = 0; # bellringer cannot perform its duties
+	}
+
+	if (GetSenderRef() == bellcog)
+	{
+		bellready = 0; # bell is not in position
+	}
+
+	return;
+
+# ...................................................................
+
+user1:
+
+	# NOTE: Sent by whatever attached cogs know the overall readiness 
+	# states of the bellringer and the bell to signify READY FOR ACTION...
+
+	if (GetSenderRef() == ringercog)
+	{
+		ringerready = 1; # bellringer can ring
+	}
+
+	if (GetSenderRef() == bellcog)
+	{
+		bellready = 1; # bell is in position
+	}
+
+	return;
+
+# ...................................................................
+
+user2:
+
+	# NOTE: Sent by attached bellcog when bell reaches top of tower...
+	# (currently, this cog pays no attention)
+
+	if (GetSenderRef() == bellcog)
+	{
+		belltop = 1; # bell is all the way up
+	}
+
+	return;
+
+# ...................................................................
+
+activated:
+
+	sender = GetSenderRef();
+	
+	if (sender == lever && leverState == 0)
+	{
+		# Indy must ring the bell to meet the old lady...
+    
+		# Prep for cutscene...
+		StartCutscene(1);
+		curCam = GetCurrentCamera();
+
+		leverState = 1;
+
+		# Mood music!
+		# PlaySong(5, 5, 5);
+
+		### temp develop stuff...
+		ringerready = 1;
+		###
+		
+		# Prep indy...
+		in_rotRate = GetThingMaxRotVel(indy);
+		SetThingMaxRotVel(indy, 75.0);
+		TeleportThing(indy, in_mk2);
+		
+		# Disable player...
+		StopThing(player); # right now
+		PlayMode(player, 1, 0); # get him into a nice stand
+		DeselectWeapon(player); # stow any weapon or lighter
+		CopyPlayerHolsters(player, indy); # make sure our actor has matching props
+		Sleep(0.5); # give him some time to do his stuff
+		
+		# Switch actor indy for player...
+		SetThingFlags(player, 0x80000); # hide him
+		SetActorFlags(player, 0x200000); # paralyze him
+		ClearThingFlags(indy, 0x80000); # reveal our actor
+		
+		# Prep camera & cut...
+		SetCameraLookInterp(2, 0); # no pan & tilt
+		SetCameraPosInterp(2, 0); # no dolly
+		SetCameraFocus(2, cam_1);
+		SetCameraSecondaryFocus(2, c_t1);
+		SetCurrentCamera(2);
+		SetCameraFOV(55, 0, 0.0);
+		Sleep(0.01);
+
+		PlayKey(lever, lever_down, 4, 0x12, 0);
+		PlayKey(indy, in_pull, 4, 0x12, 0);
+		Sleep(1.2);
+		PlaySoundLocal(leverpull, 1.0, 0, 0x0000, 0);
+		Sleep(1.4);
+		PlaySoundLocal(leverback, 1.0, 0, 0x0000, 0);
+		Sleep(0.3);
+
+		if (ringerready == 1)
+		{
+			call rollringer; 
+
+			if (bellready == 1 && bellRangAlready == 0)
+			{
+				call ringbell;
+				camPosThing = cam_8; # pos for interp back to follow cam
+				call backtoplay;
+			}
+			else 
+			{
+				call noring;
+				camPosThing = c_t5;
+				call backtoplay;
+			}
+		}
+		else
+		{
+			call noroll;
+			camPosThing = c_t5;
+			call backtoplay;
+		}	
+	}
+	else
+	{
+		if (sender == oldlady || sender == younglady)
+		{
+			# Talk to her...
+			call morechat;
+		}
+		else 
+		{
+			if (sender == barlock)
+			{
+				# Notice the barred door...
+				call doorbarred;
+			}
+		}
+	}
+
+ 	return;
+	 
+# ...................................................................
+
+rollringer:
+
+	# Prep bellringer shot...
+	ClearThingFlags(bellringer, 0x80000); # reveal bellringer
+	c_t2_br = CreateThing(ghost_tpl, c_t2); # dupe target & frame (see Marcus)
+	CaptureThing(c_t2_br);
+	AttachThingToThing(c_t2_br, bellringer); # glue it to bellringer
+
+	# Start him twirling...
+	br_keyTrack1 = PlayKey(bellringer, br_fwd, 4, 0x10, 0);
+		
+	# Cut to bellringer...
+	SetCameraFocus(2, cam_2);
+	SetCameraSecondaryFocus(2, c_t2_br); # aim at new target near ringer
+	SetCameraFOV(60, 0, 0.0); # was 70
+	Sleep(0.01);
+	
+	# Move ringer...
+	AISetMoveSpeed(bellringer, 1.2);
+	AISetLookThing(bellringer, br_mk2);
+    AISetMoveThing(bellringer, br_mk2, 0);
+
+	# Indy watches...
+	AISetLookThing(indy, cam_2);
+	headLookThing = bellringer;
+	SetPulse(indyTrackRate);
+	
+	# Boom & Zoom to tightly frame ringer...
+	MoveToFrame(c_t2_br, 1, 0.25);
+	Sleep(0.01);
+	SetCameraFOV(38, 1, 4.0);
+	Sleep(4.5);
+	
+	# Boom & Zoom back...
+	# TO DO:  find out why next MoveToFrame() screws up target attachment!
+	# MoveToFrame(c_t2_br, 0, 0.35);
+	SetCameraFOV(60, 1, 3.0);
+	
+	# Indy watches...
+	Sleep(3.5);
+	AISetLookThing(indy, in_mk7);
+
+	# Bellringer continues to move into ring/noring code...
+	ringerState = 1;
+	
+	return;
+
+# ...................................................................
+
+ringbell:
+
+	# This should happen just once...
+	bellRangAlready = 1;
+	
+	# Reposition Indy...
+	TeleportThing(indy, in_mk6);
+	Sleep(0.01);
+	AISetLookThing(indy, in_mk7);
+
+	# Prep holy woman under the bell...
+	ClearThingFlags(oldlady, 0x80000);
+	SetThingMaxRotVel(oldlady, 10.0);
+	
+	# Cut inside tower...
+	SetCameraLookInterp(2, 0); # no pan & tilt
+	SetCameraFocus(2, cam_3);
+	SetCameraSecondaryFocus(2, bellringer);
+	SetCameraFOV(80, 0, 0.0);
+	Sleep(0.01);
+
+	SetCameraLookInterp(2, 1); # allow pan & tilt
+	SetCameraInterpSpeed(2, 3.5); # was 3.5
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, c_t3);
+	SetCameraFOV(100, 1, 3.5); # was 3.5
+
+	# Pose Indy...
+	Sleep(2.0);
+	SetPulse(0); # stop his head moving around
+	AISetLookThing(indy, oldlady);
+	
+	# Finish ringer move...
+	AIWaitForStop(bellringer);
+	Sleep(0.1);
+	StopKey(bellringer, br_keyTrack1, 0.0);
+
+	# TO DO: drop in sound of ringer hitting bell
+
+	Sleep(0.3);
+	DetachThing(c_t2_br);
+	DestroyThing(c_t2_br);
+	
+	# Now ringer retreats...
+	AISetMoveThing(bellringer, br_mk1, 0);
+	br_keyTrack1 = PlayKey(bellringer, br_back, 4, 0x10, 0);
+	Sleep(1.5);
+
+	# Raise bell...
+	SendMessage(bellcog, user2);
+	
+	# Zoom in on Holy Woman...
+	SetCameraLookInterp(2, 0); # stop interping for a while
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, c_t4);
+	SetCameraFOV(40, 1, 6.0);
+	MoveToFrame(c_t4, 1, 0.24);
+	
+	# Reset bellringer...
+	StopKey(bellringer, br_keyTrack1, 0.0);
+	StopThing(bellringer);
+	TeleportThing(bellringer, br_mk1);
+	Sleep(0.1); # magic sleep that cures c_t2_br target placement on re-tries!
+	SetThingFlags(bellringer, 0x80000); # hide
+	ringerState = 0;
+	
+	# She seems confused...
+	ol_keyTrack1 = PlayKey(oldlady, ol_confused, 2, 0x12, 0);
+	Sleep(1.5);
+	
+	# Holy Woman turns toward Indy...
+	StopKey(oldlady, ol_keyTrack1, 0.5);
+	AISetLookThing(oldlady, indy);
+	Sleep(2.2);
+	
+	# Start Indy toward Holy Woman...
+	AISetMoveSpeed(indy, 1.0);
+	AISetLookThing(indy, oldlady);
+	AISetMoveThing(indy, in_mk3, 0);
+	
+	# Holy Woman:  "Hello, young man.  You rang?"
+	ol_keyTrack1 = PlayKey(oldlady, ol_stand2honcane, 2, 0x10, 0);
+	PlayKey(oldlady, ol_wavecane2, 4, 0x12, 0);
+	Sleep(0.5);
+	curSound = PlaySoundLocal(ol_rang, 1.0, 0.0, 0x0, 0);
+	StopThing(oldlady); # stop that damn churning
+	
+	# Pan to frame both actors...
+	WaitForSound(curSound);
+	AIWaitForStop(indy);
+	Sleep(0.01);
+	AISetLookThing(indy, oldlady); # make him look down at her
+	AISetLookThing(oldlady, indy); # and she looks up
+	
+	# Indy: "That's right, I did."
+	curSound = PlaySoundLocal(in_thatsright, 1.0, 0.0, 0x0, 0);
+	PlayKey(indy, in_ltarmup, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Holy Woman: "And you want my help."
+	curSound = PlaySoundLocal(ol_wanthelp, 1.0, 0.0, 0x0, 0);
+	WaitForSound(curSound);
+
+	# Cut to Indy over Holy Woman's shoulder...
+	Sleep(0.01);
+	SetCameraFocus(2, cam_4);
+	SetCameraSecondaryFocus(2, c_t5);
+	SetCameraFOV(37, 0, 0.0);
+	
+	# Indy: "Do I...I'm...lost."
+	curSound = PlaySoundLocal(in_lost, 1.0, 0.0, 0x0, 0);
+	Sleep(0.5);
+	PlayKey(indy, in_botharmsup, 4, 0x12, 0);
+	WaitForSound(curSound);
+	
+	# Cut to reverse on Holy Woman over Indy's shoulder...
+	SetCameraLookInterp(2, 0);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_5);
+	SetCameraSecondaryFocus(2, c_t6);
+	SetCameraFOV(29, 0, 0.0);
+	
+	# Holy Woman: "But it is you who must help me...spinning idol...legacy..."
+	curSound = PlaySoundLocal(ol_youhelpme, 1.0, 0.0, 0x0, 0);
+	
+	# Long slow push in...
+	MoveToFrame(c_t6, 1, 0.01);
+	SetCameraFOV(22, 1, 15.0);
+	PlayKey(oldlady, ol_ltwave, 4, 0x12, 0);	
+	Sleep(7.5);
+	PlayKey(oldlady, ol_ltwave, 4, 0x12, 0);	
+	Sleep(5.5);
+	PlayKey(oldlady, ol_wavecane2, 4, 0x12, 1);
+	WaitForSound(curSound);
+	Sleep(0.3); # take a beat
+
+	# Cut to Indy again...
+	SetCameraLookInterp(2, 0);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_4);
+	SetCameraSecondaryFocus(2, c_t5);
+	SetCameraFOV(37, 0, 0.0);
+	
+	# Indy: "Show me the way."
+	curSound = PlaySoundLocal(in_showmeway, 1.0, 0.0, 0x0, 0);
+	PlayKey(indy, in_rtarmup, 4, 0x12, 0);	
+	WaitForSound(curSound);
+	
+	# Holy Woman turns and walks away from Indy...
+	StopKey(oldlady, ol_keyTrack1, 0.0);
+	SetThingMaxRotVel(oldlady, 35.0);
+	AISetLookThing(oldlady, ol_mk1);
+	Sleep(0.2);
+
+	# Holy Woman: "I am too old and infirm...golden treasure."
+	curSound = PlaySoundLocal(ol_goldtreasure, 1.0, 0.0, 0x0, 0);
+
+	# Dolly back to keep her framed...
+	AISetMoveSpeed(oldlady, 0.7);
+	AISetMoveThing(oldlady, ol_mk1, 0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 4.1);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_6);
+	SetCameraSecondaryFocus(2, c_t7);
+	SetCameraFOV(45, 1, 0.8);
+	headLookThing = oldlady;
+	SetPulse(indyTrackRate);
+	AIWaitForStop(oldlady);
+	Sleep(6.5);
+	
+	# Holy Woman turns back toward Indy...
+	AISetLookThing(oldlady, indy);
+	Sleep(0.5);
+	ol_keyTrack1 = PlayKey(oldlady, ol_stand2honcane, 2, 0x10, 0);
+	PlayKey(oldlady, ol_pointcane, 4, 0x12, 0);
+	
+	# Indy walks up to her...
+	AISetLookThing(indy, oldlady);
+	AISetMoveThing(indy, in_mk4, 0);
+	SetCameraLookInterp(2, 0);
+	Sleep(0.01);
+	MoveToFrame(c_t7, 1, 0.14); # tilt up as Indy approaches
+	Sleep(0.01);
+	AIWaitForStop(indy);
+	AISetLookThing(indy, oldlady);
+	SetPulse(0);
+	
+	# Indy: "Okay...golden treasure..."
+	WaitForSound(curSound);
+	curSound = PlaySoundLocal(in_whereisit, 1.0, 0.0, 0x0, 0);
+	Sleep(1.5);
+	PlayKey(indy, in_ltarmup, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Cut to single shot of Holy Woman...
+	SetCameraPosInterp(2, 0);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_7);
+	SetCameraSecondaryFocus(2, c_t8);
+	SetCameraFOV(35, 0, 0.0);
+	SetThingFlags(indy, 0x10); # invisible
+
+	# Holy Woman: "Why, in the treasury, of course!"
+	curSound = PlaySoundLocal(ol_treasury, 1.0, 0.0, 0x0, 0);
+	Sleep(0.5);
+	PlayKey(oldlady, ol_wavecane2, 4, 0x12, 1);
+	StopKey(oldlady, ol_keyTrack1, 0.0);
+	ol_keyTrack1 = PlayKey(oldlady, ol_standwkey, 2, 0x10, 0);
+	ol_swapCase = 1; # swap oldlady key hand
+	PlayKey(oldlady, ol_showkey, 4, 0x12, 0);
+	WaitForSound(curSound);
+	Sleep(0.3);
+
+	# Cut to full side shot of both actors...
+	SetCameraFocus(2, cam_8);
+	SetCameraSecondaryFocus(2, c_t9);
+	SetCameraFOV(70, 0, 0.0);
+	ClearThingFlags(indy, 0x10); # visible again
+
+	# Holy Woman: "Take this, it may help you."
+	curSound = PlaySoundLocal(ol_takekey, 1.0, 0.0, 0x0, 0);
+
+	# She gives Indy the key...
+	Sleep(1.5);
+	StopKey(oldlady, ol_keyTrack1, 0.0);
+	ol_keyTrack1 = PlayKey(oldlady, ol_basicstand, 2, 0x10, 0);
+	PlayKey(oldlady, ol_givekey, 4, 0x12, 0);
+	in_swapCase = 1; # swap indy key hand
+	PlayKey(indy, in_takekey, 4, 0x12, 1);
+	StopKey(oldlady, ol_keyTrack1, 0.5);
+	WaitForSound(curSound);
+
+	# Key zips into inventory...
+	ChangeInv(player, sealkey, 1.0); # add key to inventory bin
+	SetInvAvailable(player, sealkey, 1); # make it available for use
+    JonesInvItemChanged(sealkey); # show acquisition
+	
+	# Prep Holy Woman for follow-up chat that might occur before Indy leaves area...
+	SetThingCollideSize(oldlady, 0.06); # set correct talk distance
+	SetThingMass(oldlady, 0); # 0 = infinite...don't let player push her around!
+	AIClearMode(oldlady, 0x2000); # start her watch-indy AI
+
+	return;
+
+# ...................................................................
+
+noring:
+
+	# Reposition Indy...
+	TeleportThing(indy, in_mk6);
+	Sleep(0.01);
+	AISetLookThing(indy, in_mk7);
+	
+	# Cut inside tower...
+	SetCameraLookInterp(2, 0); # no pan & tilt
+	SetCameraFocus(2, cam_3);
+	SetCameraSecondaryFocus(2, bellringer);
+	SetCameraFOV(80, 0, 0.0);
+	Sleep(0.01);
+
+	# Finish ringer move...
+	AIWaitForStop(bellringer);
+	StopKey(bellringer, br_keyTrack1, 0.0);
+	Sleep(0.3);
+	DetachThing(c_t2_br);
+	DestroyThing(c_t2_br);
+	
+	# Now it retreats...
+	SetCameraLookInterp(2, 1); # allow pan & tilt
+	SetCameraInterpSpeed(2, 5.5);
+	AISetMoveThing(bellringer, br_mk1, 0);
+	br_keyTrack1 = PlayKey(bellringer, br_back, 4, 0x10, 0);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, c_t1);
+	SetCameraFOV(28, 1, 5.5);
+	
+	# Pose Indy...
+	Sleep(2.0);
+	SetPulse(0); # stop his head moving around
+	Sleep(1.5);
+	
+	# Reset bellringer...
+	StopKey(bellringer, br_keyTrack1, 0.0);
+	StopThing(bellringer);
+	TeleportThing(bellringer, br_mk1);
+	Sleep(0.1); # this is a magic sleep that cures target placement on re-tries!
+	SetThingFlags(bellringer, 0x80000); # hide
+	ringerState = 0;
+	
+	# Indy comments...
+
+	if (noRingComment == 0 && bellRangAlready == 0)
+	{
+		noRingComment = 1;
+		in_keyTrack1 = PlayKey(indy, in_armsCrossed, 2, 0x10, 0);
+		PlayKey(indy, in_crossArms, 4, 0x12, 0);
+		PlaySoundLocal(in_notgoodenough, 1.0, 0.0, 0x0, 1);
+	}
+	else
+	{
+		in_keyTrack1 = PlayKey(indy, in_armsCrossed, 2, 0x10, 0);
+		PlayKey(indy, in_crossArms, 4, 0x12, 1);
+		PlaySoundLocal(in_hmm, 1.0, 0.0, 0x0, 1);
+	}
+
+	StopKey(indy, in_keyTrack1, 1.0);
+	Sleep(0.8);
+
+	SetCameraLookInterp(2, 0); # no pan & tilt
+	
+	return;
+
+# ...................................................................
+
+noroll:
+
+	ringerState = 0;
+	Sleep(1.0);
+	AISetLookThing(indy, cam_3);
+	Sleep(1.5);
+	StopThing(indy);
+	in_keyTrack1 = PlayKey(indy, in_handsOnHips, 2, 0x10, 0);
+	PlayKey(indy, in_handsToHips, 4, 0x12, 1);
+
+	if (noRollComment == 0)
+	{
+		noRollComment = 1;
+		PlayKey(indy, in_PushHat, 4, 0x12, 0);
+		PlaySoundLocal(in_nowork, 1.0, 0.0, 0x0, 1);
+	}
+	else
+	{
+		PlaySoundLocal(in_hmm, 1.0, 0.0, 0x0, 1);
+	}
+
+	Sleep(0.5);
+	StopKey(indy, in_keyTrack1, 0.5);
+	Sleep(0.5);
+
+	return;
+
+# ...................................................................
+
+backtoplay:
+
+	# restore player control...
+	leverState = 0;
+	SetThingMaxRotVel(indy, in_rotRate);
+	CopyOrientAndPos(indy, player); # move player to actor's spot
+	SetThingFlags(indy, 0x80000); # hide actor	
+	camPos = GetThingPOS(camPosThing); 
+	SetCameraPosition(1, camPos); # prep to swing back to follow-cam
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	ClearThingFlags(player, 0x80000); # player visible
+	ClearActorFlags(player, 0x200000); # player in control
+	SetCurrentCamera(curCam);
+	ResetCameraFOV(0, 0.0);
+	
+	EndCutscene();
+		
+	return;
+
+# ...................................................................
+
+morechat:
+
+	# Prep...
+	StartCutscene(1);
+	SetActorFlags(player, 0x200000); # remove player controls
+	ClearThingFlags(indy, 0x80000); # summon actor
+	SetThingFlags(indy, 0x10); # make actor present but invisible
+	TeleportThing(indy, player); # plant actor indy at player location
+	Sleep(0.01);
+	
+	# Align Indy and Holy Woman...
+	if (sender == oldlady)
+	{
+		AISetMode(oldlady, 0x2000); # stop indy-watch AI
+		Sleep(0.01);
+		headLookThing = oldlady;
+		AISetLookThing(indy, oldlady);
+		AISetLookThing(oldlady, indy);
+	}
+	else
+	{
+		AISetMode(younglady, 0x2000); # stop indy-watch AI
+		Sleep(0.01);
+		SetThingMaxRotVel(younglady, 25.0);
+		headLookThing = younglady;
+		AISetLookThing(indy, younglady);
+		AISetLookThing(younglady, indy);
+	}
+	Sleep(0.5); # allow time to line up
+
+	# Align follow-cam by aligning player to our actor...
+	CopyOrientAndPos(indy, player); # weird but effective
+	
+	# Now show actor and hide player...
+	CopyPlayerHolsters(player, indy);
+	ClearThingFlags(indy, 0x10); # show him
+	SetThingFlags(player, 0x80000); # hide player
+	
+	Sleep(0.01);
+	
+	SetPulse(indyTrackRate);
+
+	# Slew to side shot of indy and Holy Woman...
+	# TO DO: fix cam look interp offset bug...
+	if (sender == oldlady)
+	{
+		SetExtCamLookOffset('0.0 0.04 0.009'); # oldlady is short
+	}
+	else
+	{
+		SetExtCamLookOffset('0.0 0.04 0.011'); # younglady is tall
+	}
+	SetExtCamOffset('0.18 0.02 0.055'); # interp cam out to right
+	
+	Sleep(0.5);
+	
+	SetPulse(0);
+	
+	if (cutSceneState == 3)
+	{
+		# If the big bronze doors are already open...
+		call iceprompt;
+		AIClearMode(younglady, 0x2000); # resume indy-watch AI
+	}
+	else
+	{
+		if (GetInv(player, plantbud) == 1)
+		{
+			# If Indy has the budding plant, finish the scene right now...
+			call givetreasure;
+			camPos = GetThingPOS(cam_9); 
+			SetCameraPosition(1, camPos); # prep to swing back to follow-cam
+			AIClearMode(younglady, 0x2000); # start indy-watch AI
+		}
+		else
+		{		
+			if (GetInv(player, plantleaf) == 1)
+			{
+				# NOTE:  whoops, there are no lines for being partly-done...
+				call gotbulb;
+				AIClearMode(oldlady, 0x2000); # resume indy-watch AI
+
+			}
+			else
+			{
+				if (GetInv(player, plantbulb) == 1)
+				{
+					call gotbulb;
+					AIClearMode(oldlady, 0x2000); # resume indy-watch AI
+				}
+				else
+				{
+					call noprogress;
+					AIClearMode(oldlady, 0x2000); # resume indy-watch AI
+				}
+			}
+		}
+	}
+
+	# Restore player control...
+	CopyOrientAndPos(indy, player); # pop player to actor spot
+	SetThingFlags(indy, 0x80000); # hide actor	
+	ClearThingFlags(player, 0x80000); # player visible
+	ClearActorFlags(player, 0x200000); # player in control
+	SetThingMaxRotVel(indy, in_rotRate);
+	SetCurrentCamera(curCam);
+	RestoreExtCam();
+	ResetCameraFOV(0, 0.0);
+	EndCutscene();
+		
+	return;
+	
+# ...................................................................
+
+noprogress:
+		
+	# Holy Woman: "Where's the golden treasure?"
+	if (cutSceneState == 0)
+	{
+		# cutSceneState = 1; # only read this line once
+		curSound = PlaySoundLocal(ol_hello2, 1.0, 0.0, 0x0, 0);
+	}
+	else
+	{
+		curSound = PlaySoundLocal(ol_hello3, 1.0, 0.0, 0x0, 0);
+	}
+	Sleep(0.5);
+	WaitForSound(curSound);
+	
+	# Indy: "I haven't found it yet."
+	curSound = PlaySoundLocal(in_notfoundyet, 1.0, 0.0, 0x0, 0);
+	in_keyTrack1 = PlayKey(indy, in_handsOnHips, 2, 0x10, 0);
+	PlayKey(indy, in_handsToHips, 4, 0x12, 1);
+	WaitForSound(curSound);
+
+	if (cutSceneState == 0)
+	{
+		# Holy Woman: "Examine the treasury!"
+		curSound = PlaySoundLocal(ol_looktreasury, 1.0, 0.0, 0x0, 0);
+	}
+	else
+	{
+		# Holy Woman: "something else more generic..."
+		curSound = PlaySoundLocal(ol_looktreasury, 1.0, 0.0, 0x0, 0);
+	}
+
+	# TO DO: Get ol animation that returns to stand1, not 2
+	PlayKey(oldlady, ol_pointcane, 4, 0x12, 0);
+	
+	WaitForSound(curSound);
+	cutSceneState = 1;
+	
+	StopKey(indy, in_keyTrack1, 0.5);
+	Sleep(0.5);
+
+	return;
+
+# ...................................................................
+
+gotbulb:
+		
+	# Holy Woman: "Peace, young man.  Where's the treasure?"
+	curSound = PlaySoundLocal(ol_hello3, 1.0, 0.0, 0x0, 0);
+	Sleep(0.5);
+	WaitForSound(curSound);
+	
+	# Indy: "All I've found is a plant bulb."
+	curSound = PlaySoundLocal(in_foundbulbA, 1.0, 0.0, 0x0, 0);	
+	PlayKey(indy, in_botharmsup, 4, 0x12, 1);
+	WaitForSound(curSound);
+	
+	if (cutSceneState < 2)
+	{
+		# Indy: "Not much of a treasure..."
+		curSound = PlaySoundLocal(in_foundbulbb, 1.0, 0.0, 0x0, 0);
+		PlayKey(indy, in_ltarmup, 4, 0x12, 1);
+		WaitForSound(curSound);	
+	}
+		
+	if (cutSceneState < 2)
+	{
+		# Holy Woman: "Yet it must become one..."
+		curSound = PlaySoundLocal(ol_mustbecome, 1.0, 0.0, 0x0, 0);
+		PlayKey(oldlady, ol_pointcane, 4, 0x12, 0);
+	}
+	else
+	{
+		# Holy Woman: "snort!"
+		curSound = PlaySoundLocal(ol_snort, 1.0, 0.0, 0x0, 0);
+		PlayKey(oldlady, ol_ltwave, 4, 0x12, 0);
+	}
+	WaitForSound(curSound);
+	
+	cutSceneState = 2;
+	
+	Sleep(0.5);
+
+	return;
+	
+# ...................................................................
+
+givetreasure:
+
+	# Prep camera...
+	SetCameraLookInterp(2, 0);
+	
+	# Holy Woman: "You again.  Do you have the treasure?"
+	curSound = PlaySoundLocal(ol_gottreasure, 1.0, 0.0, 0x0, 0);
+
+	# gestures
+
+	WaitForSound(curSound);
+	
+	# Indy: "Here's the best I could do..."
+	in_swapCase = 2; # indy swapping plant
+	curSound = PlaySoundLocal(in_bestdo, 1.0, 0.0, 0x0, 0);
+	# in_keyTrack1 = 
+	PlayKey(indy, in_plantready, 2, 0x12, 1);
+	# Sleep(1.0);
+	
+	# Indy gives her the budding plant...
+	# StopKey(indy, in_keyTrack1, 0.0);
+	PlayKey(indy, in_giveplant, 4, 0x12, 0);
+	ol_swapCase = 2; # oldlady swapping plant
+	ol_keyTrack1 = PlayKey(oldlady, ol_stand2honcane, 2, 0x0, 0);
+	PlayKey(oldlady, ol_takeplantA, 4, 0x12, 1);
+	StopKey(oldlady, ol_keyTrack1, 0.0);
+	in_swapCase = 0; # indy swaps no more
+	Sleep(0.01);
+	
+	# Cut to close-up of Holy Woman...
+	SetCameraFocus(2, cam_9);
+	SetCameraSecondaryFocus(2, c_t10);
+	SetCurrentCamera(2);
+	SetCameraFOV(35, 0, 0.0);
+	CopyOrient(ol_plantspot, oldlady); # snap her to proper orientation
+	SetThingFlags(indy, 0x10); # invisible
+	
+	# She takes the plant...
+	PlayKey(oldlady, ol_takeplantB, 4, 0x12, 1);
+	
+	# Holy Woman: "Not yet."
+	ol_keyTrack1 = PlayKey(oldlady, ol_lookatbud, 2, 0x14, 0);
+	WaitForSound(curSound);
+	curSound = PlaySoundLocal(ol_notyet, 1.0, 0.0, 0x0, 0);
+	WaitForSound(curSound);
+	
+	# Lose plant from Indy's inventory...
+	ChangeInv(player, plantbud, -1.0);
+	
+	# Substitute young woman for old...
+	StopKey(oldlady, ol_keyTrack1, 0.0);
+	CopyOrientAndPos(oldlady, younglady); # young woman into position
+	SetThingFlags(oldlady, 0x80000); # hide old	
+	ClearThingFlags(younglady, 0x80000); # reveal young
+	ol_swapCase = 0; # oldlady swaps no more
+	DestroyThing(oldlady);
+	AISetMode(younglady, 0x2000); # turn off her AI
+	yl_keyTrack1 = PlayKey(younglady, yl_bentover, 2, 0x10, 0);
+	
+	# Cut to close-up of the plant as it bursts into bloom...
+	SetCameraFocus(2, cam_10);
+	SetCameraSecondaryFocus(2, c_t11);
+	SetCameraFOV(20, 0, 0.0);
+	ClearThingFlags(plant, 0x80000); # now you see it
+	plt_keyTrack1 = PlayKey(plant, plant_wait, 2, 0x10, 0); # hold on bud
+	Sleep(0.1);
+	PlayKey(plant, plant_bloom, 4, 0x12, 0);
+
+	# TO DO: fairy dust particles
+
+	Sleep(3.7);
+
+	# Camera tilts up and widens view to reveal young Holy Woman...
+	StopKey(plant, plt_keyTrack1, 0.0);
+	SetCameraFOV(33, 1, 1.5);
+	MoveToFrame(c_t11, 1, 0.47); # tilt up
+	Sleep(0.5);
+	StopKey(younglady, yl_keyTrack1, 0.0);
+	yl_keyTrack1 = PlayKey(younglady, yl_upright, 2, 0x10, 0);
+	PlayKey(younglady, yl_transform, 4, 0x12, 0);
+
+	# TO DO:  magical visual effect here...
+
+	Sleep(2.0);
+
+	# Cut to Indy reacting...
+	CopyOrientAndPos(in_mk5, indy); # move indy into position
+	SetCameraFocus(2, cam_11);
+	SetCameraSecondaryFocus(2, c_t12);
+	SetCameraFOV(30, 0, 0.0);
+	SetThingFlags(plant, 0x80000); # hide
+	SetThingFlags(younglady, 0x10); # hide
+	ClearThingFlags(indy, 0x10); # show him
+	SwapMeshes(mod_yl, 21, mod_yl_hand_bloom, 0); # younglady swap plant in offscreen
+	SwapMeshes(mod_yl, 17, mod_yl_hand_cane, 0); # younglady swap cane in offscreen
+	PlayKey(indy, in_wow, 4, 0x12, 1);
+
+	# Cut back to Holy Woman holding plant...
+	SetCameraFocus(2, cam_12);
+	SetCameraSecondaryFocus(2, c_t13);
+	SetCameraFOV(43, 0, 0.0); # was 40
+	ClearThingFlags(younglady, 0x10); # she's back
+	SetThingFlags(indy, 0x10); # hide him
+	StopKey(younglady, yl_keyTrack1, 0.0);
+	yl_keyTrack1 = PlayKey(younglady, yl_standwf, 2, 0x10, 0);
+	Sleep(0.01);
+	
+	# Holy Woman throws cane...
+	ClearThingFlags(flyingcane, 0x80000); # summon cane
+	SetThingFlags(flyingcane, 0x10); # make it invisible
+	yl_swapCase = 1; # younglady swaps cane
+	PlayKey(younglady, yl_losecane, 4, 0x12, 0);  
+	can_keyTrack1 = PlayKey(flyingcane, cane_fly, 4, 0x14, 0); # synch animations
+	Sleep(0.6);
+	ClearThingFlags(flyingcane, 0x10); # now see cane
+	yl_swapCase = 0; # swap cane once only
+	
+	# Holy Woman: "Ahhh!  Your gift is great!  Now..."
+	WaitForSound(curSound); # long since over...this is a formality
+	curSound = PlaySoundLocal(yl_greatgift, 1.0, 0.0, 0x0, 0);
+	
+	# Cane disappears...
+	Sleep(0.5);
+	StopKey(flyingcane, cane_keyTrack1, 0.0);
+	SetThingFlags(flyingcane, 0x80000); # cane is gone
+	WaitForSound(curSound);
+
+	# Prep Holy Woman to unlock & open doors...
+	AttachThingToThing(c_t13, younglady);
+	SetThingMaxRotVel(younglady, 25.0);
+	AISetMoveSpeed(younglady, 1.2);
+	SetCollideType(barlock, 0);
+	SetCollideType(leftdoor, 0);
+	SetCollideType(rightdoor, 0);
+	
+	# Holy Woman walks to flower stand...
+	SetArmedMode(younglady, 1); # causes walking with plant
+	Sleep(0.01);
+	StopKey(younglady, yl_keyTrack1, 0.0);
+	AISetLookThing(younglady, yl_mk1);
+	AISetMoveThing(younglady, yl_mk1, 0);
+	MoveToFrame(c_t13, 1, 0.12);
+	AIWaitForStop(younglady);
+	
+	# Holy Woman deposits flower on stand...
+	yl_swapCase = 2; # younglady swaps plant
+	PlayKey(younglady, yl_putflower, 4, 0x12, 1);
+	ClearThingFlags(static_flower, 0x80000);
+	SetArmedMode(younglady, 0); # cease walking with plant
+	yl_swapCase = 0; # younglady swaps no more
+	
+	# Holy Woman walks to bar...
+	SetCameraInterpSpeed(2, 3.5);
+	SetCameraLookInterp(2, 1);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, c_t14);
+	SetCameraFOV(90, 1, 3.5);
+	AISetLookThing(younglady, yl_mk2);
+	AISetMoveThing(younglady, yl_mk2, 0);
+	AIWaitForStop(younglady);
+	Sleep(0.01);
+
+	# Holy Woman heaves bar aside...
+	CopyOrient(yl_mk2, younglady); # snap her to proper orientation
+	bar_keyTrack1 = PlayKey(barlock, bar_flip, 4, 0x14, 0); # hold forever!
+	yl_keyTrack1 = PlayKey(younglady, yl_throwbar, 4, 0x12, 0);
+	Sleep(2.0);
+	StopKey(younglady, yl_keyTrack1, 0.0);
+
+	# Holy Woman walks to middle of the doors...
+	AISetLookThing(younglady, yl_mk3);
+	AISetMoveThing(younglady, yl_mk3, 0);
+	Sleep(1.0);
+	AISetLookThing(younglady, yl_mk5);
+	AIWaitForStop(younglady);
+	
+	# Holy Woman slams open the doors...
+	CopyOrient(yl_mk3, younglady); # snap her to face doors
+	Sleep(0.01);
+	ldr_keyTrack1 = PlayKey(leftdoor, ldr_open, 4, 0x14, 0); # hold forever!
+	rdr_keyTrack1 = PlayKey(rightdoor, rdr_open, 4, 0x14, 0); # hold forever!
+	PlayKey(younglady, yl_opendoors, 4, 0x12, 1);
+	
+	# ...and stands aside...
+	CopyOrientAndPos(yl_mk4, younglady); # move her to final mark
+	AISetLookThing(younglady, indy); # focus on Indy
+	SetCameraLookInterp(2, 0);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_13);
+	SetCameraSecondaryFocus(2, c_t15);
+	SetCameraFOV(63, 0, 0.0);
+	# AISetLookThing(younglady, indy);
+	
+	# swap the animated lock and doors for statics...
+	DestroyThing(barlock);
+	ClearThingFlags(barup, 0x80000);
+	DestroyThing(leftdoor);
+	ClearThingFlags(ldooropen, 0x80000);
+	DestroyThing(rightdoor);
+	ClearThingFlags(rdooropen, 0x80000);	
+	
+	# Holy Woman: "Here is the way to the Babylonian curse..."
+	curSound = PlaySoundLocal(yl_waytocurse, 1.0, 0.0, 0x0, 0);
+	PlayKey(younglady, yl_armspointway, 4, 0x12, 1);
+	Sleep(1.5);
+	PlayKey(younglady, yl_armsup, 4, 0x12, 1);	
+	WaitForSound(curSound);
+
+	# Clean up and prep for residual chat...
+	ClearThingFlags(indy, 0x10); # see him again
+	SetThingCollideSize(younglady, 0.06); # set correct talk distance
+	SetThingMass(younglady, 0); # make her immoveable
+	AIClearMode(younglady, 0x2000); # start her watch-indy AI
+	
+	cutSceneState = 3; # doors are OPEN
+
+	return;
+
+# ...................................................................
+
+iceprompt:
+		
+	# Holy Woman: "Beware the ice..."
+	curSound = PlaySoundLocal(yl_bewareice, 1.0, 0.0, 0x0, 0);
+	PlayKey(younglady, yl_lthandup, 4, 0x12, 0);
+	WaitForSound(curSound);
+	Sleep(0.2);
+
+	return;
+	
+# ...................................................................
+
+doorbarred:
+
+	StartCutScene(0);
+	
+	# Prep indy...
+	CopyOrientAndPos(player, indy); # move actor indy into position
+	CopyOrient(yl_mk5, indy); # snap him to proper orientation
+
+	# Disable player...
+	StopThing(player); # right now
+	PlayMode(player, 1, 0); # get him into a nice stand
+	DeselectWeapon(player); # stow any weapon or lighter
+	CopyPlayerHolsters(player, indy); # make sure our actor has matching props
+	Sleep(0.5); # give him some time to do his stuff
+	
+	# Switch actor indy for player...
+	CopyOrient(indy, player); # orient the player
+	SetThingFlags(player, 0x80000); # hide him
+	SetActorFlags(player, 0x200000); # paralyze him
+	ClearThingFlags(indy, 0x80000); # reveal our actor
+	Sleep(0.01);
+	
+	# TO DO: flatten the collision bubble on the bar, so interps can't fail...
+	
+	SetExtCamLookOffset('0.0 0.05 0.008'); # look toward door
+	SetExtCamOffset('-0.25 0.0 0.085'); # interp cam out to left
+
+	If (doorchat == 0)
+	{
+		doorchat = 1; # say this line just once
+		curSound = PlaySoundLocal(in_doorlocked, 1.0, 0.0, 0x0, 0);
+	}
+	else
+	{	
+		curSound = PlaySoundLocal(in_notopen, 1.0, 0.0, 0x0, 0);
+	}
+	
+	in_keyTrack1 = PlayKey(indy, in_armsCrossed, 2, 0x10, 0);
+	PlayKey(indy, in_crossArms, 4, 0x12, 1);
+	WaitForSound(curSound);
+	StopKey(indy, in_keyTrack1, 0.5);	
+	Sleep(0.5);
+
+	RestoreExtCam();
+	SetThingFlags(indy, 0x80000); # hide actor
+	ClearThingFlags(player, 0x80000); # show player again
+	ClearActorFlags(player, 0x200000); # remove player controls
+	EndCutScene();
+    
+    return;
+
+# ...................................................................
+
+callback:
+
+	swapper = GetSenderRef();
+    
+	if (swapper == indy)
+	{
+        if (in_swapCase == 1)
+		{
+            # Swap key...
+			SwapMeshes(mod_in, 15, mod_in_hand_key, 0);
+		}
+
+		if (in_swapCase == 2)
+		{
+            # Swap plant...
+			SwapMeshes(mod_in, 15, mod_in_hand_bud, 0);
+		}
+	}
+
+	if (swapper == oldlady)
+	{
+	    if (ol_swapCase == 1)
+		{
+            # Swap key...
+			SwapMeshes(mod_ol, 22, mod_ol_hand_key, 0);
+		}
+
+        if (ol_swapCase == 2)
+		{
+            # Swap plant...
+			SwapMeshes(mod_ol, 22, mod_ol_hand_bud, 0);
+		}
+	}
+
+	if (swapper == younglady)
+	{
+		if (yl_swapCase == 1)
+		{
+            # Swap cane...
+			SwapMeshes(mod_yl, 17, mod_yl_hand_cane, 0);
+		}
+
+	    if (yl_swapCase == 2)
+		{
+            # Swap plant...
+			SwapMeshes(mod_yl, 21, mod_yl_hand_bloom, 0);
+		}
+	}
+
+    return;
+
+# ...................................................................
+
+pulse:
+
+	SetThingHeadLookThing(indy, headLookThing);
+	
+	return;
+    
+# ...................................................................	
+
+end

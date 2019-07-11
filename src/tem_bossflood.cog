@@ -1,0 +1,1041 @@
+# Jones 3D Cog Script
+#
+# TEM_BossFlood.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		activated
+	message		entered
+
+	# ** local things **
+	thing		player				local
+	thing		t_Boss				local
+#	thing		sp0					local
+#	thing		sp1					local
+#	thing		sp2					local
+#	thing		indyTarget			local
+	thing		indy
+	thing		sender				local
+    thing       pud                 local
+    thing       cool                local
+
+	# ** meet boss cutscene stuff **
+	thing		meet_Cam1
+	thing		meet_Target1		# walk player to this
+	thing		meet_Target2		# secondary focus
+	sector		trig_BossCut
+    thing       offset_indy         # offset secondary focus
+    thing       backOff_Targ
+
+	# ** get Imp2 stuff **
+	thing		imp_Stand
+	thing		imp_Part
+	thing		t_GhostImp
+	thing		imp_Cam1
+	thing		imp_Cam2
+	thing		imp_CamLook1
+	thing		imp_CamLook2
+    thing       imp_Orient
+    thing		flame0
+	thing		flame1
+
+	surface		srf_trgr01
+
+	# ** boss flood things **
+	thing		cam_sm0				local
+	thing		cam_sm1				local
+	thing		cam_sm2				local
+
+	thing		wat_sm0				local
+	thing		wat_sm1				local
+	thing		wat_sm2				local
+
+#	thing		bos_sm0				local
+#	thing		bos_sm1				local
+#	thing		bos_sm2				local
+
+	# ** misc things **
+	thing		button
+	thing		mouth1				# water mask mouth
+	thing		mouth2				# lava mask mouth
+    thing		t_GhostMeet			# meet cutscene ghost
+	thing		t_GhostDie			# kill boss cutscene
+	thing		fader1				# fade to white
+	thing		targ_PosCam
+	thing		water_Flood
+    thing       explosion_Pos1      # water/lava explosion
+    thing       explosion_Pos2
+    thing       explosion_Pos3
+    thing       explosion_Pos4
+    thing       explosion_Pos5
+    thing       lava_Puddle
+    thing       light_Blue          # blue light pos when water enters
+    thing       but_Orient
+    
+    thing       boss1_Pos           # boss1 position
+    thing		boss1               # local				# cooled boss
+    
+	# ** Cameras **
+	thing		but_Cam1
+	thing		boss_Cam1
+#	thing		mask_cam1
+
+	# ** Camera targets **
+	thing		targ_ButCam
+	thing		targ_BossCam
+	thing		targ_MaskCam
+
+	# ** splash ghost pos **
+	thing		splash0				# NOT USED!
+	thing		splash1             # NOT USED!
+	thing		splash2             # NOT USED!
+
+	# ** cam smoke ghost pos **
+	thing		cam_smoke0
+	thing		cam_smoke1
+	thing		cam_smoke2
+
+	# ** water hits lava smoke ghost pos **
+	thing		wat_smoke0
+	thing		wat_smoke1
+	thing		wat_smoke2
+
+	# ** water hits lava smoke ghost pos **
+	thing		bos_smoke0			# NOT USED!
+	thing		bos_smoke1          # NOT USED!
+	thing		bos_smoke2          # NOT USED!
+
+	sector		sec_Water0
+	sector		sec_Water1
+	sector		sec_Water2
+	#sector		sec_Water3
+
+	surface		surf_WatSurf0
+	surface		surf_WatSurf1
+	surface		surf_WatSurf2
+	surface		surf_WatSurf3
+	surface		surf_WatSurf4
+	surface		surf_WatSurf5
+
+	surface		surf_Ledge0
+	surface		surf_Ledge1
+
+	surface		surf_LavaCool0
+	surface		surf_LavaCool1
+	surface		surf_LavaCool2
+	surface		surf_LavaCool3
+	surface		surf_LavaCool4
+	surface		surf_LavaCool5
+
+	surface		surf_LavaHot0
+	surface		surf_LavaHot1
+	surface		surf_LavaHot2
+
+	surface		surf_LavaTrans0
+	surface		surf_LavaTrans1
+	surface		surf_LavaTrans2
+
+	# ** templates **
+#	template	tpl_Boss=lava_boss						local
+#	template	tpl_Splash=tem_medsplash				local
+	template	tpl_smoke=tem_spr_boss_smoke			local
+	template	tplActor=indy_sh_actor					local
+	template	tpl_Ghost=ghost							local
+    template    tpl_Debris=+lava_exp                    local
+    #template    tpl_Boss1=coollava_boss                 local
+    template    tpl_Boss1=coollava_bfc                  local
+    template    tpl_CoolLava=coolava                    local   # contracting spot
+    template    tpl_PoolLava=poolava                    local   # pool
+
+	# ** boss keyframes **
+	keyframe	lb_Die=lb_die.key						local
+
+	# ** indy thinking keyframes **
+	keyframe	inStand1=0in_stand4.key					local
+	keyframe	inThinking=0in_thinking_4_4.key			local
+	keyframe	inStand2=0in_stand1_bd_4.key			local
+
+	# ** indy kneeling keyframes **
+	keyframe	kneel=0in_stand6.key					local
+	keyframe	kneelDown=0in_stand1_bd_6.key			local
+	keyframe	standUp=0in_stand6_bd_1.key				local
+    
+    # ** misc indy keyframes **
+    keyframe    indy_Startled=0in_startled_1_1.key      local
+
+	# ** materials **
+	material	mat1=tem_lava_floor_cooled.mat			local
+	material	mat2=tem_alava_flow2cooled.mat			local
+	material	mat3=tem_alava_flow2cooled_b.mat		local
+	material	mat4=gen_a_lavab128.mat					local
+    material    mat_Cool=tem_a4_lava_cools.mat          local   # cooling lava
+    material    mat_Pool=tem_a_lava_pool.mat            local   # puddle
+#	material	mat_Splash=riv_a4sprite_rocksplash.mat	local
+
+	# ** sound fx **
+	sound		sfx_LavaCool=tem_lava_water_cool_c.wav	local
+	sound		sfx_Mouth=tem_lava_mouth_c.wav			local
+	sound		sfx_WaterRush=tem_lava_water_rush_c.wav	local
+	sound		burning=gen_torch_burnin_c.wav			local
+	sound		lite=gen_torchlitet_c.wav				local
+
+	# ** indy voice lines **
+	sound		inSay1=Tm04j01.wav						local	# wow what's this guys body temp...
+	sound		in_Read1=Tm05j01.wav					local	# Is this what I think it is...
+	sound		in_Read2=Tm05j02.wav					local	# the unseen is unstoppable.
+	sound		say_Imp1=Tm05j03.wav					local	# ...another cog in the wheel.
+    sound       say_Great=Inxj014.wav                   local   # oh great!
+    sound       say_What=Inxj012.wav                    local   # now what?
+
+	# ** music **
+	sound		mus_Cue=mus_gen_fullaction.wav			local
+	sound		mus_Imp=mus_gen_machinepart.wav			local
+	sound		mus_Flood=mus_olv_snakedead.wav			local
+
+	# ** boss sounds **
+	sound		snd_BossDie=tem_boss_death_c.wav		local
+    sound       snd_BossRoar=fol_lw_wakeup.wav          local
+
+	# ** cogs **
+#	cog			talkCog			local
+	cog			cog_boss
+	cog			cog_Debris
+	cog			cog_Shake
+	cog			cog_Bubbles
+    cog         cog_Hint
+
+	vector		smokeStart		local
+	vector		smokeEnd		local
+	vector		wat_Start		local
+	vector		wat_End			local
+	vector		bos_Start		local
+	vector		bos_End			local
+	vector		minLite			local
+	vector		camFocus		local
+
+	# ** subroutines **
+	flex		getImp2			local
+	flex		readAgain		local
+	flex		killBoss		local
+
+	int			curCam			local
+	int			animTrack		local
+	int			animId			local
+	int			voiceChannel	local
+	int			inTrack			local
+	int			kneeltrack		local
+	int			cool=0			local
+#	int			hot=0			local
+	int			trans=0			local
+	int			playing=0		local
+	int			visit=0			local
+	int			ready=0			local
+	int			torches=0		local
+	int			done=0		    local
+    int         pool_Track      local
+    int         cool_Track      local
+
+	int			numCool=6		local
+#	int			numHot=3		local
+	int			numTrans=3		local
+	int			numTorches=2	local
+
+	int			n_BossCreated=0	local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+    
+	#ThingFadeAnim(boss1, 1, 0, 0.1, 0);
+	#ThingFadeAnim(fader1, 1, 0, 0.1, 0);
+    SetThingAlpha(fader1, 0.0);
+
+	# animate 128 lava texture
+	animTrack = MaterialAnim(mat4, 5.0, 1);
+
+	# vector stuff
+	smokeStart = VectorSet(1.2, 1.2, 0.5);
+	smokeEnd = VectorSet(4.2, 4.2, 0.0);
+
+	wat_Start = VectorSet(1.3, 1.3, 0.5);
+	wat_End = VectorSet(2.5, 2.5, 0.0);
+
+	bos_Start = VectorSet(1.0, 1.0, 0.5);
+	bos_End = VectorSet(2.0, 2.0, 0.0);
+
+	# torch stuff
+	minLite = VectorSet(0.87, 0.55, 0.06);
+
+	# hide torch flames
+	SetThingFlags(flame0, 0x10);
+	SetThingFlags(flame1, 0x10);
+    
+    # add some light to imp stuff
+	SetThingLight(imp_Stand, '0.25 0.25 0.25', 0.001, 0.1);
+	SetThingLight(imp_Part, '0.25 0.25 0.25', 0.001, 0.1);
+    
+    # add some light to mouths
+    SetThingLight(mouth1, '1.0 1.0 1.0', 0.001, 0.1);
+    SetThingLight(mouth2, '0.25 0.15 0.15', 0.001, 0.1);
+    
+	return;
+
+# ========================================================================================
+
+entered:
+
+	sender = GetSenderRef();
+
+	if ((sender == trig_BossCut) && (!n_BossCreated))
+	{
+		# play music cue
+		PlaySoundLocal(mus_Cue, 1.0, 0.0, 0x0, 0);
+
+		# do cutscene stuff
+		MakeMeStop();
+		StartCutscene(2);
+        
+        # attach secondary offset to indy actor
+        AttachThingToThing(offset_indy, indy);
+        
+        # put away any weapon
+        DeselectWeaponWait(player);
+        
+        # create indy actor
+		#indy = CreateThing(tplActor, player);
+		#CaptureThing(indy);
+        
+		# outfit indy actor
+		CopyPlayerHolsters(player, indy);
+
+		# hide player show actor
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indy, 0x80000);
+        
+        # Cut to meet_Cam1
+		SetCameraFocus(2, meet_Cam1);
+		SetCameraSecondaryFocus(2, offset_indy);
+		SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0.0);
+
+		# change secondary focus to indy
+		#SetCameraSecondaryFocus(2, indy);
+
+		# walk actor to target1
+		AISetCutsceneMode(indy);
+        AISetMoveSpeed(indy, 1.0);
+		AISetLookThing(indy, meet_Target1);
+        AISetMoveThing(indy, meet_Target1, 1);
+        
+        #Sleep(0.1);
+        #ResetThing(indy);
+        
+        # turn on look interp
+        SetCameraInterpSpeed(2, 2.0);
+		SetCameraLookInterp(2, 1);
+		Sleep(0.01);
+		SetCameraSecondaryFocus(2, meet_Target2);
+
+		# Send special 'Create' Boss msg to boss AI cog
+		n_BossCreated = 1;
+		t_Boss = SendMessageEx(cog_Boss, USER0, t_GhostMeet, 0, 0, 0);
+
+        Sleep(1.0);
+        
+        AISetMoveSpeed(indy, 1.0);
+        AISetMoveThing(indy, backOff_Targ, 1);
+
+		# indy jumps back
+        #PlayVoice(indy, say_What, 1.0, 0);
+        #PlayForceMoveMode(indy, 5);
+        Sleep(1.0);
+        
+        #MoveToFrame(meet_Cam1, 1, 2.0);
+        
+        # say voice line
+		voiceChannel = PlayVoice(indy, inSay1, 1.0, 0);
+
+		inTrack = PlayKey(indy, inStand1, 2, 0x0, 0);
+		PlayKey(indy, inStand2, 4, 0x12, 1);
+		PlayKey(indy, inThinking, 4, 0x12, 1);
+		StopKey(indy, inTrack, 0.5);
+		WaitForSound(voiceChannel);
+
+		# Get the player into position
+		CopyOrientAndPos(indy, player);
+        
+        # rest before returning control
+        Sleep(0.25);
+        
+        # hide actor show player
+		SetThingFlags(indy, 0x80000);
+		ClearThingFlags(player, 0x80000);
+
+		# turn off look interp
+		SetCameraLookInterp(2, 0);
+		Sleep(0.01);
+
+		# Reset the camera
+		Sleep(0.5);
+		SetCurrentCamera(1);
+
+		# Return control to player
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+        
+        # initialize boss for play
+        SendMessage(cog_Boss, user2);
+	}
+
+#	if((sender == srf_trgr01) && (ready == 1))
+#	{
+		# turn off falling debris
+		#SendMessage(cog_Debris, user1);
+
+		# turn off camera shake
+		#SendMessage(cog_Shake, user1);
+#	}
+
+return;
+
+# ===================================================================
+
+activated:
+
+# ******************    
+# ** pick up IMP2 **
+# ******************
+
+	sender = GetSenderRef();
+
+	# activate imp part
+    if((sender == imp_Stand) || (sender == imp_Part))
+	{
+		if (visit < 1)
+		{
+            visit = 1;
+            Call getImp2;
+        }
+
+		else if ((visit > 0) && (playing == 0))
+		{
+			playing = 1;
+            Call readAgain;
+        }
+	}
+
+# ****************
+# ** boss flood **
+# ****************
+
+	# activate flood button
+    else if((sender == button) && (done == 0))
+	{
+        done = 1;
+        curCam = GetCurrentCamera();
+
+        Call killBoss;
+    }
+
+return;
+
+# ========================================================================================
+
+getImp2:
+
+	# solve hint40
+    SendMessage(cog_Hint, user0);
+    
+    # do cutscene stuff
+	MakeMeStop();
+	StartCutscene(2);
+    
+    # orient the player to the imp stand
+    CopyOrientAndPos(imp_Orient, player);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+
+	# offset the camera
+	SetExtCamOffsetToThing(imp_Cam1);
+	SetExtCamLookOffsetToThing(imp_CamLook1);
+
+	# create indy actor
+	indy = CreateThing(tplActor, player);
+	CaptureThing(indy);
+
+	# outfit indy actor
+	CopyPlayerHolsters(player, indy);
+
+	# hide player show actor
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indy, 0x80000);
+
+	# kneel down
+	PlayKey(indy, kneelDown, 2, 0x12, 1);
+	kneeltrack = PlayKey(indy, kneel, 2, 0x14, 0);
+
+	# say first visit line
+	PlayVoice(indy, in_Read1, 1.0, 1);
+
+	# stand up
+	StopKey(indy, kneeltrack, 0.0);
+	PlayKey(indy, standUp, 2, 0x12, 1);
+
+	# make indy look at imp_Part
+    AISetLookThing(indy, imp_Part);
+    
+    Sleep(0.5);
+
+	# reach for imp_Part
+	PlayMode(indy, 60, 0);
+	Sleep(0.3);
+
+	# play Imp part music cue
+	PlaySoundLocal(mus_Imp, 1.0, 0.0, 0x0, 0);
+
+	# pick up the imp_Part
+	PlayMode(player, 60, 0);
+	Sleep(0.3);
+	DestroyThing(imp_Part);
+
+	# Call the Pickup Lines cog
+	#talkCog = GetCogByIndex(0);
+	#SendMessage(talkCog, 27);
+
+	# sleep to wait for talkCog
+	#Sleep(1.3);
+
+	# add tiki2 to inventory
+	SetInvAvailable(player, 15, 1);
+	ChangeInv(player, 15, 1.0);
+	JonesInvItemChanged(15);
+
+	# Johnny, tell the player what he's picked up
+	PlayVoice(indy, say_Imp1, 1.0, 1);
+
+	# light statue flames
+	for (torches=0; torches<numTorches; torches=torches+1)
+	{
+		ClearThingFlags(flame0[torches], 0x10);
+		PlaySoundThing(lite, flame0[torches], 1.0, 5, 15, 0x0);
+		SetThingLight(flame0[torches], minlite, 0.5, 0.1);
+		PlaySoundThing(burning, flame0[torches], 1.0, 10, 25, 0x0001);
+        Sleep(0.1); # so torch sfx wont play over each other
+	}
+
+	# switch to imp_Cam2
+	SetCameraFocus(2, imp_Cam2);
+	SetCameraSecondaryFocus(2, imp_CamLook2);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0);
+
+	# turn on falling debris
+	SendMessage(cog_Debris, user0);
+
+	# shake the place
+	SendMessage(cog_Shake, user0);
+    
+    Sleep(1.0);
+
+	# bring in boss behind alter (USER3 == teleport msg)
+	SendMessageEx(cog_Boss, USER3, t_GhostImp, 0, 0, 0);
+	AISetLookThing(t_Boss, indy);
+
+	# Put boss into 'angry mode'
+    SendMessage(GetThingClassCog(t_boss), USER0);
+
+    Sleep(0.5);
+    
+    # play startled animation
+    PlayKey(indy, indy_Startled, 4, 0x12, 0);
+    
+	# say "oh great!"
+    PlayVoice(indy, say_Great, 1.0, 1);
+    
+    # stop unfinished animations
+    ResetThing(player);
+    
+    Sleep(1.0);
+    
+	# Get the player into position
+	CopyOrientAndPos(indy, player);
+    
+    # hide actor show player
+	SetThingFlags(indy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+
+	# restore camera to player
+	SetCameraPosition(1, GetThingPos(imp_Cam1));
+	Sleep(0.01);
+	SetCurrentCamera(1);
+	RestoreExtCam();
+
+	# restore controls
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+    
+    Sleep(2.0);
+    
+	# turn off falling debris
+	SendMessage(cog_Debris, user1);
+
+	# turn off camera shake
+	SendMessage(cog_Shake, user1);
+
+	ready = 1;
+
+	return;
+
+# ========================================================================================
+
+readAgain:
+
+	# do cutscene stuff
+	MakeMeStop();
+	StartCutscene(2);
+
+	# orient the player to the imp stand
+    CopyOrientAndPos(imp_Orient, player);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # offset the camera
+	SetExtCamOffsetToThing(imp_Cam1);
+    SetExtCamLookOffsetToThing(imp_CamLook1);
+
+	# create indy actor
+	indy = CreateThing(tplActor, player);
+	CaptureThing(indy);
+
+	# outfit indy actor
+	CopyPlayerHolsters(player, indy);
+
+	# hide player show actor
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indy, 0x80000);
+
+	# kneel down
+	PlayKey(indy, kneelDown, 2, 0x12, 1);
+	kneeltrack = PlayKey(indy, kneel, 2, 0x14, 0);
+    
+	# say second visit line
+	PlayVoice(indy, in_Read2, 1.0, 1);
+    
+    # stand up
+	StopKey(indy, kneeltrack, 0.0);
+	PlayKey(indy, standUp, 2, 0x12, 1);
+    
+    # Get the player into position
+	CopyOrientAndPos(indy, player);
+    
+    # hide actor show player
+	SetThingFlags(indy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+
+	RestoreExtCam();
+
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+
+	playing = 0;
+
+	return;
+
+# ========================================================================================
+
+killBoss:
+
+	# solve hint44
+    SendMessage(cog_Hint, user0);
+    
+    # do cutscene stuff
+	MakeMeStop();
+	StartCutscene(2);
+
+	# turn off lava bubbles
+	SendMessage(cog_Bubbles, user0);
+
+	# switch to button cam
+	SetCameraFocus(2, but_cam1);
+	SetCameraSecondaryFocus(2, targ_butCam);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0);
+    
+    # orient player to button
+    #CopyOrientAndPos(but_Orient, player);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+
+	# activate button
+	PlayMode(player, 60, 0);
+	Sleep(0.3);
+
+	# push button
+	MoveToFrame(button, 1, 1.0);
+	WaitForStop(button);
+
+	# open the water mouth
+	MoveToFrame(mouth1, 1, 1.0);
+	PlaySoundThing(sfx_Mouth, mouth1, 1.0, 15.0, 25.0, 0);
+
+	#Sleep(0.5);
+	#sp0 = CreateThing(tpl_splash, splash0);
+	#CaptureThing(sp0);
+	#sp1 = CreateThing(tpl_splash, splash1);
+	#CaptureThing(sp1);
+	#sp2 = CreateThing(tpl_splash, splash2);
+	#CaptureThing(sp2);
+
+	#MaterialAnim(mat_Splash, 8.0, 1);
+
+	Sleep(1.0);
+
+	# play rushing water sfx
+	PlaySoundThing(sfx_WaterRush, mouth1, 1.0, 15.0, 25.0, 0);
+
+	# destroy splash sprites
+	#DestroyThing(sp0);
+	#DestroyThing(sp1);
+	#DestroyThing(sp2);
+
+	WaitForStop(mouth1);
+
+	Sleep(0.5);
+
+# ***************************
+# *** switch to mask2 cam ***
+# ***************************
+
+	SetCameraFocus(2, boss_cam1);
+	SetCameraSecondaryFocus(2, targ_MaskCam);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0);
+
+	# set fog to red
+	SetFog(1, '0.5, 0.05 0.05', 15, 180);
+
+# *******************************
+# *** switch water OFF camera ***
+# *******************************
+
+	# turn off water sectors
+	ClearSectorFlags(sec_Water0, 0x2);
+	ClearSectorFlags(sec_Water1, 0x2);
+	ClearSectorFlags(sec_Water2, 0x2);
+    
+	# clear water atributes from water sectors 
+	ClearSectorSurfFlags(sec_Water0, 0x20000);
+	ClearSectorSurfFlags(sec_Water1, 0x20000);
+	ClearSectorSurfFlags(sec_Water2, 0x20000);
+    
+	# alter the light of the water sectors
+	SetSectorLight(sec_Water0, '0.5 0.5 0.8', 0.1);
+	SetSectorLight(sec_Water1, '0.5 0.5 0.8', 0.1);
+	SetSectorLight(sec_Water2, '0.5 0.5 0.8', 0.1);
+    
+	# turn off water surfaces
+	SetFaceGeoMode(surf_WatSurf0, 0);       # no draw
+	SetFaceGeoMode(surf_WatSurf1, 0);
+	SetFaceGeoMode(surf_WatSurf2, 0);
+	SetFaceGeoMode(surf_WatSurf3, 0);
+	SetFaceGeoMode(surf_WatSurf4, 0);
+	SetFaceGeoMode(surf_WatSurf5, 0);
+
+	# alter ledge atributes
+	SetSurfaceFlags(surf_Ledge0, 0x1000000);    # mark as hangable
+	SetSurfaceFlags(surf_Ledge1, 0x1000000);
+
+# ******************************
+# *** water enters boss room ***
+# ******************************
+
+	SetThingLight(light_Blue, '0.15 0.15 1.0', 0.5, 1.0);
+    
+    # open mouth2 to let water in
+	MoveToFrame(mouth2, 1, 1.0);
+	PlaySoundThing(sfx_Mouth, mouth2, 1.0, 15.0, 25.0, 0);
+
+	SetThingLight(water_Flood, '0.5 0.5 1.0', 0.001, 0.1); # 10.0 dist
+    
+    Sleep(0.25);
+    # bring in the water_Flood
+    MoveToFrame(water_Flood, 1, 8.0);
+
+	Sleep(0.5);
+
+	# play water sound
+	PlaySoundLocal(sfx_LavaCool, 1.0, 0.0, 0x0, 0);
+
+	# create explosions of water hitting lava
+    CreateThing(tpl_Debris, explosion_Pos1);
+    CreateThing(tpl_Debris, explosion_Pos2);
+    
+    Sleep(0.5);
+    
+    CreateThing(tpl_Debris, explosion_Pos1);
+    CreateThing(tpl_Debris, explosion_Pos2);
+    
+    # create water smoke
+	wat_sm0 = CreateThing(tpl_smoke, wat_smoke0);
+	CaptureThing(wat_sm0);
+	wat_sm1 = CreateThing(tpl_smoke, wat_smoke1);
+	CaptureThing(wat_sm1);
+	wat_sm2 = CreateThing(tpl_smoke, wat_smoke2);
+	CaptureThing(wat_sm2);
+
+	# animate water smoke
+	AnimateSpriteSize(wat_sm0, wat_Start, wat_End, 1.5);
+	AnimateSpriteSize(wat_sm1, wat_Start, wat_End, 1.5);
+	AnimateSpriteSize(wat_sm2, wat_Start, wat_End, 1.5);
+
+	#WaitForStop(mouth2);
+	#Sleep(0.5);
+    
+# ***********************************
+# *** block out camera with smoke ***
+# ***********************************
+
+	# create camera smoke
+	cam_sm0 = CreateThing(tpl_smoke, cam_smoke0);
+	CaptureThing(cam_sm0);
+	cam_sm1 = CreateThing(tpl_smoke, cam_smoke1);
+	CaptureThing(cam_sm1);
+	cam_sm2 = CreateThing(tpl_smoke, cam_smoke2);
+	CaptureThing(cam_sm2);
+
+    # fade to white
+	ThingFadeAnim(fader1, 0, 1, 1.0, 0);
+
+	AnimateSpriteSize(cam_sm1, smokeStart, smokeEnd, 3.0);
+
+	Sleep(1.0);
+
+# ********************
+# *** change lava ****
+# ********************
+
+	for (cool=0; cool<numCool; cool=cool+1)
+	{
+		SetSurfaceMat(surf_LavaCool0[cool], mat1);
+		ClearSurfaceFlags(surf_LavaCool0[cool], 0x200000);      # clear lava flag
+        #SetFaceLightMode(surf_LavaCool0[cool], 3);              # gouraud lighting
+	}
+
+	# swap HOT transition textures
+	SetSurfaceMat(surf_LavaHot0, mat3);
+	SetSurfaceMat(surf_LavaHot1, mat2);
+	SetSurfaceMat(surf_LavaHot2, mat2);
+
+	# clear lava flag from COOL transition texture
+	for (trans=0; trans<numtrans; trans=trans+1)
+	{
+		ClearSurfaceFlags(surf_Lavatrans0[trans], 0x200000);    # clear lava flag
+        #SetFaceLightMode(surf_Lavatrans0[trans], 3);    # gouraud lighting
+	}
+
+	# swap COOL transition textures
+	SetSurfaceMat(surf_Lavatrans0, mat3);
+	SetSurfaceMat(surf_Lavatrans1, mat2);
+	SetSurfaceMat(surf_Lavatrans2, mat2);
+
+	# reset all animating textures to frame0
+	StopAnim(animTrack);
+	SetMaterialCel(mat2, 0);
+	SetMaterialCel(mat3, 0);
+	SetMaterialCel(mat4, 0);
+
+	# animate lava transition texture
+	MaterialAnim(mat2, 5.0, 1);
+	MaterialAnim(mat3, 5.0, 1);
+	MaterialAnim(mat4, 5.0, 1);
+
+# **************************
+# *** look towards boss ****
+# **************************
+
+	# Destroy water smoke sprites
+	DestroyThing(wat_sm0);
+	DestroyThing(wat_sm1);
+	DestroyThing(wat_sm2);
+
+	# fade back in to show cooled lava
+	ThingFadeAnim(fader1, 1, 0, 0.5, 0);
+
+	# add more smoke around camera
+	AnimateSpriteSize(cam_sm2, smokeStart, smokeEnd, 4.0);
+    
+    # show lava pool
+    pud = CreateThing(tpl_PoolLava, lava_Puddle);
+    CaptureThing(pud);
+    pool_Track = MaterialAnim(mat_Pool, 8.0, 1);
+
+	# rest for a bit if necessary
+	Sleep(0.5);
+
+	# look at the boss guy
+	SetCameraLookInterp(2, 1);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, targ_BossCam);
+
+	# add more smoke around camera
+	AnimateSpriteSize(cam_sm0, smokeStart, smokeEnd, 4.0);
+
+	# create smoke around boss
+	#bos_sm0 = CreateThing(tpl_smoke, bos_smoke0);
+	#CaptureThing(bos_sm0);
+	#bos_sm1 = CreateThing(tpl_smoke, bos_smoke1);
+	#CaptureThing(bos_sm1);
+	#bos_sm2 = CreateThing(tpl_smoke, bos_smoke2);
+	#CaptureThing(bos_sm2);
+
+	# animate boss smoke
+	#AnimateSpriteSize(bos_sm0, bos_Start, bos_End, 2.0);
+	#AnimateSpriteSize(bos_sm1, bos_Start, bos_End, 2.0);
+	#AnimateSpriteSize(bos_sm2, bos_Start, bos_End, 2.0);
+
+	# rest for a bit before zoom in
+	Sleep(3.0);
+
+	# zoom camera in towards boss
+	animId = MoveThingToPos(boss_cam1, GetThingPos(targ_PosCam), 12.0);
+
+# ********************
+# *** kill boss ******
+# ********************
+
+    # create cooled boss
+    boss1 = CreateThing(tpl_Boss1, boss1_Pos);
+    CaptureThing(boss1);
+    SetThingAlpha(boss1, 0);
+    
+    # remove boss1 collision
+    SetCollideType(boss1, 0);
+    
+    # prepare boss for cutscene
+	AISetCutsceneMode(t_Boss);
+
+	# Set AF_IMMOBILE (used to flag 'dont make sparks')
+	SetActorFlags(t_Boss, 0x40000);
+
+    # move him into position (USER3 = teleport message)
+	SendMessageEx(cog_Boss, USER3, t_GhostDie, 0, 0, 0);
+	AISetLookThing(t_Boss, boss_Cam1);
+    
+    PlaySoundThing(snd_BossRoar, boss1, 1.0, 25.0, 50.0, 0);
+    
+	Sleep(2.0);
+    
+    # make the boss scream!
+	PlaySoundThing(snd_BossDie, boss1, 1.0, 25.0, 50.0, 0);
+    
+    CreateThing(tpl_Debris, explosion_Pos3);
+    CreateThing(tpl_Debris, explosion_Pos4);
+    CreateThing(tpl_Debris, explosion_Pos5);
+    
+    # play die keys
+	PlayKey(t_Boss, lb_Die, 4, 0x14, 0);
+	PlayKey(boss1, lb_Die, 4, 0x14, 0);
+
+    Sleep(2.0);
+    
+    # make the boss scream!
+	PlaySoundThing(snd_BossDie, boss1, 1.0, 25.0, 50.0, 0);
+    
+    CreateThing(tpl_Debris, explosion_Pos3);
+    CreateThing(tpl_Debris, explosion_Pos4);
+    CreateThing(tpl_Debris, explosion_Pos5);
+    
+    Sleep(1.0);
+    
+	# make the boss scream again!
+	PlaySoundThing(snd_BossDie, boss1, 1.0, 25.0, 50.0, 0);
+    
+    # play flood music cue
+	PlaySoundLocal(mus_Flood, 1.0, 0.0, 0x0, 0);
+
+	# fade in cooled boss
+    ThingFadeAnim(boss1, 0, 1, 3.0, 0);
+	
+    # show lava pool
+    DestroyThing(pud);
+    cool = CreateThing(tpl_CoolLava, lava_Puddle);
+    CaptureThing(cool);
+    cool_Track = MaterialAnim(mat_Cool, 8.0, 0);
+    
+    Sleep(1.0);
+	
+    # fade out lava boss
+    ThingFadeAnim(t_Boss, 1, 0, 3.0, 0);
+    
+    #tim
+    #Sleep(1.0);
+    
+    # destroy cool lava puddle
+    DestroyThing(cool);
+    
+    # rest before returing to but_cam1
+    WaitForAnimStop(animId);
+    Sleep(1.0); # was 2.0
+
+    # destroy t_Boss
+	DestroyThing(t_Boss);
+    
+    # force cooled boss to fully opaque
+    SetThingAlpha(boss1, 1.0);
+
+	# turn off look interp
+	SetCameraLookInterp(2, 0);
+	Sleep(0.01);
+	
+    # switch back to button cam
+    SetCameraFocus(2, but_cam1);
+	SetCameraSecondaryFocus(2, targ_butCam);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0);
+
+	# set fog to blue
+	SetFog(1, '0.5 0.5 0.6', 10, 350);
+    
+    # restore boss1 collision
+    SetCollideType(boss1, 3);
+
+	# close both mouths
+	MoveToFrame(mouth1, 0, 1.0);
+	PlaySoundThing(sfx_Mouth, mouth1, 1.0, 15.0, 25.0, 0);
+	MoveToFrame(mouth2, 0, 1.0);
+	WaitForStop(mouth1);
+
+	# destroy water_Flood
+	DestroyThing(water_Flood);
+    SetThingLight(light_Blue, '0.0 0.0 0.0', 0.001, 1.0);
+
+	Sleep(1.0);
+
+	SetCameraPosition(curCam, GetThingPos(but_Cam1));
+	Sleep(0.01);
+	SetCurrentCamera(curCam);
+
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+
+	return;
+
+# ========================================================================================
+
+end
+

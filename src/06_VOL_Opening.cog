@@ -1,0 +1,160 @@
+# Jones 3D Cog Script
+#
+# VOL_Opening.cog
+#
+#	[cmg]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message     startup
+	message     user0
+    
+    # Actors
+    thing		player					local
+    thing		indyActor				
+    thing		fadeplate				
+    
+
+    # Actor look targets
+    thing	face
+	
+
+	# Camera objects
+    thing	sightCam1
+    thing	restoreCam
+	
+	# Camera targets
+	thing	faceMoveTarg	
+	
+	
+	# sounds
+    sound       in_wonder=vl01j01.wav			local	#kinda warm in here...
+    sound       mus_intro=mus_vol_intro.wav		local	#opening theme
+	
+	# keyframes
+    keyframe	in_hat=0in_figithat_4_4.key		local
+	keyframe	in_brush=0in_stand1_bd_4.key	local
+	keyframe	in_stand4=0in_stand4.key		local
+	
+	int			rotref							local
+	int         track							local
+	int         snd								local
+
+	int			bSeen=0							local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+    # fadeplate is solid
+	SetThingAlpha(fadeplate, 1.0);
+
+	# Start on black...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, sightCam1);
+	SetCameraSecondaryFocus(2, faceMoveTarg);
+	SetCurrentCamera(2);
+	SetCameraFOV(45, 0, 0);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+	player = GetLocalPlayerThing();
+
+    SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	# Get the camera out in the room targeting the face
+	SetCameraFocus(2, sightCam1);
+	SetCameraSecondaryFocus(2, faceMoveTarg);
+	SetCurrentCamera(2);
+	SetCameraFOV(45, 0, 0);
+
+	SetActorFlags(player, 0x200000);
+	StartCutScene(1);
+
+    # SET UP THE ACTOR WITH CORRECT WEAPONS
+	CopyPlayerHolsters(player, indyActor);
+	TeleportThing(indyActor, player);
+    AISetCutSceneMode(indyActor);
+    AISetLookThing(indyActor, face);
+    rotref=(GetThingMaxRotVel(indyActor));
+	SetThingMaxRotVel(indyActor, 150);
+	SetThingFlags(player, 0x80000);
+    ClearThingFlags(indyActor, 0x80000);
+
+	# wait for camera to get set up
+	Sleep(0.01);
+	
+	# fade in and play theme
+    ThingFadeAnim(fadeplate, 1.0, 0.0, 1.0, 0);
+    PlaySoundLocal(mus_intro, 0.75, 0.0, 0x0, 0);
+    
+	# move camera back from face
+	MoveToFrame(sightCam1, 1, 1.0);
+	SetCameraFOV(90, 1, 4.0);
+    
+	# move camera focus object to indy's position
+    MoveToFrame(faceMoveTarg, 1, 2.9); # was 3.0
+	Sleep(1.0);
+	DestroyThing(fadeplate);   
+	WaitForStop(sightCam1);
+
+    # play indy's anims and voice line
+	track = PlayKey(indyActor, in_Stand4, 2, 0x0, 0);
+	PlayKey(indyActor, in_brush, 4, 0x12, 1);
+	Sleep(0.25);
+    snd = PlayVoice(indyActor, in_wonder, 1.0, 0);
+	PlayKey(indyActor, in_hat, 4, 0x12, 0); 
+    WaitForSound(snd);
+	Sleep(0.5);
+
+	# put the player at actors' position, clear actor, show player
+	TeleportThing(player, indyActor);
+    AIClearCutSceneMode(indyActor);
+	ClearThingFlags(player, 0x80000);
+    SetThingFlags(indyActor, 0x80000);
+	
+    # Restore the cam, end the scene
+	ResetCameraFOV(0, 0.0);
+    SetCameraPosition(1, GetThingPos(restoreCam));
+    SetCurrentCamera(1);
+    EndCutScene();
+	ClearActorFlags(player, 0x200000);
+
+for (bin= 0; bin < 200; bin = bin + 1) 
+{
+   SetInv(player, bin, GetInvMax(player, bin));                     
+   SetInvAvailable(player, bin, 1);
+}
+SetCollideType(player, 0);
+
+SetGravity(1.0);
+ClearPhysicsFlags(player,0x1);
+SetPhysicsFlags(player, 0x2000);
+
+
+    
+return;
+
+# ========================================================================================
+end
+

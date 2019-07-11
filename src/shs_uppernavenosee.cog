@@ -1,0 +1,93 @@
+# Jones 3D Cog Script
+#
+# SHS_UpperNaveNoSee.cog   Isolate Upper Nave sectors for framerate.
+# 
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+
+symbols
+	
+    message	startup
+    message crossed
+    
+   	surface FromBigNaveOn	    linkid=1	    
+    surface ToBigNaveOff	    linkid=2
+    surface	Window3		 		# makes it look dark from outside
+	surface	Window4				# these are the windows that can shot
+	surface	Window5
+
+
+    sector  WindowSec0
+	sector  WindowSec1
+	sector  WindowSec2
+	sector  WindowSec3
+	sector  WindowSec4
+	sector  WindowSec5
+        
+    int 	player		local
+
+    
+end
+
+code
+
+startup:
+	
+	player=GetLocalPlayerThing();
+	SetSectorAdjoins(WindowSec0, 0);
+    SetSectorAdjoins(WindowSec1, 0);
+    SetSectorAdjoins(WindowSec2, 0);
+	SetSectorAdjoins(WindowSec3, 0);
+	SetSectorAdjoins(WindowSec4, 0);
+    SetSectorAdjoins(WindowSec5, 0);
+	return;
+
+crossed:
+	
+
+	# make sure Indy player is sending message
+	If (GetSourceRef() != player) return;
+
+	# draw sector
+	If (GetSenderId() == 1 )
+    {
+        Print("draw sector");
+        SetSectorAdjoins(WindowSec0, 1);
+        SetSectorAdjoins(WindowSec1, 1);
+        SetSectorAdjoins(WindowSec2, 1);
+        SetSectorAdjoins(WindowSec3, 1);
+		SetSectorAdjoins(WindowSec4, 1);
+        SetSectorAdjoins(WindowSec5, 1);
+    	# Make face clear
+		SetFaceGeoMode(Window3, 0);
+		SetFaceGeoMode(Window4, 0);
+	    SetFaceGeoMode(Window5, 0);
+	}    
+    
+	# don't draw sector 
+	If ((GetSenderId() == 2))
+    {
+        Print("draw off");
+		SetSectorAdjoins(WindowSec0, 0);
+        SetSectorAdjoins(WindowSec1, 0);
+        SetSectorAdjoins(WindowSec2, 0);
+        SetSectorAdjoins(WindowSec3, 0);
+		SetSectorAdjoins(WindowSec4, 0);
+        SetSectorAdjoins(WindowSec5, 0);
+	    # Make window dark from outside
+		SetFaceGeoMode(Window3,	4);
+		SetFaceGeoMode(Window4, 4);
+	    SetFaceGeoMode(Window5, 4);
+	
+	}
+    return;
+	
+
+
+end
+
+	
+
+

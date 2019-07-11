@@ -1,0 +1,107 @@
+# Jones 3D Cog Script
+#
+# TEM_HutConTorch.cog
+#
+# [SXC] [RKD] [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    message     activated
+    message     startup
+    
+    thing       torch            	//the thing you light
+    thing       flame	nolink		//flame, hidden at startup
+    thing		player	local
+    
+    sector      sec_NoBurn
+    sector      sec_Burn
+    
+    sound       burning=gen_torch_burnin_c.wav  local
+    sound       lite=gen_torchlitet_c.wav       local
+    
+    vector      minlite		local
+    vector      maxlite		local
+    
+    int         lit=0       local
+    int         burn_Chnl   local
+    int         burn_On=0   local
+    
+    # ** subroutine **
+    flex		lightIt		local
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+	minlite = VectorSet(0.87, 0.55, 0.06);
+	maxlite = VectorSet(0.89, 0.64, 0.30);	
+	SetThingFlags(flame, 0x10);
+	SetThingLight(torch, '0.0 0.0 0.0', 0.3, 0.1);
+
+	return;
+
+# ========================================================================================
+
+entered:
+
+    # turn OFF burn sfx and light
+    if((GetSenderRef() == sec_NoBurn) && (lit == 1) && (burn_On == 1))
+    {
+        burn_On = 0;
+        StopSound(burn_Chnl, 0.5);
+        SetThingLight(torch, '0.0 0.0 0.0', 0.3, 0.5);
+    }
+    
+    # turn ON burn sfx and light
+    if((GetSenderRef() == sec_Burn) && (lit == 1) && (burn_On == 0))
+    {
+        burn_On = 1;
+        burn_Chnl = PlaySoundThing(burning, torch, 1.0, 10, 25, 0x0001);
+        SetThingLight(torch, minlite, 0.3, 0.5);
+    }
+
+    return;
+
+# ========================================================================================
+
+activated:
+
+	if (lit == 1) return;
+    
+	# light high
+    PlayMode(player, 61, 0);
+	Sleep(0.3);
+    
+    call lightIt;
+    
+    return;
+
+# ========================================================================================
+
+lightIt:
+
+	lit = 1;
+    burn_On = 1;
+    
+    ClearThingFlags(flame, 0x10);
+	SetThingLight(torch, minlite, 0.3, 0.5);
+		
+	#Sleep(0.5);
+
+    PlaySoundThing(lite, torch, 1, 10, 25, 0);
+    burn_Chnl = PlaySoundThing(burning, torch, 1, 10, 20, 1);
+    
+	return;
+
+# ========================================================================================
+
+end
+

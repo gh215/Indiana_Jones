@@ -1,0 +1,74 @@
+# Jones 3D Cog Script
+#
+# mp_WindSector.cog
+#
+#
+# "Master" cog, written for slave mp_ThrustSlave.cog. This cog moves 
+# a thing (or multiple things) to frame when a thing (button) is activated,
+# and sends messages to associated cogs.  slaveA gets turned on at startup, 
+# and turned off at arrived, while slaves B and C just get turned on at arrived.
+#
+# 
+# (PAZ)
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+        message         startup
+        message         activated
+        message         arrived
+               
+        thing           button
+        thing           floor
+        thing           thing_X
+        thing           thing_Y
+        
+        cog             slaveA
+        cog             slaveB
+        cog             slaveC
+
+        float           speed=3.0
+                      
+end
+
+#========================================================================
+
+code
+
+startup:
+        SendMessage(slaveA, user0);
+        
+return;
+
+#........................................................................
+
+
+activated:
+        if (GetSenderRef() == button)             
+        
+                {
+                MoveToFrame(floor, 1, speed);     
+                MoveToFrame(thing_X, 1, speed);
+                MoveToFrame(thing_Y, 1, speed);               
+                }
+                
+        return;
+        
+#........................................................................
+
+arrived:                                           
+        SendMessage(slaveA, user1);               
+        SendMessage(slaveB, user0);             
+        SendMessage(slaveC, user0);
+        
+return;
+        
+end
+                        
+                      
+        
+
+
+
+

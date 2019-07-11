@@ -1,0 +1,84 @@
+# Jones 3D Cog Script
+#
+# gen_Door.cog
+#
+# Generic Door Script
+#
+# [IS]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup		
+	message	activate	
+	message	arrived		
+	message	timer		
+	message	blocked		
+
+	thing		door0					linkid=0 mask=0x405
+
+	float		moveSpeed=8.0
+	float		sleepTime=2.0
+
+	float		lightValueR=0.5
+	float		lightValueG=0.5
+	float		lightValueB=0.5
+
+	vector	vecLightValue		local
+
+	sector	doorSector			local
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	doorSector = GetThingSector(door0);
+	SetSectorAdjoins(doorSector, 0);
+
+	vecLightValue = VectorSet(lightValueR, lightValueG, lightValueB);
+	SetSectorLight(doorSector, vecLightValue, 0.0);		// add some light to door sector
+	return;
+
+# ........................................................................................
+
+activate:
+	if (IsThingMoving(door0)) return;
+	if (GetCurFrame(door0) == 0)
+	{
+		SetSectorAdjoins(doorSector, 1);
+		MoveToFrame(door0, 1, moveSpeed);
+	}
+	return;
+
+# ........................................................................................
+
+arrived:
+	if (GetCurFrame(door0) == 1)
+	{
+		SetTimer(sleepTime);
+	}
+	else
+	{
+		SetSectorAdjoins(doorSector, 0);
+	}
+	return;
+
+# ........................................................................................
+
+blocked:
+	MoveToFrame(door0, 1, moveSpeed);
+	return;
+
+# ........................................................................................
+
+timer:
+	MoveToFrame(door0, 1, moveSpeed);
+	return;
+
+# ........................................................................................
+
+end
+

@@ -1,0 +1,30 @@
+# Jones 3D Cog Script
+#
+# SOL_CrateNoPush.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    
+    thing       crate
+        
+end
+
+# ========================================================================================
+code
+
+startup:
+
+    ClearThingFlags(crate, 0x40000000);
+
+    return;
+      
+# ========================================================================================
+
+end
+

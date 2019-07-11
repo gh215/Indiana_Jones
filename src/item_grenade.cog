@@ -1,0 +1,101 @@
+# Jones 3D Cog Script
+#
+# item_Grenade.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	activated
+message	touched
+message	taken
+
+sound	foundOne=INXJ163.wav	local
+sound	foundPack=INXJ166.wav	local
+
+thing	player					local
+
+int		bin=11					local
+
+int		bUnderwater				local
+
+end
+
+# ===================================================================
+
+code
+
+activated:
+
+    player = GetSourceRef();
+
+	StartCutscene(0);
+
+	if (Rand() < 0.5)
+	{
+		SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+		SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 -0.01');
+
+	return;
+
+# -------------------------------------------------------------------
+
+touched:
+
+	player = GetSourceRef();
+
+	if (GetInv(player, bin) < GetInvMax(player, bin))
+	{
+		TakeItem(GetSenderRef(), player);
+	}
+    else
+	{
+		EndCutscene();
+	}
+	
+	return;
+
+# -------------------------------------------------------------------
+
+taken:
+
+	player = GetSourceRef();
+	bUnderwater = BitTest(GetThingFlags(player), 0x02000000);
+	
+	if (IsThingModelName(GetSenderRef(), "weap_grenade_pack.3do"))
+	{
+		JonesInvItemChanged(120);
+        ChangeInv(player, bin, 3);
+		SetInvAvailable(player, bin, 1);
+
+        Sleep(1.0);
+
+        if (!bUnderwater)
+			PlayVoice(player, foundPack, 1.0, 0);
+	}
+	else
+	{
+		JonesInvItemChanged(bin);
+		ChangeInv(player, bin, 1);
+		SetInvAvailable(player, bin, 1);
+	
+		Sleep(1.0);
+
+        if (!bUnderwater)
+			PlayVoice(player, foundOne, 1.0, 0);
+	}
+
+	EndCutscene();
+
+	return;
+
+end

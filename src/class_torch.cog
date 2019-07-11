@@ -1,0 +1,35 @@
+# Jones 3D Cog Script
+#
+# class_Torch.cog
+#
+# Continuous global animation of gen_torchflame4_01.mat material
+#
+# [SXC]
+#
+# RT - Changed to animate on sight
+# RKD - Changed to animate on startup
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+message		startup
+
+material	flame=gen_torchflame4_01.mat	local	desc=animating_material
+
+flex		fps=8.0							local	desc=playback_speed
+
+end
+
+# ........................................................................................
+
+code
+
+startup:
+
+	MaterialAnim(flame, fps, 0x1);
+	return;
+
+end
+

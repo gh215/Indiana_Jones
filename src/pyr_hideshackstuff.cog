@@ -1,0 +1,167 @@
+# Jones 3D Cog Script
+#
+# pyr_hideshackstuff.cog
+#	
+# Hide stuff in shack (or shack itself) when Indy isn't around to see it
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	entered
+message	exited
+message	killed
+
+# things to hide only at startup
+thing	chain		nolink
+thing	bucket		nolink
+thing	shacknohole	nolink
+
+# things to hide from a few faraway sectors
+thing	shack		nolink
+thing	shackwindow	nolink
+thing	sign		nolink
+
+# things to hide anytime
+thing	box5		nolink
+thing	box6		nolink
+thing	box7		nolink
+thing	box8		nolink
+thing	box9		nolink
+
+# things to hide that may get destroyed
+thing	dynamite1
+thing	dynamite2	nolink
+thing	dynamite3	nolink
+thing	box2		nolink
+thing	box3		nolink
+thing	box4		nolink
+
+sector	hidesector	linkid=1
+
+sector	triggeron1	linkid=1
+sector	triggeron2	linkid=1
+
+sector	triggeroff1	linkid=2
+sector	triggeroff2	linkid=2
+sector	triggeroff3	linkid=2
+sector	triggeroff4	linkid=2
+
+# these hide the shack when entered, show it when exited
+sector	shacktrigger1	linkid=3
+sector	shacktrigger2	linkid=3
+sector	shacktrigger3	linkid=3
+sector	shacktrigger4	linkid=3
+sector	shacktrigger5	linkid=3
+sector	shacktrigger6	linkid=3
+sector	shacktrigger7	linkid=3
+sector	shacktrigger8	linkid=3
+
+# subroutine
+flex	hidethings=0.0	local
+flex	showthings=0.0	local
+end
+
+code
+startup:
+	sleep(.01);
+	SetThingFlags(shack, 0x10);
+	SetThingFlags(sign, 0x10);
+	SetThingFlags(chain, 0x10);
+	SetThingFlags(bucket, 0x10);
+	SetThingFlags(shacknohole, 0x10);
+	SetThingFlags(shackwindow, 0x10);
+
+	call hidethings;
+
+	# when opening cutscene is done, show the big shack stuff again
+	sleep(50);
+	ClearThingFlags(shack, 0x10);
+	ClearThingFlags(sign, 0x10);
+	ClearThingFlags(chain, 0x10);
+	ClearThingFlags(bucket, 0x10);
+	ClearThingFlags(shacknohole, 0x10);
+	ClearThingFlags(shackwindow, 0x10);
+
+	return;
+
+entered:
+# ---> triggeron, triggeroff sectors, and hidesector
+	
+	if (GetSenderID() == 1)
+	{
+		call showthings;
+	}
+	else if (GetSenderID() == 2)
+	{
+		call hidethings;
+	}
+	else if (GetSenderID() == 3)
+	{
+		SetThingFlags(shack, 0x10);
+		SetThingFlags(shackwindow, 0x10);
+		SetThingFlags(sign, 0x10);
+	}
+
+	return;
+
+exited:
+# ---> shack triggers only	
+	if (GetSenderID() != 3) return;
+
+	ClearThingFlags(shack, 0x10);
+	ClearThingFlags(shackwindow, 0x10);
+	ClearThingFlags(sign, 0x10);
+	return;
+
+killed:
+# ---> dynamite
+	dynamite1 = -1;
+	return;
+
+showthings:
+	# make these boxes visible
+	ClearThingFlags(box5, 0x10);
+	ClearThingFlags(box6, 0x10);
+	ClearThingFlags(box7, 0x10);
+	ClearThingFlags(box8, 0x10);
+	ClearThingFlags(box9, 0x10);
+
+	# if dynamite hasn't blown, show these things too
+	if (dynamite1 != -1)
+	{
+		ClearThingFlags(box2, 0x10);
+		ClearThingFlags(box3, 0x10);
+		ClearThingFlags(box4, 0x10);
+		ClearThingFlags(dynamite1, 0x10);
+		ClearThingFlags(dynamite2, 0x10);
+		ClearThingFlags(dynamite3, 0x10);
+	}
+
+	return;
+
+hidethings:
+	# make these boxes invisible
+	SetThingFlags(box5, 0x10);
+	SetThingFlags(box6, 0x10);
+	SetThingFlags(box7, 0x10);
+	SetThingFlags(box8, 0x10);
+	SetThingFlags(box9, 0x10);
+
+	# if dynamite hasn't blown, hide these things too
+	if (dynamite1 != -1)
+	{
+		SetThingFlags(box2, 0x10);
+		SetThingFlags(box3, 0x10);
+		SetThingFlags(box4, 0x10);
+		SetThingFlags(dynamite1, 0x10);
+		SetThingFlags(dynamite2, 0x10);
+		SetThingFlags(dynamite3, 0x10);
+	}
+
+	return;
+
+end

@@ -1,0 +1,146 @@
+# Jones 3D Cog Script
+#
+# INF_SpinnerBots.cog
+#
+# [SXC]
+#
+# Controls the spinner bots in the chapel
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message	    startup
+	message	    entered
+    message     damaged
+    message     activate
+    message     killed
+
+	thing		player					        local
+    
+    thing       spinbot0                        linkid=2
+    thing       spinbot1                        linkid=2
+    thing       spinbot2                        linkid=2
+    thing       cutscenebutton
+    
+    sector      tripsector
+    sector      hallsector
+    sector      restartsector
+    
+    int         enterflag=0                     local
+    int         killflag=0                      local
+    int         damageflag=0                    local
+    int         botflag=0                       local
+    int         bothealth=0                     local
+
+end
+
+# ================================================================================
+    
+code
+
+# --------------------------------------------------------------------------------
+
+startup:
+
+    AISetCutsceneMode(spinbot0);
+    AISetCutsceneMode(spinbot1);
+    AISetCutsceneMode(spinbot2);
+	player = GetLocalPlayerThing();
+    
+return;
+
+# --------------------------------------------------------------------------------
+
+entered:
+
+    if ((GetSenderRef() == tripsector) && (GetSourceRef() == player))
+    {
+        enterflag = 1;
+        AIClearCutsceneMode(spinbot0);
+        AIClearCutsceneMode(spinbot1);
+    }
+    
+    if ((GetSenderRef() == hallsector) && (GetSourceRef() == player))
+    {
+        AISetCutsceneMode(spinbot0);
+        AISetCutsceneMode(spinbot1);
+        AISetCutsceneMode(spinbot2);
+    }
+    
+    if ((GetSenderRef() == restartsector) && (GetSourceRef() == player))
+    {
+        AIClearCutsceneMode(spinbot0);
+        AIClearCutsceneMode(spinbot1);
+        AIClearCutsceneMode(spinbot2);
+    }
+    
+return;
+
+# --------------------------------------------------------------------------------
+
+damaged:
+
+    if ((GetSenderRef() == spinbot2) && (botflag == 0))
+    {
+        botflag = 1;
+        bothealth = GetThingMaxHealth(spinbot2);
+        SetThingHealth(spinbot2, bothealth);
+        AIClearCutsceneMode(spinbot2);
+    }
+    
+return;
+    
+# --------------------------------------------------------------------------------
+
+killed:
+
+    if (GetSenderRef() == spinbot0)
+    {
+        spinbot0 = -1;
+    }
+    
+    if (GetSenderRef() == spinbot1)
+    {
+        spinbot1 = -1;
+    }
+    
+    if (GetSenderRef() == spinbot2)
+    {
+        spinbot2 = -1;
+    }
+    
+return;    
+
+# --------------------------------------------------------------------------------
+
+activate:
+    
+    if (GetSenderRef() == cutscenebutton)
+    {
+        if (spinbot0 != -1)
+        {
+            SetThingFlags(spinbot0, 0x80000);
+        }
+        
+        if (spinbot1 != -1)
+        {
+            SetThingFlags(spinbot1, 0x80000);
+        }
+        
+        if (spinbot2 != -1)
+        {
+            SetThingFlags(spinbot2, 0x80000);
+        }    
+        
+    }
+    
+return;
+        
+# --------------------------------------------------------------------------------
+
+end
+
+

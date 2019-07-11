@@ -1,0 +1,816 @@
+# Jones 3D Cog Script
+#
+# 01_BAB_Cinematic_4.cog
+#
+# Kazakstan Exposition with Indy & Turner ends Babylon Chapter
+#
+# [HB]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	# ************************ MESSAGES ************************
+
+	message		startup
+    message     crossed
+	message		entered
+    message		activated
+	message		callback
+	message		shutdown
+	message		timer
+	
+	# ************************ KEYFRAMES ***********************
+	
+	keyframe	in_PushHat=0in_figithat_4_4.key			local
+	keyframe	in_ArmsOut=0in_armsout_1_1.key			local
+	keyframe	in_Gesture=0in_armsup_1_1.key			local
+	keyframe	in_Think=0in_thinking_4_4.key			local
+	keyframe	in_leftarm=0in_leftarm_1_1.key			local
+    
+	keyframe	in_handsSide=0in_stand1.key				local
+	keyframe	in_armsCrossed=0in_stand2.key			local
+	keyframe	in_handsOnHips=0in_stand4.key			local
+	keyframe	in_crossArms=0in_stand1_bd_2.key	   	local
+	keyframe	in_handsToHips=0in_stand1_bd_4.key	   	local
+	keyframe	in_handsToSide=0in_stand4_bd_1.key	   	local
+	keyframe	in_showMarduk=0in_holdstatue_1_hold.key	local
+	keyframe	in_giveMarduk=0in_givestatue_hold_1.key	local
+	keyframe	in_inscription=0in_inscription_1_1.key	local
+	keyframe	in_urgon=0in_urgon_1_1.key				local
+	keyframe	in_heavenly=0in_tianshan_1_1.key		local
+	keyframe	in_Smash=0in_smash_1_4.key				local
+	
+	keyframe	jpa_mountJeep=ij_sitdown.key			local
+	keyframe	jpa_steerL=ij_turnL.key					local
+	keyframe	jpa_steerR=ij_turnR.key					local
+	keyframe	jpa_wheelsFwd=ij_wheelturn.key			local
+	
+	keyframe	trn_handships=0tu_stand1.key			local
+	keyframe	trn_armsFold=0tu_stand2.key				local
+	keyframe	trn_handsSide=0tu_stand3.key			local
+	keyframe	trn_handstohips=0tu_stand3_bd_1.key		local
+	keyframe	trn_lounge=0tu_stand6.key				local
+	keyframe	trn_tenhut=0tu_stand6_bd_1.key			local
+	keyframe	trn_fistshake=0tu_pointout_1_1.key		local
+	keyframe	trn_givekey=0tu_hndkey_1_1.key			local
+	keyframe	trn_beMyGuest=0tu_funeral_3_2.key		local
+	keyframe	trn_foldArms=0tu_stand1_bd_2.key		local
+	keyframe	trn_leftUp=0tu_leftarm_1_1.key			local
+	keyframe	trn_nothelp=0tu_nothelp_1_1.key			local
+	keyframe	trn_reach=0tu_reach_1_1.key				local
+	keyframe	trn_getMarduk=0tu_takestatue_1_hold.key	local
+	keyframe	trn_stowMarduk=0tu_putawaystatue_hold_1.key		local
+	keyframe	trn_sovietland=0tu_lasttime_1_1.key		local
+    
+    keyframe    jeep_idle=ij_idle.key                   local
+    keyframe    jeep_fwd_rev=ij_fwd_bd_rev.key          local
+    keyframe    jeep_rev_fwd=ij_rev_bd_fwd.key          local
+    keyframe    jeep_turnleft=ij_turnL.key              local
+    keyframe    jeep_turnright=ij_turnR.key             local
+    keyframe    jeep_rturnleft=ij_rev_turnL.key         local
+    keyframe    jeep_rturnright=ij_rev_turnR.key        local
+    keyframe    jeep_runforward=ij_fwd.key              local
+    keyframe    jeep_runbackward=ij_rev.key             local
+	   
+	# ************************* MODELS *************************
+		
+    model  		mod_in=gen_in_shirt.3do					local
+	model		mod_trn=gen_tu.3do						local
+    model       inhand_mdkstat=hand_in_mrdkstat.3do     local
+    model       tuhand_mdkstat=hand_tu_mrdkstat.3do     local
+    model       tu_hand=hand_in.3do                     local
+
+	# ************************* SOUNDS *************************
+    
+	sound		trn_GotStatue=Bb11t01.wav				local
+	sound		in_NotYet=Bb11j02.wav					local
+	sound		trn_HelpEachOther=Bb11t03.wav			local
+	sound		trn_WhereStatue=Bb11t04.wav				local
+	sound		in_WorkOnIt=bb11j05.wav					local
+	sound		trn_BeWaiting=Bb11t06.wav				local
+	sound		trn_StatueJones=Bb11t12.wav				local
+	sound		in_YeahIKnow=Bb11j08.wav				local
+	sound		trn_StillWaiting=Bb11t09.wav			local
+	sound		in_ThisDo=Bb11j13.wav					local
+	sound		trn_JustMight=Bb11t14.wav				local
+	sound		in_TowerExpo=Bb11j15.wav				local
+	sound		trn_DisciplesWhere=Bb11t16.wav			local
+	sound		in_NotSure=Bb11j17.wav					local
+	sound		trn_NotMuch=Bb11t18.wav					local
+	sound		in_Enough=Bb11j19.wav					local
+	sound		trn_KazakSoviet=Bb11t20.wav				local
+	sound		in_NoPassport=Bb11j21.wav				local
+	sound		trn_YourFuneral=Bb11t22.wav				local
+
+    sound       itsawrap=mus_gen_indy_a_theme1.wav      local
+    
+    sound       jeep_start_wav=jep_engine_start.WAV     local
+    sound       jeep_rev_wav=jep_reverse_loop.WAV       local
+    sound       jeep_shift_wav=jep_sus_crk_4.WAV        local
+    sound       jeep_fwd_wav=jep_engine_loop.WAV        local
+           
+	# ************************* THINGS *************************
+
+	thing		player									local
+							
+	thing		indy	    							linkid=0
+    thing		turner	    							linkid=1
+	thing		indyAlt									linkid=2
+												
+	thing		in_mark_2  								nolink
+	thing		in_mark_3								nolink
+
+	thing		trn_mark_2								nolink
+	thing		trn_mark_3								nolink
+	
+	thing		cam_1									nolink
+	thing		cam_2									nolink
+	thing		cam_3									nolink
+	thing		cam_4									nolink
+	thing		cam_5									nolink
+	thing		cam_6									nolink
+	thing		cam_7									nolink
+	thing		cam_8									nolink
+	thing		cam_9									nolink
+	thing		cam_10									nolink
+	
+	thing		c_t1									nolink
+	thing		c_t2									nolink
+	thing		c_t3 									nolink
+	thing		c_t4									nolink
+	thing		c_t5									nolink
+	thing		c_t6									nolink
+	thing		c_t7									nolink
+	thing		c_t8									nolink
+	thing		c_t9									nolink
+	thing		c_t10									nolink
+
+	thing		jeep									nolink
+	
+	thing		jp_t1									nolink
+	thing		jp_t2									nolink
+	thing		jp_t3									nolink
+	thing		jp_t4									nolink
+	thing		jp_t5									nolink
+	thing		jp_t6									nolink
+	thing		jp_t7									nolink
+	thing		jp_t8									nolink
+
+	thing		jp_lk1									nolink
+	thing		jp_lk2									nolink
+	thing		jp_lk3									nolink
+	thing		jp_lk4									nolink
+    
+    thing       fadeplane
+					   
+	# *********************** MISCELLANY ***********************
+			
+	sector		trigger         						linkid=3
+    surface     triggerturner                           
+
+	template	jeep_actor_tpl=jeep_actor_pyr			local
+
+	vector		camPos									local
+	vector		interpCamPos							local
+	vector		interpCamLook							local
+	vector		indyHeadAim								local
+	
+	flex		turnerCollSize							local
+	flex		turnerMass								local
+	flex		in_rotRate								local
+	flex		trn_rotRate								local
+	flex		jeep_rotRate							local
+    flex        giveidolandexit                         local
+							
+	int			in_keyTrack1							local
+	int			in_keyTrack2							local
+
+	int			trn_keyTrack1							local
+	int			trn_keyTrack2							local
+		
+	int			in_ArmTrack								local
+	int			trn_ArmTrack							local
+			
+	int			in_swap=0								local
+	int			trn_swap=0								local
+    					
+	int			sender									local
+	int			curSound								local
+	int			curCam									local
+
+	int			cutSceneState=0							local
+
+	int			matAnimNum								local
+	int			actorMeshNum							local
+	int			actorSwapRef							local
+	int			turnerCollType							local
+    int         crosflag = 0                            local
+	
+	int			mardukIdol=83							local # inventory bin
+	int			tempIdol=0								local # for test only
+    
+    int         jeepstart_chan                          local
+    int         jeeprevrs_chan                          local
+    int         jeepshift_chan                          local
+    int         in_jeepkey_rev                          local
+    
+    thing       jeep_actor                              local       
+    
+end
+
+# ===================================================================
+
+code
+
+# -------------------------------------------------------------------
+
+startup:
+
+	# Pointer to Player
+	player = GetLocalPlayerThing();
+
+	# TO DO:  in real game, actor Turner must already be lounging in place!
+    
+    turnerCollSize = GetThingCollideSize(turner);
+	turnerCollType = GetCollideType(turner);
+	turnerMass = GetThingMass(turner);
+	trn_rotRate = GetThingMaxRotVel(turner);
+//	AISetMode(turner, 0x2000); # turn off his AI
+	AISetCutsceneMode(turner);
+	trn_keyTrack1 = PlayKey(turner, trn_lounge, 2, 0x10, 0); # lean against jeep
+	
+	ThingFadeAnim(fadeplane, 1, 0, 0.01, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+crossed:
+    if ((GetSenderRef() == triggerturner) && (crosflag == 0) && (GetSourceRef() == player))
+    {
+        crosflag = 1;
+        ClearThingFlags(turner, 0x80000);
+        cutSceneState = 1;
+    }
+return;
+# -------------------------------------------------------------------
+
+entered:
+
+	# NOTE:  this cog only responds to "entered" the first time
+	# Indy encounters Turner in this area of Babylon
+	
+	if ((GetSenderRef() == trigger) && (cutSceneState == 1))
+//    if (GetSenderRef() == trigger)
+	{
+	    cutSceneState = 2; # only play the full version one time
+        
+	    RestoreExtCam(); # temp devo stuff
+	    Sleep(0.01); # temp devo stuff
+	    
+	    curCam = GetCurrentCamera();
+	    
+	    StartCutscene(1);
+        
+	    # Mood music!
+	    # PlaySong(5, 5, 5);
+        
+	    # Disable and hide player...
+	    StopThing(player); # right now
+	    DeselectWeaponWait(player);
+	    SetThingFlags(player, 0x80000);
+	    
+	    # Prep actor indy...
+	    CopyPlayerHolsters(player, indy);
+	    ClearThingFlags(indy, 0x80000); # our actor
+	    in_rotRate = GetThingMaxRotVel(indy);
+	    SetThingMaxRotVel(indy, 350.0);
+        
+	    # Prep camera...
+	    SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	    SetCameraPosInterp(2, 0); # kill dolly mode
+	     
+        # Walk Indy...
+	    AISetMoveSpeed(indy, 1.0);
+	    AISetLookThing(indy, turner);
+        AISetMoveThing(indy, in_mark_2, 0);
+	    Sleep(0.01);
+        
+	    # Cut to watch him...
+	    SetCameraFocus(2, cam_1);
+	    SetCameraSecondaryFocus(2, c_t1);
+	    SetCurrentCamera(2);
+	    SetCameraFOV(70, 0, 0.0);
+	    Sleep(0.01);
+	    
+	    # Dolly back to frame Turner and jeep...
+	    SetCameraLookInterp(2, 1); # enable pan & tilt
+	    SetCameraPosInterp(2, 1); # enable dolly
+	    SetCameraInterpSpeed(2, 2.0); # speed is actually time (was 3.0)
+	    Sleep(0.01);
+	    SetCameraFocus(2, cam_2);
+	    SetCameraSecondaryFocus(2, c_t2);
+	    SetCameraFOV(60, 1, 2.0);
+	    AIWaitForStop(indy);
+	    
+	    # Turner:  "Ahh, Jones, there you are..."
+	    curSound = PlaySoundLocal(trn_GotStatue, 1.0, 0.0, 0x0, 0);
+        
+	    # Turner steps over...
+	    AISetLookThing(turner, indy);
+	    AISetLookThing(indy, turner);
+        Sleep(0.01);
+	    StopKey(turner, trn_keyTrack1, 0.0); # stop playing the lounge
+	    PlayKey(turner, trn_tenhut, 4, 0x12, 1); # stand turner up
+	    trn_keyTrack1 = PlayKey(turner, trn_handships, 2, 0x10, 0);
+//	    AIClearMode(turner, 0x2000); # now start turner's watch-indy AI 
+		AIClearCutSceneMode(turner);
+	    AISetLookThing(turner, indy);
+	    AISetLookThing(indy, turner);
+	    Sleep(0.4);
+	    PlayKey(turner, trn_leftUp, 4, 0x12, 1);
+	    WaitForSound(curSound);
+	    
+	    # Establish forthcoming talk radius & nail Turner to this spot...
+	    SetThingCollideSize(turner, 0.04);	# doubled, so talk distance will be right later
+	    SetThingMass(turner, 0); # 0 = infinite...don't let player push turner around!
+        
+	    if (GetInv(player, mardukIdol) == 1 && cutSceneState != 3)
+	    {
+	    	# If Indy has the Marduk statue, complete the scene right now...
+	    	call GiveIdolAndExit;
+	    }
+        
+	    if (GetInv(player, mardukIdol) == 0 && cutSceneState != 3)
+	    {
+	    	# If Indy doesn't have the statue, the scene stalls...
+	    	
+	    	# Cut to close-up of Indy...
+	    	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	    	SetCameraPosInterp(2, 0); # kill dolly mode
+	    	SetCameraFocus(2, cam_3);
+	    	SetCameraSecondaryFocus(2, c_t3);
+	    	SetCameraFOV(38, 0, 0.0);
+	    	Sleep(0.01);
+	    	
+	    	# Indy: "Sorry, not yet..."
+	    	in_keyTrack1 = PlayKey(indy, in_handsOnHips, 2, 0x14, 0);
+	    	PlayKey(indy, in_handsToHips, 4, 0x12, 1);
+	    	PlayKey(indy, in_PushHat, 4, 0x12, 0);
+	    	# curSound = PlaySoundLocal(in_NotYet, 1.0, 0.0, 0x0, 0);
+	    	curSound = PlayVoice(indy, in_NotYet, 1.0, 0);
+	    	Sleep(1.7);
+	    	WaitForSound(curSound);
+	    	StopKey(indy, in_keyTrack1, 0.0);
+	    	
+	    	# Move player into new position before we need him...
+	    	CopyOrientAndPos(indy, player); # plant the player where actor is standing
+	    	StopThing(player); # and calm him down
+	    	ResetThing(player); 
+	    	
+	    	# Cut to close-up of Turner...
+	    	SetCameraFocus(2, cam_4);
+	    	SetCameraSecondaryFocus(2, c_t4);
+	    	SetCameraFOV(45, 0, 0.0); # was 40
+	    	SetThingFlags(indy, 0x10); # invisible
+        
+	    	# Turner: "And here I thought..."
+	    	curSound = PlaySoundLocal(trn_HelpEachOther, 1.0, 0.0, 0x0, 0);
+	    	Sleep(0.01);
+	    	trn_keyTrack2 = PlayKey(turner, trn_givekey, 4, 0x12, 0);
+	    	Sleep(4.0);
+	    	PlayKey(turner, trn_fistshake, 4, 0x12, 0);
+	    	WaitForSound(curSound);
+	    	Sleep(0.4);
+        
+	    	# Clean up...
+	    	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	    	SetCameraPosInterp(2, 0); # kill dolly mode
+	    	
+	    	# restore player control...
+	    	SetThingFlags(indy, 0x80010); # hide actor
+	    	camPos = GetThingPOS(cam_1); 
+	    	SetCameraPosition(1, camPos); # prep to swing back to follow-cam
+	    	ClearThingFlags(player, 0x80000); # player active
+	    	SetCurrentCamera(curCam);
+	    	ResetCameraFOV(0, 0.0);
+        
+	    }
+	    
+	    EndCutScene();
+    }
+    return;
+
+# -------------------------------------------------------------------
+    
+activated:
+
+	# NOTE:  this cog responds when player activates Turner...
+
+	if (GetSenderRef() != turner)
+	{
+		return;
+	}
+
+	# set up...
+	StartCutscene(1);
+	CopyPlayerHolsters(player, indyAlt);
+	CopyOrientAndPos(player, indyAlt); # plant dupe actor indy at player location
+	SetThingFlags(player, 0x80000); # set player invisible
+	ClearThingFlags(indyAlt, 0x80000); # show dupe actor indy
+	Sleep(0.01);
+	AISetLookThing(indyAlt, turner);
+	AISetLookThing(turner, indyAlt);
+	
+	if (GetInv(player, mardukIdol) == 1)
+	//if (tempIdol == 1) # temp test method
+	{
+		# 83 is item ID for "statuette of winged god Marduk"
+		# If Indy has the statue, complete the level right now...
+		# TO DO: fix CamLookOffset interp bug
+		
+		# SetExtCamLookOffset('0.0 0.04 0.014'); # look between indyAlt & turner
+		SetExtCamOffset('0.16 0.02 0.055'); # interp cam out to right & a tad high
+		Sleep(0.5);
+
+		# Turner asks about statue again...
+		if (cutSceneState == 1)
+		{
+			curSound = PlaySoundLocal(trn_WhereStatue, 1.0, 0.0, 0x0, 0);
+		}
+		if (cutSceneState > 1)
+		{
+			curSound = PlaySoundLocal(trn_StatueJones, 1.0, 0.0, 0x0, 0);
+		}
+		WaitForSound(curSound);
+		
+		# call function that finishes up
+		call GiveIdolAndExit;
+	}
+
+	if (cutSceneState == 2)
+	{
+		# if scene has played twice, run this shorter version as often as needed...
+			
+		# TO DO: fix CamLookOffset interp bug
+		
+		# SetExtCamLookOffset('0.0 0.04 0.014'); # look between indyAlt & turner
+		SetExtCamOffset('0.16 0.02 0.055'); # interp cam out to right & a tad high
+		Sleep(0.5);
+
+		# Turner: "The statue, Jones?"
+		curSound = PlaySoundLocal(trn_StatueJones, 1.0, 0.0, 0x0, 0);
+		WaitForSound(curSound);
+
+		# Indy: "Yeah, yeah, I know."
+		curSound = PlaySoundLocal(in_YeahIKnow, 1.0, 0.0, 0x0, 0);
+		
+		in_keyTrack1 = PlayKey(indyAlt, in_armsCrossed, 2, 0x10, 0);
+		PlayKey(indyAlt, in_crossArms, 4, 0x12, 1);
+		WaitForSound(curSound);
+		
+		# Turner: "I'm still waiting."
+		curSound = PlaySoundLocal(trn_StillWaiting, 1.0, 0.0, 0x0, 0);
+		PlayKey(turner, trn_reach, 4, 0x12, 0);
+		Sleep(1.0);
+		StopKey(indyAlt, in_keyTrack1, 0.5);
+		WaitForSound(curSound);
+
+		###
+		tempIdol = 1; # for testing purposes only!
+		###
+		
+		SetThingFlags(indyAlt, 0x80000); # hide dupe actor indy
+		ClearThingFlags(player, 0x80000);
+		RestoreExtCam();
+	}
+			
+	if (cutSceneState == 1)
+	{
+		# if scene has already played once, run this...
+			
+		cutSceneState = 2; # only play this version one time
+
+		# TO DO: fix CamLookOffset interp bug
+		
+		SetExtCamLookOffset('0.0 0.04 0.012'); # look between indyAlt & turner
+		SetExtCamOffset('0.18 0.02 0.055'); # interp cam out to right
+		Sleep(0.5);
+		
+		# Turner: "Well, where's the statue?"
+		curSound = PlaySoundLocal(trn_WhereStatue, 1.0, 0.0, 0x0, 0);
+		# gestures here
+		trn_keyTrack2 = PlayKey(turner, trn_foldArms, 4, 0x14, 0);
+		Sleep(0.5);
+		in_keyTrack1 = PlayKey(indyAlt, in_handsOnHips, 2, 0x10, 0);
+		PlayKey(indyAlt, in_handsToHips, 4, 0x12, 1);
+		WaitForSound(curSound);
+
+		# Indy: "I'm working on it."
+		curSound = PlaySoundLocal(in_WorkOnIt, 1.0, 0.0, 0x0, 0);
+		WaitForSound(curSound);
+
+		# Turner: "I'll be waiting."
+		curSound = PlaySoundLocal(trn_BeWaiting, 1.0, 0.0, 0x0, 0);
+		# gestures here
+		Sleep(1.0);
+		WaitForSound(curSound);
+		StopKey(indyAlt, in_keyTrack1, 0.5);
+		StopKey(turner, trn_keyTrack2, 0.5);
+		Sleep(0.5);
+		
+		SetThingFlags(indyAlt, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		RestoreExtCam();		
+	}
+	
+	EndCutScene();
+
+	return;
+
+# -------------------------------------------------------------------
+
+GiveIdolAndExit:
+
+	cutSceneState = 3; # we're finishing scene now
+	
+	# Show Indy on his mark...
+	DestroyThing(indyAlt); # don't need dupe no more
+	SetThingFlags(player, 0x80000); # hide player
+	ClearThingFlags(indy, 0x80010); # our first actor is visible again
+	Sleep(0.01);
+
+	# Cut to close-up of Indy...
+	RestoreExtCam();
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	SetCameraFocus(2, cam_3);
+	SetCameraSecondaryFocus(2, c_t3);
+	SetCurrentCamera(2);
+	SetCameraFOV(40, 0, 0.0);
+	Sleep(0.01);
+	AISetLookThing(indy, turner);
+	AISetLookThing(turner, indy);
+	
+	# Indy: "Will this do?"
+	curSound = PlaySoundLocal(in_ThisDo, 1.0, 0.0, 0x0, 0);
+
+	# Lift statue into view...
+    SetThingMesh(indy, 15, inhand_mdkstat, 0);
+	in_keyTrack1 = PlayKey(indy, in_showMarduk, 2, 0x14, 0);
+	WaitForSound(curSound);
+	Sleep(0.5);
+
+	# Cut to side-view of Indy and Turner
+	SetCameraFocus(2, cam_10);
+	SetCameraSecondaryFocus(2, c_t10);
+	SetCurrentCamera(2);
+	SetCameraFOV(28, 0, 0.0);
+
+	# Turner: "It just might!  Anything else?"
+	curSound = PlaySoundLocal(trn_JustMight, 1.0, 0.0, 0x0, 0);
+
+	# Dolly into reverse angle on Indy over Turner's shoulder...
+	SetCameraInterpSpeed(2, 18.5); # speed is actually time
+	SetCameraLookInterp(2, 1); # enable pan & tilt mode
+	SetCameraPosInterp(2, 1); # enable dolly mode
+	Sleep(0.01);
+	SetCameraFocus(2, cam_6);
+	SetCameraSecondaryFocus(2, c_t6);
+	SetCameraFOV(45, 1, 7.0); # first we widen the angle...
+
+	# Give & take Marduk statuette...
+	StopKey(indy, in_keyTrack1, 0.0);
+	PlayKey(indy, in_giveMarduk, 4, 0x12, 0);
+    SetThingMesh(turner, 5, tuhand_mdkstat, 0);
+    SetThingMesh(indy, 15, tu_hand, 0);
+	PlayKey(turner, trn_getMarduk, 4, 0x12, 1);
+	PlayKey(turner, trn_stowMarduk, 4, 0x12, 0);
+	StopKey(indy, in_keyTrack1, 0.5); # Indy relaxes from giving statue
+	Sleep(1.5);
+    SetThingMesh(turner, 5, tu_hand, 0);
+    Sleep(0.5);
+    
+	# Lose statue from inventory...
+	SetInv(player, mardukIdol, 0.00);
+
+	# Indy: "According to the inscription..."
+	WaitForSound(curSound);
+	# curSound = PlaySoundLocal(in_TowerExpo, 1.0, 0.0, 0x0, 0);
+	curSound = PlayVoice(indy, in_TowerExpo, 1.0, 0);
+	PlayKey(indy, in_inscription, 4, 0x12, 1);
+	SetCameraFOV(34, 1, 8.3); # ...and then we tighten up again
+	WaitForSound(curSound);
+
+	# Turner: "Taking them...where?"
+	curSound = PlaySoundLocal(trn_DisciplesWhere, 1.0, 0.0, 0x0, 0);
+	PlayKey(turner, trn_leftUp, 4, 0x12, 1);
+	WaitForSound(curSound);
+
+	# Indy: "Not sure, except...Urgon...heavenly mountains..."
+	# curSound = PlaySoundLocal(in_NotSure, 1.0, 0.0, 0x0, 0);
+	curSound = PlayVoice(indy, in_NotSure, 1.0, 0);
+	PlayKey(indy, in_urgon, 4, 0x12, 1);
+	WaitForSound(curSound);
+
+	# Turner: "That's not much help."
+	curSound = PlaySoundLocal(trn_NotMuch, 1.0, 0.0, 0x0, 0);
+	PlayKey(turner, trn_nothelp, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Cut to Indy...
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	Sleep(0.01);
+	SetCameraFocus(2, cam_5);
+	SetCameraSecondaryFocus(2, c_t5);
+	SetCameraFOV(42, 0, 0.0); # was 35
+	SetThingFlags(turner, 0x10); # invisible
+	
+	# Indy: "Might be enough...Tian Shan..."
+	# curSound = PlaySoundLocal(in_Enough, 1.0, 0.0, 0x0, 0);
+	curSound = PlayVoice(indy, in_Enough, 1.0, 0);
+	PlayKey(indy, in_heavenly, 4, 0x12, 1);
+	WaitForSound(curSound);
+
+	# Cut to Turner over Indy's shoulder...
+	SetCameraFocus(2, cam_7);
+	SetCameraSecondaryFocus(2, c_t7);
+	SetCameraFOV(36, 0, 0.0);
+	ClearThingFlags(turner, 0x10); # visible again
+	
+	# Turner: "Kazakstan?  ...Soviet territory."
+	curSound = PlaySoundLocal(trn_KazakSoviet, 1.0, 0.0, 0x0, 0);
+	PlayKey(turner, trn_sovietland, 4, 0x12, 1);
+	WaitForSound(curSound);
+	
+	# Indy: "Maybe I won't show the border guards..."
+	curSound = PlaySoundLocal(in_NoPassport, 1.0, 0.0, 0x0, 0);
+	PlayKey(indy, in_ArmsOut, 4, 0x12, 0);
+	Sleep(0.4);
+
+	# Dolly and boom to wider shot...
+	SetCameraInterpSpeed(2, 2.2); # speed is actually time (was 3.0)
+	SetCameraLookInterp(2, 1); # enable pan & tilt
+	SetCameraPosInterp(2, 1); # enable dolly
+	Sleep(0.01);
+	SetCameraFocus(2, cam_9);
+	SetCameraSecondaryFocus(2, c_t9);
+	SetCameraFOV(75, 1, 2.2); # (was 3.0)
+	WaitForSound(curSound);
+
+	# Turner: "Okay, buddy.  It's your funeral."
+	curSound = PlaySoundLocal(trn_YourFuneral, 1.0, 0.0, 0x0, 0);	
+
+	# Turner moves aside...
+	StopKey(turner, trn_keyTrack1, 0.0); # kill low-priority hands-on-hips anim
+	trn_keyTrack1 = PlayKey(turner, trn_beMyGuest, 4, 0x14, 0);
+	Sleep(2.0);
+	AISetLookThing(turner, indy);
+	SetCollideType(turner, 0); # indy must not be impeded by t's collision sphere
+	WaitForSound(curSound);
+    
+    # Ending Theme
+    PlaySoundLocal(itsawrap, 1, 0, 0, 0);
+
+	# Prep camera to follow jeep...
+	SetCameraInterpSpeed(2, 6.0); # speed is actually time
+    
+    SetCameraFocus(2, cam_8);
+	SetCameraSecondaryFocus(2, c_t8);
+	SetCameraFOV(80, 1, 3.0);
+	
+	# Put Indy into the jeep...
+	AISetLookThing(indy, jeep);
+	AISetMoveThing(indy, in_mark_3, 0);
+	AIWaitForStop(indy);
+	SetThingMaxRotVel(indy, in_rotRate); # superstition?
+	DestroyThing(jeep);
+    DestroyThing(indy);
+   
+	# Make a jeep with Indy in it...
+	jeep_actor = CreateThing(jeep_actor_tpl, jeep);
+	CaptureThing(jeep_actor);
+	ClearThingFlags(jeep_actor, 0x80000);
+	AttachThingToThing(c_t8, jeep_actor); # so cam will follow
+	PlayKey(jeep_actor, jpa_mountJeep, 4, 0x12, 1); # sit our hero down
+	Sleep(0.5);
+    
+    jeepstart_chan=PlaySoundThing(jeep_start_wav, jeep_actor, 1, 10, 20, 0);
+    WaitForSound(jeepstart_chan);
+    
+	# Cut to watch Indy go brrrrmm...
+	jeep_rotRate = GetThingMaxRotVel(jeep_actor);
+	SetThingMaxRotVel(jeep_actor, 50.0); # make it resistant to turning
+	in_keyTrack1 = PlayKey(jeep_actor, jpa_steerL, 2, 0x04, 0);
+    in_jeepkey_rev = PlayKey(jeep_actor, jeep_runbackward, 2, 0x0, 0);
+    jeeprevrs_chan=PlaySoundThing(jeep_rev_wav, jeep_actor, 1, 10, 20, 1);
+    
+	AISetMoveSpeed(jeep_actor, 1.0);
+	AISetLookThing(jeep_actor, jp_lk1);
+	AISetMoveThing(jeep_actor, jp_t1, 0);
+	Sleep(0.5);
+	AISetMoveSpeed(jeep_actor, 1.5);
+	AISetLookThing(jeep_actor, jp_lk2);
+	AISetMoveThing(jeep_actor, jp_t2, 0);
+	Sleep(0.4);
+	AISetMoveSpeed(jeep_actor, 2.0);
+	AISetLookThing(jeep_actor, jp_lk3);
+	AISetMoveThing(jeep_actor, jp_t3, 0);
+	Sleep(0.4);
+	AISetMoveSpeed(jeep_actor, 1.5);
+	AISetMoveThing(jeep_actor, jp_t4, 0);
+	Sleep(0.4);
+	AISetMoveSpeed(jeep_actor, 1.0);
+	AISetLookThing(jeep_actor, jp_lk4);
+	AISetMoveThing(jeep_actor, jp_t5, 0);
+	Sleep(1.0);
+	StopKey(jeep_actor, in_keyTrack1, 0.5);
+    StopKey(jeep_actor, in_jeepkey_rev, 0.1);
+	Sleep(0.5);
+    
+    # TO DO: get the wheels to spin--backwards up to here, then forward
+    StopSound(jeeprevrs_chan, 0);
+    jeepshift_chan=PlaySoundThing(jeep_actor, jeep_shift_wav, 1, 10, 20, 0);
+    WaitForSound(jeepshift_chan);
+    in_keyTrack1 = PlayKey(jeep_actor, jeep_runforward, 2, 0x00, 0);
+    PlaySoundThing(jeep_actor, jeep_fwd_wav, 1, 10, 20, 1);
+	AISetMoveSpeed(jeep_actor, 2.0);
+	AISetLookThing(jeep_actor, jp_t6);
+	AISetMoveThing(jeep_actor, jp_t6, 0);
+	Sleep(0.6);
+
+	# Prep Turner to move again...
+	StopKey(turner, trn_keyTrack1, 0.0);
+	SetThingMass(turner, turnerMass); # back to normal
+	SetCollideType(turner, turnerCollType);
+	SetThingCollideSize(turner, turnerCollSize);
+	AISetMoveSpeed(turner, 1.0);
+	AISetLookThing(turner, jp_lk3);
+	Sleep(0.01);
+	AISetMoveSpeed(jeep_actor, 3.0);
+	Sleep(1.0);
+	
+	# Walk Turner into the shot...
+	AISetMoveThing(turner, jp_lk3, 0);
+	Sleep(0.5);
+
+	AISetMoveSpeed(jeep_actor, 4.0);
+	Sleep(2.0);
+	AIWaitForStop(turner);
+	Sleep(0.5);
+    AttachThingToThing(fadeplane, cam_8);
+    ThingFadeAnim(fadeplane, 0, 1, 2, 0);
+
+	# TO DO:  stop Turner twitching as he ends walk...
+	trn_keyTrack1 = PlayKey(turner, trn_handships, 2, 0x0, 0);
+	PlayKey(turner, trn_handstohips, 4, 0x12, 1);
+	Sleep(4.0);
+    
+	# Final clean up...
+	
+	# Default actors (too bad we don't have a command for this)...
+	SetThingMaxRotVel(turner, trn_rotRate);
+	SetThingMaxRotVel(jeep_actor, jeep_rotRate);
+	
+	# Kill any lingering animations...
+	StopKey(jeep_actor, in_keyTrack1, 0.0);
+	StopKey(turner, trn_keyTrack1, 0.0);
+    
+	# Fix up the camera...
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	SetCurrentCamera(curCam);
+	ResetCameraFOV(0, 0.0);
+	RestoreExtCam(); 
+	
+	# TO DO: end the level right now!
+    
+    JonesEndLevel();
+    
+
+	# Restore player control... (temp, since Babylon chapter is now complete!)
+	# ClearThingFlags(player, 0x80000); # player active
+   
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+    return;
+
+# -------------------------------------------------------------------
+
+shutdown:
+	return;
+
+# -------------------------------------------------------------------
+
+timer:
+	return;
+    
+# -------------------------------------------------------------------
+
+end

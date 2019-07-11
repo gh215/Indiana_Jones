@@ -1,0 +1,265 @@
+# Jones 3D Cog Script
+#
+# SHW_CommieCreator.cog
+#
+# Creates a bunch of enemies after various events in the waterworks
+#
+# [CM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	#	MESSAGES
+	message     startup
+    message     crossed
+    message     user0
+    
+	#	COGS
+    cog     thawcog
+    cog     keycog
+    cog     gatecog
+
+	#	TRIGGERS
+	surface	    triggersurf
+	surface	    triggersurf1
+
+    #	PROPS
+	thing	    door0
+	thing	    door1
+	sector	    doorsector	local
+
+	#	ACTORS
+	thing		player          local
+	
+    thing	    enemy0          
+    thing	    enemy1          
+    thing	    enemy2          
+    thing	    enemy3          
+    thing	    enemy4          
+    thing	    enemy5          
+    thing	    enemy6
+
+	#	ACTOR MARKS
+	thing		enemy_mv0
+	thing		enemy_mv1
+	thing		enemy_mv2
+	thing		enemy_mv3
+	thing		enemy_mv4
+    
+	#	SOUNDS
+	sound		dangercue1=mus_gen_russbold_shrt4.wav	local
+	sound		dangercue2=mus_gen_russbold_shrt3.wav	local
+	sound		dangercue3=mus_gen_russbold_shrt1.wav	local
+	
+	#	VARIABLES
+    int         enemytype       local
+    int         crosonce=0      local
+    int         thawevent=0     local
+    int         key2event=0     local
+    int         gateevent=0     local
+    int         i=0     		local
+    
+	
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    
+    doorSector = GetThingSector(door0);
+	SetSectorAdjoins(doorSector, 0);
+	crosonce = 0;
+    player = GetLocalPlayerThing();
+    
+    for (i = 0; i <= 6; i = i + 1)
+		{
+		SetThingFlags(enemy0[i], 0x80000);
+        AISetCutSceneMode(enemy0[i]);
+		}
+return;
+    
+
+# ........................................................................................
+crossed:
+	If (crosonce == 3) return;
+        
+        If ((GetSenderRef() == triggersurf) && (GetSourceRef() == player))
+               {
+                If (thawevent == 1)  
+                   {
+                   call guard;
+                   thawevent = 2;
+                   return;
+                   }
+           else If  (gateevent == 1)
+                   {
+                   call guard;
+                   gateevent = 2;
+                   return;
+                   }
+               }    
+        
+        If ((GetSenderRef() == triggersurf1) && (GetSourceRef() == player) && (keyevent == 1))
+                {
+                call guard;
+                keyevent = 2;
+                return;
+                }
+return;
+	
+# ........................................................................................
+user0:
+
+        If (GetSenderRef() == thawcog)
+                {
+                print("message from river received");
+                thawevent= 1;
+                }
+                
+        If (GetSenderRef() == keycog)
+                {
+                print("message from bucket received");
+                keyevent= 1;
+                }
+
+        If (GetSenderRef() == gatecog)
+                {
+                print("message from sluice2 received");
+                gateevent= 1;
+                }
+                
+return;
+# ........................................................................................
+guard:
+
+        crosonce = crosonce + 1;
+        
+        If (crosonce == 1)
+                {
+                # play music cue
+                PlaySoundLocal(dangercue1, 1.0, 0.0, 0x0, 0);
+				
+				# open the door
+				SetSectorAdjoins(doorSector, 1);
+				Rotate(door0, 90, 1, 1);
+				Rotate(door1, -90, 1, 1);
+				
+				Sleep(0.5);
+				# bring the commie into play and charge him in
+				ClearThingFlags(enemy0,0x80000);
+				AISetLookThing(enemy0, enemy_mv0);
+                AISetMoveSpeed(enemy0, 3.2);
+                AISetMoveThing(enemy0, enemy_mv0, 1);
+                
+				# close the door
+				WaitForStop(door0);
+				Rotate(door0, -90, 1, 1);
+				Rotate(door1, 90, 1, 1);
+
+                #	commie opens fire
+				AIClearCutSceneMode(enemy0);
+                
+				WaitForStop(door0);
+                SetSectorAdjoins(doorSector, 0);
+				return;
+                }
+        
+         
+		
+		If (crosonce == 2)
+                {
+                # play music cue
+                PlaySoundLocal(dangercue2, 1.0, 0.0, 0x0, 0);
+				
+				# open the door
+				SetSectorAdjoins(doorSector, 1);
+				Rotate(door0, 90, 1, 1);
+				Rotate(door1, -90, 1, 1);
+				
+				Sleep(0.5);
+				# bring the commies into play and charge them in
+                ClearThingFlags(enemy1,0x80000);
+                ClearThingFlags(enemy2,0x80000);
+                ClearThingFlags(enemy3,0x80000);
+                AISetLookThing(enemy1, enemy_mv0);
+                AISetMoveSpeed(enemy1, 3.2);
+                AISetMoveThing(enemy1, enemy_mv0, 0);
+
+                AISetLookThing(enemy2, enemy_mv1);
+                AISetMoveSpeed(enemy2, 3.2);
+                AISetMoveThing(enemy2, enemy_mv1, 0);
+
+                AISetLookThing(enemy2, enemy_mv2);
+                AISetMoveSpeed(enemy2, 3.2);
+                AISetMoveThing(enemy2, enemy_mv2, 1);
+
+                # close the door
+				WaitForStop(door0);
+				Rotate(door0, -90, 1, 1);
+				Rotate(door1, 90, 1, 1);
+
+				# commies open fire
+				AIClearCutsceneMode(enemy1);
+				AIClearCutsceneMode(enemy2);
+				AIClearCutsceneMode(enemy3);
+
+                WaitForStop(door0);
+                SetSectorAdjoins(doorSector, 0);
+                return;
+                }
+
+         If (crosonce == 3)
+                {
+                # play music cue
+                PlaySoundLocal(dangercue3, 1.0, 0.0, 0x0, 0);
+				
+				# open the door
+				SetSectorAdjoins(doorSector, 1);
+				Rotate(door0, 90, 1, 1);
+				Rotate(door1, -90, 1, 1);
+				
+				Sleep(0.5);
+                # bring commies into play charge them in the door
+				ClearThingFlags(enemy4,0x80000);
+                ClearThingFlags(enemy5,0x80000);
+                ClearThingFlags(enemy6,0x80000);
+
+                AISetLookThing(enemy4, enemy_mv2);
+                AISetMoveSpeed(enemy4, 3.2);
+                AISetMoveThing(enemy4, enemy_mv2, 0);
+
+                AISetLookThing(enemy5, enemy_mv3);
+                AISetMoveSpeed(enemy5, 3.2);
+                AISetMoveThing(enemy5, enemy_mv3, 0);
+
+                AISetLookThing(enemy6, enemy_mv4);
+                AISetMoveSpeed(enemy6, 3.2);
+                AISetMoveThing(enemy6, enemy_mv4, 1);
+
+                # close the door
+				WaitForStop(door0);
+				Rotate(door0, -90, 1, 1);
+				Rotate(door1, 90, 1, 1);
+
+				# commies open fire
+				AIClearCutsceneMode(enemy4);
+				AIClearCutsceneMode(enemy5);
+				AIClearCutsceneMode(enemy6);
+
+				WaitForStop(door0);
+                SetSectorAdjoins(doorSector, 0);
+                return;
+                }
+                
+return;
+
+# ........................................................................................
+
+end
+
+

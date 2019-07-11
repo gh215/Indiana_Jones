@@ -1,0 +1,225 @@
+# Jones 3D Cog Script
+#
+# VOL_Funicular.cog
+#
+# This cog will play the funicular puzzle area in Vol.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+#.......................MESSAGES....................
+message	startup
+message	entered
+message	sighted
+message	killed
+
+#.......................ACTORS....................
+thing	player													local
+
+thing	ledge0													local
+thing	ledge1													local
+thing	ledge2													local
+
+#.......................ACTOR MV_TARGETS....................
+thing	ledgecommie_MIDmv0										# intermediate movetargs for commies 
+thing	ledgecommie_MIDmv1										# intermediate movetargs for commies
+thing	ledgecommie_MIDmv2										# intermediate movetargs for commies
+
+thing	ledgecommie_mv0											# where ledge commies will move to
+thing	ledgecommie_mv1											# where ledge commies will move to
+thing	ledgecommie_mv2											# where ledge commies will move to
+
+#.......................EVENT LOCATIONS....................
+thing	commiespot_targ									
+thing	commiecreate_spot									
+			
+
+#.......................TRIGGERS....................
+surface	cratespot							mask=0x80
+thing	crate							
+
+#.......................ENEMIES....................
+thing	ledgecommie0
+thing	ledgecommie1
+thing	ledgecommie2
+
+
+#.......................TEMPLATES....................
+template	fighter0=spetz_simonov								local
+template	fighter1=khaki_simonov4								local
+template	fighter2=jungle_simonov2							local
+
+
+#.......................VARIABLES....................
+int		inthezone=0			   									local
+## int		commiespot=0											local
+int		commie_limit=0											local
+int		i					   									local
+
+flex	heretheycome											local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+	Sleep(.25);
+    
+	# get the player
+	player = GetLocalPlayerThing();
+	
+    for (i = 0; i <= 2; i = i + 1) 
+	{
+        SetThingFlags(ledgecommie0[i], 0x80000);
+        #AISetMode(commie0[i], 0x12040);		// Disable the AI, but make sure we still gat messages, and don't check for cliffs while moving.
+		AISetCutSceneMode(ledgecommie0[i]);
+	}
+
+return;
+
+# ========================================================================================
+
+entered:
+
+If ((GetSenderRef() == cratespot) && (GetSourceRef() == crate))
+	{
+		inthezone = 1;
+		## if (commiespot == 1)
+		##	{
+
+			call heretheycome;
+
+		##	}
+    }
+
+return;
+
+# ========================================================================================
+## sighted:
+
+##	If (GetSenderRef() != commiespot_targ) return;
+##	If (commiespot != 0) return;
+##	If (inthezone != 1) return;
+
+heretheycome:
+	{
+		## commiespot = 1;
+        for (i = 0; i <= 2; i = i + 1) 
+		{
+        ClearThingFlags(ledgecommie0[i], 0x80000);
+		}
+
+		# move ledgecommie0 into position
+		AISetMoveSpeed(ledgecommie0, 2.0);
+		AISetLookThingEyeLevel(ledgecommie0, ledgecommie_mv0);
+		AISetMoveThing(ledgecommie0, ledgecommie_mv0, 0);
+
+		# move ledgecommie1 into position
+        AISetMoveSpeed(ledgecommie1, 2.0);
+		AISetLookThingEyeLevel(ledgecommie1, ledgecommie_mv1);
+		AISetMoveThing(ledgecommie1, ledgecommie_mv1, 0);
+
+		# move ledgecommie2 into position
+        AISetMoveSpeed(ledgecommie2, 2.0);
+		AISetLookThingEyeLevel(ledgecommie2, ledgecommie_mv2);
+		AISetMoveThing(ledgecommie2, ledgecommie_mv2, 1);
+
+        for (i = 0; i <= 2; i = i + 1) 
+		{
+			AISetLookThingEyeLevel(ledgecommie0[i], player);
+			AIClearCutSceneMode(ledgecommie0[i]);
+			AISetFireTarget(ledgecommie0[i], player);
+		}
+
+	}
+
+return;
+
+# ========================================================================================
+killed:
+
+	commie_limit = commie_limit + 1;
+	If (commie_limit == 12) return;
+
+	If ((GetSenderRef() == ledgecommie0) || (GetSenderRef() == ledge0))
+	{
+		# create commie and move him to the edge of the abyss
+		Sleep(2.0);
+		ledge0=CreateThing(fighter0, commiecreate_spot);
+		CaptureThing(ledge0);
+		AISetCutsceneMode(ledge0);
+		AISetMoveSpeed(ledge0, 2.0);
+		AISetLookThingEyeLevel(ledge0, ledgecommie_MIDmv0);
+        AISetMoveThing(ledge0, ledgecommie_MIDmv0, 1);
+		
+		AISetLookThingEyeLevel(ledge0, ledgecommie_mv0);
+        AISetMoveThing(ledge0, ledgecommie_MIDmv1, 1);
+        AISetMoveThing(ledge0, ledgecommie_MIDmv2, 1);
+		
+		AISetMoveThing(ledge0, ledgecommie_mv0, 1);
+		
+		# attack the player
+		AISetLookThingEyeLevel(ledge0, player);
+		AIClearCutSceneMode(ledge0);
+		AISetFireTarget(ledge0, player);
+	}
+
+	
+	If ((GetSenderRef() == ledgecommie1) || (GetSenderRef() == ledge1))
+	{
+		# create commie and move him to the edge of the abyss
+		Sleep(2.0);
+		ledge1=CreateThing(fighter1, commiecreate_spot);
+		CaptureThing(ledge1);
+		AISetCutsceneMode(ledge1);
+		AISetMoveSpeed(ledge1, 2.0);
+		AISetLookThingEyeLevel(ledge1, ledgecommie_MIDmv0);
+		AISetMoveThing(ledge1, ledgecommie_MIDmv0, 1);
+		
+		AISetLookThingEyeLevel(ledge1, ledgecommie_mv1);
+        AISetMoveThing(ledge1, ledgecommie_MIDmv1, 1);
+        AISetMoveThing(ledge1, ledgecommie_MIDmv2, 1);
+		AISetMoveThing(ledge1, ledgecommie_mv1, 1);
+		
+		# attack the player
+		AISetLookThingEyeLevel(ledge1, player);
+		AIClearCutSceneMode(ledge1);
+		AISetFireTarget(ledge1, player);
+	}
+
+    If ((GetSenderRef() == ledgecommie2) || (GetSenderRef() == ledge2))
+	{
+		# create commie and move him to the edge of the abyss
+		Sleep(2.0);
+		ledge2=CreateThing(fighter2, commiecreate_spot);
+		CaptureThing(ledge2);
+		AISetCutsceneMode(ledge2);
+		AISetMoveSpeed(ledge2, 2.0);
+		AISetLookThingEyeLevel(ledge2, ledgecommie_MIDmv0);
+		AISetMoveThing(ledge2, ledgecommie_MIDmv0, 1);
+		
+		AISetLookThingEyeLevel(ledge2, ledgecommie_mv2);
+        AISetMoveThing(ledge2, ledgecommie_MIDmv1, 1);
+        AISetMoveThing(ledge2, ledgecommie_MIDmv2, 1);
+		AISetMoveThing(ledge2, ledgecommie_mv2, 1);
+		
+		# attack the player
+		AISetLookThingEyeLevel(ledge2, player);
+		AIClearCutSceneMode(ledge2);
+		AISetFireTarget(ledge2, player);
+	}
+
+return;
+
+# ========================================================================================
+
+end
+
+
+
+

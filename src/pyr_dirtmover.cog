@@ -1,0 +1,271 @@
+# Jones 3D Cog Script
+#
+# pyr_dirtmover.cog
+#	
+# Works for dirtmover in Horner's pit
+#
+# [RKD] && [PM]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	arrived
+message	user1
+
+# rotational ghost objects
+thing	bottom		linkid=0
+thing	topback		linkid=0
+thing	topfront	linkid=0
+thing	middle		linkid=0
+
+# locations to which shovels will be sent from previous rotation
+thing	gotopback	nolink
+thing	gotopfront	nolink
+thing	gomiddle	nolink
+thing	gobottom	nolink
+
+# shovel items
+thing	shovel0		local	# dummy shovel for array
+thing	shovel1
+thing	shovel2
+thing	shovel3
+thing	shovel4
+
+# variables
+int		shovelnum=0		local
+int		onbottom=1		local
+int		ontopback=2		local
+int		ontopfront=3	local
+int		onmiddle=4		local
+int		shovelat2=0		local
+int		shovelat4=0		local
+int		shovelat6=0		local
+int		shovelat0=0		local
+
+thing	shovel0MoveTo	local			// What thing this shovel is currently moving to.
+thing	shovel1MoveTo	local
+thing	shovel2MoveTo	local
+thing	shovel3MoveTo	local
+thing	shovel4MoveTo	local
+
+thing	shovel0AttachTo	local			// What thing this shovel will next be attached to.
+thing	shovel1AttachTo	local
+thing	shovel2AttachTo	local
+thing	shovel3AttachTo	local
+thing	shovel4AttachTo	local
+
+flex	shovel0RotateTime		local	// How long the shovel's next rotation will be.
+flex	shovel1RotateTime		local
+flex	shovel2RotateTime		local
+flex	shovel3RotateTime		local
+flex	shovel4RotateTime		local
+
+int		shovel0RotateDegrees	local	// How many degrees shovel's next rotation will be.
+int		shovel1RotateDegrees	local
+int		shovel2RotateDegrees	local
+int		shovel3RotateDegrees	local
+int		shovel4RotateDegrees	local
+
+flex	whichShovel				local
+
+flex	BottomCycle=2.4			local
+flex	UpTime=5.0				local
+flex	TopBackCycle=1.2		local
+flex	ForeTime=1.0			local
+flex	TopFrontCycle=1.8		local
+flex	DiagTime=0.779765		local
+flex	MiddleCycle=0.6			local
+flex	DownTime=3.5			local
+flex	Shovel2StartCycle=3.5	local
+
+# slow variables, for testing
+#flex	BottomCycle=4.8			local
+#flex	UpTime=10.0				local
+#flex	TopBackCycle=2.4		local
+#flex	ForeTime=2.0			local
+#flex	TopFrontCycle=3.6		local
+#flex	DiagTime=1.55953		local
+#flex	MiddleCycle=1.2			local
+#flex	DownTime=7.0			local
+#flex	Shovel2StartCycle=7		local
+
+# subroutines
+flex	firstmove=0.0		local
+end
+
+code
+user1:
+
+# ---> MoverControl Cog
+
+	call firstmove;
+	return;
+
+#order of shovelsteps
+#	0 = attaching to bottom
+#	1 = upward from bottom to topback
+#	2 = attached to topback
+#	3 = inward from topback to topfront
+#	4 = attached to topfront
+#	5 = diagonally from topfront to middle
+#	6 = attached to middle
+#	7 = downward from middle to bottom
+	
+firstmove:
+# ---> User1
+
+	# starting shovel 1
+	AttachThingToThing(shovel1, bottom);
+	Rotate(bottom, 180, 0, BottomCycle);
+	onbottom = 1;
+
+	# starting shovel 2
+	MoveThingToPos(shovel2, GetThingPos(gotopback), Shovel2StartCycle);
+	shovel2MoveTo = gotopback;
+	shovel2AttachTo = topback;
+	shovel2RotateTime = TopBackCycle;
+	shovel2RotateDegrees = 90;
+
+	# starting shovel 3
+	AttachThingToThing(shovel3, topback);
+	Rotate(topback, 90, 0, TopBackCycle);
+	ontopback = 3;
+
+	# starting shovel 4
+	AttachThingToThing(shovel4, middle);
+	Rotate(middle, -45, 0, MiddleCycle);
+	onmiddle = 4;
+
+	ontopfront = 0;
+
+	return;
+
+arrived:
+# ---> Rotation things
+	
+	# whatever is attached to bottom wheel, send it toward topback
+	if (GetSenderRef() == bottom)
+	{
+		shovelnum = shovel0[onbottom];
+		DetachThing(shovelnum);
+		MoveThingToPos(shovelnum, GetThingPos(gotopback), UpTime);
+		shovel0MoveTo[onbottom] = gotopback;
+		shovel0AttachTo[onbottom] = topback;
+		shovel0RotateTime[onbottom] = TopBackCycle;
+		shovel0RotateDegrees[onbottom] = 90;
+
+		return;
+	}
+
+	# whatever is attached to topback wheel, send it toward topfront
+	if (GetSenderRef() == topback)
+	{
+		shovelnum = shovel0[ontopback];
+		DetachThing(shovelnum);
+		MoveThingToPos(shovelnum, GetThingPos(gotopfront), ForeTime);
+		shovel0MoveTo[ontopback] = gotopfront;
+		shovel0AttachTo[ontopback] = topfront;
+		shovel0RotateTime[ontopback] = TopFrontCycle;
+		shovel0RotateDegrees[ontopback] = 135;
+
+		return;
+	}
+
+	# whatever is attached to topfront wheel, send it toward middle
+	if (GetSenderRef() == topfront)
+	{
+		shovelnum = shovel0[ontopfront];
+		DetachThing(shovelnum);
+		MoveThingToPos(shovelnum, GetThingPos(gomiddle), DiagTime);
+		shovel0MoveTo[ontopfront] = gomiddle;
+		shovel0AttachTo[ontopfront] = middle;
+		shovel0RotateTime[ontopfront] = MiddleCycle;
+		shovel0RotateDegrees[ontopFront] = -45;
+		
+		return;
+	}
+
+	# whatever is attached to middle wheel, send it toward bottom
+	if (GetSenderRef() == middle)
+	{
+		shovelnum = shovel0[onmiddle];
+		DetachThing(shovelnum);
+		MoveThingToPos(shovelnum, GetThingPos(gobottom), DownTime);
+		shovel0MoveTo[onmiddle] = gobottom;
+		shovel0AttachTo[onmiddle] = bottom;
+		shovel0RotateTime[onmiddle] = BottomCycle;
+		shovel0RotateDegrees[onmiddle] = 180;
+
+		return;
+	}
+
+
+# ---> Movement things
+
+	if (GetSenderRef() == shovel1)
+	{
+		whichShovel = 1;
+	}
+	else
+	{
+		if (GetSenderRef() == shovel2)
+		{
+			whichShovel = 2;
+		}
+		else
+		{
+			if (GetSenderRef() == shovel3)
+			{
+				whichShovel = 3;
+			}
+			else
+			{
+				if (GetSenderRef() == shovel4)
+				{
+					whichShovel = 4;
+				}
+				else
+				{
+					return;
+				}
+			}
+		}
+	}
+
+	CopyOrientAndPos(shovel0MoveTo[whichShovel], shovel0[whichShovel]);
+
+	# attach and move shovel in question
+	AttachThingToThing(shovel0[whichShovel], shovel0AttachTo[whichShovel]);
+	Rotate(shovel0AttachTo[whichShovel], shovel0RotateDegrees[whichShovel], 0, shovel0RotateTime[whichShovel]);
+
+	if (shovel0AttachTo[whichShovel] == bottom)
+	{
+		onbottom = whichShovel;
+	}
+	else
+	{
+		if (shovel0AttachTo[whichShovel] == topback)
+		{
+			ontopback = whichShovel;
+		}
+		else
+		{
+			if (shovel0AttachTo[whichShovel] == topfront)
+			{
+				ontopfront = whichShovel;
+			}
+			else
+			{
+				if (shovel0AttachTo[whichShovel] == middle)
+				{
+					onmiddle = whichShovel;
+				}
+			}
+		}
+	}
+
+	return;
+
+end
+

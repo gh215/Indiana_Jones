@@ -1,0 +1,67 @@
+# Jones 3D Cog Script
+#
+# PRU_test.cog    The camera shakes a sector is entered.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		entered
+message 	timer
+
+surface		shakeSurface				   
+thing		player				local
+
+int			duration=0			local
+int			once=0				local
+
+vector		posOffset			local	#xyz direction for the camera to jump to
+vector		angOffset			local	#pyr direction for the camera to turn to
+
+flex		posDelta=10.0		local	#units per frame that the camera moves back
+flex		angDelta=180.0		local	#degrees per frame that the camera moves back
+ 
+end
+# ========================================================================================
+code
+startup:
+	player=GetLocalPlayerThing();
+	return;
+
+entered:
+    if (once == 1) return;
+    once = 1;
+    
+    SetTimer(Rand() * 0.3);
+    return;
+	
+timer:
+    duration = duration + 1;
+    if (duration < 7)
+	{
+		SetTimer(Rand() * 0.3);
+    }
+	else
+	{
+		once = 0;
+		duration = 0;
+	}
+	posOffSet = VectorSet(RandBetween(-2, 2) * 0.001, RandBetween(-2, 2) * 0.001, RandBetween(-2, 2) * 0.001);
+	#first number kicks the camera to the right(pos) or left(neg)
+	#middle number kicks the camera forward(pos) or back(neg)
+	#last number pops camera straight up(pos) or down(neg) 
+    
+    angOffSet = VectorSet(RandBetween(-7, 7), RandBetween(-5, 5), RandBetween(-3, 3));
+	#angOffSet = VectorSet(0, 0, 0);
+		#These numbers are tripled for 3rd person
+	#first number makes camera shift down(positive) or up(negative)
+	#middle number makes camera shift to right(positive) or left(negative)
+	#last number makes camera shift to lower right(positive) or lower left(negative)
+    
+    SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+	return;
+end

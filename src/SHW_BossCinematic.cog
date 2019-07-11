@@ -1,0 +1,560 @@
+# Jones 3D Cog Script
+#
+# SHW_BossCinematic.cog
+#
+# Nifty cutscenes for ice boss startup and death
+#
+# [CM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+#...............MESSAGES..............
+	message  	startup
+	message  	entered
+	message  	killed
+	message  	pulse
+	message		damaged
+	message		user0
+
+
+#...............COGS..............
+	cog			boss_Cog
+
+
+#...............ACTORS..............
+	thing		player										local
+	thing		indyActor									
+	thing		Ice_Boss										
+	thing		t_CombatIceBoss								local										
+	
+	thing		ice_barrier									mask=0x408																		
+
+
+#...............EVENT LOCATIONS..............
+	thing		fragment									local	#local thing for debris generation
+    thing		dustthing									local
+    sector		safetySECT								
+
+#...............ACTOR MARKS..............
+    thing		in_mv0
+    thing		in_mv1
+    
+	thing		ib_mv0
+    thing		ib_mv1
+
+#...............TRIGGERS..............
+	sector		startsect
+
+
+#...............CAMERAS..............
+	thing		startCam
+	thing		boss_shotPos
+	thing		menace_shotPos
+	
+	thing		shatterCam											# imp action camera on the barrier
+	thing		damageCam									local	# for showing the boss upon damage
+	thing		crackshoCam											# show barrier crack with this one
+	thing		returncampos										# come back from intro cutscene
+
+
+#...............CAMERA TARGETS..............
+    thing		bossCamTarg									local																		                                 
+	thing		menace_shotTarg								
+	
+	thing		damageTarg									local	# create at boss' position for showing damage								
+	#thing		damageTarg1									local 
+	thing		shatterTarg											# show damage on the ice barrier								
+
+
+#...............KEYFRAMES..............
+    keyframe	in_hat=0in_figithat_4_4.key					local
+	keyframe	in_brush=0in_stand1_bd_4.key				local
+	keyframe	in_stand4=0in_stand4.key					local
+
+
+#...............VECTORS..............
+	vector		bossCamVec									local
+	vector		vec_pos										local
+
+
+#...............VARIABLES..............
+    int    		b_started=0	   								local
+    int    		start_scene=0   							local
+    int    		end_scene=0   								local
+    int    		animID		   								local
+    int    		b_spin		   								local
+    int    		track		   								local
+    int    		i_shatterable=0								local
+    int    		i=0											local
+    int    		crackloop									local
+	
+
+#...............TEMPLATES..............
+    template    ghostTpl=ghost      						local
+    template    debris=iceshrapa   							local
+	template	dust=dustcloud4ever							local
+
+#...............MATERIALS..............
+	material	dustmat=gen_a4sfx_dustcloud.mat				local
+	material	blockadeskin=ice_4door_frnt.mat				local
+
+#...............SOUNDS..............
+	sound    	in_what=Inxj005.wav							local
+	sound    	in_success=INXJ110.wav						local
+    
+	sound    	enter_cue=mus_gen_fullaction.wav			local
+	sound    	kill_cue=mus_jep_indyrescue1.wav			local
+	sound    	relief_cue=mus_gen_indyrelief.wav			local
+
+	sound		explosion=imp1_wall_break.wav				local
+	sound       sfxCharge=imp1_chargeup.wav             	local
+	sound       mus_Eerie=mus_gen_eerie1.wav            	local
+	
+	sound       crackice=pru_boulder_rolling_c.wav     		local
+
+#...............VECTORS..............
+	vector		duststart  									local
+	vector		dustend										local
+	vector		v_targetpos									local
+
+end
+
+# ========================================================================================
+code
+
+# ========================================================================================
+startup:
+
+	AISetCutSceneMode(Ice_Boss);
+	player = GetLocalPlayerThing();
+    SetSectorAdjoins(safetySECT, 0);
+
+	return;
+
+
+# ========================================================================================
+entered:
+
+    If ( (GetSenderRef() == startsect) && (b_started == 0) )
+	{
+		b_started = 1;
+
+		# stop player
+		Sleep(0.5);
+		MakeMeStop();
+        DeselectWeaponWait(player);
+
+		# setup actor
+		StartCutscene(1);
+		CopyPlayerHolsters(player, indyActor);
+		CopyOrientAndPos(player, indyActor); 
+        SetThingFlags(player, 0x80000);
+		ClearThingFlags(indyActor, 0x80000);
+		
+		# create target for secondary focus at player position.
+		bossCamVec = VectorAdd(VectorTransformToOrient(player, '0.0 0.05 0.02'), GetThingPos(player));
+		bossCamTarg = CreateThingAtPos(ghostTpl, GetThingSector(player), bossCamVec, '0 0 0');
+		CaptureThing(bossCamTarg);
+		AttachThingToThing(bossCamTarg, indyActor);
+		
+
+        # switch to camera 2 with focus on ghost at indy's position
+		SetCameraFocus(2, startCam);
+		SetCameraSecondaryFocus(2, bossCamTarg);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		
+		# move the actor forward
+		AISetMoveSpeed(indyActor, 1.0);
+		AISetLookThingEyeLevel(indyActor, in_mv0);
+        AISetMoveThing(indyActor, in_mv0, 1);
+		
+		# play actors anims and line
+		Sleep(0.25);
+		track = PlayKey(indyActor, in_Stand4, 2, 0x0, 0);
+		PlayKey(indyActor, in_brush, 4, 0x12, 1);
+		PlayVoice(indyActor, in_what, 1.0, 0);
+		PlayKey(indyActor, in_hat, 4, 0x12, 0);
+		Sleep(1.0);
+
+        # music cue
+		PlaySoundLocal(enter_cue, 1, 1, 0x0, 0);
+		
+		# detach the camtarget and move it up to the ice boss
+		DetachThing(bossCamTarg);
+		
+		# cam interps are on
+		SetCameraInterpSpeed(2, 2.0);
+		SetCameraLookInterp(2, 1);
+		Sleep(0.01);
+        
+		
+		# camera focus interps to ice boss
+		SetCameraSecondaryFocus(2, Ice_Boss); 
+		#animId = MoveThingToPos(bossCamTarg, GetThingPos(Ice_Boss), 2.0);
+		# camera position interps to  boss_shotPos
+		animId = MoveThingToPos(startCam, GetThingPos(boss_shotPos), 2.0);
+        SetCameraFOV(70, 1, 2);
+		Sleep(2.25);
+
+		# cut camera look interping and begin his downward flipping
+		SetCameraLookInterp(2, 0);
+		#Sleep(1.0);
+		SetCameraFOV(90, 1, 1.0);
+		
+		SetActorFlags(Ice_Boss, 0x08);
+		DetachThing(Ice_Boss);
+
+		Sleep(0.75);
+		# move cam down lower
+		animId = MoveThingToPos(startCam, GetThingPos(menace_shotPos), 1.0);
+		Sleep(1.0);
+		
+		# camera looks at menace shot targ 
+		SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 3);
+		Sleep(0.01);
+		SetCameraSecondaryFocus(2, menace_shotTarg);
+#		Sleep(1.0);
+	   
+        # ice boss lands, and menaces indy
+#        SetPulse(0.1);	# world shakes
+		CopyorientAndPos(ib_mv1, Ice_Boss);
+		SendMessage(GetThingClassCog(Ice_Boss), USER2);			# Request 'dust cloud' VFX from actor COG
+		AISetLookThing(Ice_Boss, indyActor);
+        Sleep(1.0);
+		
+		# clear camera look interp
+		SetCameraLookInterp(2, 0);
+
+#		SetPulse(0.0);
+
+		# Play boss menace sequence
+		PlayMode(Ice_Boss, 61, 0);								# Play 'crouch to stand' anim and wait
+
+		SetCameraFOV(80, 1, 0.5);								# Zoom in on the beast
+		Sleep(0.5);
+
+		PlaySoundClass(Ice_Boss, 98);							# Play 'roar' sound
+		PlayMode(Ice_Boss, 62, 1);								# Play 'standing roar' anim
+
+        PlayMode(Ice_Boss, 64, 0);								# Play 'stand to crouch' anim
+		Sleep(0.5);
+        # cheat player towards the cross slightly
+		TeleportThing(player, in_mv1);
+		SetThingFlags(indyActor, 0x80000);
+		ClearThingFlags(player, 0x80000);
+
+		# camera and control returns to player
+        
+		# Establish a camera position near Indy and prep follow-cam...			
+		v_targetpos = VectorAdd(VectorTransformToOrient(player, '0.25 -0.1 0.0'), GetThingPos(player));	
+		SetCameraPosition(1, v_targetpos);
+        SetCurrentCamera(1);
+		ResetCameraFOV(0, 0.0);
+		RestoreExtCam();
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+
+		Sleep(1.0);		# give the player a little safetytime
+
+		# Destroy the cutscene boss
+		DestroyThing(Ice_Boss);
+
+		# Request combat ice boss creation AI ice boss' actor cog at cutscene boss' position
+		t_CombatIceBoss = SendMessageEx(boss_Cog, USER0, ib_mv1, 0, 0, 0);
+		
+		# Put AI Boss "into play"
+		SendMessage(boss_Cog, USER1);
+
+        # create target for secondary focus above the IceBoss
+		damageTarg = CreateThingAtPos(ghostTpl, GetThingSector(t_CombatIceBoss), VectorAdd(GetThingPos(t_CombatIceBoss),'0 0 0.15'), '0 0 0');	
+              
+		# create camera for focus above the player
+		damageCam = CreateThingAtPos(ghostTpl, GetThingSector(player), VectorAdd(GetThingPos(player),'0 0.0 0.15'), '0 0 0');
+	
+        # lock the objects to their 
+		AttachThingToThingEx(damageTarg, t_CombatIceBoss, 0x000C);
+		AttachThingToThingEx(damageCam, player, 0x000C);
+	}
+return;
+
+
+# ========================================================================================
+# KILLED recieved when the ice boss takes the final hit from IMP1.
+# ========================================================================================
+killed:
+
+	# Boss AI cog notifies us of boss' defeat
+	if ( GetSenderRef() == boss_Cog )
+	{
+		# Prep boss for death cutscene
+		AISetCutsceneMode(t_CombatIceBoss);
+		StopThing(t_CombatIceBoss);
+
+		# Start a little boss world camera shake
+		SendmessageEx(GetThingClassCog(t_CombatIceBoss), USER0, 20, 0, 0, 0);
+
+		# player control and cam delay
+		StartCutscene(1);
+		SetActorFlags(player, 0x200000);
+		StopThing(player);
+		
+		SetPulse(0.01);
+		Sleep(0.75);
+        
+		
+		# SHOW THE CREATURE'S DEATH THROES
+		SetCameraFocus(2, damageCam);
+		SetCameraSecondaryFocus(2, t_CombatIceBoss);
+		# camera 2 look interp is on
+		SetCameraLookInterp(2,1);
+		SetCameraInterpSpeed(2, 1.0);
+		SetCurrentCamera(2);
+		SetThingFlags(player, 0x10);
+		Sleep(0.01);
+		SetCameraFOV(90, 0, 0.0);
+	
+#		SetPulse(0.01);
+		
+		Sleep(0.25);
+		# camera pans up with beast
+		SetCameraSecondaryFocus(2, damageTarg);
+		SetCameraFOV(100, 1, 1.0);
+		
+        # Begin boss death sequence
+		PlayMode(t_CombatIceBoss, 61, 1);							# Play 'crouch to stand' anim and wait
+		PlayMode(t_CombatIceBoss, 20, 0);							# Start the boss 'death' anim
+		
+		Sleep(2.0);
+		SetPulse(0.0);
+		# play death cue music
+		PlaySoundLocal(kill_cue, 1.0, 0.0, 0x0, 0);
+		Sleep(3.0);
+
+		# Remove boss from game
+		DestroyThing(t_CombatIceBoss);
+
+        Sleep(1.0);
+
+		# show damage on the door
+        SetCameraLookInterp(2, 0);	# cut look interp
+		SetCameraFOV(120, 0, 0.0);
+		Sleep(0.01);
+		SetCameraSecondaryFocus(2, shatterTarg);
+		SetCameraFocus(2, crackshoCam);
+        SetCameraFOV(60, 1, 1.5);
+		SetPulse(0.1);
+        
+		crackloop=PlaySoundLocal(crackice, 0.5, 0, 0x0, 0);
+		materialanim(blockadeskin, 5, 0);
+		ChangeSoundVol(crackloop, 2, 1.0);
+		Sleep(1.0);
+		StopSound(crackloop, 0.25);
+        SetPulse(0.0);
+		Sleep(2.0);
+
+		# restore the cam
+		Sleep(0.01);
+	
+	
+		# Establish a camera position near Indy and prep follow-cam...			
+		v_targetpos = VectorAdd(VectorTransformToOrient(player, '0.25 -0.1 0.05'), GetThingPos(player));	
+		SetCameraPosition(1, v_targetpos);
+	
+		# Drop into follow-cam mode...
+        ClearThingFlags(player, 0x10);
+		SetCurrentCamera(1);
+		ResetCameraFOV(0, 0.0);
+		RestoreExtCam();
+		Sleep(0.01);
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+        # damage the barrier
+		i_shatterable = 3;
+		# clear the safety adjoin
+		SetSectorAdjoins(safetySECT, 1);
+    }
+
+	return;
+
+
+# ========================================================================================
+# USER0 received when the player damages (but doesnt kill) the ice boss with IMP1
+# ========================================================================================
+user0:
+	
+	StopThing(t_CombatIceBoss);
+	AISetCutSceneMode(t_CombatIceBoss);
+
+	SetActorFlags(player, 0x200000);
+	StartCutscene(1);
+	StopThing(player);
+	Sleep(0.5);
+	
+	# take player control
+	MakeMeStop();
+    
+    # show the damage to the creature
+    
+	#SetExtCamOffsetToThing(damageCam);
+    #Sleep(0.5);
+	#SetExtCamLookOffsetToThing(damageTarg);
+	
+	# creature scream and animation
+	#PlaySoundClass(t_CombatIceBoss, 98);						# Play 'roar' sound
+	#PlayMode(t_CombatIceBoss, 62, 0);
+	
+	SetCameraFocus(2, damageCam);
+	SetCameraSecondaryFocus(2, t_CombatIceBoss);
+	# camera 2 look interp is on
+	SetCameraLookInterp(2,1);
+	SetCameraInterpSpeed(2, 1.0);
+	SetCurrentCamera(2);
+    SetThingFlags(player, 0x10);
+	Sleep(0.01);
+	SetCameraFOV(90, 0, 0.0);
+#	SetCameraFOV(80, 1, 0.5);
+
+#	SetPulse(0.01);
+    
+	Sleep(0.5);
+	# camera pans up with beast
+    SetCameraSecondaryFocus(2, damageTarg);
+	SetCameraFOV(100, 1, 1.0);
+	
+	# creature scream and animation
+
+	PlayMode(t_CombatIceBoss, 61, 1);							# Play 'crouch to stand' anim and wait
+	PlaySoundClass(t_CombatIceBoss, 98);						# Play 'roar' sound
+	PlayMode(t_CombatIceBoss, 62, 1);                          	# Play 'standing roar' anim and wait
+    PlayMode(t_CombatIceBoss, 64, 0);							# Play 'stand to crouch' anim and wait
+	Sleep(0.75);
+
+    # restore the cam
+	SetCameraLookInterp(2, 0);	# cut look interp
+	ResetCameraFOV(0, 0.0);
+	Sleep(0.01);
+	
+	
+	# Establish a camera position near Indy and prep follow-cam...			
+	v_targetpos = VectorAdd(VectorTransformToOrient(player, '0.25 -0.1 0.0'), GetThingPos(player));	
+	SetCameraPosition(1, v_targetpos);
+
+	# Drop into follow-cam mode...
+    ClearThingFlags(player, 0x10);
+	SetCurrentCamera(1);
+    RestoreExtCam();
+    ResetCameraFOV(0, 0.0);
+    Sleep(0.01);
+
+	# restore control
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	AIClearCutSceneMode(t_CombatIceBoss);
+
+
+return;
+
+
+# ========================================================================================
+pulse:
+
+		SetPOVShake('0.0 0.0 0.005', '0.0 0.0 0.005', 80.0, 0.80);
+
+return;
+
+
+# ========================================================================================
+damaged:
+
+	If (GetSenderRef() != ice_barrier) return;
+	If (i_shatterable != 3) return;
+
+    if(GetParam(1) == 0x1000)						# IMP1 damage?
+    {
+        # do cutscene stuff
+        MakeMeStop();
+		StartCutscene(1);
+        
+        # interp camera
+		SetExtCamOffsetToThing(shatterCam);
+        
+        # start cameraShake
+		SetPulse(0.05);
+       
+        # alter fov for zoom-in effect
+        SetCameraFOV(70, 1, 2.5);
+        
+        # play temp sfx
+        PlaySoundLocal(sfxCharge, 1.0, 0.0, 0x0, 0);
+        
+        # light up the player
+        SetThingLight(shatterTarg, '0.25 0.55 1.0', 5.0, 2.0);
+        Sleep(1.0);
+
+        # play explosion sfx
+        PlaySoundLocal(explosion, 1, 0, 0x0, 0);
+        
+        Sleep(1.0);
+        
+		# reset fov
+        ResetCameraFOV(0, 0.0);
+        
+        # kill dynamic light
+        SetThingLight(shatterTarg, '0.0 0.0 0.0', 5.0, 2.0);
+        
+        
+        # create the debris
+		for(i=0; i<8; i=i+1)                                                        	            
+		{
+		fragment = CreateThing(debris, shatterTarg);                                 
+        SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 1));
+        SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 200.0));
+		Sleep(0.01);
+		}
+		
+		# kill the barrier
+		DestroyThing(ice_barrier);
+        
+        # stop the screenshake
+		SetPulse(0);
+
+		# create and animate the dust sprite
+		SetMaterialCel(dustmat, 0);
+		MaterialAnim(dustmat, 8.0, 1);
+		dustthing = CreateThing(dust, shatterTarg);
+		AnimateSpriteSize(dustthing, duststart, dustend, 5.0);
+        
+		Sleep(1.0);
+        # indy sayline
+		PlayVoice(player, in_success, 1.0, 0);
+		
+		# rest for a bit
+        Sleep(0.5);
+        
+        # restore camera
+        RestoreExtCam();
+		SetCameraPosition(1, GetThingPos(shatterCam));
+        SetCurrentCamera(1);
+        
+        # restore controls
+        RestoreExtCam();
+		ResetCameraFOV(0, 0.0);
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+        
+        # play music cue (temp?)
+        PlaySoundLocal(mus_Eerie, 1.0, 0.0, 0x0, 0);
+    }
+
+return;
+
+
+end
+
+

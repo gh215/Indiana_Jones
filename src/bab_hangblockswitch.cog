@@ -1,0 +1,56 @@
+# Jones 3D Cog Script
+#
+# TEO_CrossBlocks.cog
+#
+# Crushing Block script
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message     crossed
+
+	surface     triggeroff_surf mask=0x080
+    surface     triggeron_surf  mask=0x080
+    
+    surface     hangledge0      
+    surface     hangledge1      
+    surface     hangledge2      
+    
+    thing       pushblock     
+
+end
+
+# ========================================================================================
+
+code
+
+# ........................................................................................
+
+crossed:
+
+	if ((GetSenderRef() == triggeron_surf) && (GetSourceRef() == pushblock))
+	{
+        //print("turning on hangledges");
+        SetSurfaceFlags(hangledge0, 0x1000000);
+        SetSurfaceFlags(hangledge1, 0x1000000);
+        SetSurfaceFlags(hangledge2, 0x1000000);
+	}
+    
+    if ((GetSenderRef() == triggeroff_surf) && (GetSourceRef() == pushblock))
+	{
+        //print("turning off hangledges");
+        ClearSurfaceFlags(hangledge0, 0x1000000);
+        ClearSurfaceFlags(hangledge1, 0x1000000);
+        ClearSurfaceFlags(hangledge2, 0x1000000);
+	}
+    
+return;                
+
+# ........................................................................................
+                
+end
+

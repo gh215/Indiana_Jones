@@ -1,0 +1,27 @@
+# Jones 3D Cog Script
+#
+# gen_MatAnim.cog
+#
+# Continuous global animation of a material
+#
+# [SXC]
+# Fixed by RKD 5/8 - wasn't looping
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup	
+	material	animmat		desc=animating_material
+	flex		fps=5.0		desc=playback_speed
+end
+
+code
+# ........................................................................................
+
+startup:
+	materialanim(animmat, fps, 1);
+	return;
+
+end
+

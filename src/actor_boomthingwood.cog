@@ -1,0 +1,50 @@
+# Jones 3D Cog Script
+#
+# actor_BoomThingWood.cog
+#
+# [RT]
+#
+# Ignore damage from fists, whip and machete.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		damaged
+
+	sound		punch=gen_fists_fire.wav		local
+	sound		crunch=gen_machete_hit_wood.wav	local
+
+	thing 		sender							local
+
+	int			damageType						local
+
+end
+
+# ===================================================================
+
+code
+
+# -------------------------------------------------------------------
+
+damaged:
+
+	damageType = GetParam(1);
+
+	if (BitTest(damageType, 0x8 | 0x10 | 0x20))
+	{
+        sender = GetSenderRef();
+		
+		if (BitTest(damageType, 0x8))
+			PlaySoundThing(punch, sender, 1, -1, -1, 0x880);
+		else if (BitTest(damageType, 0x20))
+			PlaySoundThing(crunch, sender, 1, -1, -1, 0x880);
+
+		ReturnEx(0);
+	}
+
+	return;
+
+end

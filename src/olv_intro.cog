@@ -1,0 +1,103 @@
+# Jones 3D Cog Script
+#
+# OLV_Intro.cog
+#
+#	[DS]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message     startup
+	message     user0
+
+
+	sound       indyline=ov01j01.wav			local
+	thing		fader						# gen_fadeplat thing
+	thing       campos
+	thing		trackpos
+	int         track						local
+	int         snd						local
+	thing		player					local
+	keyframe	in_think=0in_thinking_4_4.key		local
+	keyframe	in_1to4=0in_stand1_bd_4.key		local
+	keyframe	in_stand4=0in_stand4.key		local
+	sound		music0=mus_olv_intro.wav		local
+
+	int			bSeen=0							local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	# Start on black...
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, trackpos);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCurrentCamera(2);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+    player = GetLocalPlayerThing();
+
+#   if you're going to switch the camera to start your level cutscene,
+#   do it first before anything else!
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, trackpos);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCurrentCamera(2);
+
+#   cutscene camera is set up and set as current,
+#   now sleep for 0.01 to let the engine generate a frame
+
+	sleep(0.01);
+
+#	then you can do the rest of the stuff you need to start your cutscene.
+#   IMPORTANT! -- don't do a StartCutscene() until after the new camera is set 
+#   and has had a chance to render a frame! 
+
+	SetActorFlags(player, 0x200000);
+	SetThingAlpha(player, 1.0);
+	StartCutscene(2);
+	AttachThingToThing(fader, campos);
+	ThingFadeAnim(fader, 1, 0, 1.7, 0);
+	PlaySoundLocal(music0, 0.8, 0.0, 0x0, 0);
+	MoveToFrame(campos, 1, 1.2);
+	Sleep(11.5);
+
+	snd = PlayVoice(player, indyline, 1.0, 0);
+    track = PlayKey(player, in_Stand4, 2, 0x0, 0);
+	PlayKey(player, in_1to4, 4, 0x12, 1);
+	PlayKey(player, in_think, 4, 0x12, 1);
+	Sleep(0.5);
+	StopKey(player, track, 0.5);
+
+	WaitForSound(snd);
+	DestroyThing(fader);
+	ClearActorFlags(player, 0x200000);
+	SetCurrentCamera(1);
+	EndCutscene();
+
+	return;
+
+end
+

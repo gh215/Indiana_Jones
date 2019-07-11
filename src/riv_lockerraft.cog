@@ -1,0 +1,163 @@
+# Jones 3D Cog Script
+#
+# RIV_LockerRaft.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activated
+
+    thing       player      local
+    thing       indy        local
+    thing       t_Item      local
+    
+    thing       door
+    thing       offsetCam
+    thing       ghost_Thing
+    thing       cam1
+    thing       camTarg
+    thing       ghostPos        # move player to this pos
+    thing       walk_Targ       # walk indy to this pos
+    
+    template    tpl_Thing=limpraftmove      local
+    template    tpl_Actor=indy_actor        local
+    
+    sound       snd_Open=fol_lockr_opn.wav        local
+    sound       snd_Close=fol_lockr_cls.wav       local
+    
+    sound       snd_Raft=Rv02j01.wav        local # a raft... so this is..
+    
+    cog         talkCog     local
+    cog         hintCog
+    
+    flex        openDoor    local
+    
+    int         open=0      local
+    int         playing=0   local
+    int         bin_Num=57  local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    SetThingLight(door, '0.25 0.25 0.25', 0.1, 0.5);
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    if((GetSenderRef() == door) && (open == 0) && (playing == 0))
+    {
+        Call openDoor;
+    }
+    
+    return;
+    
+# ========================================================================================
+
+openDoor:
+
+    SendMessage(hintCog, user0);
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # nudge door
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # create item
+    t_Item = CreateThing(tpl_Thing, ghost_Thing);
+    CaptureThing(t_Item);
+    
+    Sleep(0.5);
+    
+    # switch to camera inside locker
+    SetCameraFocus(2, cam1);
+    SetCameraSecondaryFocus(2, camTarg);
+    SetCurrentCamera(2);
+    
+    # move player away from door
+    CopyOrientAndPos(ghostPos, player);
+    
+    # create indy actor
+    indy = CreateThing(tpl_Actor, player);
+    CaptureThing(indy);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # hide player show indy
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    Sleep(0.5);
+    
+    PlaySoundLocal(snd_Open, 1.0, 0.0, 0x0, 0);
+    Rotate(door, -90, 1, 1.0);
+    WaitForStop(door);
+    
+    Sleep(0.5);
+    
+    # indy walks up to locker
+    AISetCutsceneMode(indy);
+    AISetMoveSpeed(indy, 1.0);
+    AISetLookThing(indy, walk_Targ);
+    AISetMoveThing(indy, walk_Targ, 1);
+
+	# RT: Swap player back in so lips move...
+	CopyOrientAndPos(indy, player);
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # reach for the item
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    DestroyThing(t_Item);
+    
+    # Call the Pickup Lines cog
+    talkCog = GetCogByIndex(0);
+    SendMessage(talkCog, 27);
+    
+    # sleep to wait for talkCog
+    Sleep(1.3);
+    
+    # add item to inventory
+    SetInvAvailable(player, bin_Num, 1);
+    ChangeInv(player, bin_Num, 1.0);
+    JonesInvItemChanged(bin_Num);
+        
+    # Johnny, tell the player what he's picked up
+    PlayVoice(player, snd_Raft, 1.0, 1);
+
+    # restore camera
+    SetCameraPosition(1, GetThingPos(offsetCam));
+    SetCurrentCamera(1);
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    open = 1;
+    
+    return;
+    
+# ========================================================================================
+
+end

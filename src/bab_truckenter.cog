@@ -1,0 +1,195 @@
+# Jones 3D Cog Script
+#
+# 01_BAB_TruckEnter.cog
+#
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	# ************************ MESSAGES ************************
+
+	message		startup
+    message     entered
+	message		crossed
+	
+	# ************************ KEYFRAMES ***********************
+	
+	keyframe	in_kneel=in_stand_bd_crawl.key			local
+	keyframe	in_standUp=0in_crawl_bd_stand.key		local
+	   
+	# ************************* SOUNDS *************************
+    
+    sound       bodyhit=fol_bodyfall_fall.wav           local
+    sound       introuble=inxj011.wav                   local
+    sound       indymusic=mus_gen_indy_a_theme1.wav     local
+    
+	# ************************* THINGS *************************
+
+	thing		player									local
+    thing       actorindy
+    thing       babtruck                                
+    thing       spintarget
+    thing       swingpos
+    thing       teleport_pos
+    thing       invisitruck
+    
+    cog         enemytargetcog
+    cog         truckmovecog
+    
+    surface     scene_triggerface
+    surface     crosface0                               mask=0x004
+    surface     crosface1                               mask=0x004
+    
+    # Cameras
+    
+    thing       cam0_exterior
+    thing       cam0_interior
+    thing       cam1_interior
+    thing       safepos0
+							
+	# *********************** VARIABLES ***********************
+    
+    int         got_in=0                                local
+    int         cogstarted=0                            local
+    int         in_keytrack1                            local
+			
+end
+                    
+# ===================================================================
+
+code
+
+# -------------------------------------------------------------------
+startup:
+
+	# Pointer to Player
+	player = GetLocalPlayerThing();
+	
+return;
+
+# -------------------------------------------------------------------
+crossed:
+
+    if ((GetSenderRef() == scene_triggerface) && (cogstarted == 0))
+    {
+        //attach a ghost to the truck to teleport actor to
+        //truck is made visible in BAB_Truckmove
+        cogstarted = 1;
+        Sleep(1);
+        AttachThingToThingEx(teleport_pos, babtruck, 0x000C);
+        AttachThingToThingEx(invisitruck, babtruck, 0x000C);
+        SetThingFlags(teleport_pos, 0x10);
+        //print("thing attached to truck");
+    }
+    
+    //Switch to interior camera as truck crossed external adjoin
+    if ((GetSenderRef() == crosface0) &&
+        (GetSourceRef() == babtruck) &&
+        (got_in == 1) && 
+        (cogstarted == 1))
+    {
+        //print("truck has gone inside");
+        got_in=2;
+        //set up interior camera cut to watch him run in
+        SetCameraFocus(2, cam0_interior);
+        SetCurrentCamera(2);
+        SetCameraFOV(60, 1, 2.5);
+        
+    }
+    
+    //when stop face is entered stand actor up and return control
+    if ((GetSenderRef() == crosface1) && 
+        (GetSourceRef() == babtruck) && 
+        (got_in == 2) && 
+        (cogstarted == 1))
+    {
+        //print("truck has hit side door");
+        got_in=3;
+        //cut to closer shot as indy stands up
+        Sleep(1);
+        SetCameraFocus(2, cam1_interior);
+        SetCurrentCamera(2);
+        SetCameraFOV(60, 0, 0);
+        
+        //stand indy up
+        //DetachThing(actorindy);
+        PlayKey(actorindy, in_standUp, 6, 0x12, 1);
+        StopKey(actorindy, in_keytrack1, 0);
+        StopThing(actorindy);
+        
+        //turn him around
+        AISetLookThing(actorindy, spintarget);
+        Sleep(2);
+        
+        //finish cutscene
+        SetCollideType(babtruck, 0);
+        SetCollideType(teleport_pos, 0);
+        Sleep(0.1);
+        TeleportThing(player, actorindy);
+        //CopyOrientandPos(actorindy, player);
+        SetThingFlags(actorindy, 0x80000);
+        SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0);
+        EndCutscene();
+        PlayVoice(player, introuble, 1, 1);
+        ClearActorFlags(player, 0x200000);
+        Sleep(3);
+        SendMessage(enemytargetcog, user1);
+    }
+    
+return;
+    
+# -------------------------------------------------------------------
+entered:
+
+    //Disable player and start cutscene
+    If (((GetSenderRef() == babtruck) || 
+         (GetSenderRef() == teleport_pos) || 
+         (GetSenderRef() == invisitruck)) && 
+         (got_in == 0))
+    {
+        got_in = 1;
+        //print("indy entered truck");
+        Sleep(0.01);
+        if (BitTest(GetThingFlags(player), 0x202))
+        {
+            return;
+        }
+        
+        SetActorFlags(player, 0x200000);
+        StartCutscene(1);
+        TeleportThing(player, safepos0);
+        CopyPlayerHolsters(player, actorindy);
+	    ClearThingFlags(actorindy, 0x80000);
+        AISetCutsceneMode(actorindy);
+        TeleportThing(actorindy, teleport_pos);
+        AttachThingToThingEx(actorindy, babtruck, 0x000C);
+        AISetLookThing(actorindy, spintarget);
+        
+        //set up exterior camera
+        SetCameraFocus(2, cam0_exterior);
+        SetCameraSecondaryFocus(2, actorindy);
+        SetCurrentCamera(2);
+        SetCameraFOV(70, 0, 0);
+        
+        //play landing anim
+        PlayMode(actorindy, 55, 0);
+        Sleep(1);
+        PlaySoundLocal(indymusic, 1, 0, 0, 0);
+        //play kneeling down
+        in_keyTrack1 = PlayKey(actorindy, in_kneel, 4, 0x14, 0);
+        
+        //tell truckmove that indy has entered truck
+        SendMessage(truckmovecog, user0);
+    }
+     
+return;
+
+# -------------------------------------------------------------------
+
+end

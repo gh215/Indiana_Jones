@@ -1,0 +1,133 @@
+# Jones 3D Cog Script
+#
+# INF_ChapelDoor.cog
+#
+# This is the generic door with a camera attached
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+    message     entered
+    
+    thing       wheelfloordoor     
+    thing       elevplat     
+    thing       elevplatbutn     
+    
+    thing       camera0
+    thing       camera0_tgt0
+           
+    thing       player                      local
+    
+    int         flag=0                      local
+    int         actcheck=0                  local
+    int         startchan                   local
+    int         movechan                    local
+    int         wepnum=1                    local
+    int         lastrand=-1                 local
+    int         currand=0                   local
+
+    
+    sound       indylineb0=inxj058.wav      local
+    sound       indylineb1=inxj059.wav      local
+    sound       indylineb2=inxj060.wav      local
+    sound       indylineb3=inxj061.wav      local
+    sound       indylineb4=inxj090.wav      local
+    sound       indylineb5=inxj095.wav      local
+      
+end
+
+# ========================================================================================
+
+code
+
+#........................................................................................
+startup:
+
+    player = GetLocalPlayerThing();
+    //SetCollideType(elevplatbutn, 0);
+    
+    return;
+
+#........................................................................................
+entered:
+
+    if ((GetSenderRef() == elevplat) && (GetSourceRef() == player) && (GetCurFrame(elevplat) == 0) && (flag == 0))
+    {
+        flag = 1;
+        sleep(1);
+        MoveToFrame(elevplat, 1, 1);
+    }
+    
+    return;   
+    
+#........................................................................................
+activate:
+
+    if ((GetSenderRef() == elevplatbutn) && (actcheck == 0) && (GetCurItem(player) == 0))
+    {
+        actcheck=1;
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        StartCutscene(1);
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player);
+            DeselectWeaponWait(player);
+            DeselectWeapon(player);
+            //printint(wepnum);
+        }
+        PlayMode(player, 60, 0);
+        //print("activating button");
+        MoveToFrame(elevplatbutn, 1, 1);
+        WaitForStop(elevplatbutn);
+        Sleep(1);
+        
+        SetCameraFocus(2, camera0);
+        SetCameraSecondaryFocus(2, camera0_tgt0);
+        SetCurrentCamera(2);
+        
+        Rotate(wheelfloordoor, 29.0, 0, 3);
+        SetCameraFOV(110, 1, 2);
+        WaitForStop(wheelfloordoor);
+        Sleep(1);
+        
+        SetCameraLookInterp(2, 0);
+        SetCameraPosInterp(2, 0);
+        SetCameraInterpSpeed(2, 0);
+        SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0);
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+        wepnum = 1;
+
+    }
+    
+    if ((GetCurItem(player) != 0) && (GetSenderRef() == elevplatbutn))
+    {
+        StopThing(player);
+        StartCutscene(0);
+        SetActorFlags(player, 0x200000);
+        currand = RandBetween(0, 5);
+        While (lastrand == currand)
+        {
+            currand = RandBetween(0, 5);
+        }
+        PlayVoice(player, indylineb0[currand], 1, 1);
+        lastrand = currand;
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }
+    
+    return;
+    
+#........................................................................................					
+
+end
+
+

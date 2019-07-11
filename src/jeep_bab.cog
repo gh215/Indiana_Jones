@@ -1,0 +1,163 @@
+# Jones 3D Cog Script
+#
+# Jeep_bab.cog
+#
+# [PKM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		created
+	message		activated
+	message		callback
+
+	sound		someGas=INXJ243.wav					local
+	sound		gasCanOn=jep_gascan_attach.wav		local
+	sound		gasCanOff=jep_gascan_detach.wav		local
+
+	thing		jeep								local
+	thing		indy								local
+
+	int			jeepMesh							local
+	int			meshRef								local
+	int			gasCanBin=66						local
+	int			isTakingCan=0						local
+	int			bStartCutscene=0					local
+
+	flex		dotProduct							local
+	flex		rightDot							local
+
+	vector		indyVector							local
+	vector		cameraPos							local
+
+	model		jeepGasCan=gascan_bab_jeep.3do		local
+
+	keyframe	in_reach=in_pickup_med.key			local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	indy = GetLocalPlayerThing();
+	return;
+
+created:
+	jeep = GetSenderRef();
+	jeepMesh = GetMeshByName(jeep, "jeep_body");
+	meshRef = SetThingMesh(jeep, jeepMesh, jeepGasCan, 0);
+
+	SetThingUserData(jeep, meshRef);
+	return;
+
+activated:
+	indyVector = VectorNorm(VectorSub(GetThingPos(jeep), GetThingPos(indy)));
+
+	# Check to see where Indy is standing relative to the jeep
+    dotProduct = VectorDot(GetThingLVec(jeep), indyVector);
+    rightDot = VectorDot(GetThingRVec(jeep), indyVector);
+
+
+	# Check to see if Indy is positioned near the gas can.
+	if ((dotProduct >= 0.904) && (dotProduct <= 0.997) && (rightDot > 0))
+	{
+		meshRef = GetThingUserData(jeep);
+
+		# The player has activated the jeep near the gas can bracket.
+		if (meshRef == -1)
+		{
+			if (GetCurItem(indy) == gasCanBin)
+			{
+				isTakingCan = 0;
+				bStartCutscene = 1;
+
+				SendMessage(GetCogByIndex(0), user1);
+			}
+		}
+		else
+		{
+			isTakingCan = 1;
+			bStartCutscene = 1;
+
+			SendMessage(GetCogByIndex(0), user0);
+		}
+	}
+
+	if (bStartCutscene)
+	{
+		if (MakeMeStop() == -1)
+		{
+			bStartCutscene = 0;
+			return;
+		}
+		# RT: Fixed bug #7626
+		DeselectWeaponWait(indy);
+
+		SetExtCamOffset('0.2 0.1 0.1');
+
+		# RT: Also forgot to start the cutscene
+		StartCutscene(0);
+
+		# RT: Now it's okay to capture indy
+		CaptureThing(indy);
+		PlayKey(indy, in_reach, 5, 0x12, 0); 
+		bStartCutscene = 0;
+	}
+
+	return;
+
+callback:
+	if (GetParam(1) == 16)
+	{
+		# Indy is halfway through with his reach animation, so take the can off the jeep, or
+		# put it back, as appropriate.
+
+		meshRef = GetThingUserData(jeep);
+
+		ReleaseThing(indy);
+		if (isTakingCan == 1)
+		{
+			# The gas can is currently attached to the jeep - give it to the player.
+
+			RestoreThingMesh(jeep, meshRef);
+			SetThingUserData(jeep, -1);
+			PlaySoundLocal(gasCanOn, 1.0, 0, 0, 0);
+
+			SetInvAvailable(indy, gasCanBin, 1);
+			ChangeInv(indy, gasCanBin, 1.0);
+			JonesInvItemChanged(gasCanBin);			
+
+			SendMessage(GetThingCaptureCog(jeep), user0);
+
+			Sleep(1.0);
+			PlayVoice(indy, someGas, 1.0, 0);
+		}
+		else
+		{
+			# The player is activating us with the gas can - put it back on the jeep.
+			jeepMesh = GetMeshByName(jeep, "jeep_body");
+			meshRef = SetThingMesh(jeep, jeepMesh, jeepGasCan, 0);
+			PlaySoundLocal(gasCanOff, 1.0, 0, 0, 0);
+
+			SetThingUserData(jeep, meshRef);
+
+			ChangeInv(indy, gasCanBin, -1.0);
+			SetInvAvailable(indy, gasCanBin, 0);
+
+			SendMessage(GetThingCaptureCog(jeep), user1);
+		}
+	}
+
+	RestoreExtCam();
+	ClearActorFlags(indy, 0x200000);
+	EndCutscene();
+
+	return;
+end

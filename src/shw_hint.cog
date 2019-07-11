@@ -1,0 +1,273 @@
+# Jones 3D Cog Script
+#
+# SHW_Hint.cog
+#
+# Solves hints    
+#
+# [SXC]	adapted by [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+        message         startup
+        message         entered
+        message         crossed
+        message         user0
+        message         user1
+        message         user2
+        message         activated
+        message         taken
+        message         arrived
+
+        
+        thing           player                          local
+
+        # HINT OBJECTS/SURFS/SECTORS
+        
+		thing           hint2
+        surface         h2_face             	# see the ice dam (entered)
+        
+        thing           hint4
+        thing         	h4_flask             	# take the flask (taken)
+        
+        thing           hint6
+        cog		        h6_icedamcog            # blow the ice dam (user0)
+        
+        thing           hint8  
+        surface         h8_face          		# pull block above div1 onto this face	(entered)
+        
+		thing           hint10
+        thing			h10_div1key				# take key from pier trap cave (taken)
+
+		thing           hint12
+        thing         	h12_lever            	# pull portcullis wheel lever  (activated)
+        
+        thing           hint14
+        thing			h14_Bdoor2				# open boss door 2	(arrived)
+        
+        thing           hint16
+        cog         	h16_bucketdevcog       # release div2key from bucket device	(user0)
+        
+        thing           hint18
+        cog         	h18_sluicecog			# pull D1lever (user0)
+        
+        thing           hint20
+        thing         	h20_Bdoor3				# open boss door 3 (arrived)       
+
+        thing           hint22
+        thing	        h22_div2keybox			# unlock divroom2 door (activated)
+
+        thing           hint24
+        cog         	h24_D2sluicecog			# pull D2lever	(user1)
+
+        thing           hint26
+        thing         	h26_D3key				# take Divroom3 key	(activated)
+
+        thing           hint28
+        thing         	h28_Bdoor4				# open Boss door 4 (arrived)
+
+        thing           hint30
+        cog         	h30_sluicecog			# pull D1lever again (activated)
+
+        thing           hint32
+        surface         h32_face				# jump into hole in floor (crossed)
+
+        thing           hint34
+        thing          	h34_whipstrut   		# damage the whip wall swing strut (damaged)
+        
+        thing           hint36
+        thing          	h36_D3lever    			# pull D3lever	(activated)
+
+        thing           hint38
+        thing          	h38_Bdoor1      		# open boss door 1 (arrived)
+
+        thing           hint40
+		sector         	h40_bossSect			# enter boss arena (entered)
+
+        thing           hint42
+        surface         h42_face				# enter lab balcony (entered)
+
+        thing           hint44
+        thing          	h44_switch        		# hit the exit switch (activated)
+
+		
+
+end
+
+
+# ========================================================================================
+code
+
+startup:
+    player = GetLocalPlayerThing();
+	
+return;
+
+# ========================================================================================
+damaged:
+
+	If ((GetSenderRef() == h34_whipstrut) && (GetHintSolved(hint34) == 0))
+		{
+        SetHintSolved(hint34);
+		}
+return;
+
+
+# ========================================================================================
+crossed:
+
+	If ((GetSenderRef() == h4_face) && (GetHintSolved(hint4) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint4);
+		}
+	
+	if ((GetSenderRef() == h12_face) && (GetHintSolved(hint12) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint12);
+		}
+
+    if ((GetSenderRef() == h32_face) && (GetHintSolved(hint32) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint32);
+		}
+return;
+    
+
+# ========================================================================================
+
+entered:
+        
+	If ((GetSenderRef(h2_face))	 &&  (GetHintSolved(hint2) == 0))
+		{
+		SetHintSolved(hint2);
+		}	
+
+	if ((GetSenderRef() == h8_face) && (GetHintSolved(hint8) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint8);
+		}
+
+    if ((GetSenderRef() == h40_bossSect) && (GetHintSolved(hint40) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint40);
+		}
+
+    if ((GetSenderRef() == h42_face) && (GetHintSolved(hint42) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint42);
+		}
+return;
+	
+# ========================================================================================
+activated:	
+	
+    if ((GetSenderRef() == h12_lever) && (GetHintSolved(hint12) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint12);
+		}
+
+    if ((GetSenderRef() == h22_div2keybox) && (GetHintSolved(hint22) == 0) && (GetCurItem(player) == 59))
+		{
+        SetHintSolved(hint22);
+		}
+
+    if ((GetSenderRef() == h26_D3key) && (GetHintSolved(hint26) == 0))
+		{
+        SetHintSolved(hint26);
+		}
+
+    if ((GetSenderRef() == h36_D3lever) && (GetHintSolved(hint36) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint36);
+		}
+
+    if ((GetSenderRef() == h44_switch) && (GetHintSolved(hint44) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint44);
+		}
+
+return;
+
+# ========================================================================================
+user0:
+
+	If ((GetSenderRef() == h6_icedamcog) && (GetHintSolved(hint6) == 0))
+		{
+            SetHintSolved(hint6);
+        }
+
+	If ((GetSenderRef() == h16_bucketdevcog) && (GetHintSolved(hint16) == 0))
+		{
+            SetHintSolved(hint16);
+        }
+
+    If ((GetSenderRef() == h18_sluicecog) && (GetHintSolved(hint18) == 0))
+		{
+            SetHintSolved(hint18);
+        }
+
+    if ((GetSenderRef() == h30_sluicecog) && (GetHintSolved(hint24) == 1) && (GetHintSolved(hint30) == 0))
+		{
+        SetHintSolved(hint30);
+		}
+
+    
+return;
+    
+# ========================================================================================
+user1:
+
+	If ((GetSenderRef() == h24_D2sluicecog) && (GetHintSolved(hint24) == 0))
+		{
+            SetHintSolved(hint24);
+        }
+return;
+
+# ========================================================================================
+# ========================================================================================
+
+
+taken:
+
+	if ((GetSenderRef() == h4_flask) && (GetHintSolved(hint4) == 0))
+		{
+        SetHintSolved(hint4);
+		}
+    
+	if ((GetSenderRef() == h10_div1key) && (GetHintSolved(hint10) == 0))
+		{
+        SetHintSolved(hint10);
+		}
+    
+return;
+    
+# ========================================================================================
+arrived:
+
+	if ((GetSenderRef() == h14_Bdoor2) && (GetHintSolved(hint14) == 0))
+		{
+        SetHintSolved(hint14);
+		}
+
+    if ((GetSenderRef() == h20_Bdoor3) && (GetHintSolved(hint20) == 0))
+		{
+        SetHintSolved(hint20);
+		}
+
+    if ((GetSenderRef() == h28_Bdoor4) && (GetHintSolved(hint28) == 0))
+		{
+        SetHintSolved(hint28);
+		}
+
+    if ((GetSenderRef() == h38_Bdoor1) && (GetHintSolved(hint38) == 0))
+		{
+        SetHintSolved(hint38);
+		}
+
+return;
+# ========================================================================================
+
+end
+

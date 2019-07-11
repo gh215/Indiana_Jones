@@ -1,0 +1,61 @@
+# Jones 3D Cog Script
+#
+# sea_window.cog 
+# 
+#  [JWC & DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     damaged
+    
+	surface     insidewindow	mask=0x408		
+	surface	outsidewindow	mask=0x408	
+    
+	sound		shatter=shs_glassbreak.wav	local
+	template	shards=iceshrapa			local
+	thing		player				local
+	thing		shardpos				local
+	int		broken=0				local
+	template	glass=ghost				local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	sleep(0.01);
+	player = GetLocalPlayerThing();
+	shardpos = CreateThingAtPos(glass, GetSurfaceSector(insidewindow), GetSurfaceCenter(insidewindow), VectorSet(0, 0, 0));
+	CaptureThing(shardpos);
+	return;
+    
+# ========================================================================================
+
+damaged:
+	If((GetSenderRef() == insidewindow) || (GetSenderRef() == outsidewindow))
+    	{
+		if(broken == 0)
+		{
+			broken=1;
+			PlaySoundLocal(shatter, 1.0, 0, 0, 0);
+
+			# Make stuff
+			CreateThing(shards, shardpos);
+
+			# Swap Texture
+			SetWallCel(insidewindow, 1);
+			SetWallCel(outsidewindow, 1);
+		}
+	}
+	return;
+
+# ========================================================================================
+
+end
+

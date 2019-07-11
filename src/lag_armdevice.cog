@@ -1,0 +1,92 @@
+# Jones 3D Cog Script
+#
+# lag_armdevice.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# =======================================================================================
+
+symbols
+	message	startup
+	message	touched
+	message	activated
+
+   	thing		bumpit0
+	thing		armdevice
+
+	keyframe	in_reach=in_pickup_low.key			local
+	sound		foundSnd=INXJ254.wav				local
+	sound		ahaSnd=INXJ147.wav				local # Aha...
+	sound		bumpwav0=inxj003.wav				local
+	sound		bumpwav1=inxj141.wav				local
+	thing		player						local
+	int		talking=0						local
+	int		sndnum						local
+	int		numsounds=2						local
+	int		tryit							local
+
+end
+
+# ========================================================================================
+
+code
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+activated:
+	if (GetSenderRef() != bumpit0) return;
+	if(talking == 2) return;
+	StopSound(tryit, 0.01);
+	talking=2;
+	StartCutscene(0);
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+	DeselectWeaponWait(player);
+	PlayVoice(player, ahaSnd, 1.0, 0);
+
+	# ----- Set Cam Offset ---------
+    if (Rand() < 0.5)
+	{
+        SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+        SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 0.0');
+
+	PlayKey(player, in_reach, 4, 0x12, 0);
+	sleep(0.6);
+	DestroyThing(armdevice);
+
+	# ----- Add Arm Device --------
+	ChangeInv(player, 60, 1.0);
+	SetInvAvailable(player, 60, 1);
+	JonesInvItemChanged(60);
+	Sleep(1.0);
+	PlayVoice(player, foundSnd, 1.0, 1);
+
+	# ----- Reset Camera ----------
+	RestoreExtCam();
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	return;
+
+
+touched:
+	if (GetSenderRef() != bumpit0) return;
+	if(talking >= 1) return;
+	sndnum = rand()*numsounds;
+	talking=1;
+	tryit = PlayVoice(player, bumpwav0[sndnum], 1.0, 0);
+	WaitForSound(tryit);
+	sleep(10);
+	if(talking == 2) return;
+	talking=0;
+	return;
+
+end
+

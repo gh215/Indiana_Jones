@@ -1,0 +1,173 @@
+# Jones 3D Cog Script
+#
+# sol_ExitComplex_Wpnts.cog   
+#
+# [SCHOLL]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	startup
+message user0
+message	aievent
+
+thing	t_Indy		local
+
+int		n_Waypoint		local
+int		n_idx			local
+int		b_WpntsActive=0	local
+
+
+template	tpl_mauser=khaki_mauser			local
+template	tpl_simonov=khaki_simonov		local
+
+
+# ===========================WAYPOINTS================================================
+int			NUM_WAYPOINTS=21			local
+thing		t_Waypoint00
+thing		t_Waypoint01
+thing		t_Waypoint02
+thing		t_Waypoint03
+thing		t_Waypoint04
+thing		t_Waypoint05
+thing		t_Waypoint06
+thing		t_Waypoint07
+thing		t_Waypoint08
+thing		t_Waypoint09
+thing		t_Waypoint10
+thing		t_Waypoint11
+thing		t_Waypoint12
+thing		t_Waypoint13
+thing		t_Waypoint14
+thing		t_Waypoint15
+thing		t_Waypoint16
+thing		t_Waypoint17
+thing		t_Waypoint18
+thing		t_Waypoint19
+thing		t_Waypoint20
+
+thing		t_TrackMauser
+thing		t_Grenade
+thing		t_BarrowSub
+thing		t_HallSub
+thing		t_FinalShotgun
+
+
+thing		t_Commie			local
+
+# ===========================SECTORS================================================
+
+
+# ===========================MISC CONSTANTS================================================
+
+flex		activatewaypoints			local
+
+end
+# ========================================================================================
+
+code
+startup:
+	call ActivateWaypoints;
+
+	// These were just for testing
+//	SendMessageEx(GetSelfCog(), 27, 8, 0, 0, 0);
+//	SendMessageEx(GetSelfCog(), 27, 11, 1, 0, 0);
+
+	return;
+
+
+# ========================================================================================
+aievent:
+	if (GetParam(0) == 0x100) // SITHAI_EVENTMODECHANGED
+	{
+		// acquired target visibility (SITHAI_MODETARGETVISIBLE).
+		if ( !BITTEST(GetParam(2), 0x400) && BITTEST(GetParam(1), 0x400))
+		{
+			// Only enable roam after they have seen Indy, so that they
+			// don't move from their original places before we want them to.
+//			DebugPrint("Roaming");
+			AIEnableInstinct(GetSenderRef(),"roam", 1);
+		}
+	}
+	return;
+
+# ========================================================================================
+
+// Param0 is waypoint to create commie at. 
+//	Use 8, 9, 10, 11. The higher numbers are closer to the final room.
+//  Don't create two commies at the same waypoint at the same time.
+// Param1 specifies which type of commie.
+//	0 - mauser
+//  1 - simonov
+user0:
+	t_Commie = -1;
+	if (GetParam(1) == 0)
+	{
+		t_Commie = CreateThing(tpl_mauser, t_Waypoint00[GetParam(0)]);
+	}
+	else
+	{
+		t_Commie = CreateThing(tpl_simonov, t_Waypoint00[GetParam(0)]);
+	}
+
+	if (t_Commie != -1)
+	{
+//		Print("Creating Commie");
+		AISetInstinctWpntMode(t_Commie);
+		AIWpntHuntTarget(t_Commie, 2.0, 0.0);
+		AIEnableInstinct(t_Commie, "roam", 1);
+	}
+
+	return;
+
+
+# ========================================================================================
+ActivateWaypoints:
+
+#	DebugPrint("ACTIVATING WAYPOINTS FOR EXIT COMPLEX");
+
+	CaptureThing(t_TrackMauser);
+	AISetInstinctWpntMode(t_TrackMauser);
+	#CaptureThing(t_Grenade);
+	#AISetInstinctWpntMode(t_Grenade);
+	CaptureThing(t_BarrowSub);
+	AISetInstinctWpntMode(t_BarrowSub);
+	CaptureThing(t_HallSub);
+	AISetInstinctWpntMode(t_HallSub);
+	CaptureThing(t_FinalShotgun);
+	AISetInstinctWpntMode(t_FinalShotgun);
+
+	for ( n_idx = 0; n_idx < NUM_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx);
+	}
+
+	AIConnectWpnts(0, 1);
+	AIConnectWpnts(1, 2);
+	AIConnectWpnts(2, 3);
+	AIConnectWpnts(3, 4);
+	AIConnectWpnts(4, 5);
+	AIConnectWpnts(4, 6);
+	AIConnectWpnts(6, 7);
+
+	AIConnectWpnts(8, 9);
+	AIConnectWpnts(9, 10);
+	AIConnectWpnts(10, 11);
+	AIConnectWpnts(11, 12);
+	AIConnectWpnts(12, 13);
+	AIConnectWpnts(13, 14);
+	AIConnectWpnts(14, 15);
+	AIConnectWpnts(14, 20);
+	AIConnectWpnts(15, 16);
+	AIConnectWpnts(16, 17);
+	AIConnectWpnts(17, 18);
+	AIConnectWpnts(18, 19);
+	AIConnectWpnts(19, 20);
+
+	return;
+
+
+end
+

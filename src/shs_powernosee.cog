@@ -1,0 +1,76 @@
+# Jones 3D Cog Script
+#
+# SHS_Power_NoSee.cog   Isolates Power Room sectors for framerate.
+# 
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+
+symbols
+	
+    message	startup
+    message crossed
+    
+   	surface PowerSecOn 		linkid=1 	    
+    surface PowerSecOff		linkid=2
+    surface PowerSecOn1		linkid=1
+	surface PowerSecOff1	linkid=2
+    
+	surface ClocktowerSecOff 
+    surface ClocktowerSecOn	
+    
+    sector  PowerSec
+    sector	ClocktowerSec
+
+	int 	player		local
+
+   
+    
+end
+
+code
+
+startup:
+	
+	player=GetLocalPlayerThing();
+	SetSectorAdjoins(PowerSec, 0);
+	return;
+
+crossed:
+	
+
+	# make sure Indy player is sending message
+	If (GetSourceRef() != player) return;
+
+	# draw sector
+	If (GetSenderId() == 1)
+    {
+        
+		SetSectorAdjoins(PowerSec, 1);
+	}    
+    
+	If (GetSenderRef() == ClockTowerSecOn) 
+	{
+		SetSectorAdjoins(ClockTowerSec, 1);
+	}
+	
+	# don't draw sector 
+	
+	If ((GetSenderId() == 2))
+    {
+        SetSectorAdjoins(PowerSec, 0);
+    }
+	
+	If (GetSenderRef() == ClockTowerSecOff) 
+	{
+		SetSectorAdjoins(ClockTowerSec, 0);
+	}
+	 
+    return;
+	
+
+
+end
+
+	

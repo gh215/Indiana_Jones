@@ -1,0 +1,174 @@
+# Jones 3D Cog Script
+#
+# actor_Snake.cog
+#
+# [MDR]
+#
+# Special stuff for snakes.
+#
+# Rattlesnakes rear up when between 10-15 meters from player
+# and play their rattle sound... eewww... scary...
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		created
+	message		aievent
+   
+# ************************** SOUNDS ****************************
+	sound		snd_rattle=fol_rs_rattle.wav	local
+
+# ************************** MISC LOCAL VARS *******************
+	thing		t_sender						local
+	int			n_event							local
+
+	int			n_sndRattle						local
+	flex		f_attackRange=1.0				local
+
+# ************************ SUBROUTINES *************************
+
+	flex		PreventSnakeChase				local
+	flex		CheckRattleDist					local
+	flex		StopRattleSound					local
+	flex		StartRattleSound				local
+
+end
+
+# ========================================================================================
+code
+
+# .................................................................................	
+created:
+
+	t_sender = GetSenderRef();
+
+	AISetMode(t_sender, 0x2000000);						# Set MODE_NOCHASING
+	AISetSubMode(t_sender, 0x20000);					# Set SUBMODE_SEMICONTINUOUSMOTION
+	AISetSubMode(t_sender, 0x1000000);					# Set SUBMODE_SPECIALTURNS
+	SetThingUserData(t_sender, -1);
+
+	if ( IsThingModelName(t_sender, "gen_rs.3do") )
+	{
+		AISetMode(t_sender, 0x10000);					# Set MODE_WANTALLEVENTS
+	}
+
+    return;
+
+
+# .................................................................................	
+aievent:
+
+	t_sender = GetSenderRef();
+	n_event  = GetParam(0);
+
+	if ( n_event == 0x100 )								#---- SITHAI_EVENTMODECHANGED
+	{
+		# Switched to MODE_ATTACKING?
+		if ( BITTEST(GetParam(1), 0x02) && !BITTEST(GetParam(2), 0x02) )
+		{
+			if ( IsThingModelName(t_sender, "gen_rs.3do") )
+			{
+				call CheckRattleDist;
+			}
+			return;
+		}
+	}
+	else if ( n_event == 0x40 )							#---- SITHAI_EVENTMOVETARGETCHANGED
+	{
+		if ( BITTEST(GetParam(1), 0x02) )
+		{
+			if ( VectorDist(GetThingPos(t_sender), GetThingPos(GetLocalPlayerThing())) > f_attackRange )
+			{
+				call PreventSnakeChase;
+			}
+		}
+		else
+		{
+			call StopRattleSound;
+		}
+	}
+	else if ( n_event == 0x4000 )						#---- SITHAI_EVENTFIRE
+	{
+		if ( IsThingModelName(t_sender, "gen_rs.3do") )
+		{
+			if ( Rand() > 0.6 )
+			{
+				call StartRattleSound;
+			}
+			else
+			{
+				call StopRattleSound;
+			}
+		}
+	}
+
+    return;
+
+
+# ===================================================================
+#	Subroutines
+# ...................................................................
+#	Assumes t_sender is initialized
+# ===================================================================
+
+# .................................................................................	
+PreventSnakeChase:
+
+	Reset();
+
+	StopThing(t_sender);								# Stop the wee beastie
+	AISetMode(t_sender, 0x04);							# Set MODE_SEARCHING
+	AIClearMode(t_sender, 0x80602);						# Clear MODE_(CHASEGOAL|ACTIVE|ATTACKING|TARGETVISIBLE)
+	return;
+
+
+# .................................................................................	
+CheckRattleDist:
+
+	Reset();
+
+	if ( VectorDist(GetThingPos(t_sender), GetThingPos(GetLocalPlayerThing())) > f_attackRange )
+	{
+		StopThing(t_sender);
+		AISetMode(t_sender, 0x04);						# Set MODE_SEARCHING
+		AIClearMode(t_sender, 0x602);					# Clear MODE_(ATTACKING|ACTIVE|TARGETVISIBLE)
+
+		call StartRattleSound;
+
+		return;
+	}
+
+	# Allow code to fall through to StopRattleSound here...
+
+# .................................................................................	
+StopRattleSound:
+
+	n_sndRattle = GetThingUserData(t_sender);
+	if ( n_sndRattle > -1 )
+	{
+		StopSound(n_sndRattle, 0.8);					# Halt rattle sound
+	}
+
+	return;
+
+
+# .................................................................................
+StartRattleSound:
+
+	if ( GetMoveStatus(t_sender) != 0 )					# SITHPLAYERMOVE_STILL?
+		return;
+
+	n_sndRattle = PlaySoundThing(snd_rattle, t_sender, 1.0, 2.0, 15.0, 0x881);
+	if ( n_sndRattle > -1 )
+	{
+		SetThingUserData(t_sender, n_sndRattle);
+	}
+
+	return;
+
+
+end
+

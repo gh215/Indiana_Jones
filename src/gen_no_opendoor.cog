@@ -1,0 +1,83 @@
+# Jones 3D Cog Script
+#
+# gen_no_opendoor.cog
+#
+# Generic Door Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+
+	#..................MESSAGES................
+    message		startup		
+    message		activated		
+
+	
+	#..................ACTORS................
+	thing		player          				local
+    
+
+	#..................PROPS................
+	thing		door0
+	thing		door1
+
+	#..................CAMERAS................
+    thing       unlockCam          		
+	
+
+    #..................COGS................
+	cog			doortalkcog
+    
+    #..................PROPS................
+    thing		door0		
+    thing		door1		
+    
+	
+    
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+return;
+
+# ========================================================================================
+activated:
+
+If ((GetSenderRef() == door0) || (GetSenderRef() == door1))
+	
+	{
+	   	# Prep for scene...
+		MakeMeStop(player);
+		StartCutScene(1);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		DeselectWeaponWait(player); # stow any weapon or lighter
+		Sleep(0.25); # wait a beat
+
+        # Slew follow camera to observe the scene from a known position
+		SetExtCamOffsetToThing(unlockCam);
+
+		# message to doortalk cog for sayline
+		SendMessageEx(doortalkcog, user5, player, 0, 0, 0);
+		
+		# player activates the door
+        PlayMode(player, 60, 1);
+		
+		RestoreExtCam();
+		ClearActorFlags(player, 0x200000);
+		EndCutScene();
+	}
+return;
+
+
+	
+end
+

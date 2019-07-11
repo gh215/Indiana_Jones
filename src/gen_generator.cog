@@ -1,0 +1,97 @@
+# Jones 3D Cog Script
+#
+# 00_GENERATOR.COG
+#
+# Generic Dark Forces like enemy generator.
+#
+# [YB]
+#
+# 8/29 - RKD, added trapdoor, in case generator doesn't appear on certain difficulties
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+
+
+symbols
+
+thing			generator_pos							desc=generator_ghost
+thing			player		local
+template		enemy_tpl								desc=enemy_to_generate
+flex			initial_delay=300.0					desc=initial_delay
+flex			generate_delay=30.0					desc=generate_delay
+int			generate_num=5							desc=generate_number
+int			max_alive=3								desc=max_alive
+flex			min_dist=0.0							desc=min_dist
+flex			max_dist=1000.0						desc=max_dist
+
+int			enemy										local
+int			cur_num=0								local
+int			cur_alive=0								local
+flex			distance=0.0							local
+
+message		startup
+message		user0
+message		timer
+message		pulse
+message		killed									mask=0xfff
+
+end
+
+## Code Section
+
+code
+
+//-------------------------------------------------------------------------------------------------
+
+startup:
+	// if initial_delay == -1 then the generator will be started by SendMessage
+	// user0 from another COG. Much like the WAKEUP message in DF...
+	if (generator_pos == -1) return;	// if generator doesn't appear on this difficulty, quit
+	
+	if(initial_delay != -1) SetTimer(initial_delay);
+
+	Return;
+
+//-------------------------------------------------------------------------------------------------
+
+user0:	
+
+//-------------------------------------------------------------------------------------------------
+
+timer:
+	SetPulse(generate_delay);
+
+//-------------------------------------------------------------------------------------------------
+
+pulse:
+	if((cur_alive < max_alive))
+	{
+		distance = VectorDist(GetThingPos(generator_pos), GetThingPos(GetLocalPlayerThing()));
+		if((distance >= min_dist) && (distance <= max_dist))
+		{
+			if(!HasLOS(player, generator_pos))
+			{
+				enemy = CreateThing(enemy_tpl, generator_pos);
+				CaptureThing(enemy);
+
+				cur_num   = cur_num + 1;
+				cur_alive = cur_alive + 1;
+
+				// If we have generated enough enemies, end the pulse
+				if(cur_num >= generate_num) SetPulse(0);
+			}
+		}
+	}
+
+	Return;
+
+//------------------------------------------------------------------------------------------------
+
+killed:
+	// Note that this script is generic, so generated enemies won't drop powerups.
+	// If dropped powerups are necessary, one script per enemy must be done...
+	cur_alive = cur_alive - 1;
+
+	Return;
+
+end
+

@@ -1,0 +1,299 @@
+# Jones 3D Cog Script
+#
+# pyr_blockrise
+#
+# For the sinkblock puzzle in the tunnels between the pyramids
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+message		startup
+message		activated
+message		entered
+message		exited
+message		timer
+message		pulse
+
+# world things
+thing	player		local
+thing	button
+thing	sinkblock					# column that rises and falls
+thing	lowerblock	nolink			# pushblock that keeps column from falling
+thing	pushblocker	nolink			# makes bottom block unpushable with sayline from Indy
+
+# camera things
+thing	buttoncam
+thing	buttonlook
+thing	blockcam
+thing	blockcamlook
+thing	cam1spot	local
+thing	cam1look	local
+
+# hint things
+thing	hint24
+thing	hint25
+thing	hint26
+
+# world surfaces
+surface	lowblockstart	mask=0x080
+surface	lowblockend		mask=0x080
+surface	hangledge	nolink
+surface	nohangface	nolink
+
+# sectors
+sector	sinkblocksector	nolink
+
+# sounds
+sound	stomperdown=olv_rockhead_hitearth_c.wav			local
+sound	indycrush=fol_in_landhurt.wav					local
+sound	indycrush2=fol_in_landpuddle.wav				local
+sound	warningcreak=riv_elev_wheel_engage.wav	local
+
+# variables
+int		locked=0		local
+int		sinkerwaiting=0	local
+int		pulled=0		local
+int		pushermoving=0	local
+int		counter=10	local
+
+# subroutines
+flex	startscene=0.0		local
+flex	endscene=0.0		local
+flex	fixcams=0.0			local
+end
+
+
+code
+startup:
+	SetThingLight(button, '1.2 1.2 .8', .001, .01);
+	SetAdjoinFlags(hangledge, 2);
+	SetAdjoinFlags(nohangface, 2);
+	return;
+
+activated:
+# ---> button
+
+	if (GetSenderRef() != button) return;
+	if (locked) return;
+
+	player = GetLocalPlayerThing();
+	
+    # prepare player
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+	
+	StartCutscene(1);
+	locked = 1;
+	
+	# setup offset camera
+	cam1spot = CreateThing(GetThingTemplate(buttoncam), buttoncam);
+	cam1look = CreateThing(GetThingTemplate(buttoncam), buttoncam);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+	SetCameraFocus(2, buttoncam);
+	SetCameraSecondaryFocus(2, buttonlook);
+	
+	#Move camera, push button
+	Sleep(.25);
+	PlayMode(player, 60, 0);
+	Sleep(.25);
+	MoveToFrame(button, 1, 2);
+	WaitForStop(button);
+
+	# solve hint 24
+	SetHintSolved(hint24);
+
+	# get ready to jump to block cam
+	sleep(.5);
+	call startscene;
+	
+	# Move sinkblock up with collision off
+	SetCollideType(sinkblock, 0);
+	SetCollideType(lowerblock, 0);
+	PlaySoundThing(warningcreak, sinkblock, 1, -1, -1, 0);
+	MoveToFrame(sinkblock, 1, 4);
+	WaitForStop(sinkblock);
+	Sleep(1);
+
+	# make sure shimmy ledge doesn't work
+	SetAdjoinFlags(hangledge, 2);
+	SetAdjoinFlags(nohangface, 2);
+
+	# restore camera and get rid of objects
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(buttoncam));
+	SetCurrentCamera(1);
+	DestroyThing(cam1spot);
+	DestroyThing(cam1look);
+
+	# restore control to player
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+
+	# restore collision
+	SetCollideType(sinkblock, 3);
+	SetCollideType(lowerblock, 3);
+	
+	# make pushblock push/pullable
+	SetThingFlags(pushblocker, 0x80000);
+	
+	# set timer to make block fall again
+	# timer ranges from 15 on hard to 25 on easy, minus the sound of the warning creak
+	SetTimer(25 - (2 * GetDifficulty()) - GetSoundLen(warningcreak));
+	return;
+
+timer:
+	# if lower pushblock en route, make sinkblock pause until it's there
+	if (pushermoving)
+	{
+		sinkerwaiting = 1;
+		return;
+	}
+
+	PlaySoundThing(warningcreak, sinkblock, 1, -1, -1, 0);
+	Sleep(GetSoundLen(warningcreak) - .5);
+	
+	# turn collision off in order to send sinkblock down
+	SetCollideType(sinkblock, 0);
+	SetCollideType(lowerblock, 0);
+	
+	# if lower pushblock is out
+	if (pulled)
+	{
+		# make sinkblock fall onto pushblock
+		MoveToFrame(sinkblock, 2, 10);
+		WaitForStop(sinkblock);
+		SetPulse(.1);
+
+		# cover engine shimmy bug
+		ClearAdjoinFlags(hangledge, 2);
+		ClearAdjoinFlags(nohangface, 2);
+	
+		# solve hint 25
+		SetHintSolved(hint25);
+	}
+	else
+	{
+		# make sinkblock fall to floor
+		MoveToFrame(sinkblock, 0, 10);
+		WaitForStop(sinkblock);
+
+		# if puzzle has never been fully solved, reset initial hints
+		if (GetHintSolved(hint26) == 0)
+		{
+			SetHintUnsolved(hint24);
+			SetHintUnsolved(hint25);
+		}
+
+		# cover engine shimmy bug
+		SetAdjoinFlags(hangledge, 2);
+		SetAdjoinFlags(nohangface, 2);
+
+		# make some shakey
+		PlaySoundThing(stomperdown, sinkblock, 1, -1, -1, 0);
+		SetPulse(.1);
+	}	
+	
+	# if Indy is below sinkblock, kill him!
+	if (GetThingSector(player) == sinkblocksector)
+	{
+		DamageThing(player, 1000, 0x1, player);
+		PlaySoundLocal(stomperdown, 1, 0, 0x0, 0);
+		PlaySoundLocal(indycrush, 1, 0, 0x0, 0);
+		PlaySoundLocal(indycrush2, 1, 0, 0x0, 0);
+		SetPulse(.1);
+		
+		sleep(.01);
+	
+		SetThingFlags(player, 0x80000);
+	}
+	
+	SetCollideType(sinkblock, 3);
+	SetCollideType(lowerblock, 3);
+	
+	# make pushblock non-push/pullable
+	ClearThingFlags(pushblocker, 0x80000);
+	
+	MoveToFrame(button, 0, 2);
+	WaitForStop(button);
+	locked = 0;
+
+	return;
+	
+entered:
+# ---> either of two pushblock faces (masked for pushblocks only)	
+
+	pushermoving = 0;
+
+	# if block is back where it started, it's not "pulled"
+	if (GetSenderRef() == lowblockstart)
+	{
+		pulled = 0;
+	}
+	else if (GetSenderRef() == lowblockend)
+	{
+		pulled = 1;
+	}
+
+	# if sinker was waiting for block to arrive, tell it to fall after a short delay
+	if (sinkerwaiting)
+	{
+		Sleep(Rand() * 2);
+		call timer;
+	}
+	
+	sinkerwaiting = 0;
+	
+	return;
+
+exited:
+# ---> either of two pushblock faces (masked for pushblocks only)
+	pushermoving = 1;
+	return;
+
+startscene:
+	call fixcams;
+	SetCameraFocus(2, blockcam);
+	SetCameraSecondaryFocus(2, blockcamlook);
+	SetCurrentCamera(2);
+	return;
+		
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosInterp(1, 0);
+	SetCameraLookInterp(1, 0);
+	return;
+
+pulse:
+	if (counter > 1)
+	{
+		counter = counter - 1;
+		
+		SetPOVShake(VectorScale(VectorSet(RandBetween(-1, 1), RandBetween(-1, 1), RandBetween(-1, 1)), .0005 * counter),
+					VectorScale(VectorSet(RandBetween(-2, 2), RandBetween(-2, 2), RandBetween(-2, 2)), .05 * counter),
+					10, 180);
+	}
+	else
+	{
+		SetPulse(0);
+		counter=10;
+	}
+
+	return;
+end

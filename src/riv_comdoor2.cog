@@ -1,0 +1,284 @@
+# Jones 3D Cog Script
+#
+# RIV_ComDoor2.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     exited
+    message     activated
+    message     blocked
+    message     timer
+
+    thing       player      local
+    thing       door
+    thing       button1
+    thing       camOffset1
+    
+    surface     surf0       linkID=1
+    surface     surf1       linkID=1
+    
+    sound       snd_DoorOpen=bab_door_metal_slide_c.wav     local
+    sound       snd_DoorStop=bab_door_metal_stop.wav        local
+    sound       snd_Button=gen_wood_button.wav              local
+    
+    # ** voice lines **
+    sound	    in_DoorLine0=Inxj096.wav				local # I can't open it.
+	sound	    in_DoorLine1=Inxj098.wav				local # It won't budge.
+	sound	    in_DoorLine2=Inxj099.wav			    local # Something is holding this door closed.
+	sound	    in_DoorLine3=Inxj102.wav			    local # ...I can't seem to open it from this side.
+    
+    flex        openDoor        local
+    flex        closeDoor       local
+    flex        randstucklines  local
+    
+    int         open=0          local
+    int         playing=0       local
+    int         firstTime=1     local
+    int         otherSide=0     local
+    int         chnl_Door       local
+    int         newLine         local
+    int         oldLine         local
+    int         autoClose
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    SetThingLight(button1, '0.25 0.25 0.25', 0.01, 0.5);
+    SetThingLight(door, '0.25 0.25 0.25', 0.01, 0.5);
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if(GetSenderID() == 1)
+    {
+        otherSide = 1;
+    }
+    
+    return;
+    
+# ========================================================================================
+
+exited:
+
+    if((GetSenderID() == 1) && (GetSourceRef() == player))
+    {
+        otherSide = 0;
+    }
+    
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    if((GetSenderRef() == button1) && (open == 0) && (playing == 0))
+    {
+        playing = 1;
+        Call openDoor;
+    }
+    
+    else if((GetSenderRef() == button1) && (open == 1) && (autoClose == 0) && (playing == 0))
+    {
+        playing = 1;
+        Call closeDoor;
+    }
+    
+    else if((GetSenderRef() == door) && (otherSide == 1) && (playing == 0))
+    {
+        Call randstucklines;
+    }
+    
+    return;
+    
+# ========================================================================================
+
+openDoor:
+
+    open = 1;
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    #SetExtCamOffsetToThing(camOffset1);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    PlaySoundThing(snd_Button, button1, 1.0, 2.0, 5.0, 0);
+    MoveToFrame(button1, 1, 1.0);
+    WaitForStop(button1);
+    
+    SetCollideType(door, 0);
+    chnl_Door = PlaySoundThing(snd_DoorOpen, door, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(door, 1, 2.0);
+    WaitForStop(door);
+    StopSound(chnl_Door, 0.5);
+    PlaySoundThing(snd_DoorStop, door, 1.0, 5.0, 10.0, 0);
+    SetCollideType(door, 3);
+    
+    if(autoClose == 1)
+    {
+        SetTimer(8.0);
+    }
+    
+    else
+    {
+        Sleep(0.25);
+        PlaySoundThing(snd_Button, button1, 1.0, 5.0, 10.0, 0);
+        MoveToFrame(button1, 0, 1.0);
+        WaitForStop(button1);
+        playing = 0;
+    }
+    
+    #RestoreExtCam();
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    return;
+    
+# ========================================================================================
+
+closeDoor:
+
+    open = 0;
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    #SetExtCamOffsetToThing(camOffset1);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    PlaySoundThing(snd_Button, button1, 1.0, 2.0, 5.0, 0);
+    MoveToFrame(button1, 1, 1.0);
+    WaitForStop(button1);
+    
+    SetCollideType(door, 0);
+    chnl_Door = PlaySoundThing(snd_DoorOpen, door, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(door, 0, 2.0);
+    WaitForStop(door);
+    StopSound(chnl_Door, 0.5);
+    PlaySoundThing(snd_DoorStop, door, 1.0, 5.0, 10.0, 0);
+    SetCollideType(door, 3);
+    
+    Sleep(0.25);
+    
+    PlaySoundThing(snd_Button, button1, 1.0, 2.0, 5.0, 0);
+    MoveToFrame(button1, 0, 1.0);
+    WaitForStop(button1);
+    
+    playing = 0;
+    
+    #RestoreExtCam();
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    return;
+    
+# ========================================================================================
+
+randstucklines:
+
+	playing = 1;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    if(firstTime == 1)
+    {
+		firstTime = 0;
+        PlayVoice(player, in_DoorLine3, 1.0, 1);
+        oldLine = 3;
+    }
+    
+    else
+    {
+        while (newLine == oldLine)
+    	{	
+    		newLine = RandBetween(0, 3); # pick new line
+    	}
+        
+    	oldLine = newLine; # remember what got picked
+        
+        PlayVoice(player, in_DoorLine0[newLine], 1.0, 1);
+    }
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+	
+    playing = 0;
+
+	return;
+           
+# ========================================================================================
+
+blocked:
+
+    PlaySoundThing(snd_DoorOpen, door, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(door, 1, 2.0);
+    WaitForStop(door);
+
+    return;
+    
+# ========================================================================================
+
+timer:
+
+    PlaySoundThing(snd_Button, button1, 1.0, 2.0, 5.0, 0);
+    MoveToFrame(button1, 0, 1.0);
+    WaitForStop(button1);
+    Sleep(0.25);
+    
+    SetCollideType(door, 0);
+    chnl_Door = PlaySoundThing(snd_DoorOpen, door, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(door, 0, 2.0);
+    WaitForStop(door);
+    StopSound(chnl_Door, 0.5);
+    PlaySoundThing(snd_DoorStop, door, 1.0, 5.0, 10.0, 0);
+    SetCollideType(door, 3);
+    
+    playing = 0;
+    open = 0;
+    
+    return;
+
+# ========================================================================================
+
+end

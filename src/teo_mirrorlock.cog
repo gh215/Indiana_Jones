@@ -1,0 +1,223 @@
+# Jones 3D Cog Script
+#
+# TEO_Mirrorlock.cog
+#
+# Raise the MirrorLock Statue. Stage one.
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+	message     user0
+    
+    cog         hintcog
+    
+    sound       statsound
+    sound       snakesound
+    sound       statstop
+    sound       awesomewav=mus_teo_statuerise.wav local
+        
+    surface     snakesurf0      linkid=2    mask=080
+    surface     snakesurf1      linkid=2    mask=080
+    surface     snakesurf2      linkid=2    mask=080
+    
+	surface     trigrsurf0      linkid=3    mask=080   
+	surface     trigrsurf1      linkid=3    mask=080
+	surface     trigrsurf2      linkid=3    mask=080
+
+	thing		statue
+	thing		column
+    thing       column1
+    thing       column2
+	thing       gear
+    thing       sidedoor
+    thing       sidedoorcam
+    thing       sidedoorcamfocus
+
+	thing		snakehead0		linkid=4		
+	thing       snakehead1		linkid=4
+	thing       snakehead2		linkid=4		
+        
+	thing       ghostcampos
+
+	flex        camTime
+    int         grindsound
+	int         moveSpeed
+	int		    locked = 0		local
+	int		    democheck = 0	local
+	int		    stage = 0      	local
+    thing       player          local
+    int         statline=0      local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    
+return;
+
+# ........................................................................................
+entered:
+
+	if ((GetSenderID() == 2) &&
+			(democheck == 0))
+	{
+		if (GetSourceRef() == snakehead0)
+		{
+		    stage = stage + 1;
+            ClearThingFlags(snakehead0, 0x40000000);
+            SendMessage(hintcog, user6);
+		}
+		else if (GetSourceRef() == snakehead1)
+		{
+		    stage = stage + 1;
+            ClearThingFlags(snakehead1, 0x40000000);
+            SendMessage(hintcog, user5);
+		}
+		else if (GetSourceRef() == snakehead2)
+		{
+		    stage = stage + 1;
+            ClearThingFlags(snakehead2, 0x40000000);
+            SendMessage(hintcog, user4);
+		}
+        
+        // move stat based on stage state
+	    if (stage == 1)
+	    {
+            StartCutscene(1);
+            Sleep(0.25);
+            PlaySoundLocal(snakesound, 1, 0, 0x00, 1);
+            SetActorFlags(player, 0x200000);
+            StopThing(player);
+            PlayMode(player, 1, 0);
+            grindsound = PlaySoundThing(statsound, statue, 1, 30, 50, 0x0081);
+            SetCollideType(statue, 0);
+            SetCollideType(column, 0);
+            SetCollideType(gear, 0);
+	        MoveToFrame(statue, 1, moveSpeed);
+	        MoveToFrame(column, 1, moveSpeed);
+            MoveToFrame(column1, 1, moveSpeed);
+            MoveToFrame(column2, 1, moveSpeed);
+			MoveToFrame(gear, 1, moveSpeed);
+			SetCameraFocus(2, ghostcampos);
+            SetCameraSecondaryFocus(2, gear);
+            SetCurrentCamera(2);
+            SetCameraFOV(110, 0, 0);
+            PlaySoundLocal(awesomewav, 1, 0, 0, 0);
+            WaitForStop(column);
+            StopSound(grindsound, 0);
+            PlaySoundThing(statstop, statue, 1, 10, 20, 0);
+            SetCollideType(statue, 3);
+            SetCollideType(column, 3);
+            SetCollideType(gear, 3);
+            Sleep(1);
+            ClearActorFlags(player, 0x200000);
+	        //SetCameraFocus(1, player);
+            SetCurrentCamera(1);
+            SetCameraFOV(90, 0, 0);
+            EndCutscene();
+	    }
+		else if (stage == 2)
+		{
+            StartCutscene(1);
+            Sleep(0.25);
+            PlaySoundLocal(snakesound, 1, 0, 0x00, 1);
+            SetActorFlags(player, 0x200000);
+            StopThing(player);     
+            PlayMode(player, 1, 0);
+            grindsound = PlaySoundThing(statsound, statue, 1, 30, 50, 0x0081);
+            SetCollideType(statue, 0);
+            SetCollideType(column, 0);
+            SetCollideType(gear, 0);
+		    MoveToFrame(statue, 2, moveSpeed);
+			MoveToFrame(column, 2, moveSpeed);
+            MoveToFrame(column1, 2, moveSpeed); 
+			MoveToFrame(column2, 2, moveSpeed); 
+            MoveToFrame(gear, 2, moveSpeed);
+            SetCameraFocus(2, ghostcampos);
+            SetCameraSecondaryFocus(2, gear);
+            SetCurrentCamera(2);
+            SetCameraFOV(110, 0, 0);
+            WaitForStop(column);
+            StopSound(grindsound, 0);
+            PlaySoundThing(statstop, statue, 1, 10, 20, 0);
+            SetCollideType(statue, 3);
+            SetCollideType(column, 3);
+            SetCollideType(gear, 3);
+            Sleep(1);
+            ClearActorFlags(player, 0x200000);
+            SetCurrentCamera(1);
+            SetCameraFOV(90, 0, 0);
+            EndCutscene();
+		}
+		else if (stage == 3)
+		{
+            StartCutscene(1);
+            Sleep(0.25);
+            PlaySoundLocal(snakesound, 1, 0, 0x00, 1);
+            SetActorFlags(player, 0x200000);
+            StopThing(player);
+            PlayMode(player, 1, 0);
+            grindsound = PlaySoundThing(statsound, statue, 1, 30, 50, 0x0081);
+            SetCollideType(statue, 0);
+            SetCollideType(column, 0);
+            SetCollideType(gear, 0);
+		    MoveToFrame(statue, 3, moveSpeed);
+		    MoveToFrame(column, 3, moveSpeed);
+            MoveToFrame(column1, 3, moveSpeed); 
+		    MoveToFrame(column2, 3, moveSpeed); 
+            MoveToFrame(gear, 3, moveSpeed);
+            SetCameraFocus(2, ghostcampos);
+            SetCameraSecondaryFocus(2, gear);
+            SetCurrentCamera(2);
+            SetCameraFOV(110, 0, 0);
+            WaitForStop(column);
+            StopSound(grindsound, 0);
+            PlaySoundThing(statstop, statue, 1, 10, 20, 0);
+            SetCollideType(statue, 3);
+            SetCollideType(column, 3);
+            SetCollideType(gear, 3);
+            Sleep(1);
+            SetCameraFocus(2, sidedoorcam);
+            SetCameraSecondaryFocus(2, sidedoorcamfocus);
+            SetCurrentCamera(2);
+            MoveToFrame(sidedoor, 1, moveSpeed);
+            SetCameraFOV(70, 1, 2);
+            WaitForStop(sidedoor);
+            Sleep(1);
+            ClearActorFlags(player, 0x200000);          
+			ResetCameraFOV(0, 0.0);
+            SetCurrentCamera(1);
+            SetThingMoveSize(column, 0.1);
+            EndCutscene();
+        }                                
+	}
+    
+return;
+
+# ........................................................................................
+user0:
+
+	democheck = 1;
+	MoveToFrame(statue, 3, moveSpeed);
+	MoveToFrame(column, 3, moveSpeed);
+    MoveToFrame(column1, 3, moveSpeed); 
+	MoveToFrame(column2, 3, moveSpeed); 
+    MoveToFrame(gear, 3, moveSpeed); 
+    
+return;
+
+# ........................................................................................
+
+end
+

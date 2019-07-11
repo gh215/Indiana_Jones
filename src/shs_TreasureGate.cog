@@ -1,0 +1,227 @@
+# Jones 3D Cog Script
+#
+# SHS_TreasureGate.cog      Closes gate on Indy. Commies show up. (ha ha)
+#
+# [JWC]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+   
+symbols
+
+message 	entered
+message 	activated
+message 	startup
+message		taken
+
+
+keyframe    inReach=in_activate_medium.key      local
+
+
+sector  	tripsector
+
+sound		unlock=tem_monkeykey_unlock_c.wav 	local
+sound   	in_whoa=inxj007.wav   				local
+sound		music0=mus_gen_russbold_shrt4.wav	local
+sound		music1=mus_gen_indyrelief.wav		local     
+sound		comchat=Inxh1007.wav				local
+
+surface		blocked
+
+template	tpl_indy=indy_actor					local	
+
+thing		indyactor       local
+thing		gate 						
+thing		player			local
+thing   	lock
+thing		keyCam
+thing		bulb
+thing		key
+thing		looktarg
+
+thing       commie0
+thing       commie1
+
+int     	closed=0  		local
+int     	speed=20  		local
+int			bronzeKey=103	local
+int			whichItem		local
+int			keygrumble=0	local
+int			keyed=0			local
+int 		x				local
+int 		in_rotRate		local
+
+cog			doortalkcog
+
+end 
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    SetThingFlags(key, 0x80000);
+    SetAdjoinFlags(blocked, 0x10);
+	for (x=0; x<=2; x=x+1)
+    {
+		SetThingFlags(commie0[x], 0x80000); #make invisible
+	    AISetCutsceneMode(commie0[x]);
+	}
+	return;
+    
+entered:
+
+    if (closed < 1)
+	{		 		
+		# Gate closes if indy walks into sector
+		MoveToFrame(gate, 1, speed);
+		WaitForStop(gate);
+		PlayVoice(player, in_whoa, 1.0, 0);
+		closed = 1;
+	}
+	return;
+
+activated:
+  
+    if (GetSenderRef() == lock)
+	{	
+		if (keyed==1) return; 
+		
+		# check if inventory is being used...
+		whichItem = GetCurItem(player);
+		
+		# Prep for scene...
+		SetActorFlags(player, 0x200000);
+		StartCutScene(1);
+        StopThing(player);
+		DeselectWeaponWait(player);
+		Sleep(0.5); # wait a beat
+        
+		# Slew follow camera to observe the scene from a known position
+		SetExtCamOffsetToThing(keyCam);
+		
+		# Swap player for actor
+        indyactor = CreateThing(tpl_Indy, player);
+        CaptureThing(indyactor);
+        CopyPlayerHolsters(player, indyactor);
+		ClearThingFlags(indyactor, 0x80000);
+        SetThingFlags(player, 0x80000);
+
+        Sleep(0.5);
+	
+		# Look at keyhole, Indy
+		AiSetLookThing(indyactor, lock);
+		
+		if ((whichItem == bronzeKey) && (keyed ==0))
+		{
+						
+			PlayKey(indyactor, inReach, 4, 0x12, 0);
+			
+			ChangeInv(player, bronzeKey, -1);
+			Sleep(0.2);
+			ClearThingFlags(key, 0x80000);
+
+			# play sound of key opening
+            PlaySoundLocal(unlock, 1.0, 0.0, 0x0, 1);
+            
+			# Indy notes success
+			SendMessageEx(doortalkcog, user1, indyactor, 1, 1, 0);
+			while (global15 == 0)
+			{
+				Sleep(0.01); # wait for line to finish
+			}
+            
+			# open gate
+			ClearAdjoinFlags(blocked, 0x10);
+			PlaySoundLocal(music1, 1.0, 0.0, 0x0, 0);
+			MoveToFrame(gate, 0, 1.0);
+            
+			# looks at gate
+			in_rotRate = GetThingMaxRotVel(player); 	# remember Indy rate
+			SetThingMaxRotVel(indyactor, 75.0);
+            AISetLookThing(indyactor, looktarg);
+			
+			WaitForStop(gate);
+			keyed=1; # plays only once
+        
+		}
+		else
+		{								
+			if (whichItem != 0)
+			{
+				# Take care of wrong keys and items...
+				PlayKey(indyactor, inReach, 4, 0x12, 0);
+				Sleep(0.2);
+				SendMessageEx(doortalkcog, user0, indyactor, bronzeKey, whichItem, 0);
+			}
+			else
+			{
+				if (keygrumble == 0)
+				{
+					# Note need for key 1st time thru...
+					SendMessageEx(doortalkcog, user4, indyactor, 1, 3, 0);
+					keygrumble = 1;
+				}
+				else
+				{
+					# General "door is locked" grmubling thereafter...
+					SendMessageEx(doortalkcog, user4, indyactor, 0, 0, 0);
+				}
+			
+			}
+			
+			while (global15 == 0)
+			{
+				Sleep(0.01); # wait for line to finish
+			}
+			
+			Sleep(0.3);
+			
+			
+        }
+        # swap player back
+		SetThingMaxRotVel(indyactor, in_rotRate);
+        ClearThingFlags(player, 0x80000);
+		TeleportThing(player, indyactor);
+		DestroyThing(indyactor);
+
+		# return control
+		RestoreExtCam();
+		ClearActorFlags(player, 0x200000);
+		EndCutScene();
+		return; 
+	
+    
+	}
+	return;	
+        
+taken:
+	
+	if (GetSenderRef() == bulb)
+	{
+		print("bulb taken, commies should be here");
+		# make commies visible
+		for (x=0; x<=2; x=x+1)
+		{
+			ClearThingFlags(commie0[x], 0x80000); # make visible
+        }
+		Sleep(2.5);	 # Let Indy finish talking and get ready
+		
+		# play russian music
+        PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+		PlaySoundLocal(comchat, .5, 0, 0x0, 0);
+		
+		for (x=0; x<=2; x=x+1)
+		{
+			AIClearCutsceneMode(commie0[x]); 	# wake them up
+        }
+ 
+	}
+return;
+
+
+end
+

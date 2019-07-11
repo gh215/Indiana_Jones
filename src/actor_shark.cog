@@ -1,0 +1,119 @@
+# Jones 3D Cog Script
+#
+# actor_Shark.cog
+#
+# [RT] [MDR]
+#
+# Animates ultra-cool shark mat cels in the following order:
+#	Type 1: 1, 0, 2, 0.  FPS = 3.0
+#	Type 2: 0, 2, 0, 1.  FPS = 3.5
+#	Type 3: 2, 1, 0, 1.  FPS = 4.0
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		created
+	message		sighted
+	message		timer
+   
+# ************************** TEMPLATES *************************
+	material	skin1=shsd.mat
+	material	skin2=shsd2.mat
+	material	skin3=shsd3.mat
+
+# ************************** MISC LOCAL VARS *******************
+	int			n_animT1=0			local
+	int			n_animT2=0			local
+	int			n_animT3=0			local
+
+	int			T1cel0=1			local
+	int			T1cel1=0			local
+	int			T1cel2=2			local
+	int			T1cel3=0			local
+
+	int			T2cel0=0			local
+	int			T2cel1=2			local
+	int			T2cel2=0			local
+	int			T2cel3=1			local
+
+	int			T3cel0=2			local
+	int			T3cel1=1			local
+	int			T3cel2=0			local
+	int			T3cel3=1			local
+
+end
+
+
+# ========================================================================================
+code
+
+# ...................................................................
+created:
+
+	AISetSubMode(GetSenderRef(), 0x80);				# Set SUBMODE_NOMOVEBACKWARDS
+	AISetSubMode(GetSenderRef(), 0x20000);			# Set SUBMODE_SEMICONTINUOUSMOTION
+	AISetSubMode(GetSenderRef(), 0x200000);			# Set SUBMODE_SWIMNEARSURFACE
+		
+	return;
+
+
+# ...................................................................
+sighted:
+
+	if ( IsThingModelName(GetSenderRef(), "gen_sh.3do") )
+	{
+		SetTimerEx(0.333, 1, 0, 0);
+	}
+	else if ( IsThingModelName(GetSenderRef(), "gen_sh2.3do") )
+	{
+		SetTimerEx(0.286, 2, 0, 0);
+	}
+	else if( IsThingModelName(GetSenderRef(), "gen_sh3.3do") )
+	{
+		SetTimerEx(0.250, 3, 0, 0);
+	}
+
+	return;
+
+
+# ...................................................................
+timer:
+
+	if ( GetSenderID() == 1 )
+	{
+		SetMaterialCel(skin1, T1cel0[n_animT1]);
+
+		n_animT1 = n_animT1 + 1;
+		if ( n_animT1 > 3 )
+			n_animT1 = 0;
+
+		SetTimerEx(0.333, 1, 0, 0);
+	}
+	else if ( GetSenderID() == 2 )
+	{
+		SetMaterialCel(skin2, T2cel0[n_animT2]);
+
+		n_animT2 = n_animT2 + 1;
+		if ( n_animT2 > 3 )
+			n_animT2 = 0;
+
+		SetTimerEx(0.286, 2, 0, 0);
+	}
+	else if ( GetSenderID() == 3 )
+	{
+		SetMaterialCel(skin3, T3cel0[n_animT3]);
+
+		n_animT3 = n_animT3 + 1;
+		if ( n_animT3 > 3 )
+			n_animT3 = 0;
+
+		SetTimerEx(0.250, 2, 0, 0);
+	}
+
+	return;
+
+end
+

@@ -1,0 +1,38 @@
+# Jones 3D Cog Script
+#
+# gen_DeathFloor.cog
+#
+# This script creates a surface that kills anything that touches it
+#
+# [IS]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	touched		
+	message	entered
+
+	surface	surf0		mask=0x404
+	surface	surf1		mask=0x404
+	surface	surf2		mask=0x404
+	surface	surf3		mask=0x404
+	surface	surf4		mask=0x404
+	surface	surf5		mask=0x404
+	surface	surf6		mask=0x404
+	surface	surf7		mask=0x404
+	surface	surf8		mask=0x404
+
+	int		victim	local
+end
+
+# ========================================================================================
+
+code
+touched:
+entered:
+	victim = GetSourceRef();
+	DamageThing(victim, 1000.0, 0x1, victim);
+	return;
+end
+

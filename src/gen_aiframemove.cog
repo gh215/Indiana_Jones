@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# gen_AIFrameMove.cog
+#
+# Like AIFramePatrol but just one way, triggered by entry into a sector
+#
+# [RD]
+#
+# (C) 1998 LucasArts Entertainment Co. LLC All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	entered
+	message	arrived
+
+	sector	trigger
+
+	thing	mover
+
+	flex	patrolspeed=1	// defaults to walk
+	flex	numframes=1		// total frames, not including frame 0
+
+	int		curframe=1		local
+	int		begun=0			local
+end
+
+# ========================================================================================
+
+code
+
+entered:
+	if (begun) return;
+	
+	begun = 1;
+	AISetMoveSpeed(mover, patrolspeed);
+	AISetLookFrame(mover, curframe);
+	AISetMoveFrame(mover, curframe);
+	return;
+	
+# ........................................................................................
+
+arrived:
+	curframe = curframe + 1;
+	if (curframe > numframes) return;
+
+	AISetLookFrame(mover, curframe);
+	AISetMoveFrame(mover, curframe);
+	return;
+
+end
+

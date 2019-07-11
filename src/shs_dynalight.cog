@@ -1,0 +1,47 @@
+
+# Jones 3D Cog Script
+#
+# SHS_DynaLight.cog
+#
+# Attatch up to 4 things to create dynamic light at those positions.
+#
+# [TRM]
+#
+# 10/21/98 RT: Added radius
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+
+    thing       thing0
+   
+    flex        rval=1
+    flex        gval=1
+    flex        bval=1
+    flex        radius=1.0
+    flex        speed=.01
+
+    vector      color           local
+
+    
+             
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+       
+     
+    SetThingLight(thing0, VectorSet(rval, gval, bval), radius, speed);
+    return;
+           
+# ========================================================================================
+
+end

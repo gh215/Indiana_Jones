@@ -1,0 +1,799 @@
+# Jones 3D Cog Script
+#
+# nub_Lightning.cog
+#
+# [RT] [TL] [SXC] [GGJ] [HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	startup
+message	activated
+message	arrived
+message	touched
+message	pulse
+message	user0
+message	user1
+message	user2
+message	entered
+
+# ***** COGS ********************************************************
+
+cog		nub_Commie_Grid	# Commie control
+
+# ***** LINKED GEOMETRY *********************************************
+
+sector	triggersector
+
+surface	climbout
+surface	climbFace
+
+# ***** LOCAL GEOMETRY **********************************************
+
+sector	targetSector	local
+
+# ***** LINKED THINGS ***********************************************
+
+thing	probe
+thing	button
+
+thing	blastDoor1
+
+# ***** NO LINK THINGS **********************************************
+
+thing	head0			nolink
+thing	head1			nolink
+thing	head2			nolink
+
+thing	indy			nolink
+thing	introIndy		nolink
+
+thing	commie0			nolink
+thing	commie1			nolink
+thing	commie2			nolink
+thing	volodnikov		nolink
+
+thing	commieTarg0		nolink
+thing	commieTarg1		nolink
+thing	commieTarg2		nolink
+
+thing	blastDoor0		nolink
+
+thing	cam0			nolink
+thing	cam1			nolink
+thing	cam2			nolink
+thing	volCam			nolink
+thing	indyCam			nolink
+thing	volCamTarg		nolink
+thing	indytarg		nolink
+thing	probetarg		nolink	
+thing	zaptarg			nolink
+thing	lt_mk_1			nolink
+
+thing	tower			nolink
+thing	lightningGhost	nolink
+
+thing	buttonTarget	nolink
+thing	ballTarget		nolink
+thing	camTarget		nolink
+thing	volExitTarg		nolink
+
+thing	randtarget0		nolink
+thing	randtarget1		nolink
+thing	randtarget2		nolink
+thing	randtarget3		nolink
+thing	randtarget4		nolink
+thing	randtarget5		nolink
+
+# ***** LOCAL THINGS ************************************************
+
+thing	player			local
+thing	deadIndy		local
+thing	sender			local
+thing	source			local
+thing	curCamLocus		local
+thing	curCamFocus		local
+thing	curTarget		local
+thing	glow			local
+thing	tempThing		local
+
+# ***** MODELS ******************************************************
+
+model	mod_VoGun=weap_tokarev.3do			local
+model	mod_VoHolster=holster_vo_notok.3do	local
+
+# ***** SOUNDS ******************************************************
+
+sound	chargingSnd=nub_aethlight_on_c.wav	local
+sound	fireSnd=gen_lightning_c.wav			local
+sound	hitSnd=gen_lightning_contact_c.wav	local
+sound	interestingSnd=INXJ001B.WAV			local
+sound	uhohSnd=INXJ009.WAV					local
+sound	comMus=mus_gen_russbold_shrt2.wav	local
+sound	ballMus=mus_gen_awechord1.wav		local
+
+# ***** TEMPLATES ***************************************************
+
+template	sparksTpl=bluesparks			local
+template	smokeTpl=+pistol_smoke1			local
+template	lightHitTpl=+lightninghit		local
+template	ghostTpl=ghost					local
+template	glowTpl=+tower_glow				local
+
+# ***** MATERIALS ***************************************************
+
+material	zapMat0=inf_4sfx_lightning_a.mat	local
+material	zapMat1=inf_4sfx_lightning_b.mat	local
+material	zapMat2=inf_4sfx_lightning_c.mat	local
+
+material	ballMat=probe_ball_side.mat			local
+
+# ***** KEYFRAMES ***************************************************
+
+keyframe	vo_Command=0vo_rightup_3_3.key			local
+keyframe	in_Shock=in_activate_medium_shock.key	local
+keyframe	in_DieShock=in_die_shocked.key			local
+keyframe	in_Reaction=0in_reaction.key			local
+keyframe	cm_LookAround=01h_sailor_lookaround.key	local
+
+# ***** BOOLS *******************************************************
+
+int		b_Disabled=0		local
+int		b_IntroDone=0		local
+int		b_CommieIntroDone=0	local
+int		b_CommieKilled=0	local
+int		b_LightningOn=0		local
+int		b_ZappedIndy=0		local
+int		b_TouchOfDeath=0	local
+
+# ***** MISC. LOCAL VARIABLES ***************************************
+
+int		count				local
+int		index				local
+
+int		comFrame0=0			local
+int		comFrame1=0			local
+int		comFrame2=0			local
+
+int		curFrame			local
+int		curDamage			local
+
+int		moveStatus			local
+
+flex	strikeRate=6.0		local
+flex	inRotRate			local
+flex	inHeadRate			local
+
+vector	targetPos			local
+
+# ***** SUBROUTINES *************************************************
+
+flex	SetTargetRandom		local
+flex	LightningStrike		local
+flex	LightningIntro		local
+flex	CommieIntro			local
+flex	KillCommie			local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+# Disable commies & Volodya
+for(index = 0; index < 4; index = index + 1)
+{
+	AISetCutsceneMode(commie0[index]);
+	SetThingFlags(commie0[index], 0x80000);
+}
+
+# Clear stand on bit on tower
+ClearThingFlags(tower, 0x40);
+
+SetThingLight(button, '1.0 1.0 1.0', 0.01, 1.0);
+
+return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+if (b_Disabled) return;
+
+if (GetSenderRef() == button)
+{
+	if (GetCurFrame(button) != 0) return;
+
+	# Setup...
+	MakeMeStop();
+	DeselectWeaponWait(player);
+
+	StartCutscene(1);
+	CopyPlayerHolsters(player, indy);
+	ClearThingFlags(indy, 0x80000);
+	SetThingFlags(player, 0x80000);
+
+	# Cut to camera watching Indy
+	curCamLocus = CreateThing(ghostTpl, cam2);
+	curCamFocus = CreateThing(ghostTpl, buttonTarget);
+	SetCameraFocus(2, curCamLocus);
+	SetCameraSecondaryFocus(2, curCamFocus);
+	SetCurrentCamera(2);
+
+	# Indy presses button.
+	PlayMode(indy, 60, 0);
+	Sleep(0.2);
+	MoveToFrame(button, 1, 1);
+	Sleep(0.5);
+
+	# Move camera and target to watch ball and doors rise.
+	MoveThingToPos(curCamLocus, GetThingPos(camTarget), 2.0);
+	MoveThingToPos(curCamFocus, GetThingPos(ballTarget), 2.0);
+	SetCameraFOV(120, 1, 2.0);
+
+	# No bumpin' into things...
+	SetCollideType(probe, 0);
+	SetCollideType(blastDoor0, 0);
+	SetCollideType(blastDoor1, 0);
+
+	# Move stuff
+	curFrame = 1 - GetCurFrame(probe);
+	MoveToFrame(probe, curFrame, 1);
+	MoveToFrame(blastDoor0, curFrame, 1);
+	Sleep(0.01);
+	MoveToFrame(blastDoor1, curFrame, 1);
+}
+return;
+
+# -------------------------------------------------------------------
+
+arrived:
+
+sender = GetSenderRef();
+
+if (sender == probe)
+{
+	SetCollideType(probe, 3);
+
+	if (GetCurFrame(probe) == 0)
+	{
+		if (!b_CommieIntroDone)
+		{
+			call CommieIntro;
+		}
+	}
+	else if (b_IntroDone && !b_CommieKilled)
+	{
+		if (b_LightningOn)
+		{
+			b_CommieKilled = 1;
+			call KillCommie;
+			SetPulse(strikeRate);
+		}
+    }
+
+	# Intro scenes do their own cleanup
+	if (b_IntroDone && b_CommieIntroDone)
+	{
+		TeleportThing(player, indy);
+		
+		SetCameraPosition(1, GetThingPos(cam2));
+		Sleep(0.01);
+		ResetCameraFOV(0, 0.0);
+		SetCurrentCamera(1);
+
+		# Clean up temp cam stuff
+		DestroyThing(curCamLocus);
+		DestroyThing(curCamFocus);
+		Sleep(0.01);
+
+		ClearThingFlags(player, 0x80000);
+		SetThingFlags(indy, 0x80000);
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+	}
+
+	Sleep(0.5);
+	MoveToFrame(button, 0, 1);
+
+	return;
+}
+else if (sender == blastDoor1)
+{
+	SetCollideType(blastDoor0, 3);
+	SetCollideType(blastDoor1, 3);
+	return;
+}
+else if (sender == volodnikov)
+{
+	ResetCameraFOV(0, 0.0);
+	SetCurrentCamera(1);
+
+	TeleportThing(player, indy);
+	SetThingFlags(indy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+
+	DestroyThing(volodnikov);
+	EndCutscene();
+
+	SendMessageEx(nub_Commie_Grid, user3, commie0, commie1, commie2, 0);
+
+	b_CommieIntroDone = 1;
+
+	return;
+}
+else if (sender == button)
+{
+	return;
+}
+
+for(index = 0; index < 3; index = index + 1)
+{
+	if (sender == commie0[index])
+	{
+		if (comFrame0[index] < 2)
+		{
+			AISetLookFrame(commie0[index], 2);
+			AISetMoveFrame(commie0[index], 2);
+			comFrame0[index] = 2;
+			return;
+		}
+		else
+		{
+			ReleaseThing(commie0[index]);
+			AIClearCutsceneMode(commie0[index]);
+			return;
+		}
+	}
+}
+
+return;
+
+# -------------------------------------------------------------------
+
+entered:
+
+sender = GetSenderRef();
+source = GetSourceRef();
+
+# Everything below triggered only by player
+if (source != player) return;
+
+if (sender == triggersector)
+{
+	if (b_IntroDone) return;
+
+	call LightningIntro;
+}
+else if (sender == climbFace)
+{
+	SetCollideType(tower, 0); # Turn off tower's collision when Indy climbs out
+}
+else if (sender == climbout)
+{
+	Sleep(1.0);
+	SetCollideType(tower, 3); # Restore tower's collision
+	SetThingFlags(tower, 0x40); # Set stand on bit
+}
+
+return;
+
+# -------------------------------------------------------------------
+
+touched: # Indy touched the probe...heh
+
+# Quick exit conditions...
+if (b_Disabled) return;
+if (b_TouchOfDeath) return;
+if (GetSenderRef() != probe) return;
+if (GetSourceRef() != player) return;
+if (GetCurFrame(probe) != 0) return;
+if (!b_LightningOn) return;
+if (GetHealth(player) <= 0) return;
+
+b_TouchOfDeath = 1;
+
+SetCameraFocus(2, ballTarget);
+SetCameraSecondaryFocus(2, probe);
+SetCurrentCamera(2);
+SetCameraFOV(120, 0, 0.0);
+
+SetMaterialCel(ballMat, 1);
+
+tempThing = CreateThing(glowTpl, probe);
+AnimateSpriteSize(tempThing, '0.25 0.25 1.0', '0.35 0.35 0.0', 1.0);
+SetLifeLeft(tempThing, 1.1);
+
+PlaySoundThing(fireSnd, probe, 1.0, -1, -1, 0x880);
+
+SetThingFlags(player, 0x10);
+
+deadIndy = CreateThing(GetThingTemplate(indy), player);
+CopyPlayerHolsters(player, deadIndy);
+ClearThingFlags(deadIndy, 0x80000);
+
+PlayKey(deadIndy, in_DieShock, 5, 0x14, 0);
+
+Sleep(0.7); 
+DamageThing(player, 1000, 0x100000, probe);
+b_TouchOfDeath = 0;
+
+return;
+
+# -------------------------------------------------------------------
+
+pulse:
+
+curTarget = player;
+curDamage = (GetDifficulty() + Rand()) * 100;
+
+call LightningStrike;
+
+if (GetHealth(player) > 0 && b_ZappedIndy) # If Indy is still alive & atually got hit..
+{
+	if (!BitTest(GetThingFlags(player), 0x2000000)) # Indy is not swimming
+	{
+        PlayVoiceMode(player, 92);
+
+		moveStatus = GetMoveStatus(player);
+		if ((moveStatus >= 0) && (moveStatus <= 2)) # Still, walking and running ONLY
+		{
+			MakeMeStop();
+			PlayKey(player, in_Shock, 4, 0x12, 1);
+			ClearActorFlags(player, 0x200000);
+		}
+	}
+}
+else
+{
+	call SetTargetRandom; 
+	call LightningStrike;
+}
+
+return;
+
+# -------------------------------------------------------------------
+
+user0: # Sent by nub_h2oswitch.cog -- disables lightning
+
+SetPulse(0);
+b_LightningOn = 0;
+return;
+
+# -------------------------------------------------------------------
+
+user1: # Sent by nub_h2oswitch.cog -- enables lightning
+
+SetPulse(strikeRate);
+b_LightningOn = 1;
+return;
+
+# -------------------------------------------------------------------
+
+user2: # Sent by nub_h2oswitch.cog -- IMP4 has been taken
+
+b_Disabled = 1;
+return;
+
+# -------------------------------------------------------------------
+
+SetTargetRandom:
+
+# If the probe is up, blast the heads
+if (GetCurFrame(probe) == 0)
+{
+	curTarget = head0[RandBetween(0, 2)];
+}
+# Otherwise, hit the ghosts around the pool
+else
+{
+	curTarget = randtarget0[RandBetween(0, 5)];
+}
+curDamage = 0;
+
+return;
+
+# -------------------------------------------------------------------
+
+LightningStrike: # curTarget and curDamage must already be set!
+
+PlaySoundThing(chargingSnd, probe, 1.0, 20, 40, 0x880);
+#Sleep(1.0);
+
+SetMaterialCel(ballMat, 1);
+
+glow = CreateThing(glowTpl, probe);
+AnimateSpriteSize(glow, '0.25 0.25 1.0', '0.35 0.35 0.0', 1.0);
+SetLifeLeft(glow, 1.1);
+
+PlaySoundThing(fireSnd, probe, 1.0, -1, -1, 0x880);
+
+Sleep(0.5);
+
+for (count = 0; count < 2; count = count + 1)
+{
+	CreatePolylineThing(lightningGhost, probe, '0 0 -1.0', zapMat0[RandBetween(0, 2)], 0.35, 0.35, 0.05);
+	Sleep(0.05);
+}
+
+Sleep(0.01);
+
+if (curTarget == player)
+{
+	# See if we have a line of sight from probe to Indy
+	if(HasLOS(probe, player) && !IsInvisible() && !b_TouchOfDeath)
+	{
+		b_ZappedIndy = 1;
+	}
+	else
+	{
+		call SetTargetRandom;
+		b_ZappedIndy = 0;
+	}
+}
+
+for (count = 0; count < 2; count = count + 1)
+{
+	CreatePolylineThing(probe, curTarget, '-0.1 -0.1 0', zapMat0[RandBetween(0, 2)], 0.35, 0.35, 0.05);
+	Sleep(0.05);
+}
+
+SetMaterialCel(ballMat, 0);
+
+targetPos = GetThingPos(curTarget);
+targetSector = GetThingSector(curTarget);
+
+# Push target up a little on Indy & Commie
+if ((curTarget == player) || (curTarget == commie0))
+{
+	targetPos = VectorAdd(targetPos, '0 0 0.035');
+}
+else if (curTarget == introIndy)
+{
+    targetPos = VectorAdd(targetPos, '-0.1 -0.1 0.035');
+}
+
+CreateThingAtPos(sparksTpl, targetSector, targetPos, '0 0 0');
+CreateThingAtPos(smokeTpl, targetSector, targetPos, '0 0 0');
+glow = CreateThingAtPos(lightHitTpl, targetSector, targetPos, '0 0 0');
+SetLifeLeft(glow, 0.5);
+
+PlaySoundThing(hitSnd, curTarget, 1.0, -1, -1, 0x880);
+
+if (curTarget == player)
+{
+	# If player is already dead, bail
+	if (GetHealth(player) <= 0) return;
+
+	if ((GetHealth(player) - curDamage) <= 0)
+	{
+		# If player is invulnerable, bail...
+		if (BitTest(GetActorFlags(player), 0x8)) return;
+
+		SetThingFlags(player, 0x10);
+
+		deadIndy = CreateThing(GetThingTemplate(indy), player);
+		CopyPlayerHolsters(player, deadIndy);
+		ClearThingFlags(deadIndy, 0x80000);
+
+		PlayKey(deadIndy, in_DieShock, 5, 0x14, 0);
+
+		Sleep(1.1); 
+		DamageThing(player, 1000, 0x100000, probe);
+
+		return;
+	}
+}
+
+DamageThing(curTarget, curDamage, 0x100000, probe);
+
+return;
+
+# -------------------------------------------------------------------
+
+LightningIntro:
+
+SetActorFlags(player, 0x200000);
+StopThing(player);
+MakeMeStop();
+StartCutscene(1);
+
+SetThingFlags(player, 0x80000);
+ClearThingFlags(introIndy, 0x80000);
+AISetCutsceneMode(introIndy);
+CopyPlayerHolsters(player, introIndy);
+
+# Cut to Indy...
+SetCameraLookInterp(2, 0);
+SetCameraPosInterp(2, 0);
+SetCameraFocus(2, cam0);
+SetCameraSecondaryFocus(2, indytarg);
+SetCurrentCamera(2);
+SetCameraFOV(75, 0, 0.0);
+
+SetCollideType(probe, 0);
+SetCollideType(blastDoor0, 0);
+SetCollideType(blastDoor1, 0);
+
+inRotRate = GetThingMaxRotVel(introindy);
+SetThingMaxRotVel(introindy, 50.0);
+inHeadRate = GetThingMaxHeadVel(introindy);
+SetThingMaxHeadVel(introindy, 30.0);
+
+# Walk Indy into shot...
+AISetLookThing(introindy, lt_mk_1);
+AISetMoveSpeed(introindy, 1.0);
+AISetMoveThing(introindy, lt_mk_1, 0);
+Sleep(0.01);
+SetCameraFOV(60, 1, 2.5);
+
+AIEnableHeadTracking(introindy, probe);
+
+AIWaitForStop(introindy);
+
+AIDisableHeadTracking(introindy);
+AISetLookThing(introindy, probe);
+
+PlayVoice(player, interestingSnd, 1.0, 1);
+PlaySoundLocal(ballMus, 1.0, 0.0, 0x0, 0);
+
+MoveToFrame(probe, 1, 1.0);
+MoveToFrame(BlastDoor0, 1, 1.0);
+Sleep(0.01); # To prevent sounds from competing
+MoveToFrame(BlastDoor1, 1, 1.0);
+
+# Pan & tilt to probe...
+SetCameraLookInterp(2, 1);
+SetCameraPosInterp(2, 1);
+SetCameraInterpSpeed(2, 2.0);
+Sleep(0.01);
+SetCameraSecondaryFocus(2, probetarg);
+SetCameraFOV(50, 1, 2.0);
+
+Sleep(1.0);
+
+MoveToFrame(probe, 1, 1.0);
+MoveToFrame(BlastDoor0, 1, 1.0);
+Sleep(0.01); # To prevent sounds from competing
+MoveToFrame(BlastDoor1, 1, 1.0);
+
+Sleep(2.0);
+
+## WaitForStop(probe);
+
+curTarget = introIndy;
+curDamage = 0;
+call LightningStrike;
+
+SetPulse(strikeRate); # Start lightning...
+b_LightningOn = 1;
+
+SetCameraLookInterp(2, 0);
+SetCameraPosInterp(2, 0);
+SetCameraFocus(2, indyCam);
+SetCameraSecondaryFocus(2, volCamTarg);
+SetCameraFOV(50, 0, 0.0);
+
+SetThingMaxRotVel(introindy, inRotRate);
+SetThingMaxHeadVel(introindy, inHeadRate);
+
+PlayVoice(introIndy, uhohSnd, 1.0, 0);
+PlayKey(introIndy, in_Reaction, 2, 0x12, 1);
+
+ResetCameraFOV(0, 0.0);
+SetCurrentCamera(1);
+ResetCameraFOV(0, 0.0);
+
+TeleportThing(player, introindy);
+ClearThingFlags(player, 0x80000);
+SetThingFlags(introIndy, 0x80000);
+DestroyThing(introIndy);
+EndCutscene();
+ClearActorFlags(player, 0x200000);
+
+b_IntroDone = 1;
+
+return;
+
+# -------------------------------------------------------------------
+
+CommieIntro:
+
+PlaySoundLocal(comMus, 1.0, 0.0, 0x0, 0);
+
+# Remove gun from holster & put it in Volodnikov's hand 
+ClearThingFlags(volodnikov, 0x80000);
+SetThingMesh(volodnikov, 8, mod_VoGun, 0);
+SetThingMesh(volodnikov, 19, mod_VoHolster, 0);
+
+# Shot of Volodya ushering his men in...
+SetCameraFocus(2, volCam);
+SetCameraSecondaryFocus(2, volCamTarg);
+SetCurrentCamera(2);
+SetCameraFOV(50, 1, 2.5);
+SetCameraPosition(1, GetThingPos(cam2));
+Sleep(1.0);
+
+# Clean up temp cam stuff
+DestroyThing(curCamLocus);
+DestroyThing(curCamFocus);
+
+AIEnableHeadTracking(volodnikov, tower);
+Sleep(1.0);
+
+PlayKey(volodnikov, vo_Command, 4, 0x12, 0);
+
+for(index = 0; index < 3; index = index + 1)
+{
+	comFrame0[index] = 1; # Start frame counter at 1
+
+	ClearThingFlags(commie0[index], 0x80000);
+	AISetMoveSpeed(commie0[index], 2.0);
+	AISetLookFrame(commie0[index], 1);
+	AISetMoveFrame(commie0[index], 1);
+	CaptureThing(commie0[index]);		
+}
+
+Sleep(1.0);
+AIDisableHeadTracking(volodnikov);
+Sleep(2.0);
+CaptureThing(volodnikov);
+AISetMoveSpeed(volodnikov, 1.25);
+AISetLookThing(volodnikov, volExitTarg);
+AISetMoveThing(volodnikov, volExitTarg, 0);
+
+return;
+
+# -------------------------------------------------------------------
+
+KillCommie:
+
+if (GetHealth(commie0) > 0) # See if he's till alive...
+{
+	SetPulse(0);
+
+	# Put 'em in cutscene mode & teleport 'em
+	for(index = 0; index < 3; index = index + 1)
+	{
+		TeleportThing(commie0[index], commieTarg0[index]);
+		AISetCutsceneMode(commie0[index]);
+		StopThing(commie0[index]);
+	}
+
+	Sleep(0.5); # Let them get into position
+
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, commie0);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0);
+	SetCameraFOV(30, 1, 2.5);
+
+	Sleep(1.0);
+
+	PlayKey(commie0, cm_LookAround, 2, 0x12, 0);
+
+	curTarget = commie0;
+	curDamage = 1000;
+	call LightningStrike;
+
+	# Let Commie cog know he's zapped...
+	SendMessage(nub_Commie_Grid, user4);
+
+	Sleep(3.0);
+
+	AIClearCutsceneMode(commie1);
+	AIClearCutsceneMode(commie2);
+
+	SetPulse(strikeRate);
+}
+
+return;
+
+end

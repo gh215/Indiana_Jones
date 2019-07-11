@@ -1,0 +1,61 @@
+# Jones 3D Cog Script
+#
+# actor_YoungLady.cog
+#
+# [RT]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		created
+	message		damaged
+
+#	model		head0=head_yl_msound.3do	local
+	model		head1=head_yl_asound.3do	local
+	model		head2=head_yl_amsound.3do	local
+	model		head3=head_yl_osound.3do	local
+
+	sound		hurtSnd=inxy001.wav			local	# "Don't do that...you need my help."
+
+	thing		lady						local
+
+	int			bTalking=0					local
+
+end
+
+# ===================================================================
+
+code
+
+created:
+
+	lady = GetSenderRef();
+
+	# Heads!
+	SetThingVoiceHeads(lady, "llhead", "", "head_yl_asound.3do", "head_yl_amsound.3do", "head_yl_osound.3do");
+
+	return;
+
+# -------------------------------------------------------------------
+
+damaged:
+
+	if (GetThingParent(GetSourceRef()) != GetLocalPlayerThing()) return;
+
+	if (bTalking) return;
+
+	bTalking = 1;
+
+	lady = GetSenderRef();
+
+	# Start the voice & wait...
+	PlayVoice(lady, hurtSnd, 1.0, 1);
+
+	bTalking = 0;
+
+	return;
+
+end

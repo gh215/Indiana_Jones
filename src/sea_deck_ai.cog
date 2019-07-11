@@ -1,0 +1,446 @@
+# Jones 3D Cog Script
+#
+# SEA_Deck_AI.cog
+# 
+# Management of the Sailor patrol patterns and population on the surface deck of the Pudovkin
+#
+#
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+# ========================================================================================
+Symbols
+
+message         startup
+message         entered
+message         killed
+message         timer
+#message         taken
+message         user0          
+message         user1
+message         user2
+message         user3
+
+#=================================== SUBROUTINES ========================================
+flex            NewSailor               local
+flex            RandomSailorPicker      local
+flex            GhostPicker             local
+flex            InstinctManager         local
+flex            SailorCacheCheck        local
+flex            DisableAIForCutscene    local
+flex            EnableAIAfterCutscene   local
+
+#========== SAILORS ON DECK.  ALSO USED FOR CREATION OF REPLACEMENT SAILORS==============
+
+thing           DeckSailor00     LinkID=1
+thing           DeckSailor01     LinkID=1
+thing           DeckSailor02     LinkID=1
+thing           DeckSailor03     LinkID=1  #One sailor Standing Guard at the start, i.e. not roaming
+
+#============== GHOST OBJECTS FOR THE CREATION OF NEW SAILORS============================
+thing           GhostSailor00    
+thing           GhostSailor01    
+thing           GhostSailor02    
+
+#======================= ADJOIN TRIGGERS =============================
+
+surface         Begin           #Start the maddness
+
+#surface         BridgeCutsceneOn    mask=0x404
+#surface         BridgeCutsceneOff   #mask=0x404
+
+#thing           CrankWheel
+#thing           DingyWinch
+
+#=========================== MISC LOCAL VARIABLES =======================================
+
+int             counter                     local
+int             counter2                    local
+int             StartCheck=0                local
+int             SailorGrowthCounter=0       local
+
+int             IndyNearestwpnt             local
+int             GhostSailorNum              local
+
+    # Random number variables for making new commies
+int             SailorRand                  local
+int             SailorRandCheck=-1          local
+int             VoiceRand                   local
+int             VoiceRandCheck=-1           local
+
+int             UpperGridOn=-1              local
+
+int             NumSailorsInCache=0         local
+
+int             IndyHasTheCrank=0           local
+
+int             CutsceneStatus=0            local
+
+thing           TempSailor                  local
+
+# ================================= CONSTANTS ===========================================
+                
+int             SAILOR_MAKER_CAP=6              local
+int             STARTING_SAILORS=4              local
+int             VARIETY_OF_COMMIES=3            local
+int             VARIETY_OF_VOICES=5             local
+int             TIMER_ID_CREATE_SAILOR          local
+
+int             FLEE_TO_WPNT=0                  local
+
+flex            NEW_SAILOR_DELAY=32.0                   local
+flex	        MIN_COMMIE_CREATION_SEPARATION=20.0	local
+flex	        PrevCommieCreationTime		        local
+
+# ============================ COMMIE TEMPLATES =========================================
+                                
+template        TokarevTPL00=Sailor_Tokarev     local
+template        TokarevTPL01=Sailor_Tokarev2    local
+template        TokarevTPL02=Sailor_Tokarev3    local
+template        TokarevTPL03=Sailor_Tokarev4    local
+template        TokarevTPL04=Sailor_Tokarev5    local
+
+template        SimonovTPL00=Sailor_Simonov     local
+template        SimonovTPL01=Sailor_Simonov2    local
+template        SimonovTPL02=Sailor_Simonov3    local
+template        SimonovTPL03=Sailor_Simonov4    local
+template        SimonovTPL04=Sailor_Simonov5    local
+
+template        MauserTPL00=Sailor_Mauser       local
+template        MauserTPL01=Sailor_Mauser2      local
+template        MauserTPL02=Sailor_Mauser3      local
+template        MauserTPL03=Sailor_Mauser4      local
+template        MauserTPL04=Sailor_Mauser5      local
+
+
+end
+
+# ========================================================================================
+# ========================================= CODE =========================================
+# ========================================================================================
+
+code
+
+# ========================================================================================
+startup:
+
+    for(counter = 0; counter < STARTING_SAILORS; counter = counter + 1)
+    {   
+        AISetCutsceneMode(DeckSailor00[counter]);  #  Start all of the sailors in cutscene mode.  Their patrols trigger when Idny gets on deck
+        SetThingFlags(DeckSailor00[counter], 0x80000);
+    }
+    
+    
+    return;
+    
+# ========================================================================================
+entered:
+    
+    if(GetSenderRef() == Begin) #Do this once, only once, and nothing else until then
+    {
+        if(StartCheck != 0) return;
+        
+        StartCheck = 1;
+
+        for(counter = 0; counter < STARTING_SAILORS; counter = counter + 1)
+        {
+            ClearThingFlags(DeckSailor00[counter], 0x80000);   
+            AIClearCutsceneMode(DeckSailor00[counter]);
+        
+            AISetInstinctWpntMode(DeckSailor00[counter]);
+        
+            if(counter < 2) // Only set two of the Commies roaming at the start
+            {
+                AIEnableInstinct(DeckSailor00[counter], "roam", 1);
+            }
+        }
+    }
+    
+//    else if(GetSenderRef() == BridgeCutsceneOn && CutsceneStatus == 0)
+//    {
+//        DebugPrint("DisablingAI for cutscene");
+//        CutsceneStatus = 1;  //Cutscene is in the process of playing
+//        Call DisableAIForCutscene;
+//    }
+    
+//    else if(GetSenderRef() == BridgeCutsceneOff && CutsceneStatus == 1)
+//    {
+//        DebugPrint("EnablingAI after Cutscene");
+        
+//        Call EnableAIAfterCutscene;
+//        CutsceneStatus = 2;  //Cutscene has played and won't play again
+//        Call SailorCacheCheck;
+//    }                                                                  
+    
+    return;
+
+# ========================================================================================
+killed:
+
+    TempSailor = GetSenderRef();
+    for (counter = 0; counter < STARTING_SAILORS; counter = counter + 1)
+    {
+        if (DeckSailor00[counter] == TempSailor) #locate exactly which sailor died and prepare to make a new one
+        {            
+            DeckSailor00[counter] = -1;
+        }
+    }
+    
+    SetTimerEx(NEW_SAILOR_DELAY, TIMER_ID_CREATE_SAILOR, 0, 0);  #Small delay before making a new sailor      
+    
+    return;
+    
+# ========================================================================================
+timer:
+    
+    if(GetSenderID() == TIMER_ID_CREATE_SAILOR) #From the SetTimerEx in the killed message
+    {
+        Call NewSailor;
+    }    
+                       
+    return;
+
+# ========================================================================================
+//taken:
+
+//    if(IndyHasTheCrank == 1) return;
+    
+//    if(GetSenderRef() == CrankWheel)
+//    {
+//        IndyHasTheCrank = 1;
+//    }
+    
+//    return;
+
+# ========================================================================================
+//Expects SEA_Grid.cog to send a message when it swaps out grids... only param(0) is being used for now
+User0:
+
+    UpperGridOn = GetParam(0);
+    
+    if(StartCheck == 0) return; // Nothing will happen until the initial entered message above is recieved
+    Call InstinctManager;
+    Call SailorCacheCheck; //See if any Sailors were added to the cache while the Uper Grid was off
+
+    return;
+    
+# ========================================================================================
+user1:
+    
+    Sleep(1.0);
+    
+    for(counter = 0; counter < STARTING_SAILORS; counter = counter + 1)
+    {
+        //Make the commies run away so that when Indy solves the final puzzle they aren't just standing on camera doing nothing
+        if(DeckSailor00[counter] != -1)
+        {
+            SetThingFlags(DeckSailor00[counter], 0x80000); //Fleeing didn't work so well, just disabling them
+            
+        //AISetSubMode(DeckSailor00[counter], 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION. Required for FleeToWpnt
+    	//AIFleeToWpnt(Decksailor00[counter], FLEE_TO_WPNT);               
+        }
+    }
+    
+    return;
+
+# ========================================================================
+user2:
+
+    Call DisableAIForCutscene;
+
+    return;
+    
+# ========================================================================
+user3:
+
+    Call EnableAIAfterCutscene;
+
+    return;    
+            
+# ========================================================================
+#                           -==SUBROUTINES==-
+# ========================================================================
+//  Expects a dead sailor with its value set to -1
+//  Creates a new random sailor to replace any killed on the deck
+//  Ghost Objects will be checked for LOS to the player
+NewSailor:
+    
+    if(SailorGrowthCounter >= SAILOR_MAKER_CAP) #Check to see if any more sailors are allowed to be made
+    {
+        return;
+    }
+    
+    if(UpperGridOn == 0 || CutsceneStatus == 1)
+    {
+        NumSailorsInCache = NumSailorsInCache + 1;
+        return;
+    }    
+    
+    if(GetFlexGameTime() - PrevCommieCreationTime < MIN_COMMIE_CREATION_SEPARATION)
+    {
+        SetTimerEx(MIN_COMMIE_CREATION_SEPARATION, TIMER_ID_CREATE_SAILOR, 0, 0); 
+        return;
+    }
+    
+    for(counter = 0; counter < (STARTING_SAILORS  - 1); counter = counter + 1)  #Only keep Regenerating three of the Sailors, Hence the -1.
+    {
+        if(DeckSailor00[counter] == -1)
+        {
+            Call GhostPicker;
+            Call RandomSailorPicker;
+            
+            if(SailorRand == 0)
+            {
+                DeckSailor00[counter] = CreateThing(TokarevTPL00[VoiceRand], GhostSailor00[GhostSailorNum]);
+            }
+            else if(SailorRand == 1)
+            {
+                DeckSailor00[counter] = CreateThing(SimonovTPL00[VoiceRand], GhostSailor00[GhostSailorNum]);
+            }
+            else
+            {
+                DeckSailor00[counter] = CreateThing(MauserTPL00[VoiceRand], GhostSailor00[GhostSailorNum]);
+            }
+            
+            if (DeckSailor00[counter] == -1)
+    	    {
+                SetTimerEx(10.0, TIMER_ID_CREATE_SAILOR, 0, 0);  
+	        return;
+            }
+            
+            SailorGrowthCounter = SailorGrowthCounter + 1;
+            
+            PrevCommieCreationTime = GetFlexGameTime();
+            
+            CaptureThing(DeckSailor00[counter]);
+            
+            AISetInstinctWpntMode(DeckSailor00[counter]);
+            
+            AIEnableInstinct(DeckSailor00[counter], "roam", 1);
+            
+            if(RandBetween(0, 2) < 2)
+            {
+                AIWpntHuntTarget(DeckSailor00[counter], 1.6, 0.0);
+            }
+            
+            return;
+        }
+    }
+    return;
+   
+# ========================================================================================
+//Finds one of a set number of Ghost Objects for creating a new Sailor
+//If Indy is near a defined group of waypoints new commie wil always be created at a specific ghost object
+GhostPicker:    
+    
+    IndyNearestWpnt = AIFindNearestWpnt(GetLocalPlayerThing()); #finds nearest waypoint to the player
+    
+    if(IndyNearestwpnt <= 7)
+    {
+        GhostSailorNum = 1;
+    }
+    else if(IndyNearestWpnt <= 15)
+    {
+        GhostSailorNum = 2;
+    }
+    else if(IndyNearestWpnt <= 25 )
+    {
+        GhostSailorNum = 0;
+    }
+    
+    return;
+    
+# ========================================================================================
+// Picks a Commie from bank of templates and then picks one of the 5 vocal interations of that commie
+// makes sure that new sailor is not the same type or voice as any previously generated sailor
+RandomSailorPicker:
+    
+    SailorRand = RandBetween(0, VARIETY_OF_COMMIES-1);  #Randomly choose from one of three templates
+    while(SailorRand == SailorRandCheck)
+    {
+        SailorRand = RandBetween(0, VARIETY_OF_COMMIES-1);
+    }    
+    SailorRandCheck = SailorRand;
+    
+    VoiceRand = RandBetween(0, VARIETY_OF_VOICES-1);    #Randomly choose one of the 5 voice iterations of the sailors
+    while(VoiceRand == VoiceRandCheck)
+    {
+        VoiceRand = RandBetween(0, VARIETY_OF_VOICES-1);
+    }
+    VoiceRandCheck = VoiceRand;
+
+    return;
+
+# ========================================================================================
+//Expects UpperGridOn to be defined by the User0 message.
+//Sets cutscene mode on and off when the Deck Grid is turned on and off by SEA_Grid.cog
+InstinctManager:
+    
+    if(UpperGridOn == 0)
+    {
+        for(counter = 0; counter < STARTING_SAILORS; counter = counter +1)
+        {   
+            if(DeckSailor00[counter] != -1)
+            {
+                AIClearInstinctWpntMode(DeckSailor00[counter]);
+                AISetCutsceneMode(DeckSailor00[counter]);
+            }
+        }
+    }
+    else
+    {
+        for(counter = 0; counter < STARTING_SAILORS; counter = counter + 1)
+        {
+            if(DeckSailor00[counter] != -1)
+            {
+                AIClearCutsceneMode(DeckSailor00[counter]);
+                AISetInstinctWpntMode(DeckSailor00[counter]);
+            }
+        }
+    }
+            
+    return;
+
+# ========================================================================================
+//Checks to see if there are any Sailors that had to be put in the Cache because the Upper Grid was off
+//Then Makes that many new Sailors
+SailorCacheCheck:
+    
+    if(NumSailorsInCache == 0) return;
+    
+    while(NumSailorsInCache != 0)
+    {
+        NumSailorsInCache = NumSailorsInCache - 1;
+        Call NewSailor;
+    }
+    return;
+
+# ========================================================================================
+DisableAIForCutscene:
+
+    for(counter = 0; counter < STARTING_SAILORS; counter = counter + 1)
+    {
+        if(DeckSailor00[counter] != -1) 
+        {
+            AISetCutsceneMode(DeckSailor00[counter]);
+        }
+    }                                                 
+    
+    return;
+# ========================================================================================
+EnableAIAfterCutscene:
+
+    for(counter = 0; counter < STARTING_SAILORS; counter = counter + 1)
+    {
+        if(DeckSailor00[counter] != -1)
+        {
+            AIClearCutsceneMode(DeckSailor00[counter]);
+        }
+    }
+
+    return;
+
+# ========================================================================================
+end

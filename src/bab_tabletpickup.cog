@@ -1,0 +1,135 @@
+# Jones 3D Cog Script
+#
+# BAB_TabletPickup.cog
+#
+# Indy picks up tablets & comments
+#
+# [SXC & revised by HB]
+#
+# 11/23/98 SXC
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+	message		user7
+	
+	sound		in_whatsthis=Inxj140.wav	local
+	sound		in_hmm=Inxj146.wav			local
+	sound		in_aha=Inxj147.wav			local
+	sound		in_tabpart=Inxj171.wav		local
+	sound		in_textfrag=Inxj172.wav		local
+	sound		in_moretext=Inxj240.wav		local
+
+    thing       player						local
+    thing       tablet
+    thing       swingpos    
+	
+	cog			archivebridgecog    
+    
+    int         itemnum       
+    int         croscheck=0					local
+    int         cursound					local 
+	int			bridgedown=0				local
+             
+end
+
+# ==============================================================================
+
+code
+
+## NOTE:  this cog uses--> global6 <--to sequence saylines
+
+startup:
+
+    player = GetLocalPlayerThing();
+	global6 = 0; # init
+
+    return;
+           
+# ..............................................................................
+
+user7:
+
+	# NOTE: received from archivebridgecog when bridge has collapsed
+	bridgedown = 1;
+
+	return;
+
+# ..............................................................................
+
+activate:
+
+    If ((GetSenderRef() == tablet) && (croscheck == 0) && (GetCurItem(player) == 0) && (GetCurWeapon(player) == 0))
+    {
+        croscheck = 1;
+		MakeMeStop();
+        StartCutscene(0);
+        PlayMode(player, 60, 0);
+
+        SetExtCamOffsetToThing(swingpos);
+
+		if (global6 == 0)
+		{	
+			PlayVoice(player, in_whatsthis, 1.0, 1);
+		}
+		if (global6 == 1)
+		{
+			PlayVoice(player, in_hmm, 1.0, 1);		
+		}
+		if (global6 == 2)
+		{
+			PlayVoice(player, in_aha, 1.0, 1);		
+		}
+		Sleep(0.35);
+
+		DestroyThing(tablet);
+        ChangeInv(player, itemnum, 1);
+        SetInvAvailable(player, itemnum, 1);
+        JonesInvItemChanged(itemnum);
+		Sleep(0.5);
+		
+		if (global6 == 0)
+		{	
+			cursound = PlayVoice(player, in_tabpart, 1.0, 0);
+		}
+		if (global6 == 1)
+		{
+			cursound = PlayVoice(player, in_textfrag, 1.0, 0);
+		}
+		if (global6 == 2)
+		{
+			cursound = PlayVoice(player, in_moretext, 1.0, 0);
+		}
+
+		if (global6 < 2)
+		{
+			global6 = global6 + 1;
+		}
+
+        WaitForSound(cursound);
+        Sleep(0.5);
+
+		//allow bridge to fall...
+		if (itemnum == 69)
+		{
+			SendMessage(archivebridgecog, user6);
+			while (bridgedown == 0)
+			{
+				Sleep(0.1);
+			}
+		}
+
+	    RestoreExtCam();
+		Sleep(0.5);
+		EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }
+    
+	return;
+        
+end

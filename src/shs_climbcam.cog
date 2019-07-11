@@ -1,0 +1,57 @@
+
+# Jones 3D Cog Script
+#
+# shs_climbcam.cog     
+#
+# [JWC] copied from RD
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+message	entered
+
+# maze entry surfaces
+
+# bottom
+surface	entry1		linkid=1 	
+surface	entry2		linkid=1
+# top
+surface	entry3		linkid=1
+surface	entry4		linkid=1
+# by treasure
+surface	entry5		linkid=1
+surface	entry6		linkid=1
+
+# maze exit surfaces
+surface RestoreSurf1		linkid=2
+surface	RestoreSurf2		linkid=2
+surface	RestoreSurf3		linkid=2
+surface	RestoreSurf4		linkid=2
+surface RestoreSurf5		linkid=2
+
+# maze exit sectors 
+sector	RestoreSec1		linkid=2
+sector	RestoreSec2		linkid=2
+
+end
+
+code
+entered:
+# ---> all faces
+	
+	if (GetSenderID() == 1)
+	{
+		SetCameraFOV(110, 1, 1);
+	}
+
+	if (GetSenderID() == 2)
+	{
+		SetCameraFOV(90, 1, 1);
+	}
+
+	return;
+
+end
+

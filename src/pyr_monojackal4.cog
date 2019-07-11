@@ -1,0 +1,790 @@
+# Jones 3D Cog Script
+#
+# pyr_monojackal4.cog
+#
+# mystic eye critter #4
+#
+# [RKD & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ==============================================================================
+
+symbols
+message	startup
+message	activated
+message	entered
+message	exited
+message	arrived
+message	user1
+message	pulse
+
+# keyframes
+keyframe	lookdown=0in_stand5.key		local
+
+# world things
+thing	rotator
+thing	jackal			nolink
+thing	jackalbase		nolink
+thing	sparkle			nolink
+thing	activeye
+thing	eye
+thing	RuinsWindow
+
+# flame inside pyramid
+thing	flame		nolink
+
+# actors
+thing	player		nolink	local
+thing	indyactor0	nolink
+thing	indyactor1	nolink
+thing	indyactor2	nolink
+
+# camera things
+thing	jackalcam
+thing	jkl_rocam	nolink
+thing	rotatecam	nolink
+thing	returncam	nolink
+thing	hintcam		nolink
+thing	cam1spot	local
+
+# camera lookthings
+thing	rotatecamlook	nolink
+thing	jackalcamlook	nolink
+thing	jkl_ct_a		nolink
+thing	jkl_ct_b		nolink
+thing	jkl_rotarg		nolink
+thing	cam1look		local
+
+# pushblocks around pushyjackal
+thing	block1
+thing	block2
+thing	block3
+
+# creation aids
+template	tpl_ghost=ghost				local
+
+# surface over monojackal
+surface	sandtrigger
+
+# surface where block can stop the beam
+surface	eyetrigger		mask=0x480
+
+# Indy's saylines
+sound	prismhere=pr13j02.wav			local
+sound	operation=pr13j03.wav			local
+sound	okaywhat=pr13j04.wav			local
+sound	goodlook=pr13j05.wav			local
+sound	there=pr13j06.wav				local
+sound	whoa=inxj007a.wav				local
+
+# non-voice sounds
+sound	crump=pyr_jackal_stat_start.wav		local
+sound	turnstart=nub_2mstep_move_c.wav		local
+sound	turnloop=teo_spike_block_c.wav		local
+sound	turnstop=gen_stone_stop_c.wav		local
+sound	eyein=gen_grenade_bounce.wav		local
+sound	jackalmove=pyr_jackal_stat_move.wav	local
+
+# music
+sound	riseup1=mus_pyr_jackal1.wav			local	#long version, for first time jackal comes up
+sound	riseup2=mus_pyr_jackal2.wav			local
+sound	turnround1=mus_pyr_jackalgem2.wav	local
+sound	turnround4=mus_pyr_jackalgem1.wav	local   #long version, for when door finally opens
+
+# cogs
+cog		bigfancydoor
+cog		boxcog
+cog		glowcog
+
+# variables
+vector	posOffset		local
+vector	angOffset		local
+
+int		vibe			local
+int		shake=0			local
+int		in_keytrack1	local
+int		camexists		local
+
+int		locked=0		local
+int		actornum=0		local
+int		cursound=0		local
+int		blockinway=0	local
+
+# subroutines
+flex	startscene=0.0		local
+flex	endscene=0.0		local
+flex	fixcams=0.0			local
+flex	movejackal=0.0		local
+flex	doorcall=0.0		local
+
+end
+# ==============================================================================
+
+code
+startup:
+	Sleep(0.1);
+	player = GetLocalPlayerThing();
+	
+	# make eye and "activation eye" invisible
+	SetThingFlags(eye, 0x10);
+	SetThingFlags(activeye, 0x10);
+
+	# make sure sandtrigger is no-move
+	ClearAdjoinFlags(sandtrigger, 2);
+	
+	# light up jackal to avoid popping
+	SetThingLight(jackal, '100 87 75', .001, .01);
+	SetThingLight(jackalbase, '100 87 75', .001, .01);
+	SetThingLight(eye, '100 87 75', .001, .01);
+	SetThingLight(block1, '100 87 75', .001, .01);
+	SetThingLight(block2, '100 87 75', .001, .01);
+	SetThingLight(block3, '100 87 75', .001, .01);
+
+	# every frame is sacred
+	SetThingFlags(jackalbase, 0x10);
+	
+	# hide sparkle on eye (animated in proximityglow.cog) and attach it to eye
+	AnimateSpriteSize(sparkle, '.1 .1 0.0', '.2 .2 0.0', .1);
+	AttachThingToThingEx(sparkle, jackal, 0x08);
+
+	return;
+
+# ..............................................................................
+
+user1:
+# ---> JackalBlockTrigger cog
+	
+	#if already triggered, or if light room not prepared, return
+	if (locked) return;
+	if (GetThingFlags(flame) & 0x10) return;
+	
+	# a switch-trigger sound
+	PlaySoundThing(crump, jackalbase, 1, -1, -1, 0);
+
+	# jackalbase makes assembly rise, rotator makes jackal and parts turn
+	AttachThingToThing(rotator, jackalbase);
+	AttachThingToThing(jackal, rotator);
+	AttachThingToThing(eye, jackal);
+	AttachThingToThing(activeye, eye);
+	
+	# get player closer to center, call scene setup, and move the jackal up
+	Sleep(0.25);
+	actornum=0;
+	
+	# orient actor without moving him from center
+	CopyOrient(player, indyactor0[actornum]);
+	
+	# start early sound on jackalbase
+	cursound = PlaySoundThing(jackalmove, jackalbase, .5, -1, -1, 1);
+	ChangeSoundVol(cursound, 1, 1);
+	
+	# start cam shake...
+	shake = 1;
+	SetPulse(0.1);
+
+	# Indy stops...
+	if (MakeMeStop() == -1)
+	{
+		SetPulse(0);
+		return;
+	}
+
+	StartCutScene(1);
+	
+	# jackalbase can show up now
+	ClearThingFlags(jackalbase, 0x10);
+	
+	locked = 1;
+
+	in_keytrack1 = PlayKey(player, lookdown, 4, 0x00, 0);
+	Sleep(1.0);
+	
+	call startscene;
+	call movejackal;
+
+	return;
+
+# ..............................................................................
+
+startscene:
+
+	call fixcams;	
+
+	TeleportThing(player, indyactor0[actornum]);
+	CopyPlayerHolsters(player, indyactor0[actornum]);
+	ClearThingFlags(indyactor0[actornum], 0x80000);
+	AISetCutSceneMode(indyactor0[actornum]);
+	SetThingFlags(player, 0x80000);
+	
+	# turn collision off on boxes
+	SetCollideType(block1, 0);
+	SetCollideType(block2, 0);
+	SetCollideType(block3, 0);
+
+	return;
+	
+# ..............................................................................
+
+movejackal:
+
+	# if jackalbase is down, send it up
+	if (GetCurFrame(jackalbase) == 0)
+	{						
+		# stop preliminary sound
+		StopSound(cursound, .5);
+		
+		# Change to jackalcam
+		SetCameraFocus(2, jackalcam);		
+		SetCameraSecondaryFocus(2, jkl_ct_a);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		StopKey(player, in_keytrack1, 0.0);
+		in_keytrack1 = PlayKey(indyactor0[actornum], lookdown, 4, 0x10, 0);
+
+		SetCurrentCamera(2);
+		
+		# global5 = number of light sentries that have risen from the sand
+		# global5 is initialized in monojackal.cog and updated AFTER each light sentry has risen
+		# play music depending on 1st or later instances
+		if (global5 == 0)
+		{
+			PlaySoundLocal(riseup1, 1, 0, 0, 0);
+		}
+		else
+		{
+			PlaySoundLocal(riseup2, 1, 0, 0, 0);
+		}
+		
+		# Make sure Indy rises with statue
+		DetachThing(indyactor0);
+
+		# make sand floor movethru
+		SetAdjoinFlags(sandtrigger, 2);
+		
+		# light sentry moves up
+		MoveToFrame(jackalbase, 1, .5);
+				
+		# if this is the first time, indy reacts appropriately
+		if (global5 == 0)
+		{
+			PlayVoice(indyactor0, whoa, 1, 0);
+		}
+		else
+		{
+			# Indy turns to look at front of statue
+			SetThingMaxHeadVel(indyactor0, 175);
+			SetThingMaxRotVel(indyactor0, 175);
+			StopKey(indyactor0[actornum], in_keytrack1, 0.5);
+			Sleep(0.5);
+			AISetLookThing(indyactor0, indyactor2);
+		}
+	
+		# Move jackal camera back to show Indy and jackal together...
+		SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 3.5);
+		Sleep(1.0);
+
+		# Track jackal...
+		SetCameraSecondaryFocus(2, jkl_ct_b);
+		MoveToFrame(jackalcam, 1, 0.7);
+		SetCameraFOV(100, 1, 3.5);
+			
+		# Indy turns to look at pyramid
+		Sleep(0.5);
+		StopKey(indyactor0[actornum], in_keytrack1, 0.5);
+		Sleep(0.5);
+		SetThingMaxHeadVel(indyactor0, 175);
+		SetThingMaxRotVel(indyactor0, 175);
+		AISetLookThing(indyactor0, flame);
+	}
+	# if jackalbase is up, send it down
+	else
+	{
+		MoveToFrame(jackalbase, 0, 0.7);
+		shake = 1;
+		SetPulse(0.1);		
+		Sleep(3.0);
+		SetPulse(0.0);
+		call endscene;
+
+		# give jackalbase time to arrive, then clean up
+		WaitForStop(jackalbase);
+		sleep(1);
+		DestroyThing(jackalbase);
+		DestroyThing(rotator);
+		DestroyThing(eye);
+		DestroyThing(activeye);
+	}
+	
+	return;	
+
+# ..............................................................................
+		
+activated:
+# --> ActivEye	
+
+	if (GetSenderRef() != activeye) return;
+	
+	# if player holds gemeye or within Marcus
+	if ((GetCurItem(player) == 65) || (InEditor() && (GetThingFlags(eye) & 0x10)))
+	{	
+		actornum = 1;
+		
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		StartCutScene(1);
+
+		TeleportThing(indyactor0[actornum], player);
+		CopyPlayerHolsters(player, indyactor0[actornum]);
+		ClearThingFlags(indyactor0[actornum], 0x80000);
+		AISetCutSceneMode(indyactor0[actornum]);
+		SetThingFlags(player, 0x80000);
+		SetCollideType(block1, 0);
+		SetCollideType(block2, 0);
+		SetCollideType(block3, 0);
+
+		call fixcams;
+
+		if (camexists == 0)
+		{
+			cam1spot = CreateThing(tpl_ghost, player);
+			CaptureThing(cam1spot);
+			cam1look = CreateThing(tpl_ghost, player);
+			CaptureThing(cam1look);
+			camexists = 1;
+		}
+		Sleep(0.01);
+		MakeCamera2LikeCamera1(cam1spot, cam1look);
+		SetCameraFocus(2, cam1spot);
+		SetCameraSecondaryFocus(2, cam1look);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		Sleep(0.01);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 0.8);
+		Sleep(0.01);	
+		
+		# Dolly to camera behind Indy...
+		SetCameraFocus(2, jkl_rocam);
+		SetCameraSecondaryFocus(2, jkl_rotarg);
+		
+		# global6 = number of times the player has applied the eye
+		# global6 is initialized in monojackal.cog and updated AFTER each bar is removed from the door
+		#indy applies the eye (and sayline if 1st time)
+		if (global6 == 0)
+		{
+			PlayVoice(indyactor1, operation, 1, 0);
+			Sleep(2.0);
+		}
+		
+		# if door is about to open and lightbeam isn't blocked, play long version
+		if ((global6 == 3) && (!blockinway))
+		{
+			PlaySoundLocal(turnround4, 1, 0, 0, 0);
+		}
+		else
+		{
+			# otherwise play short version
+			PlaySoundLocal(turnround1, 1, 0, 0, 0);
+		}
+	
+		PlayMode(indyactor1, 61, 0);
+		Sleep(0.5);
+		
+		# make eye visible and take it out of inventory
+		PlaySoundThing(eyein, eye, 1, -1, -1, 0);
+		ClearThingFlags(eye, 0x10);
+		ChangeInv(player, 65, -1);
+		Sleep(1.0);
+
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+
+		# assembly rotates, camera slides sideways
+		PlaySoundThing(turnstart, jackalbase, 1, -1, -1, 0);
+		cursound = PlaySoundThing(turnloop, jackalbase, 1, -1, -1, 1);
+
+		Rotate(rotator, -180, 1, 5);
+		AttachThingToThing(jkl_rocam, jkl_rotarg);
+		Rotate(jkl_rotarg, -150, 1, 5.0);
+		SetCameraFOV(70, 1, 5.0);
+		Sleep(2.5);
+		
+		# New sayline if this is the 2nd time
+		if (global6 == 1)
+		{
+			PlayVoice(indyactor1, okaywhat, 1, 0);
+		}
+		
+		# New sayline if this is the 3rd time
+		if (global6 == 2)
+		{
+			PlayVoice(indyactor1, goodlook, 1, 0);
+		}
+	}
+	else
+	{
+		# player doesn't have the gem and it's not on the jackal, Indy gives a hint
+		if (GetThingFlags(eye) & 0x10)
+		{
+			# prepare player
+			if (MakeMeStop() == -1) return;
+			DeselectWeaponWait(player);
+			
+			StartCutscene(1);
+
+			SetCollideType(block1, 0);
+			SetCollideType(block2, 0);
+			SetCollideType(block3, 0);
+
+			SetCameraLookInterp(2, 0);
+			SetCameraPosInterp(2, 0);
+
+			if (camexists == 0)
+			{
+				cam1spot = CreateThing(tpl_ghost, player);
+				CaptureThing(cam1spot);
+				cam1look = CreateThing(tpl_ghost, player);
+				CaptureThing(cam1look);
+				camexists = 1;
+			}
+			
+			MakeCamera2LikeCamera1(cam1spot, cam1look);
+			SetCameraFocus(2, cam1spot);
+			SetCameraSecondaryFocus(2, cam1look);
+			SetCurrentCamera(2);
+			ResetCameraFOV(0, 0.0);
+			SetCameraLookInterp(2, 1);
+			SetCameraPosInterp(2, 1);
+			SetCameraInterpSpeed(2, 0.8);
+			Sleep(0.01);
+			SetCameraFocus(2, hintcam);
+			SetCameraSecondaryFocus(2, eye);
+			Sleep(0.5);
+
+			# Indy needs prism...
+			PlayVoice(player, prismhere, 1, 1);
+			Sleep(0.5);
+			
+			# Restore player, end scene
+			SetCameraPosition(1, GetThingPos(hintcam));
+			SetCurrentCamera(1);
+			Sleep(0.5);
+
+			EndCutscene();
+			SetCollideType(block1, 3);
+			SetCollideType(block2, 3);
+			SetCollideType(block3, 3);
+			ClearActorFlags(player, 0x200000);
+
+			return;	
+		}
+
+		# player takes gem from jackal
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		actornum = 2;
+		call startscene;
+		
+		# cut to camera next to Indy
+		SetCameraFocus(2, returncam);
+		SetCameraSecondaryFocus(2, jkl_rotarg);
+		SetCurrentCamera(2);
+		
+		# make eye invisible on jackal and add it to inventory
+		PlayMode(indyactor2, 61, 0);
+		Sleep(0.5);
+		PlaySoundThing(eyein, eye, 1, -1, -1, 0);
+		SetThingFlags(eye, 0x10);
+		SetThingLight(eye, VectorSet(0, 0, 0), .001, .1);
+		ChangeInv(player, 65, 1.0);
+		SetInvAvailable(player, 65, 1);
+		JonesInvItemChanged(65);
+		
+		# detach these to avoid rotation slowness
+		DetachThing(eye);
+		DetachThing(activeye);
+		
+		# rotate jackal back around
+		PlaySoundThing(turnstart, jackalbase, 1, -1, -1, 0);
+		cursound = PlaySoundThing(turnloop, jackalbase, 1, -1, -1, 1);
+		Rotate(rotator, 180, 1, 4);		
+	}
+
+	return;
+
+# BlockInWay states
+#	-1 = doorcog triggered (i.e., moot point)
+#	0 = block not on face
+#	1 = block on face, jackal not in place yet
+#	2 = block on face, jackal in place
+
+# ..............................................................................
+
+entered:
+# ---> EyeTrigger
+
+	if (blockinway == -1) return;
+	if (GetSenderRef() != eyetrigger) return;
+
+	# if block enters surface, set flag to keep eye from seeing pyramid
+	if ((GetSourceRef() == block1) || (GetSourceRef() == block2) || (GetSourceRef() == block3))
+	{
+		blockinway = 1;
+	}
+	return;
+
+# ..............................................................................
+
+exited:
+# ---> EyeTrigger
+
+	if (blockinway == -1) return;
+	if (GetSenderRef() != eyetrigger) return;
+
+	# if block exits surface and blockinway
+	if ((GetSourceRef() == block1) || (GetSourceRef() == block2) || (GetSourceRef() == block3))
+	{
+
+		if (blockinway == 2)
+		{
+			Sleep(1.0);
+			
+			StartCutscene(1);
+			SetActorFlags(player, 0x200000);
+			
+			# allow camera to pass through ruins
+			SetCollideType(RuinsWindow, 0);		
+
+			# swing camera left or right, dependent on player's facing
+			if (VectorY(GetThingLVecPYR(player)) > 0)
+			{
+				SetExtCamOffset('-0.3 -.08 0.22');
+			}
+			else
+			{
+				SetExtCamOffset('0.3 -.08 0.22');
+			}
+
+			SetCameraFOV(75, 1, 4);
+			
+			PlaySoundLocal(turnround4, 1, 0, 0, 0);
+			Sleep(2.0);
+
+			# make the eye sparkle a couple times
+			AnimateSpriteSize(sparkle, '.08 .08 0.0', '.15 .15 1.0', .1);
+			Sleep(2.0);
+
+			call doorcall;
+
+			# restore ruins collision and disable blockinway
+			SetCollideType(RuinsWindow, 3);
+			blockinway = -1;
+		}
+		else
+		{
+			blockinway = 0;
+		}
+	}
+
+	return;
+
+# ..............................................................................
+
+arrived:
+# ---> JackalCam or Rotator
+	
+	# ==JackalCam==
+	# pause and call endscene
+	if (GetSenderRef() == jackalcam)
+	{
+		Sleep(1.0);	
+		SetPulse(0.0);
+		Sleep(1.5);
+		call endscene;
+		
+		#add 1 to monojackal rise count
+		global5 = global5 + 1;
+		
+		return;
+	}
+	
+	# ==Rotator==
+	# if eye invisible, move jackal back down, otherwise send message to BigFancyDoor
+	if (GetThingFlags(eye) & 0x10)
+	{
+		PlaySoundThing(turnstop, jackalbase, 1, -1, -1, 0);
+		StopSound(cursound, 0.1);
+		call movejackal;
+	}
+	else
+	{
+		# if pushblock is in the way, prepare to trigger doorcall when it moves
+		if (blockinway)
+		{
+			blockinway = 2;
+			
+			PlaySoundThing(turnstop, jackalbase, 1, -1, -1, 0);
+			StopSound(cursound, 0.1);
+			Sleep(2.0);
+			call endscene;
+			return;
+		}
+		else
+		{
+			StartCutscene(1);
+			
+			PlaySoundThing(turnstop, jackalbase, 1, -1, -1, 0);
+			StopSound(cursound, 0.1);
+
+			# make the eye sparkle a couple times
+			AnimateSpriteSize(sparkle, '.08 .08 0.0', '.15 .15 1.0', .1);
+
+			# New sayline if this is the 4th time
+			if (global6 == 3)
+			{
+				PlayVoice(indyactor1, there, 1, 0);
+			}
+		
+			Sleep(2.5);
+			call doorcall;
+			call endscene;
+
+			blockinway = -1;
+		}
+	}
+
+	return;
+
+# ..............................................................................
+
+endscene:
+
+	call fixcams;
+
+	TeleportThing(player, indyactor0[actornum]);
+	SetThingFlags(indyactor0[actornum], 0x80000);
+	ClearThingFlags(player, 0x80000);
+   	
+	# Establish a camera position near Indy and prep follow-cam...			
+	SetCameraPosition(1, VectorAdd(VectorTransformToOrient(player, '-0.25 -0.05 0.0'), GetThingPos(player)));	
+
+	# turn collision on for boxes
+	SetCollideType(block1, 3);
+	SetCollideType(block2, 3);
+	SetCollideType(block3, 3);
+
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+# ..............................................................................
+
+fixcams:
+
+	# Reset camera settings...
+	ResetCameraFOV(0, 0.0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+
+	return;
+
+# ..............................................................................
+
+doorcall:
+
+	# Tell door to open lock
+	SendMessage(bigfancydoor, user1);
+		
+	# turn sparkle off
+	AnimateSpriteSize(sparkle, '.1 .1 0.0', '.2 .2 0.0', .1);
+	SetThingFlags(flame, 0x10);
+	
+	#add 1 to doorbar-removed count
+	global6 = global6 + 1;
+	
+	#give doorcog time to play scene (longer if door has to open)
+	if (global6 < 4)
+	{
+		Sleep(5.0);
+	}
+	else
+	{
+		Sleep(12.0);
+	}
+	
+	call fixcams;
+		
+	# turn collision on for boxes
+	SetCollideType(block1, 3);
+	SetCollideType(block2, 3);
+	SetCollideType(block3, 3);
+
+	# tell lightbox cog to turn off the flame
+	SendMessage(boxcog, user1);
+	
+	# tell lightbox cog to turn off the flame
+	SendMessage(glowcog, user1);
+	
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+# ..............................................................................
+
+pulse:
+
+	vibe = RandBetween(1, 4);
+	if (vibe == 1)
+	{
+		posOffset = '-0.005 0.00 -0.001';
+		angOffset = '0.00 -0.001 0.001';
+	}
+	
+	if (vibe == 2)
+	{
+		posOffset = '0.005 -0.003 0.001';
+		angOffset = '0.001 0.00 -0.001';
+	}
+	
+	if (vibe == 3)
+	{
+		posOffset = '0.003 0.003 -0.003';
+		angOffset = '-0.001 0.003 -0.003';
+	}
+	
+	if (vibe == 4)
+	{
+		posOffset = '-0.001 0.00 0.003';
+		angOffset = '0.00 0.00 0.001';
+	}
+
+	vibe = RandBetween(1, 3);
+	if (vibe == 1)
+	{
+		SetPulse(0.05);
+	}
+	if (vibe == 2)
+	{
+		SetPulse(0.1);
+	}
+	if (vibe == 3)
+	{
+		SetPulse(0.15);
+	}
+
+	SetPOVShake(posOffSet, angOffSet, 0.1, 30.0);
+
+	return;
+
+end
+

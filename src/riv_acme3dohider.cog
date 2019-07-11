@@ -1,0 +1,48 @@
+# Jones 3D Cog Script
+#
+# RIV_Acme3doHider.cog
+#
+# much work to hide/show one lousy 3do.  Stupid horizon sky.
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message entered
+    
+    thing   bracket         # hide/show this
+    
+    sector  hideHammers
+    sector  showHammers0    linkID=1
+    sector  showHammers1    linkID=1
+    
+    int     canSee=1        local
+        
+end
+
+# ========================================================================================
+code
+
+entered:
+
+    if((GetSenderRef() == hideHammers) && (canSee == 1))
+    {
+        canSee = 0;
+        SetThingFlags(bracket, 0x10);
+    }
+    
+    if((GetSenderID() == 1) && (canSee == 0))
+    {
+        canSee = 1;
+        ClearThingFlags(bracket, 0x10);
+    }
+
+    return;
+
+# ========================================================================================
+
+end
+

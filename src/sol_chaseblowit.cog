@@ -1,0 +1,481 @@
+# Jones 3D Cog Script
+#
+# SOL_ChaseBlowIt.cog
+#
+# waypoints by [SCHOLL]
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     user1
+    message     entered
+    message     removed
+    message     pulse
+    
+    thing       player      local
+    thing       car         local
+    thing       tnt1        local
+    thing       tnt2        local
+    thing       grenade     local
+    
+    thing       comCar_Upper
+    thing       comCar_Lower
+    
+    thing       comCar_Start1
+    thing       comCar_Start2
+    thing       comCar_Start3
+    
+    thing       cam1
+    thing       camTarg1
+    thing       commTarg1
+    
+    thing       exp1
+    thing       exp2
+    thing       exp3
+    
+    thing       com1        # tnt commies
+    thing       com2
+    
+    thing       ghostTnt1
+    thing       ghostTnt2
+    
+    # ** oil shed commies **
+    thing       os_com3
+    thing       os_com4
+    thing       os_com_grenade
+    
+    # ** oil shed items
+    thing       os_Satchels
+    thing       os_Grenades
+    thing       os_Health
+    
+    surface     readySurf       mask=0x404      
+    surface     blowItSurf      mask=0x404      # trigger explosions
+    surface     stopSurf        mask=0x004      # destroy comCar
+    surface     front
+    surface     back
+    
+    template    tplExp=+dummy_bazooka           local
+    template    tplTnt=tntcrate                 local
+    template    grenade_tpl=+grenade			local
+    
+    sound       comWatch=Inxh1012.wav           local   # watch out!
+        
+    keyframe    comReach=1h_reach_low.key       local
+    keyframe    im_Duck=im_duckdown.key         local
+    keyframe    im_GetUp=im_getup.key           local
+    
+    # ** types **
+    AI			ai_sniper=com_1HGrndSniper.ai	local
+    
+    # ** cogs **
+    cog         transformer
+    cog         chaseUpper
+    cog         chaseLower
+    cog         hintCog
+    cog         ambush
+    
+    int         ready=0         local
+    int         blowIt=0        local
+    int         done=0          local
+    int         pulseCount=0    local
+    int         upper=0         local
+    int         duck_Track      local
+    int         chase_Ready=0   local
+    
+# ===========================WAYPOINTS================================================
+	int			n_idx				local
+	int			WAYPOINT_BASE=25		local
+	int			NUM_WAYPOINTS=6			local
+	thing		t_Waypoint00
+	thing		t_Waypoint01
+	thing		t_Waypoint02
+	thing		t_Waypoint03
+	thing		t_Waypoint04
+	thing		t_Waypoint05
+    
+    # ** subroutines **
+    flex        tossgrenade             local
+	flex		activatewaypoints		local
+    flex        blowItCut               local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    # hide commies
+    SetThingFlags(com1, 0x80000);
+    SetThingFlags(com2, 0x80000);
+
+    # disable bi-ped commies
+    AISetCutsceneMode(com1);
+    AISetCutsceneMode(com2);
+    
+    # hide oil shed commies
+    SetThingFlags(os_Com3, 0x80000);
+    SetThingFlags(os_Com4, 0x80000);
+    SetThingFlags(os_com_grenade, 0x80000);
+    
+    # hide oil shed inventory items
+    SetThingFlags(os_Health, 0x80000);
+    SetThingFlags(os_Grenades, 0x80000);
+    SetThingFlags(os_Satchels, 0x80000);
+
+    return;
+    
+# ========================================================================================
+
+user0:
+
+    upper = 1;
+    return;
+
+# ========================================================================================
+
+user1:
+
+    chase_Ready = 1;
+    return;
+
+# ========================================================================================
+
+entered:
+        
+    player = GetLocalPlayerThing();
+    car = GetSourceRef();
+    
+    if((BitTest(GetPhysicsFlags(car), 0x01000000)) && (done == 0) && (chase_Ready == 1))
+    {
+        # start cutscene
+        if(GetSenderRef() == readySurf)
+        {
+            if((GetSourceRef() == comCar_Upper) || (GetSourceRef() == comCar_Lower))
+            {
+                #Print("comCar entered readySurf");
+                ready = 1;
+                
+                # start countdown
+                SetPulse(1.0);
+                
+                if(upper == 1)
+                {
+                    SetThingThrust(comCar_Upper, '0.0 2.0 0.0');
+                }
+                
+                else
+                {
+                    SetThingThrust(comCar_Lower, '0.0 2.0 0.0');
+                }
+            }
+            
+            # player reached readySurf before pulseCount is 3
+            else if((GetSourceRef() == player) && (ready == 1))
+            {
+                #Print("player entered readySurf ON TIME");
+                blowIt = 1;
+                
+                Call blowItCut;
+            }
+            
+            # player didn't reach readySurf in time
+            else if((GetSourceRef() == player) && (ready == 0))
+            {
+                #Print("player entered readySurf LATE");
+                
+                blowIt = 1;
+                # comCar came from chaseUpper
+                if(upper == 1)
+                {
+                    #Print("teleporting comCar_Upper to comCar_Start3");
+                    StopThing(comCar_Upper);
+                    ClearThingFlags(comCar_Upper, 0x80000);
+                    TeleportThing(comCar_Upper, comCar_Start3);
+                    StopAllSoundsThing(comCar_Upper);
+                    Call blowItCut;
+                    #upper = 0;
+                }
+                
+                # comCar came from chaseLower
+                else
+                {
+                    #Print("teleporting comCar_Lower to comCar_Start3");
+                    StopThing(comCar_Lower);
+                    Sleep(0.1);
+                    ClearThingFlags(comCar_Lower, 0x80000);
+                    TeleportThing(comCar_Lower, comCar_Start3);
+                    StopAllSoundsThing(comCar_Lower);
+                    Call blowItCut;
+                }
+            }
+        }
+        
+        # blow it up
+        else if((GetSenderRef() == blowItSurf) && (blowIt == 1))
+        {
+            # comCar enters blowItSurf
+            if((GetSourceRef() == comCar_Upper) || (GetSourceRef() == comCar_Lower))
+            {
+                #Print("comCar entered blowItSurf");
+                
+                # start player moving again
+                SetThingThrust(player, '0.0 1.25 0.0');
+                
+                # toss a grenade from comCar
+                Call tossgrenade;
+                
+                # panic say line for biped commies when they see the grenade!
+                PlayVoice(com2, comWatch, 1.0, 0);
+                
+                Sleep(0.5);
+                
+                # send biped commies fleeing from grenade
+                AISetMoveSpeed(com1, 4.5);
+                AISetLookThing(com1, commTarg1);
+                AISetMoveThing(com1, commTarg1, 0);
+                Sleep(0.25);
+                AISetMoveSpeed(com2, 4.5);
+                AISetLookThing(com2, commTarg1);
+                AISetMoveThing(com2, commTarg1, 0);
+                
+                # give biped commies time to get away
+                Sleep(2.0);
+            }
+            
+            # player enters blowItSurf so make him stop here
+            else if(GetSourceRef() == player)
+            {
+                #Print("player entered blowItSurf");
+                
+                # stop player
+                StopThing(player);
+                Sleep(1.0);
+                
+                # restore camera and controls
+                SetCurrentCamera(1);
+                ClearActorFlags(player, 0x200000);
+                
+                # enable bi-ped commies
+                AIClearCutsceneMode(com1);
+                AIClearCutsceneMode(com2);
+                
+                ClearActorFlags(player, 0x200000);
+                EndCutscene();
+                
+				Call ActivateWaypoints;
+                done = 1;
+                
+                if(upper == 1) DestroyThing(comCar_Upper);
+                else DestroyThing(comCar_Lower);
+                
+                # tell ambush that secondLap = 1
+                SendMessage(ambush, user0);
+                
+                # show oil shed commies
+                ClearThingFlags(os_com3, 0x80000);
+                ClearThingFlags(os_com4, 0x80000);
+                ClearThingFlags(os_com_grenade, 0x80000);
+                
+                # show oil shed inventory items
+                ClearThingFlags(os_Health, 0x80000);
+                ClearThingFlags(os_Grenades, 0x80000);
+                ClearThingFlags(os_Satchels, 0x80000);
+                
+                # turn os_com_grenade into a sniper
+                AISetClass(os_com_grenade, ai_sniper);
+            }
+        }
+           
+        # destroy comCar
+        else if(GetSenderRef() == stopSurf)
+        {
+            # comCar came from chaseUpper
+            if(upper == 1)
+            {
+                #Print("comCar_Upper teleported");
+                StopThing(comCar_Upper);
+                #TeleportThing(comCar_Upper, comCar_Start1);
+                #SetThingFlags(comCar_Upper, 0x80000);
+                StopAllSoundsThing(comCar_Upper);
+                #upper = 0;
+            }
+            
+            # comCar came from chaseLower
+            else
+            {
+                #Print("comCar_Lower teleported");
+                StopThing(comCar_Lower);
+                #TeleportThing(comCar_Lower, comCar_Start2);
+                #SetThingFlags(comCar_Lower, 0x80000);
+                StopAllSoundsThing(comCar_Lower);
+            }
+        }
+    }
+        
+    return;
+
+# ========================================================================================
+
+blowItCut:
+
+    # do cutscene stuff
+    StartCutscene(0);
+    SetActorFlags(player, 0x200000);
+    
+    # stop player outside mine doors
+    StopThing(player);
+    
+    # show TnT commies
+    ClearThingFlags(com1, 0x80000);
+    ClearThingFlags(com2, 0x80000);
+    
+    Sleep(0.1);
+    
+    # Cut to cam1 inside oil key room
+    SetCameraFocus(2, cam1);
+    SetCameraSecondaryFocus(2, camTarg1);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    if(ready == 0)
+    {
+        if(upper == 1)
+        {
+            Sleep(0.1);
+            SetThingThrust(comCar_Upper, '0.0 1.0 0.0');
+        }
+        
+        else
+        {
+            Sleep(0.1);
+            SetThingThrust(comCar_Lower, '0.0 1.0 0.0');
+        }
+    }
+    
+    # commies put down the TnT
+    PlayKey(com1, comReach, 4, 0x12, 0);
+    Sleep(0.5);
+    tnt1 = CreateThing(tplTnt, ghostTnt1);
+    CaptureThing(tnt1);
+    PlayKey(com2, comReach, 4, 0x12, 0);
+    Sleep(0.5);
+    tnt2 = CreateThing(tplTnt, ghostTnt2);
+    CaptureThing(tnt2);
+                
+    return;
+
+# ========================================================================================
+
+tossgrenade:
+
+    # toss the grenade
+    if(upper == 1)
+    {
+        grenade = CreateThingAtPos(grenade_tpl, GetThingSector(comCar_Upper), GetThingPos(comCar_Upper), '0 0 0');
+    }
+    
+    else
+    {
+        grenade = CreateThingAtPos(grenade_tpl, GetThingSector(comCar_Lower), GetThingPos(comCar_Lower), '0 0 0');
+    }
+    
+    CaptureThing(grenade);
+    SetThingLight(grenade, '1.0 1.0 1.0', 0.01, 0.01);
+                    
+    return;
+
+# ========================================================================================
+
+removed:
+
+    if(GetSenderRef() == grenade)
+    {
+        Sleep(0.5);
+        
+        #duck_Track = PlayKey(player, im_Duck, 4, 0x14, 0);
+        
+        # create explosions and destroy TnT
+        CreateThing(tplExp, exp1);
+        DestroyThing(tnt1);
+        Sleep(0.25);
+        CreateThing(tplExp, exp2);
+        DestroyThing(tnt2);
+        CreateThing(tplExp, exp3);
+        
+        # blow open storage room chain link fence
+        SetFaceGeoMode(front, 0);       # no draw
+        SetFaceGeoMode(back, 0);
+        ClearAdjoinFlags(front, 0x10);       # player move
+        ClearAdjoinFlags(back, 0x10);
+        
+        # alter transformer zap so it hits the track now
+        SendMessage(transformer, user0);
+        
+        # tell chaseUpper and Lower that it blew up
+        SendMessage(chaseUpper, user0);
+        SendMessage(chaseLower, user0);
+        
+        # tell hintCog that hint14 is solved
+        #SendMessage(hintCog, user0);
+        
+        #StopKey(player, duck_Track, 0.5);
+        #PlayKey(player, im_GetUp, 4, 0x14, 0);
+    }
+    
+    return;
+
+# ========================================================================================
+
+pulse:
+
+    pulseCount = pulseCount+1;
+    #PrintInt(pulseCount);
+    
+    if(pulseCount == 3)
+    {
+        #Print("pulseCount = 3");
+        ready = 0;
+        #blowIt = 0;
+        SetPulse(0.0);
+        pulseCount = 0;
+    }
+    
+    return;
+
+# ========================================================================================
+
+ActivateWaypoints:
+
+	for ( n_idx = 0; n_idx < NUM_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx + WAYPOINT_BASE);
+	}
+
+	AIConnectWpnts(0 + WAYPOINT_BASE, 1 + WAYPOINT_BASE);
+	AIConnectWpnts(1 + WAYPOINT_BASE, 2 + WAYPOINT_BASE);
+	AIConnectWpnts(2 + WAYPOINT_BASE, 3 + WAYPOINT_BASE);
+	AIConnectWpnts(3 + WAYPOINT_BASE, 4 + WAYPOINT_BASE);
+	AIConnectWpnts(4 + WAYPOINT_BASE, 5 + WAYPOINT_BASE);
+
+	AISetInstinctWpntMode(com1);
+	AISetInstinctWpntMode(com2);
+	AIEnableInstinct(com1, "roam", 1);
+	AIEnableInstinct(com2, "roam", 1);
+	AIWpntHuntTarget(com1, 1.5, 0.0);
+	AIWpntHuntTarget(com2, 1.5, 0.0);
+
+	return;
+    
+# ========================================================================================
+
+end
+

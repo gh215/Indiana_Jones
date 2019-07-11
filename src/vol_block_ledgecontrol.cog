@@ -1,0 +1,201 @@
+# Jones 3D Cog Script
+#
+# VOL_BlockLedgeControl.cog
+#
+# toggles hang ledge tag on faces in the block puzzle ledge in hidden cave 2    
+#
+# [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+#...................MESSAGES............................    
+	message		startup
+	message		entered
+	message		exited
+
+#...................PROPS............................    
+	thing		block0							linkID=2		
+	thing		block1		                    linkID=2
+	thing		block2		                    linkID=2
+
+
+#...................BLOCK SURFACES............................
+	surface		surf0							mask=0x80	
+	surface		surf1							mask=0x80	
+	surface		surf2							mask=0x80	
+	surface		surf3							mask=0x80	
+	surface		surf4							mask=0x80	
+	surface		surf5							mask=0x80	
+	surface		surf6							mask=0x80	
+	surface		surf7							mask=0x80	
+	surface		surf8							mask=0x80	
+	surface		surf9							mask=0x80	
+	surface		surf10							mask=0x80	
+
+#...................LEDGE SURFACES............................
+	surface		ledge0								
+	surface		ledge1								
+	surface		ledge2								
+	surface		ledge3								
+	surface		ledge4								
+	surface		ledge5								
+	surface		ledge6								
+	surface		ledge7								
+	surface		ledge8								
+	surface		ledge9								
+	surface		ledge10							
+	surface		ledge11							
+
+
+end
+# ========================================================================================
+code
+
+startup:
+    
+	# clear hang flag from appropriate ledges
+	ClearSurfaceFlags(ledge2, 0x1000000);
+	ClearSurfaceFlags(ledge5, 0x1000000);
+	ClearSurfaceFlags(ledge9, 0x1000000);
+
+return;
+
+# ========================================================================================
+entered:	# if a block enters a surface above a hangledge, the hang surf bit is cleared
+
+
+If ((GetSourceRef() == block0) || (GetSourceRef() == block1) || (GetSourceRef() == block2))
+{
+
+If (GetSenderRef() == surf0) 
+	{
+    ClearSurfaceFlags(ledge0, 0x1000000);
+	}
+
+If (GetSenderRef() == surf1)
+	{
+	ClearSurfaceFlags(ledge1, 0x1000000);
+	}
+
+If (GetSenderRef() == surf2)
+	{
+	ClearSurfaceFlags(ledge2, 0x1000000);
+	}
+
+If (GetSenderRef() == surf3)
+	{
+	ClearSurfaceFlags(ledge3, 0x1000000);
+	}
+
+If (GetSenderRef() == surf4)
+	{
+	ClearSurfaceFlags(ledge4, 0x1000000);
+	}
+
+If (GetSenderRef() == surf5)
+	{
+	ClearSurfaceFlags(ledge5, 0x1000000);
+	}
+
+If (GetSenderRef() == surf6)
+	{
+	ClearSurfaceFlags(ledge6, 0x1000000);
+	}
+
+If (GetSenderRef() == surf7)
+	{
+	ClearSurfaceFlags(ledge7, 0x1000000);
+	}
+
+If (GetSenderRef() == surf8)
+	{
+	ClearSurfaceFlags(ledge8, 0x1000000);
+	ClearSurfaceFlags(ledge11, 0x1000000);
+	}
+
+If (GetSenderRef() == surf9)
+	{
+	ClearSurfaceFlags(ledge9, 0x1000000);
+	}
+
+If (GetSenderRef() == surf10)
+	{
+	ClearSurfaceFlags(ledge10, 0x1000000);
+	}
+
+}
+return;
+	
+
+
+# ========================================================================================
+exited:		# if a block exits a surface above a hangledge, the hang surf bit is set
+
+If ((GetSourceRef() == block0) || (GetSourceRef() == block1) || (GetSourceRef() == block2))
+{
+
+If (GetSenderRef() == surf0)
+	{
+	SetSurfaceFlags(ledge0, 0x1000000);
+	}
+
+If (GetSenderRef() == surf1)
+	{
+	SetSurfaceFlags(ledge1, 0x1000000);
+	}
+
+If (GetSenderRef() == surf2)
+	{
+	SetSurfaceFlags(ledge2, 0x1000000);
+	}
+
+If (GetSenderRef() == surf3)
+	{
+	SetSurfaceFlags(ledge3, 0x1000000);
+	}
+
+If (GetSenderRef() == surf4)
+	{
+	SetSurfaceFlags(ledge4, 0x1000000);
+	}
+
+If (GetSenderRef() == surf5)
+	{
+	SetSurfaceFlags(ledge5, 0x1000000);
+	}
+
+If (GetSenderRef() == surf6)
+	{
+	SetSurfaceFlags(ledge6, 0x1000000);
+	}
+
+If (GetSenderRef() == surf7)
+	{
+	SetSurfaceFlags(ledge7, 0x1000000);
+	}
+
+If (GetSenderRef() == surf8)
+	{
+	SetSurfaceFlags(ledge8, 0x1000000);
+	SetSurfaceFlags(ledge11, 0x1000000);
+	}
+
+If (GetSenderRef() == surf9)
+	{
+	SetSurfaceFlags(ledge9, 0x1000000);
+	}
+
+If (GetSenderRef() == surf10)
+	{
+	SetSurfaceFlags(ledge10, 0x1000000);
+	}
+}
+
+return;
+	
+# ========================================================================================
+
+end
+

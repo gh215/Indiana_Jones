@@ -1,0 +1,257 @@
+# Jones 3D Cog Script
+#
+# PRU_hints.cog
+#
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+message		taken
+message		entered
+message		activated
+message		damaged
+message		removed
+message		user0
+message		user1
+message		user2
+message		user3
+message		user4
+
+thing		key
+thing		pike
+thing		idol
+thing		Torch
+#thing		eagle			mask=0x08
+surface		rubbleFace		mask=0x08
+thing		lastClimb0		mask=0x08
+thing		lastClimb1		mask=0x08
+thing		floor7
+thing		swingBranch		mask=0x08
+
+thing		hint1
+thing		hint2
+thing		hint3
+thing		hint4
+thing		hint5
+thing		hint6
+thing		hint7
+thing		hint8
+thing		hint9
+thing		hint10
+thing		hint11
+thing		hint12
+thing		hint13
+thing		hint14
+thing		hint15
+thing		hint16
+thing		hint17
+thing		hint18
+thing		hint19
+thing		hint20
+thing		hint21
+thing		hint22
+thing		hint23
+thing		hint24
+thing		hint25
+thing		hint26
+thing		hint27
+thing		hint28
+
+surface		shimmyHang
+
+sector		waterTunnel
+sector		riverStart
+sector		darkWaterTunnel
+sector		waterMazeExit
+sector		lastTrapDoor
+sector		lightTrap
+sector		acrossWater
+sector		columnCutscene
+sector		columnWindow
+sector		columnCubby
+sector		stairPitCubby
+sector		stairPitExit
+sector		boulderTrigger
+sector		beyondPike
+
+int			gotRaft=0			local
+int			gotKey=0			local
+int			triggerdBoulder=0	local
+
+end
+# ========================================================================================
+code
+taken:
+#(9)  Indy picked up the key.
+if (GetSenderRef() == key)
+{
+	SetHintSolved(hint9);
+	gotKey=1;
+	return;
+}
+#(24)  Indy picked up the new idol.
+if (GetSenderRef() == idol)
+{
+	SetHintSolved(hint24);
+}
+return;
+
+# ========================================================================================
+removed:
+#(14)  Indy picked up the pike.
+if (GetSenderRef() == pike)
+{
+	SetHintSolved(hint14);
+}
+return;
+
+# ========================================================================================
+entered:
+#(2)  Indy rafted into the river.
+if ((GetSenderRef() == riverStart) && (gotRaft == 1))
+{
+    SetHintSolved(hint2);
+	Print("RAFTING");
+}
+#(3)  Indy found the tunnel under the lagoon
+if (GetSenderRef() == waterTunnel)
+{
+    SetHintSolved(hint3);
+}
+#(4)  Indy found the exit to the underwater maze.
+if (GetSenderRef() == waterMazeExit)
+{
+    SetHintSolved(hint4);
+}
+#(6)  Indy found the exit below the torch.
+if (GetSenderRef() == darkWaterTunnel)
+{
+    SetHintSolved(hint4);						#just in case Indy never lit the bowl
+	SetHintSolved(hint5);
+	SetHintSolved(hint6);
+}
+#(8)  Indy found the light trap.
+if (GetSenderRef() == lightTrap)
+{
+	SetHintSolved(hint8);
+}
+#(10)  Indy headed across the water-filled pit.
+if ((GetSenderRef() == acrossWater) && (gotKey == 1))
+{
+	SetHintSolved(hint10);
+}
+#(13)  Indy entered the sector leading into the column.
+if (GetSenderRef() == columnCutscene)
+{
+	SetHintSolved(hint13);
+}
+#(16)  Indy whipclimbed to the ledge behind the whip pike.
+if (GetSenderRef() == beyondPike)
+{
+	Print("climbed up whipspike");
+	SetHintSolved(hint16);
+}
+#(17)  Indy fell through the last trap door.
+if (GetSenderRef() == lastTrapDoor)
+{
+    SetHintSolved(hint17);
+}
+#(18)  Indy jumped and grabbed the shimmy hang ledge.
+if (GetSenderRef() == shimmyHang)
+{
+	SetHintSolved(hint18);
+}
+#(19)	Indy jumped to the top opening of the column.
+if (GetSenderRef() == columnWindow)
+{
+	SetHintSolved(hint19);
+}
+#(20)  Indy dropped into the column cubby.
+if (GetSenderRef() == columnCubby)
+{
+	SetHintSolved(hint13);					#just in case Indy never triggered the column cutscene.
+	SetHintSolved(hint20);
+}
+#(22)  Indy made it to the far side of the stairpit.
+if (GetSenderRef() == stairPitCubby)
+{
+	SetHintSolved(hint22);
+}
+#(23)  Indy made it to the top of the stairpit.
+if (GetSenderRef() == stairPitExit)
+{
+	SetHintSolved(hint23);
+}
+#(25)  Indy triggered the rolling boulder.
+if (GetSenderRef() == boulderTrigger)
+{
+	SetHintSolved(hint25);
+	#triggeredBoulder=1;
+}
+#(26)  Indy jumped back on the last chunk of loose floor.
+if ((GetSenderRef() == floor7) && (triggerdBoulder == 1))
+{
+	SetHintSolved(hint26);
+}
+return;
+# ========================================================================================
+activated:
+#(5) Indy lit the torch.
+if (GetSenderRef() == torch)
+{
+    SetHintSolved(hint5);
+}
+return;
+# ========================================================================================
+damaged:
+#(21)  Indy whipped the eagle statue.
+if (GetSenderRef() == rubbleFace)		#was eagle
+{
+	SetHintSolved(hint21);
+}
+#(27)  Indy whip swung across the branch.
+if (GetSenderRef() == swingBranch)
+{
+	SetHintSolved(hint27);
+}
+#(28)  Indy whipclimbed his way to safety at the end of the level.
+if ((GetSenderRef() == lastClimb0) || (GetSenderRef() == lastClimb0))
+{
+	SetHintSolved(hint28);
+}
+
+return;
+# ========================================================================================
+#(1)  Indy picked up the raft.  From PRU_arrivalCS.cog.  
+user1:
+SetHintSolved(hint1);
+gotRaft=1;
+return;
+
+#(7)  Indy pushed the rock into the water.  From PRU_rockflood.cog
+user2:
+SetHintSolved(hint7);
+return;
+
+#(11)  Indy saw the empty light shaft.  From PRU_voicelineCan'tWhip.cog
+user0:
+SetHintSolved(hint11);
+return;
+
+#(12)  Indy unlocked the door in the floor.  From PRU_treasuredoor.cog
+user4:
+SetHintSolved(hint12);
+return;
+
+#(15)  Indy placed the pike.  From PRU_whipspike.cog.
+user3:
+SetHintSolved(hint11);  					#just in case the player never looked at the light shaft...
+SetHintSolved(hint15);
+Print("placed pike");
+return;
+
+end

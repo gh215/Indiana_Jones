@@ -1,0 +1,57 @@
+# Jones 3D Cog Script
+#
+# shs_AmbPR.cog
+#
+# Plays a random sound at random intervals with random volume and panning
+#
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+   	message	    crossed
+  
+    surface     start_Amb1      linkID=1
+    surface     stop_Amb1       linkID=0
+    
+    thing		soundPos0		nolink
+	thing		player			local
+
+	sound		ambient0=shs_h2odrain_c.wav   local
+	    
+	int         looping     local
+	
+
+end
+
+# ========================================================================================
+
+
+code
+
+# ........................................................................................
+
+startup:
+    player = GetLocalPlayerThing();
+	return;
+
+# ........................................................................................
+    
+crossed:
+	
+	if(GetSenderID() == 1)
+	{
+		looping=PlaySoundThing(ambient0, soundPos0, .5, 2, 25, 0x045);
+	}
+		
+	if(GetSenderID() == 0)
+	{
+		StopSound(looping, 1.0);
+    }
+  	return;
+
+
+end
+	
+	

@@ -1,0 +1,331 @@
+# Jones 3D Cog Script
+#
+# RIV_BorderGate.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     entered
+    message     exited
+    message     activated
+
+    thing       player          local
+    thing       pushed          local
+    thing       pulled          local
+    
+    thing       indy
+    thing       brdr_Gate
+    thing       lever_Pos
+    thing       offsetCam
+    thing       lever_Look
+    thing       gate_Look
+    thing       block1
+    thing       block2
+    
+    thing       invisi1
+    thing       invisi2
+    
+    surface     surf0       linkID=1
+    
+    template    tplLevPull=pullever         local
+    template    tplLevPush=pushlever        local
+    template    tpl_Indy=indy_actor         local
+    
+    keyframe    leverPull=gen_lever_pull.key        local
+    keyframe    leverPush=gen_lever_push.key        local
+    
+    keyframe    indyPull=in_pull_lever.key          local
+    keyframe    indyPush=in_push_lever.key          local
+    
+    sound       sndLever=gen_lever_pull.wav             local
+    sound       snd_Gate=shs_belldoors_open.wav         local
+    sound       snd_Close=shs_belldoors_close.wav       local
+    
+    flex        pullLever           local
+    flex        pushLever           local
+    
+    int         onSpot=0            local
+    int         lever_Ready=1       local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    pushed = CreateThing(tplLevPull, lever_Pos);
+    CaptureThing(pushed);
+    
+    player = GetLocalPlayerThing();
+    
+    # hide invisiplates
+    SetThingFlags(invisi1, 0x80000);
+    SetThingFlags(invisi2, 0x80000);
+    
+    # open the gate
+    SetCollideType(brdr_Gate, 0);
+    SetCollideType(block1, 0);
+    SetCollideType(block2, 0);
+    Rotate(brdr_Gate, -65, 2, 2.0);
+    WaitForStop(brdr_Gate);
+    SetCollideType(brdr_Gate, 3);
+    SetCollideType(block1, 3);
+    SetCollideType(block2, 3);
+    
+    return;
+    
+# ========================================================================================
+
+user0:
+
+    # close the gate
+    SetCollideType(brdr_Gate, 0);
+    SetCollideType(block1, 0);
+    SetCollideType(block2, 0);
+    
+    PlaySoundThing(snd_Gate, brdr_Gate, 1.0, 10.0, 25.0, 0);
+    Rotate(brdr_Gate, 65, 2, 2.0);
+    
+    Sleep(1.0);
+    PlaySoundThing(snd_Close, brdr_Gate, 1.0, 10.0, 25.0, 0);
+    
+    WaitForStop(brdr_Gate);
+    SetCollideType(brdr_Gate, 3);
+    SetCollideType(block1, 3);
+    SetCollideType(block2, 3);
+    
+    # show invisiplates
+    ClearThingFlags(invisi1, 0x80000);
+    ClearThingFlags(invisi2, 0x80000);
+    
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if(GetSenderID() == 1)
+    {
+        onSpot = 1;
+    }
+    
+    return;
+    
+# ========================================================================================
+
+exited:
+
+    if((GetSenderID() == 1) && (GetSourceRef() == player))
+    {
+        onSpot = 0;
+    }
+    
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    if((GetSenderRef() == pushed) && (lever_Ready == 1) && (onSpot == 1))
+    {
+        Call pullLever;
+    }
+    
+    else if((GetSenderRef() == pulled) && (lever_Ready == 1) && (onSpot == 1))
+    {
+        Call pushLever;
+    }
+
+    return;
+    
+# ========================================================================================
+
+pullLever:
+
+    # do cutscene stuff
+    MakeMeStop();
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    StartCutscene(2);
+    
+    # outfit Indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, lever_Look);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # show actor hide player
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # pull the lever
+    PlayKey(pushed, leverPull, 4, 0x14, 0);
+    PlayKey(indy, indyPull, 4, 0x12, 0);
+    Sleep(0.75);
+    PlaySoundLocal(sndLever, 1.0, 0.0, 0x0, 1);
+    
+    # set camera interp speed turn on look interp
+    SetCameraInterpSpeed(2, 2.0);
+    SetCameraLookInterp(2, 1);
+    Sleep(0.01);
+    
+    # interp to gate_Look
+    SetCameraSecondaryFocus(2, gate_Look);
+    
+    Sleep(1.5);
+    
+    # open the gate
+    SetCollideType(brdr_Gate, 0);
+    SetCollideType(block1, 0);
+    SetCollideType(block2, 0);
+    PlaySoundThing(snd_Gate, brdr_Gate, 1.0, 10.0, 25.0, 0);
+    Rotate(brdr_Gate, -65, 2, 2.0);
+    WaitForStop(brdr_Gate);
+    SetCollideType(brdr_Gate, 3);
+    SetCollideType(block1, 3);
+    SetCollideType(block2, 3);
+    
+    # hide invisiplates
+    SetThingFlags(invisi1, 0x80000);
+    SetThingFlags(invisi2, 0x80000);
+    
+    # interp back to lever_Look
+    SetCameraSecondaryFocus(2, lever_Look);
+    
+    Sleep(2.0);
+    
+    # Destroy old lever and create a new one
+    DestroyThing(pushed);
+    pulled = CreateThing(tplLevPush, lever_Pos);
+    CaptureThing(pulled);
+    
+    # stop any unfinished animations
+    ResetThing(indy);
+    
+    #Sleep(1.0);
+    
+    # show player and return controls
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    
+    # turn off look interp
+    SetCameraLookInterp(2, 0);
+    Sleep(0.01);
+    
+    # return camera to player
+    SetCameraPosition(1, GetThingPos(offsetCam));
+    SetCurrentCamera(1);
+    
+    EndCutscene();
+    
+    lever_Ready = 1;
+    
+    return;
+
+# ========================================================================================
+
+pushLever:
+
+    # do cutscene stuff
+    StartCutscene(2);
+    MakeMeStop();
+    StopThing(player);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, lever_Look);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # show actor hide player
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # push the lever
+    PlayKey(pulled, leverPush, 4, 0x14, 0);
+    PlayKey(indy, indyPush, 4, 0x12, 0);
+    Sleep(0.85);
+    PlaySoundLocal(sndLever, 1.0, 0.0, 0x0, 1);
+    
+    # set camera interp speed turn on look interp
+    SetCameraInterpSpeed(2, 2.0);
+    SetCameraLookInterp(2, 1);
+    Sleep(0.01);
+    
+    # interp to gate_Look
+    SetCameraSecondaryFocus(2, gate_Look);
+    
+    Sleep(1.5);
+    
+    # close the gate
+    SetCollideType(brdr_Gate, 0);
+    SetCollideType(block1, 0);
+    SetCollideType(block2, 0);
+    PlaySoundThing(snd_Gate, brdr_Gate, 1.0, 10.0, 25.0, 0);
+    Rotate(brdr_Gate, 65, 2, 2.0);
+    
+    Sleep(1.0);
+    PlaySoundThing(snd_Close, brdr_Gate, 1.0, 10.0, 25.0, 0);
+    
+    WaitForStop(brdr_Gate);
+    SetCollideType(brdr_Gate, 3);
+    SetCollideType(block1, 3);
+    SetCollideType(block2, 3);
+    
+    # show invisiplates
+    ClearThingFlags(invisi1, 0x80000);
+    ClearThingFlags(invisi2, 0x80000);
+    
+    # interp back to lever_Look
+    SetCameraSecondaryFocus(2, lever_Look);
+    
+    Sleep(2.0);
+    
+    # Destroy old lever and create a new one
+    DestroyThing(pulled);
+    pushed = CreateThing(tplLevPull, lever_Pos);
+    CaptureThing(pushed);
+    
+    # stop any unfinished animations
+    ResetThing(indy);
+    
+    #Sleep(1.0);
+    
+    # show player and return controls
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    
+    # turn off look interp
+    SetCameraLookInterp(2, 0);
+    Sleep(0.01);
+    
+    # return camera to player
+    SetCameraPosition(1, GetThingPos(offsetCam));
+    SetCurrentCamera(1);
+    
+    EndCutscene();
+    
+    return;
+
+# ========================================================================================
+
+end
+

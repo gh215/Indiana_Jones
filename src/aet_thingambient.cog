@@ -1,0 +1,52 @@
+# Jones 3D Cog Script
+#
+# aet_ThingAmbient.cog
+#
+# [TRM] [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message     entered
+
+thing       ambientPos
+
+sector      stopAmbients
+sector      startAmbients
+
+sound       snd
+
+int         looping     local
+
+flex        vol=0.5
+flex        min=8.0
+flex        max=12.0
+flex		pitch=1.0
+flex		time=1.0
+
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+if (GetSenderRef() == startAmbients)
+	{
+	looping = PlaySoundThing(snd, ambientPos, vol, min, max, 0x045);
+	ChangeSoundPitch(snd, pitch, time);
+	}
+if (GetSenderRef() == stopAmbients)
+	{
+	StopSound(looping, 0.0);
+	}
+
+return;
+
+# ========================================================================================
+
+end
+

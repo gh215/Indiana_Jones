@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# pyr_spiderdrop.cog
+#
+# make spiders drop from the ceiling
+#
+# [GGJ] + [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	crossed
+
+surface	spiderTrigger
+
+thing	spiderGhost0
+thing	spiderGhost1
+
+thing	spider	local
+
+template	spiderTpl=spider_wall		local
+
+end
+
+# ========================================================================================
+code
+crossed:
+	Sleep(RandBetween(1, 2));
+
+	if (spiderGhost0 != -1)
+	{
+		spider = CreateThing(spidertpl, spiderGhost0);
+		#sends message to spider_wall's class cog, saying "user0" (27)
+		SendMessageEx(GetThingClassCog(spider), 27, spider, 0, 0, 0);
+		DestroyThing(spiderGhost0);
+	}
+
+	Sleep(RandBetween(1, 2));
+
+	if (spiderGhost1 != -1)
+	{
+		spider = CreateThing(spidertpl, spiderGhost1);
+		SendMessageEx(GetThingClassCog(spider), 27, spider, 0, 0, 0);
+		DestroyThing(spiderGhost1);
+	}
+
+return;
+
+end

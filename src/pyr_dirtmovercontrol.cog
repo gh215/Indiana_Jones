@@ -1,0 +1,409 @@
+# Jones 3D Cog Script
+#
+# pyr_dirtmovercontrol.cog
+#	
+# Control all elements of the dirtmover precedent to its operation
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+symbols
+message	startup
+message activated
+
+# indyactors: 0 puts chain on, 1 pulls lever, 2 floats to talk about engine
+thing   indyactor0
+thing	indyactor1
+thing	indyactor2	
+
+# world things
+thing   lever
+thing   chain
+thing	engine
+thing	engineshell		# invisible shell that provides the engine with collision
+thing   player		local
+thing	sparkghost
+thing	indywalk
+
+# cameras and lookthings
+thing	chaincam		nolink
+thing	levercam		nolink
+thing	levercamlook	nolink
+
+# related cogs
+cog		dirtmover
+cog		moveranim
+cog		pitfall
+cog		nolineup
+
+# keyframes
+keyframe	indypull=in_pull_lever_down.key		local
+keyframe	leverpull=gen_lever.key				local
+keyframe	tohandsonhips=0in_stand1_bd_4.key 	local
+keyframe	indythink=0in_thinking_4_4.key		local
+
+# indy dialogue
+sound	hmmgenerator=pr09j01.wav	local
+sound	crankitup=pr09j02.wav		local
+sound	drivechain=pr09j03.wav		local
+sound	powertospare=pr09j04.wav	local
+sound	thatwontwork=inxj058.wav	local
+sound	notsure=inxj061.wav			local
+
+# materials
+material	lamplight=lamp_hang_bot.mat				local
+material	sparkmat1=gen_a4sprite_rbblast.mat		local
+material	sparkmat2=gen_a4sprite_flash_purple.mat	local
+
+# templates
+template	RedSparks=redsparks      local
+template	BlueSparks=bluesparks    local
+
+# sound effects
+sound	chainsnd=pyr_chain_pickup.wav			local
+sound	leversnd=nub_lever_pull_c.wav			local
+sound	enginestart=pyr_gas_motor_start.wav		local
+sound	enginerun=pyr_gas_motor.wav				local
+sound	shock=sol_fuse_shock_c.wav				local
+
+# music
+sound	patontheback=mus_gen_indycalm.wav	local
+
+# variables
+int		actornum=0		local
+int		firsttime=1		local
+int		enginestatus=0	local
+int		curtrack=0		local
+
+# subroutines
+flex	startscene=0.0		local
+flex	endscene=0.0		local
+flex	fixcams=0.0			local
+flex	nochainlines=0.0	local
+flex	startmover=0.0		local
+flex	stopmover=0.0		local
+end
+
+code
+startup:
+	sleep(.01);
+	player = GetLocalPlayerThing();
+
+	# turn lightposts off
+	SetMaterialCel(lamplight, 1);
+
+	#make chain invisible
+	SetThingFlags(chain, 0x10);
+	
+	return;
+
+# enginestatus values
+# 0 = nothing yet
+# 1 = chain applied
+# 2 = lever pulled
+
+activated:
+# ---> Chain, Lever, Engine, EngineShell
+
+	# if player uses chain on anything but invisichain, send lineup message
+	if ((GetSenderRef() != chain) && (GetCurItem(player) == 101))
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+	
+		# fix and swap player, move camera
+		StartCutscene(0);
+		SetActorFlags(player, 0x200000);
+		
+		# turn off engineshell to avoid camera screwup
+		SetThingFlags(engineshell, 0x80000);
+		
+		SetExtCamOffset('0.2 -0.15 0.1');
+		
+		sleep(.5);
+		
+		global15 = 1;
+		SendMessageEx(nolineup, user1, player, 0, 0, 0);
+				
+		while (global15 == 0)
+		{
+			sleep(.2);
+		}
+
+		sleep(.5);
+
+		ClearActorFlags(player, 0x200000);
+		RestoreExtCam();
+		
+		# restore engineshell
+		ClearThingFlags(engineshell, 0x80000);
+		
+		EndCutscene();
+		return;
+	}
+
+	# ===Chain, Lever, or Engine===
+	# if chain is invisible and player isn't holding it
+	if ((enginestatus == 0) && (GetCurItem(player) != 101))
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+	
+		call nochainlines;
+		return;
+	}
+	
+	# ===Chain===
+	# if chain is activated and it's invisible and player is holding the chain
+	if ((GetSenderRef() == chain) && (enginestatus == 0))
+	{
+		if (GetCurItem(player) != 101)
+		{
+			PlayVoice(player, thatwontwork, 1, 1);
+			return;
+		}
+		
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		actornum=0;
+		call startscene;
+			
+		# cut to chaincam
+		SetCameraFocus(2, chaincam);
+		SetCameraSecondaryFocus(2, chain);
+		SetCurrentCamera(2);
+		SetCameraFOV(100, 0, 0);
+
+		# make chain visible
+		AISetLookThing(indyactor0, chain);
+		sleep(.5);
+		PlayMode(indyactor0, 60, 0);
+		sleep(.5);
+		PlaySoundThing(chainsnd, chain, 1, -1, -1, 0);
+		ClearThingFlags(chain, 0x10);
+
+		# Indy: "Now I've got power to spare"
+		PlayVoice(indyactor0, powertospare, 1, 0);
+		sleep(1);
+		
+		# take chain out of inventory
+		ChangeInv(player, 101, -1);
+
+		# update enginestatus
+		enginestatus = 1;
+
+		call endscene;
+
+		return;
+	}
+	
+	# ===Lever===
+	if (GetSenderRef() == lever)
+	{
+		if (enginestatus == 0) return;
+
+		# if the machine is already started, refuse politely to turn it off
+		if (enginestatus == 2)
+		{
+			# prepare player
+			if (MakeMeStop() == -1) return;
+			DeselectWeaponWait(player);
+			
+			# fix and swap player, move camera
+			StartCutscene(0);
+			SetActorFlags(player, 0x200000);
+			
+			# turn off engineshell to avoid camera screwup
+			SetThingFlags(engineshell, 0x80000);
+			
+			SetExtCamOffset('0.2 -0.15 0.1');
+			
+			sleep(.5);
+		
+			PlayVoice(player, notsure, 1, 1);
+			
+			RestoreExtCam();
+			EndCutscene();
+			ClearActorFlags(player, 0x200000);
+			ClearThingFlags(engineshell, 0x80000);
+
+			return;
+		}
+
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		actornum = 1;
+		call startscene;
+
+		# cut to levercam
+		SetCameraFocus(2, levercam);
+		SetCameraSecondaryFocus(2, levercamlook);
+		SetCurrentCamera(2);
+				
+		#play anims
+		PlayKey(lever, leverpull, 4, 0x12, 0);
+		PlayKey(indyactor1, indypull, 4, 0x12, 0);
+		sleep(1.2);
+		PlaySoundThing(enginestart, engine, 1, -1, -1, 0);
+		PlaySoundThing(leversnd, lever, 1, -1, -1, 0);
+
+		sleep(.5);
+		PlaySoundThing(enginerun, engine, 1, -1, 15, 1);
+
+		#wait for a second while things start up
+		call startmover;
+
+		# make transformer spark
+		PlaySoundThing(shock, sparkghost, 1, -1, -1, 0);
+		CreateThing(BlueSparks, sparkghost);
+		CreateThing(RedSparks, sparkghost);
+		MaterialAnim(sparkmat1, 10, 1);
+		MaterialAnim(sparkmat2, 10, 1);
+		sleep(1);
+				
+		#move levercam towards conveyor
+		MoveToFrame(levercam, 1, 1);
+		MoveToFrame(levercamlook, 1, 1.25);
+		Sleep(1);
+		PlaySoundLocal(patontheback, 1, 0, 0, 0);
+
+		# indy takes a walk
+		Sleep(1);
+		SetThingMaxRotVel(indyactor1, 250);
+		AISetLookThing(indyactor1, indywalk);
+		AISetMoveThing(indyactor1, indywalk, 1);
+		AISetLookPos(indyactor1, '0 -10 0');
+
+		WaitForStop(levercam);
+		sleep(1);
+
+   		# turn lightposts on (while player isn't watching)
+		SetMaterialCel(lamplight, 0);
+
+		# tell parts of the pit to be less deadly
+		SendMessage(pitfall, user1);
+
+		# update enginestatus
+		enginestatus = 2;
+		
+		#endscene
+		call endscene;
+	
+		return;
+	}
+	return;
+
+nochainlines:
+	
+	# fix and swap player, move camera
+	StartCutscene(1);
+	StopThing(player);
+	TeleportThing(indyactor2, player);
+	CopyPlayerHolsters(player, indyactor2);
+	ClearThingFlags(indyactor2, 0x80000);
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x80000);
+	
+	# turn off engineshell to avoid camera screwup
+	SetThingFlags(engineshell, 0x80000);
+	
+	SetExtCamOffset('0.2 -0.15 0.1');
+			
+	# if he hasn't commented on the chain yet, play deluxe dialogue
+	if (firsttime)
+	{
+		PlayVoice(indyactor2, hmmgenerator, 1, 0);
+		Sleep(3);
+		curtrack = PlayKey(indyactor2, tohandsonhips, 4, 0x12, 1);
+		PlayKey(indyactor2, indythink, 4, 0x14, 0);
+		Sleep(1);
+		PlayVoice(indyactor2, crankitup, 1, 1);
+		StopKey(indyactor2, curtrack, .5);
+		firsttime = 0;
+	}
+	else
+	{
+		PlayVoice(player, drivechain, 1, 1);
+	}
+
+	sleep(1);
+
+	SetThingFlags(indyactor2, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+
+	RestoreExtCam();
+	
+	# restore engineshell
+	ClearThingFlags(engineshell, 0x80000);
+	
+	EndCutscene();
+	return;
+
+startmover:
+	SendMessage(moveranim, user1);
+	SendMessage(dirtmover, user1);
+			
+	return;
+
+stopmover:
+	SendMessage(moveranim, user2);
+	SendMessage(dirtmover, user2);
+	return;
+
+startscene:
+	StartCutscene(1);
+	StopThing(player);
+	CopyOrientAndPos(indyactor0[actornum], player);
+	CopyPlayerHolsters(player, indyactor0[actornum]);
+	ClearThingFlags(indyactor0[actornum], 0x80000);
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x80000);
+	
+	return;
+		
+endscene:
+	call fixcams;
+	
+	CopyOrientAndPos(indyactor0[actornum], player);
+	SetThingFlags(indyactor0[actornum], 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+
+   	# Establish a camera position near Indy and prep follow-cam...			
+	SetCameraPosition(1, VectorAdd(VectorTransformToOrient(player, '0.25 -0.1 0.0'), GetThingPos(player)));	
+
+	SetCurrentCamera(1);
+	EndCutscene();
+
+	# when all is done, clean up
+	if (enginestatus == 2)
+	{
+		DestroyThing(indyactor0);
+		DestroyThing(indyactor1);
+		DestroyThing(indyactor2);
+		DestroyThing(sparkghost);
+		DestroyThing(indywalk);
+		DestroyThing(chaincam);
+		DestroyThing(levercam);
+		DestroyThing(levercamlook);
+	}
+	return;
+
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	RestoreExtCam();
+	return;
+
+end
+

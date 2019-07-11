@@ -1,0 +1,86 @@
+# Jones 3D Cog Script
+#
+# PRU_whirlpool.cog
+#
+# Whirlpool
+#
+# [SXC] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+message	startup
+message	entered
+message	arrived
+message pulse
+
+sector	whirlpooltrigger
+sector	whirlpool
+
+vector	suck
+
+thing	player						local
+thing	block
+thing	whirlpoolghost0
+thing	whirlpoolghost1
+
+template	bubbleparticles0=whirlpoola		local
+template	bubbleparticles1=whirlpoolb		local
+
+sound			drain=shs_h2odrain_c.wav		local
+
+int		once=0	local
+int		draining	local
+
+thing		whirlpool0		local
+thing		whirlpool1		local
+
+flex	swirlrate=0.1
+
+end
+# ========================================================================================
+code
+startup:
+	player = GetLocalPlayerThing();
+    return;
+	
+entered:
+	if (GetSenderRef() == whirlpooltrigger) 
+	{
+		if ((GetSourceRef() == player) && (once == 0))
+		{
+			Print("turning on Whirlpool from Entered message");
+			once=1;
+			SetPulse(swirlrate);
+			draining=PlaySoundThing(drain, whirlpoolghost0, 0.75, 4.0, 20.0, 0x1);
+			return;
+		}
+	}
+#whirlpool should suck less on easier difficulties (max 0.3, min 0.2)
+if (GetSourceRef() == whirlpool)
+{
+	SetSectorThrust(whirlpool, suck, (0.3 - ((5 - GetDifficulty()) * .02)));
+	return;
+}
+	
+return;
+# ========================================================================================
+pulse:
+
+	whirlpool0 = CreateThing(bubbleparticles0, whirlpoolghost0);
+	whirlpool1 = CreateThing(bubbleparticles1, whirlpoolghost1);
+
+	return;
+	
+arrived:
+	if ((GetSenderRef() == block) && (GetCurFrame(block) == 2))
+	{
+		Print("turning off whirlpool because block arrived at frame 2");
+		SetPulse(0.0);
+		StopSound(draining, 0.1);
+		Print("stopping drain sound");
+	}
+	return;
+
+end

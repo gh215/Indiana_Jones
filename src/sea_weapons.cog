@@ -1,0 +1,393 @@
+# Jones 3D Cog Script
+#
+# Sea_Weapons.cog
+#
+# [DS & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		activated
+	message		entered
+	message		exited
+	message		pulse
+	message		blocked
+	message		touched
+	message		user0
+
+	keyframe	in_activate=in_activate_medium.key	local
+
+	sound		guardsnd1=inxh1003.wav				local # Give up Jones!
+	sound		guardsnd2=se01q07.wav				local # What? (when not found)
+	sound		nocommie=inxj134.wav				local # Where did that commie rat scurry..
+	sound		getknife=inxj227.wav				local # A machete (0.9 sec)
+	sound		getwhip=se02j01.wav					local # My whip!..... (3.8 sec)
+	sound		getgun=se02j02.wav					local # My trusted smith & wesson (2.8 sec)
+	sound		bop_indy=sea_bop_indy.wav			local
+
+	thing		machete
+	thing		revolver
+	thing		whip
+	thing		enemypos
+	thing		oildrum	
+	thing		hide_crate
+	thing		cam1spot					nolink
+	thing		cam1lookspot				nolink								
+	thing		player						local
+	thing		commie						local # create on the fly
+	thing		caughtindy					local # ditto
+	thing		weapindy					local # ditto
+
+	cog			alarmcog					# 10_SEA_Alarm.cog
+	cog			weaponcontrol				# sea_WeaponControl.cog
+	cog			hintcog						# sea_hints.cog
+
+	template	indy_tpl=indy_actor			local
+	template	sailor_tpl=sailor_tokarev	local
+
+	int			machetebin=7				local
+	int			revolverbin=3				local
+	int			whipbin=2					local
+	int			gotten=0					local
+	int			touched=0					local
+	int			cursound					local
+	int			tutched					local
+
+#---------Put indy back in cell------------------
+
+	keyframe	acthit=01h_sailor_pistolwhip.key		local
+	keyframe	in_raiseHands=0in_stand1_bd_3.key		local
+	keyframe	in_fall=in_die_buckle.key				local
+
+	cog			brigcog									# sea_BrigDoor.cog
+	cog			pumpcog									# sea_leverpump.cog
+
+	surface		commiespot
+	surface		commiespot2
+
+	int			in_keytrack1							local
+	int			caught=0								local
+	int			in_colltype								local
+	int			curhealth								local
+
+#--------- Kill Indy ----------------------------
+
+	sound		guardsnd3=se01q05.wav					local # Enough!
+	sound		killsnd=gen_pistol_fire.wav				local
+
+	int			notagain=0								local
+	int			victim									local
+
+
+# ---------Camera Fade Stuff---------------------
+
+	thing		fadeghost
+	thing		fadething
+
+# --------- SubRoutines ---------------------
+flex		fade_out							local
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player = GetLocalPlayerThing();
+	commie = CreateThing(sailor_tpl, enemypos);
+	CaptureThing(commie);
+	SetThingMass(commie, 0);
+	SetActorFlags(commie, 0x8); # Invul.
+	AISetCutsceneMode(commie);
+	SetThingAlpha(commie, 1.0);
+	SetThingAlpha(fadething, 0.0); # transparent
+	return;
+
+# ..............................................................................
+
+activated:
+    
+	if (GetSenderRef() == oildrum && gotten == 0)
+	{
+		SendMessageEx(hintcog, user1, 1, 0, 0, 0); # param0=1; weapons picked up
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(0);
+
+		SetExtCamOffset('0.15 -0.06 0.065'); # interp cam out to player's right
+
+		# prep
+		weapindy = CreateThing(indy_tpl, player);
+		CaptureThing(weapindy);
+		ClearThingFlags(weapindy, 0x80000);
+		SetCollideType(weapindy, 0);
+		CopyPlayerHolsters(player, weapindy);
+		SetThingFlags(player, 0x80000);
+		AISetLookThing(weapindy, machete);
+		AIWaitForStop(weapindy);
+
+		#---------- add revolver ----------------------
+		ChangeInv(player, revolverbin, 1.0);
+		SetInvAvailable(player, revolverbin, 1);
+		PlayVoice(player, getgun, 1.0, 0);
+		Sleep(2.6);
+		PlayKey(weapindy, in_activate, 4, 0x12, 0);
+		Sleep(0.2);
+		DestroyThing(revolver);
+		JonesInvItemChanged(revolverbin);
+		Sleep(2.0);
+
+		#---------- add whip --------------------------
+		ChangeInv(player, whipbin, 1.0);
+		SetInvAvailable(player, whipbin, 1);
+		PlayVoice(player, getwhip, 1.0, 0);
+		Sleep(3.6);
+		PlayKey(weapindy, in_activate, 4, 0x12, 0);
+		Sleep(0.2);
+		DestroyThing(whip);
+		JonesInvItemChanged(whipbin);
+		Sleep(2.0);
+
+		#---------- add machete -----------------------
+		ChangeInv(player, machetebin, 1.0);
+		SetInvAvailable(player, machetebin, 1);
+		PlayVoice(player, getknife, 1.0, 10);
+		Sleep(0.7);
+		PlayKey(weapindy, in_activate, 4, 0x12, 0);
+		Sleep(0.2);
+		DestroyThing(machete);
+		JonesInvItemChanged(machetebin);
+		Sleep(2.0);
+
+		SendMessage(weaponcontrol, 27); # tell cog that took weapons Indy's got 'em back
+		DestroyThing(commie); # won't see him no more
+		TeleportThing(player, weapindy);
+		DestroyThing(weapindy);
+		ClearThingFlags(player, 0x80000);
+		
+		RestoreExtCam();
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+		gotten = 1;
+
+		# Tell alarmcog player has weapons...
+		SendMessage(alarmcog, user4);
+	}
+
+	return;
+
+# ..............................................................................
+
+entered:
+
+	if (gotten == 2)
+	{
+		return;
+	}
+
+	if ((GetSenderRef() == commiespot2) && (gotten == 1))
+	{
+		gotten = 2;
+		# Don't do a real cutscene...
+		PlayVoice(player, nocommie, 1.0, 1);
+		return;
+	}
+
+	if ((GetSenderRef() == commiespot) || (GetSenderRef() == commiespot2) || (GetSenderRef() == hide_crate))
+	{
+		if (gotten >= 1)
+		{
+			return;
+		}
+
+		# print("in hold");
+
+		# Get ready to capture Indy...
+		setPulse(0.5);
+	}
+
+	return;
+
+# ..............................................................................
+
+exited:
+
+	if (gotten >= 1)
+	{
+		return;
+	}
+
+	if ((GetSenderRef() == commiespot) || (GetSenderRef() == commiespot2) || (GetSenderRef() == hide_crate))
+	{
+		# print("left hold");
+		setpulse(0.0);
+	}
+
+	return;
+
+# ..............................................................................
+
+pulse:
+
+	if (IsInvisible() == 1) # 1=indy invisible, 0=visible
+	{
+		# print("cant see me");
+		return;
+	}
+
+	if (caught == 1)
+	{
+		return;
+	}
+
+	# Capture Indy...
+	caught = 1;
+	setpulse(0.0);
+	StartCutscene(1);
+	SetActorFlags(player, 0x200000); # no control
+	StopThing(player);
+	AISetLookThing(commie, player);
+	PlayVoice(commie, guardsnd1, 1.0, 1);
+	DeselectWeaponWait(player);
+
+	# Make an Indy actor...
+	caughtindy = CreateThing(indy_tpl, player);
+	CaptureThing(caughtindy);
+	ClearThingFlags(caughtindy, 0x80000);
+	CopyPlayerHolsters(player, caughtindy);
+	in_colltype = GetCollideType(caughtindy);
+	SetCollideType(caughtindy, 0); # guard no touch actor
+	SetThingFlags(player, 0x10); # invisible but touchable!
+	in_keyTrack1 = PlayKey(caughtindy, in_raisehands, 4, 0x14, 0);		
+
+	AISetLookThing(commie, caughtindy);
+	AISetLookThing(caughtindy, commie);
+	AISetMoveThing(commie, player, 0);
+#	print("commie on the move");
+	return;
+
+
+# ..............................................................................
+
+blocked:
+	print("blocked message");
+	if ((getsenderref() == commie) && (GetSourceref() != player))
+	{
+#	print("commie blocked");
+	StopThing(commie);
+	goto fade_out;
+	}
+	return;
+
+# ..............................................................................
+
+touched:
+	# Blocked problem fix.
+#	if ((GetSenderRef() == commie)  && (GetSourceRef() != player))
+#	{
+#	print("commie touched something");
+#	StopThing(commie);
+#	goto fade_out;
+#	return;
+#	}
+	if ((GetSenderRef() == commie)  && (GetSourceRef() == player))
+	{
+#	print("commie touched by player");
+
+		if(caught == 1) 
+		{
+#			print("touched by player");
+			StopThing(commie);
+			Sleep(0.5);
+			PlayKey(commie, acthit, 4, 0x12, 0);
+			Sleep(0.5);
+			Stopkey(caughtindy, in_keyTrack1, 0.0);
+			in_keyTrack1 = PlayKey(caughtindy, in_fall, 4, 0x14, 0);
+			PlaySoundLocal(bop_indy, 1.0, 0, 0x0, 0);
+
+			# Thats All Folks.
+			goto fade_out;
+			return;
+		}
+		if (tutched == 1) return;
+		tutched=1;
+		PlayVoice(commie, guardsnd2, 1.0, 1);
+		tutched=0;
+	}
+	return;
+
+# ..............................................................................
+
+user0:
+
+	# Uh-oh, Indy got caught once somewhere else...
+	notagain = 1;
+	return;
+
+# ------------------------------------------------------------------------------
+#		SubRoutines
+# ------------------------------------------------------------------------------
+fade_out:
+	# Record some damage (yes, player can die this way)...
+	curhealth = GetThingHealth(player);
+	SetThingHealth(player, (curhealth - 40));
+	Sleep(1.0);
+
+	#-------- add fadeout here ------------------------		
+	ClearThingFlags(fadething, 0x80000);
+	SetThingAlpha(fadething, 0.0); # transparent
+	SetCameraFadeThing(2, fadething, fadeGhost, 0);
+	SetCurrentCamera(2);
+	ThingFadeAnim(fadething, 0.0, 1.0, 1.0, 0);
+	ThingFadeAnim(commie, 1.0, 0.0, 1.0, 0);
+	ThingFadeAnim(caughtindy, 1.0, 0.0, 1.0, 0);
+	Sleep(1.0);
+	StopKey(caughtindy, in_keyTrack1, 0.0);
+	SetThingAlpha(caughtindy, 1.0); # affects the model
+	DestroyThing(caughtindy);
+	ClearThingFlags(player, 0x10); # visible when next we see him
+	
+	if(notagain == 1) # if caught before, kill player
+	{
+		PlayVoice(commie, guardsnd3, 1.0, 1);
+		PlaySoundLocal(killsnd, 1.0, 0.0, 0x0, 0);
+		EndCutscene();
+
+	#	Print("He's Dead");
+		SetThingMass(Player, 0.0);
+		ClearActorFlags(player, 0x8);
+		DamageThing(player, 1000.0, 0x200, victim);
+		return;
+	}
+
+	notagain = 1;
+	SendMessage(brigcog, user0); # put Indy back in his cell
+	SendMessage(pumpcog, user0); # inform leverpump cog Indy's been caught once
+	SendMessageEx(hintcog, user1, 2, 0, 0, 0); # param0=2; back in cell
+	DestroyThing(commie);
+	commie = CreateThing(sailor_tpl, enemypos);
+	CaptureThing(commie);
+	SetThingMass(commie, 0);
+	SetActorFlags(commie, 0x8); # Invul.
+	AISetCutsceneMode(commie);
+	SetThingAlpha(commie, 1.0);
+	caught = 0;
+	return;
+
+
+end
+
+
+
+
+
+
+

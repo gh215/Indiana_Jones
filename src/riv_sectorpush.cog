@@ -1,0 +1,68 @@
+# Jones 3D Cog Script
+#
+# RIV_SectorPush.cog
+#
+# gives a little push when needed.
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message	    entered
+    message     exited
+    
+    surface     surf_On     linkID=1
+    
+    sector      sec0
+    
+    vector      vec_Direction
+    vector      old_Thrust      local
+    
+    flex        new_Mag=0
+    flex        old_Mag=0
+    
+    int         thrusting=0     local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    if((GetSenderID() == 1) && (thrusting == 0))
+    {
+        Print("extra thrust applied");
+        thrusting = 1;
+        
+        old_Thrust = GetSectorThrust(sec0);
+        PrintVector(old_Thrust);
+    
+        Sleep(0.01);
+        SetSectorThrust(sec0, vec_Direction, new_Mag);
+    }
+    
+	return;
+
+# ========================================================================================
+
+exited:
+
+    #if((GetSenderID() == 1) && (GetSourceRef() == player))
+    if(GetSenderID() == 1)
+    {
+        Print("thrust set to normal");
+        thrusting = 0;
+        SetSectorThrust(sec0, old_Thrust, old_Mag);
+        PrintVector(old_Thrust);
+    }
+    
+    return;
+
+# ========================================================================================
+
+end

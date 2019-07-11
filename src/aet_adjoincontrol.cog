@@ -1,0 +1,74 @@
+# Jones 3D Cog Script
+#
+# aet_AdjoinControl.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+    
+message     startup
+message		entered
+message		crossed
+message		user0
+message		user1
+message		user2
+message		user3
+message		user4
+message		user5
+message		user6
+message		user7
+
+thing		player			local
+
+surface		adjoin0					# Looking down into dilator from Boss room.								
+surface		adjoin1					# Looking up into Marduk from Boss room.
+surface		adjoin2					# Looking down into Boss from Marduk.
+surface		adjoin3					# Looking into Marduk from tube A.
+surface		adjoin4					# Looking out of Marduk from tube A.
+surface		adjoin5					# Looking into Marduk from tube B.
+surface		adjoin6					# Looking out of Marduk from tube B.
+surface		adjoin7					# Looking into Marduk from tube C.
+surface		adjoin8					# Looking out of Marduk from tube C.
+surface		adjoin9					# Looking from Boss into BAB POR A.
+surface		adjoin10				# Looking from Boss into BAB POR B.
+surface		adjoin11				# Looking from Boss into BAB POR C.
+surface		adjoin12				# Looking from tube A into AET sector to RIV POR. 
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+entered:
+
+
+return;
+
+# ........................................................................................
+crossed:
+
+
+return;
+
+# ........................................................................................
+user0:
+
+//if (GetParam(0) == 1)
+//	{
+
+//	}
+
+return;
+
+# ........................................................................................
+end
+

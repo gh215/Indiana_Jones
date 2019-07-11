@@ -1,0 +1,110 @@
+# Jones 3D Cog Script
+#
+# General Underwater Door.
+#
+# [DS]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#===============================================================================
+
+
+symbols
+
+	message     startup
+	message     activated
+	message	    arrived
+	message	    timer
+
+	thing       switch0
+	thing		door0
+	thing		indy				nolink	desc=cutscene actor
+	thing		campos	
+	thing		player			    local
+	
+	flex		movespeed=0.5
+	
+	sector  	doorsector			local
+	
+	int		    doorstatus			local
+	int		    movestatus			local
+	int			curcam=1			local
+	int			actit=1				local
+
+	keyframe	in_activate=in_uw_pullswitch.key	local
+
+	# subroutines
+	flex	checkstatus=0.0		local
+	flex	opendoors=0.0	local
+end
+
+code
+
+#========================================================================================
+startup:
+	player = GetLocalPlayerThing();
+	doorsector = GetThingSector(door0);
+	SetSectorAdjoins(doorsector, 0);
+
+	return;
+
+#========================================================================================
+activated:
+	if (GetSenderRef() != switch0) return;
+	call checkstatus;
+	if(movestatus) return;
+	curCam = GetCurrentCamera();
+    if(doorstatus == 0)
+    {
+	SetSectorAdjoins(doorsector, 1);
+	SetThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	CopyPlayerHolsters(player, indy);
+	StartCutscene(1);
+	ClearThingFlags(indy, 0x80000);
+	SetCameraLookInterp(2, 0);			# turns off interp to lookthing.
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, indy);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0);				# makes sure set to default.	
+	SetTimer(1.5);
+	actit = PlayKey(indy, in_activate, 4, 0x12, 1);
+	SetCurrentCamera(curCam);
+	SetThingFlags(indy, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	EndCutscene();
+	call open_doors;
+	}
+	return;
+
+
+#========================================================================================
+arrived:
+	if (getsenderref() != door0) return;
+	return;
+
+#========================================================================================
+timer:
+	MoveToFrame(switch0, 1, 0.5);
+	return;
+
+#========================================================================================
+open_doors:
+	movetoframe(door0, 1, movespeed);
+	return;
+
+
+#========================================================================================
+checkstatus:
+	moveStatus = 0;
+	doorStatus = 0;
+	if (door0 >= 0) {
+			moveStatus = moveStatus + IsThingMoving(door0);
+			doorStatus = doorStatus + GetCurFrame(door0);
+		}
+	return;
+
+
+#========================================================================================
+
+end

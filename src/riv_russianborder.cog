@@ -1,0 +1,376 @@
+# Jones 3D Cog Script
+#
+# Riv_RussianBorder.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#========================================================================================
+
+symbols
+   
+    message		startup  	
+	message		entered
+	
+	# ** boarder cutscene triggers **
+    sector		lower
+    surface		upper
+    
+    # ** water ambient triggers **
+    sector      stop_Water1     linkID=0
+	sector      stop_Water2     linkID=0
+    sector      start_Water1    linkID=1
+	
+    
+    # ** misc local things **
+    thing		player      local
+    thing       indy        local
+    thing       indyTarget  local
+    
+	# ** lower cutscene things **
+    thing		lower_Cam1
+    thing		lower_Cam3
+    thing       lower_CamTarg1
+    thing       lower_Targ1
+    thing       lower_LookTarg
+    
+    # ** upper cutscene things
+    thing		upper_Cam1
+    thing       upper_Cam2
+    thing		upper_CamTarg1
+    thing       upper_Targ1
+    thing       upper_LookTarg
+    thing       upper_CamPos
+    
+    # ** truck stuff **
+    thing       truck
+    thing       t_Ghost0    # move truck to this pos
+    
+    # ** ambient pos **
+    thing       ambientPos
+    
+	template    tpl_Actor=indy_actor                    local
+    template    tpl_Ghost=ghost                         local
+    
+    keyframe    inStand1=0in_stand4.key                 local
+    keyframe    inThinking=0in_thinking_4_4.key         local
+    keyframe	inStand2=0in_stand1_bd_4.key	        local
+	
+	sound		sayline=Rv01j01.wav					    local	# Uh oh, the Soviet border...
+    sound       mus_CheckPoint=mus_gen_russbold1.wav    local
+    sound       snd_Engine=jep_reverse_loop.wav         local
+    sound       snd_Water=shs_h2odrain_c.wav            local   # ambient water sound
+    
+    material    mat_Wheel=obj_a_truck_tire.mat          local
+    
+    cog         towerWpnt
+    cog         borderGate
+    
+    # ** subroutines **
+    flex        lowerCut        local
+    flex        upperCut        local
+    
+    flex        min=15
+    flex        max=35
+    flex        vol=0.5
+	
+	int			done=0          local
+    int         inTrack         local
+    int         music_Track     local
+    int         truck_Track     local
+    int         voice_Track     local
+    int         chnl_Water      local
+    int         playing=0       local
+	
+end
+
+#========================================================================================
+
+code
+
+startup:
+	
+	player = GetLocalPlayerThing();
+    
+    return;
+	
+#========================================================================================
+
+entered:
+
+
+	if((GetSenderRef() == lower) && (done == 0))
+    {
+        done = 1;
+        Call lowerCut;
+    }
+		
+	if((GetSenderRef() == upper) && (done == 0))
+    {
+        done = 1;
+        call upperCut;
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        playing = 0;
+        StopSound(chnl_Water, 0.5);
+    }
+    
+    if((GetSenderID() == 1) && (playing == 0))
+    {
+        playing = 1;
+        chnl_Water = PlaySoundThing(snd_Water, ambientPos, 1.0, min, max, 0x045);
+    }
+		
+	return;
+	
+#========================================================================================
+	
+lowerCut:
+        
+    chnl_Water = PlaySoundThing(snd_Water, ambientPos, 0.5, min, max, 0x045);  # 1/2 vol
+    
+    # fire up waypoint cog
+    SendMessage(towerWpnt, user0);
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # put away any weapons
+    DeselectWeaponWait(player);
+    
+    # create indy actor
+    indy = CreateThing(tpl_Actor, player);
+    CaptureThing(indy);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # hide player show indy
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # play music cue
+    music_Track = PlaySoundLocal(mus_CheckPoint, 1.0, 0.0, 0x0, 0);
+    
+    # indy walks to lower_Targ1
+    AISetCutsceneMode(indy);
+    AISetMoveSpeed(indy, 1.0);
+    AISetLookThing(indy, lower_Targ1);
+    AISetMoveThing(indy, lower_Targ1, 0);
+    
+    # prepare the truck
+    SetCollideType(truck, 0);
+    ClearThingFlags(truck, 0x80000);    # show
+    SetPhysicsFlags(truck, 0x10);       # align to surface
+    truck_Track = PlaySoundThing(snd_Engine, truck, 1.0, 5, 20, 0x85);
+    MaterialAnim(mat_Wheel, 16, 1);
+    
+    Sleep(1.5);
+    
+    # move truck past camera
+    AISetMoveSpeed(truck, 2.0);
+    AISetLookThing(truck, t_Ghost0);
+    AISetMoveThing(truck, t_Ghost0, 0);
+    
+    Sleep(0.1);
+    
+    #cut to lower_Cam1
+    SetCameraSecondaryFocus(2, lower_CamTarg1);
+    SetCameraFocus(2, lower_Cam1);
+    SetCurrentCamera(2);
+    
+    Sleep(0.01);
+    
+    # indy looks towards tower
+    AISetLookThing(indy, lower_LookTarg);
+    
+    # move lower_Cam1 to lower_Cam3
+    MoveThingToPos(lower_Cam1, GetThingPos(lower_Cam3), 12.0);
+    
+    Sleep(10.0);
+    
+    # move target to indy's position
+    MoveToFrame(lower_CamTarg1, 1, 2.0);
+    
+    # get rid of the truck
+    StopSound(truck_Track, 0.5);
+    DestroyThing(truck);
+    
+    Sleep(2.0);
+    
+    # create target at indy's position
+    indyTarget = CreateThingAtPos(tpl_Ghost, GetThingSector(indy), GetThingPos(indy), '0 0 0');
+    CaptureThing(indyTarget);
+    
+    Sleep(0.01);
+    
+    AttachThingToThing(lower_Cam1, indyTarget);
+    Sleep(0.01);
+    
+    Rotate(indyTarget, -110.0, 1, 2.0); #90
+    
+    # indy adjusts his hat as he looks over the border
+    inTrack = PlayKey(indy, inStand1, 2, 0x0, 0);
+    PlayKey(indy, inStand2, 4, 0x12, 1);
+    voice_Track = PlayVoice(player, sayline, 1.0, 0);
+    PlayKey(indy, inThinking, 4, 0x12, 0);
+    StopKey(indy, inTrack, 0.5);
+    
+    # close the boarder gate
+    SendMessage(borderGate, user0);
+    
+    WaitForSound(voice_Track);
+    
+    Sleep(0.5);
+    
+    # Get the player into position
+    CopyOrientAndPos(indy, player);
+    
+    # hide actor show player
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # restore camera to player
+    SetCameraPosition(1, GetThingPos(lower_Cam1));
+    SetCurrentCamera(1);
+        
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    # turn on commie instincts
+    SendMessage(towerWpnt, user1);
+    
+    # turn up ambient water to full vol
+    ChangeSoundVol(chnl_Water, 1.0, 0.75);
+    
+    return;
+			
+#========================================================================================
+
+upperCut:
+
+    chnl_Water = PlaySoundThing(snd_Water, ambientPos, 0.5, min, max, 0x045);  # 1/2 vol
+    
+    # fire up waypoint cog
+    SendMessage(towerWpnt, user0);
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # put away any weapons
+    DeselectWeaponWait(player);
+    
+    # create indy actor
+    indy = CreateThing(tpl_Actor, player);
+    CaptureThing(indy);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # hide player show indy
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # play music cue
+    music_Track = PlaySoundLocal(mus_CheckPoint, 1.0, 0.0, 0x0, 0);
+    
+    # indy moves over to ai target
+    AISetCutsceneMode(indy);
+    AISetMoveSpeed(indy, 1.0);
+    AISetLookThing(indy, upper_Targ1);
+    AISetMoveThing(indy, upper_Targ1, 0);
+    
+    # prepare the truck
+    SetCollideType(truck, 0);
+    ClearThingFlags(truck, 0x80000);    # show
+    SetPhysicsFlags(truck, 0x10);       # align to surface
+    truck_Track = PlaySoundThing(snd_Engine, truck, 1.0, 5, 20, 0x85);
+    MaterialAnim(mat_Wheel, 16, 1);
+    
+    Sleep(1.5);
+    
+    # move truck past camera
+    AISetMoveSpeed(truck, 2.0);
+    AISetLookThing(truck, t_Ghost0);
+    AISetMoveThing(truck, t_Ghost0, 0);
+    
+    Sleep(0.1);
+    
+    # cut to upper_Cam1
+    #SetCameraSecondaryFocus(2, upper_CamTarg1);
+    SetCameraSecondaryFocus(2, indy);
+    SetCameraFocus(2, upper_Cam1);
+    SetCurrentCamera(2);
+    
+    Sleep(0.01);
+    
+    # move lower_Cam1 to upper_Cam2
+    MoveThingToPos(upper_Cam1, GetThingPos(upper_Cam2), 12.0);
+    
+    # have indy look at tower
+    AISetLookThing(indy, upper_LookTarg);
+    
+    # close the boarder gate
+    SendMessage(borderGate, user0);
+    
+    Sleep(10.0);
+    
+    # move target to indy's position
+    MoveToFrame(upper_CamTarg1, 1, 4.0);
+    
+    # get rid of the truck
+    StopSound(truck_Track, 0.5);
+    DestroyThing(truck);
+    
+    Sleep(2.0); # 1.9
+    
+    # create target at indy's position
+    indyTarget = CreateThingAtPos(tpl_Ghost, GetThingSector(indy), GetThingPos(indy), '0 0 0');
+    CaptureThing(indyTarget);
+    
+    AttachThingToThing(upper_Cam1, indyTarget);
+    
+    Rotate(indyTarget, -110.0, 1, 2.0); #90
+    
+    # indy adjusts his hat as he looks over the border
+    inTrack = PlayKey(indy, inStand1, 2, 0x0, 0);
+    PlayKey(indy, inStand2, 4, 0x12, 1);
+    voice_Track = PlayVoice(player, sayline, 1.0, 0);
+    PlayKey(indy, inThinking, 4, 0x12, 0);
+    StopKey(indy, inTrack, 0.5);
+    
+    WaitForSound(voice_Track);
+    
+    Sleep(0.5);
+                            
+    # Get the player into position
+    CopyOrientAndPos(indy, player);
+    
+    # hide actor show player
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # restore camera to player
+    SetCameraPosition(1, GetThingPos(upper_CamPos));
+    SetCurrentCamera(1);
+        
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    # turn on commie instincts
+    SendMessage(towerWpnt, user1);
+    
+    # turn up ambient water to full vol
+    ChangeSoundVol(chnl_Water, 1.0, 0.75);
+    
+    return;
+
+#========================================================================================
+
+end

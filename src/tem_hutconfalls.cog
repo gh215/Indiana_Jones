@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# TEM_HutConFalls.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message	    entered
+    
+    sector      sec_Done
+    sector      sec0
+    sector      sec1
+    
+    vector      vec_Direction
+    
+    int         done=0          local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetSectorThrust(sec0, vec_Direction, 0.6);
+    SetSectorThrust(sec1, vec_Direction, 0.6);
+
+    return;
+
+# ========================================================================================
+
+entered:
+
+    if((GetSenderRef() == sec_Done) && (done == 0))
+    {
+        done=1;
+        SetSectorThrust(sec0, vec_Direction, 0.0);
+        SetSectorThrust(sec1, vec_Direction, 0.0);
+    }
+    
+	return;
+
+# ========================================================================================
+
+end

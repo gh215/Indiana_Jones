@@ -1,0 +1,155 @@
+# Jones 3D Cog Script
+#
+# sea_WeaponControl.cog
+#
+# Takes care of the under-the-hood stuff for weapons on the Pudovkin.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	sighted
+message	user0
+
+thing	indy
+
+int		ammoTokarev		local
+int		ammoMauser		local
+int		ammoSimonov		local
+int		ammoSubmachine	local
+int		ammoShotgun		local
+int		ammoBazooka		local
+int		ammoGrenade		local
+int		ammoSatchel		local
+
+int		herbsBig		local
+int		herbsSmall		local
+int		healthBig		local
+int		healthSmall		local
+int		poisonKits		local
+
+int		treasure		local
+
+end
+
+# ===================================================================
+
+code
+
+# Using sighted to guarantee call AFTER Indy's class cog
+sighted:
+
+	# Store inventory values we'll need later...
+	ammoTokarev = GetInv(indy, 4); 
+	ammoMauser = GetInv(indy, 5); 
+	ammoSimonov = GetInv(indy, 6); 
+	ammoSubmachine = GetInv(indy, 8); 
+	ammoShotgun = GetInv(indy, 9); 
+	ammoBazooka = GetInv(indy, 10); 
+	ammoGrenade = GetInv(indy, 11); 
+	ammoSatchel = GetInv(indy, 12);
+
+    herbsBig = GetInv(indy, 38);
+    herbsSmall = GetInv(indy, 39);
+    healthBig = GetInv(indy, 48);
+    healthSmall = GetInv(indy, 49);
+    poisonKits = GetInv(indy, 46);
+    
+	treasure = GetInv(indy, 36);
+
+#	PrintInt(treasure);
+
+	# At startup on the Pudovkin, Indy has nothing...
+	ResetInventory(indy);
+
+	# Disable items that are available by default
+    SetInvAvailable(indy, 2, 0);
+    SetInvAvailable(indy, 3, 1);
+
+	return;
+
+# -------------------------------------------------------------------
+
+user0:
+
+	# Restore all weapon states
+
+	# Whip
+	SetInv(indy, 2, 1);
+	SetInvAvailable(indy, 2, 1);
+
+	# Smith & Wesson
+	SetInv(indy, 3, 1);
+	SetInvAvailable(indy, 3, 1);
+
+	# Tokarev
+	SetInv(indy, 4, ammoTokarev);
+	SetInvAvailable(indy, 4, 1);
+
+    # Mauser
+	SetInv(indy, 5, ammoMauser);
+	SetInvAvailable(indy, 5, 1);
+
+    # Simonov
+	SetInv(indy, 6, ammoSimonov);
+	SetInvAvailable(indy, 6, 1);
+
+    # Machete
+	SetInv(indy, 7, 1);
+	SetInvAvailable(indy, 7, 1);
+
+    # Submachine
+	SetInv(indy, 8, ammoSubmachine);
+	SetInvAvailable(indy, 8, 1);
+
+    # Shotgun
+	SetInv(indy, 9, ammoShotgun);
+	SetInvAvailable(indy, 9, 1);
+
+    # Bazooka
+	SetInv(indy, 10, ammoBazooka);
+	SetInvAvailable(indy, 10, 1);
+
+    # Grenades
+	SetInv(indy, 11, ammoGrenade);
+	SetInvAvailable(indy, 11, 1);
+
+    # Satchels
+	SetInv(indy, 12, ammoSatchel);
+	SetInvAvailable(indy, 12, 1);
+
+    # Big herbs
+    SetInv(indy, 38, herbsBig);
+	SetInvAvailable(indy, 38, 1);
+
+    # Small herbs
+    SetInv(indy, 39, herbsSmall);
+	SetInvAvailable(indy, 39, 1);
+    
+    # Big health
+	SetInv(indy, 48, healthBig);
+	SetInvAvailable(indy, 48, 1);
+    
+    # Small health
+	SetInv(indy, 49, healthSmall);
+	SetInvAvailable(indy, 49, 1);
+
+    # Poison kits
+	SetInv(indy, 46, poisonKits);
+	SetInvAvailable(indy, 46, 1);
+
+	# Treasure
+#	PrintInt(treasure);
+	SetInv(indy, 36, treasure);
+	SetInvAvailable(indy, 36, 1);
+
+	# Put the whip back in its holster
+	SetHolsterModel(indy, 2, 19);
+
+	return;
+
+end

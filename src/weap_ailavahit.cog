@@ -1,0 +1,58 @@
+# Jones 3D Cog Script
+#
+# weap_AILavaHit.cog
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		created
+message		touched
+
+# ************************** TEMPLATES *************************
+template	tpl_sparksSM=lavadeathsparks	local
+template	tpl_sparksMD=lavasparks			local
+template	tpl_exp=+gen_exp_lava_md		local
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_bullet						local
+thing		t_victim						local
+
+end
+
+
+# ===================================================================
+code
+
+# ...................................................................
+created:
+
+	t_bullet = GetSenderRef();
+
+	CreateThingAtPos(tpl_sparksSM, GetThingSector(t_bullet), GetThingPos(t_bullet), '0 0 0');
+	CreateThingAtPos(tpl_sparksSM, GetThingSector(t_bullet), GetThingPos(t_bullet), '0 0 0');
+	CreateThingAtPos(tpl_sparksMD, GetThingSector(t_bullet), GetThingPos(t_bullet), '0 0 0');
+	CreateThingAtPos(tpl_sparksMD, GetThingSector(t_bullet), GetThingPos(t_bullet), '0 0 0');
+
+	return;
+
+
+# ...................................................................
+touched:
+
+	t_bullet = GetSenderRef();
+	t_victim = GetSourceRef();
+
+	CreateThingAtPos(tpl_exp, GetThingSector(t_bullet), GetThingPos(t_bullet), '0 0 0');
+
+	DamageThing(t_victim, 1000, 0x200, t_bullet);			# Inflict SITH_DAMAGE_LAVA
+
+	return;
+
+
+# ===================================================================
+end

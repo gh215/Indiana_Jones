@@ -1,0 +1,141 @@
+# Jones 3D Cog Script
+#
+# BAB_CourtyardCommmie2.cog
+# This cog is based on the brilliant groundbreaking cog work pioneered by Reed Derleth
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     arrived
+    message     damaged
+    message     user4
+    
+    thing       player          local
+    cog         targetcog       
+    
+    thing       commie0         linkid=5    mask=0x409
+    thing       commie1         linkid=5    mask=0x409
+    thing       commie2         linkid=5    mask=0x409
+    thing       commie3         linkid=5    mask=0x409
+    
+    thing       specops0
+    thing       specops1
+    
+    thing       fencedoor
+    
+    surface     courtflr0       linkid=3
+    surface     courtflr1       linkid=3
+    surface     courtflr2       linkid=3
+    surface     courtflr3       linkid=3
+    surface     courtflr4       linkid=3
+    surface     courtflr5       linkid=3
+    surface     courtflr6       linkid=3
+    surface     courtflr7       linkid=3
+    surface     courtflr8       linkid=3
+    
+    sector      archsector
+    
+    sound       gatestop=tem_ldoorr_ldoorl_close_c.wav  local
+    sound       gatesqueal=fol_in_scrapemetal_med.wav   local
+    
+    int         done=0          local
+    int         curframe=0      local
+    int         virginal=0      local
+    int         x               local
+    int         gatechannel     local
+        
+end
+
+code
+
+# ========================================================================================
+startup:
+
+    player = GetLocalPlayerThing();
+    
+    AISetCutsceneMode(specops0);
+    AISetCutsceneMode(specops1);
+    
+    SetThingFlags(specops0, 0x80000);
+    SetThingFlags(specops1, 0x80000);
+        
+    for (x=0; x<=3; x=x+1)
+    {
+        AISetCutsceneMode(commie0[x]);
+    }
+    AISetLookFrame(commie0, 1);
+    AISetMoveFrame(commie0, 1);
+        
+return;
+
+#----------------------------------------------------------------------------------------
+arrived:
+
+    //print("AI hit Waypoint");
+    curframe = 1-curframe;
+    if ((GetSenderRef() == commie0) && (curframe == 1))
+    {
+        AISetLookFrame(commie0, 0);
+        AIWaitForStop(commie0);
+        AISetMoveFrame(commie0, 0);
+    }
+    
+    if ((GetSenderRef() == commie0) && (curframe == 0))
+    {
+        AISetLookFrame(commie0, 1);
+        Sleep(1);
+        AISetMoveFrame(commie0, 1);
+    }
+    
+return;
+    
+#----------------------------------------------------------------------------------------
+damaged:
+    
+    if (virginal == 0)
+    {
+        SendMessage(targetcog, user0);
+        virginal=1;
+        for (x=0; x<=3; x=x+1)
+        {
+            AIClearCutsceneMode(commie0[x]);
+        }
+        if (GetSectorPlayerCount(archsector) > 0)
+        {
+            ClearThingFlags(specops0, 0x80000);
+            ClearThingFlags(specops1, 0x80000);
+        }
+        SetCollideType(fencedoor, 0);
+        MoveToFrame(fencedoor, 1, 3);
+        gatechannel = PlaySoundThing(gatesqueal, fencedoor, 1, 10, 20, 1);
+        AIClearCutsceneMode(specops0);
+        AIClearCutsceneMode(specops1);
+        WaitForStop(fencedoor);
+        StopSound(gatechannel, 0);
+        SetCollideType(fencedoor, 3);
+        PlaySoundThing(gatestop, fencedoor, 1, 10, 20, 0);
+    }
+    
+return;
+                
+#----------------------------------------------------------------------------------------
+user4:
+
+    if (virginal == 1) return;
+    
+    sleep(5);
+    for (x=0; x<=3; x=x+1)
+    {
+        AIClearCutsceneMode(commie0[x]);
+    }
+    
+return;
+
+#----------------------------------------------------------------------------------------
+
+end

@@ -1,0 +1,144 @@
+# Jones 3D Cog Script
+#
+# pyr_1entrydoor.cog
+#	
+# Door to the innards of pyramid 1, opened with button on front face
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	activated
+
+# world things
+thing	button
+thing	door
+thing	player		local	nolink
+
+# camera things, lookthings, etc.
+thing	doorcam				nolink
+thing	doortestcam			nolink
+thing	buttoncam			nolink
+thing	doorlook			nolink
+
+# sectors
+sector	indoorsector		nolink
+
+# indy's sayline
+sound	thisdoor=inxj076.wav	local
+
+# music
+sound	openmusic=mus_pyr_openpyramid.wav	local
+
+# variables
+int		locked=0	local
+
+# subroutines
+flex	startscene=0.0		local
+flex	endscene=0.0		local
+flex	fixcams=0.0			local
+flex	movedoor=0.0		local
+flex	pushbutton=0.0		local
+end
+
+code
+startup:
+	Sleep(.01);
+	
+	SetThingLight(door, '100 87 75', 0.001, 0.01);
+	SetThingLight(button, '100 87 75', 0.001, 0.01);	
+	SetSectorAdjoins(indoorsector, 0);
+
+	return;
+
+activated:
+# ---> door, button
+	if (locked) return;
+	locked = 1;
+
+	player = GetLocalPlayerThing();
+	DeselectWeaponWait(GetLocalPlayerThing());
+	
+	if (GetSenderRef() == door)
+	{
+		SetExtCamOffsetToThing(doortestcam);
+	
+		PlayMode(player, 61, 1);
+		PlayVoice(player, thisdoor, 1, 1);
+		Sleep(.5);
+		RestoreExtCam();
+	
+		locked = 0;
+	}
+	
+	if (GetSenderRef() == button)
+	{
+		call startscene;
+
+		call pushbutton;
+		call movedoor;
+		call endscene;
+	}
+	
+	return;
+
+pushbutton:
+	SetExtCamOffsetToThing(buttoncam);
+	PlayMode(player, 60, 0);
+	Sleep(.25);
+	
+	PlaySoundLocal(openmusic, 1, 0, 0, 0);
+	
+	MoveToFrame(button, 1, 2);
+	Sleep(1);
+	return;
+
+movedoor:
+	SetCameraFocus(2, doorcam);
+	SetCameraSecondaryFocus(2, doorlook);
+	SetCurrentCamera(2);
+	sleep(.1);
+	SetSectorAdjoins(indoorsector, 1);
+	
+	# door opens, camera moves in, cameralook slips backward into hallway
+	MoveToFrame(doorcam, 1, 1.4);
+	MoveToFrame(doorlook, 1, 2);
+	MoveToFrame(door, 1, .27);
+	WaitForStop(door);
+	sleep(1);
+	return;
+
+startscene:
+	call fixcams;
+
+	StartCutscene(1);
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	
+	return;
+	
+endscene:
+	call fixcams;
+
+	ClearActorFlags(player, 0x200000);
+	SetCameraSecondaryFocus(2, player);
+	SetCurrentCamera(1);
+	sleep(.3);
+	RestoreExtCam();
+	
+	EndCutscene();
+	
+	return;
+	
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	return;
+	
+end
+

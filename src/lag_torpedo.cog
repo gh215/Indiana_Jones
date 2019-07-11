@@ -1,0 +1,425 @@
+# Jones 3D Cog Script
+#
+# lag_torpedo.cog
+#
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup
+	message	entered
+	message	exited
+	message	pulse	
+    message	activate
+	message	timer
+	message	callback
+
+  	thing		torpedo
+	thing		indyactor
+	thing		campos0
+	thing		campos1
+	thing		jumppos
+	thing		inviso_torp
+	surface		shipwall
+	surface		sandsurf
+	cog			hints			#send message when complete. 
+
+	thing		expos
+	int			pieces=20				local
+	int			k						local
+	int			fragment				local
+	int			see_snd					local
+	int			doplay=0				local
+	template	debris0=metalshrapa		local 		
+	template	debris1=metalshrapb		local   		
+	template	debris2=metalshrapc		local 		
+	template	debris3=metalshrapa		local 		
+	template	debris4=metalshrapb		local
+
+	int			lined_up					local
+	int			spoken=0					local
+	int			direction=0					local
+	int			torpdir=0					# desc=0-north,1-south,2-east,3-west.
+	int			played=0					local
+	sound		torpstart=lag_torp_start_c.wav		local	
+	sound		torpunder=lag_torp_under_c.wav		local	
+	sound		torpexpl=lag_torp_explo_c.wav		local	
+	sound		torpadjust=lag_torp_adjust_c.wav	local	
+	sound		torparm=lag_torp_arm_c.wav			local	
+	sound		torpsplsh=lag_torp_splash_c.wav		local	
+
+	int		blown=0					local
+	int		curcam					local
+	keyframe	in_activate=in_torpedo_launch.key	local
+	keyframe	torp_start=torpedo_launch.key		local
+	keyframe	torp_fwd=torpedo_fwd.key			local
+	keyframe	in_bothup=0in_armsup_1_1.key		local
+	vector	vec1					local
+	vector	lookvec					local
+
+
+#-------- Torpedo bubbles ---------------------------------
+
+    thing		bubble					local
+    template	bubble0=+bubbles		local
+	vector		startBubble				local
+    vector		finBubble				local
+    vector		bubbleVel				local
+    int			i=0						local
+    int			blurps=5				local
+
+#-------- Underwater explosion ----------------------------
+	template	tplExplode=+uw_blast		local
+	template	tplBubble=+bubbles			local
+	template	x=+uw_spr_blast				local
+	template	y=+uw_spr_explode			local
+	thing		bubs						local
+	int			j							local
+	vector		bubsVel						local
+
+	keyframe	in_reach=in_activate_low.key		local
+
+#.............. INDY SAY LINES ..................................................
+	sound		seetorp=lg03j01.wav	local	#A torpedo. And it's still in good shape..
+	sound		movtorp=lg03j05.wav	local	#I'll just aim this tin fish over here..
+	sound		armtorp=inxj112.wav	local	#That ought to do it..
+
+# no item line...	
+	sound		trytorp=lg03j04.wav	local	#This torp. needs an arming device..
+
+# wrong item...
+	sound	in_itemline0=Inxj089.wav		local # That didn't work.
+	sound	in_itemline1=Inxj090.wav		local # ...something wrong.
+	sound	in_itemline2=Inxj092.wav		local # Hmm...didn't quite work.
+	sound	in_itemline3=Inxj060.wav		local # I don't think...right answer.
+	sound	in_itemline4=Inxj087.wav		local # Whoops.
+	sound	in_itemline5=Inxj088.wav		local # Nope.
+	sound	in_itemline6=Inxj091.wav		local # Of course that didn't work.	
+	int		wi_newline=50					local
+	int		wi_oldline=50					local
+	int		lineindex						local # indexes sound array
+
+	int		wrongitemoffset					local
+	flex	randwrongitemlines				local
+	flex	explode							local
+	flex	notlinedup						local
+	int		under_snd						local
+	int		speak0							local
+	int		playerx							local
+	vector	playervec						local
+	thing	player							local
+	int		playery							local
+
+# wrong spot...
+	sound	in_wrongspot0=Inxj219.wav		local # Not lined up right
+	sound	in_wrongspot1=Inxj220.wav		local # Need to line up
+	sound	in_wrongspot2=Inxj221.wav		local # Need to move over.
+	sound	in_wrongspot3=Inxj222.wav		local # Not quite in position.
+	sound	in_wrongspot4=Inxj223.wav		local # Need to get in position.
+	sound	in_wrongspot5=Inxj224.wav		local # Need to find better spot.
+	int		l_newline=0						local
+	int		l_oldline=0						local
+
+
+end
+
+# ========================================================================================
+
+code
+startup:
+	player=GetLocalPlayerThing(); 
+	vec1 = VectorSet(5.96513, -21.0744, -0.779346);
+	lookvec = VectorSet(0, -1, 0);
+	setpulse(0.0);
+	return;
+
+#---------------Ready?------------------------------------------------------------
+
+entered:
+	if(GetSenderRef() != sandsurf)
+	{
+		return;
+	}
+	lined_up=1;
+	if (spoken == 1)
+	{
+		return;
+	}
+	setpulse(0.5);
+	return;
+
+exited:
+	if(GetSenderRef() != sandsurf)
+	{
+		return;
+	}
+	lined_up=0;
+	if (spoken == 1)
+	{
+		return;
+	}
+	setpulse(0.0);
+	return;
+
+#---------------Ready?------------------------------------------------------------
+
+pulse:
+
+	if (spoken == 0)
+	{
+		playervec = GetThingLVec(player);
+		playery = VectorY(playervec);
+		playerx = VectorX(playervec);
+
+		if ((playery > 0) && ((playerx > -0.7) && (playerx < 0.7)))
+		{
+			direction = 0;                               //north
+		}
+		else if ((playery < 0) && ((playerx > -0.7) && (playerx < 0.7)))
+		{
+			direction = 1;                          //south
+		}
+		else if ((playerx > 0) && ((playery > -0.7) && (playery < 0.7)))
+		{
+			direction = 2;                          //east
+		}
+		else if ((playerx < 0) && ((playery > -0.7) && (playery < 0.7)))
+		{
+			direction = 3;                          //west
+		}
+		if ((direction) == (torpdir))
+		{
+			see_snd=PlayVoice(player, seetorp, 1.0, 0);
+			spoken=1;
+		}
+	}
+	return;
+
+#===========Arm Torpedo========================================================
+Activate:
+	if(GetsenderRef() != torpedo)
+	{
+		return;
+	}
+	StopSound(see_snd, 0.1);
+	spoken=1;
+	if(GetCurItem(player) == 60)				#arming device.
+	{
+		if(lined_up == 1)
+		{
+			if (isMoving(torpedo)) return;
+			curcam = GetCurrentCamera();
+			MakeMeStop();
+			StartCutscene(1);
+			DeselectWeaponWait(player);
+			CopyPlayerHolsters(player, indyactor);
+			SetThingFlags(player, 0x80000);
+			ClearThingFlags(indyactor, 0x80000);
+			SetCameraLookInterp(2, 0);			# turns off interp to lookthing.
+			SetCameraFocus(2, campos0);
+			SetCameraSecondaryFocus(2, torpedo);
+			SetCurrentCamera(2);
+			SetCameraFOV(90, 0, 0);				# makes sure set to default.
+			PlayVoice(indyactor, movtorp, 1.0, 0);
+			ChangeInv(player, 60, -1);
+			PlayKey(indyactor, in_activate, 4, 0x12, 0);
+			PlayKey(torpedo, torp_start, 4, 0x12, 0);
+			sleep(1.0);
+			PlaySoundThing(torpadjust, torpedo, 1.0, 10.0, 20.0, 0);
+			sleep(3.1);
+			PlaySoundThing(torparm, torpedo, 0.8, 10.0, 20.0, 0);
+			sleep(1.0);
+			PlaySoundThing(torpstart, torpedo, 1.0, 10.0, 20.0, 0);
+			Sleep(1.0);
+			PlaySoundLocal(torpsplsh, 0.8, 0.8, 0x0, 1);
+			PlayVoice(indyactor, armtorp, 1.0, 0);
+			SetCameraLookInterp(2, 1);
+			sleep(0.1);
+			SetCameraInterpSpeed(2, 1.5);
+			SetCameraSecondaryFocus(2, jumppos);
+			return;
+		}
+		else
+		{
+			SetActorFlags(player, 0x200000);
+			StopThing(Player);
+			DeselectWeaponWait(player);
+			StartCutscene(0);
+			call notlinedup;
+			return;
+		}
+	}
+	else
+	{
+		SetActorFlags(player, 0x200000);
+		StopThing(Player);
+		DeselectWeaponWait(player);
+		StartCutscene(0);
+		PlayKey(player, in_reach, 4, 0x12, 0);
+
+		# player is using a wrong item
+
+	    if (GetCurItem(player) >= 1)
+		{
+			sleep(1.0);
+			call randwrongitemlines;
+		}
+
+		# player isn't using anything
+
+		else
+		{
+			sleep(1.0);
+			speak0=PlayVoice(indyactor, trytorp, 1.0, 1);
+		}
+		if(speak0 > -1)
+			WaitForSound(speak0);
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+		return;
+	}
+	return;
+
+callback:					#wait for torp starting animation
+	SetTimer(0.1);
+	TeleportThing(torpedo, jumppos);
+	AISetLookThing(indyactor, expos);
+	SetThingLook(torpedo, lookvec);
+	SetCameraLookInterp(2, 0);			#reset default
+	SetCameraInterpSpeed(2, 1);			#reset default
+	SetCameraSecondaryFocus(2, torpedo);
+	PlayKey(torpedo, torp_fwd, 4, 0x10, 0);
+	under_snd=PlaySoundThing(torpunder, torpedo, 1.0, 10.0, 60.0, 0x0081);
+	SetCameraFocus(2, campos1);
+	SetCameraFOV(45, 1, 3);
+	MoveThingToPos(torpedo, vec1, 3.0);
+	SetCameraFOV(90, 0, 0);				# makes sure set to default.
+	sleep(3.0);
+	SetFaceGeoMode(shipwall, 0);
+	SetAdjoinFlags(shipwall, 2);
+	stopsound(under_snd, 0.1);
+	PlaySoundThing(torpexpl, torpedo, 1.0, 30.0, 60.0, 0);
+	SetCameraSecondaryFocus(2, expos);
+	blown=1;
+	SendMessage(hints, user1);
+	destroything(torpedo);
+	destroything(inviso_torp);
+	call explode;
+	for(k=0; k<pieces; k=k+1)                                                        	            
+	{
+		SetPOVShake('0.0 0.02 0.05', '0.0 0.0 0.0', 80.0, 0.80);
+		fragment = CreateThing(debris0[RandBetween(0, 4)], expos);                                 
+		SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 -0.2'), 3));
+		SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 300.0));
+		sleep(0.025);
+	}
+	sleep(1.0);
+	CopyOrientAndPos(Indyactor, player);
+	EndCutscene();
+	SetCurrentCamera(curcam);
+	SetThingFlags(indyactor, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	return;
+
+timer:
+	if(blown == 1) return;
+	for(i=0; i<blurps; i=i+1)                                                        	            
+	{                                                                                    	            
+		bubble = CreateThing(bubble0, torpedo);
+		bubbleVel=VectorSet(0,0,rand()+0.25);
+		SetThingVel(bubble, VectorScale(bubbleVel, 0.2));
+		startBubble = VectorSet(0.01, 0.01, 1.0);
+		finBubble = VectorSet(0.1, 0.1, 0.0);
+		AnimateSpriteSize(bubble, startBubble, finBubble, rand()*4.0+2.0);
+	}
+	SetTimer(0.05);
+    return;   
+
+#------ underwater explosion ---------------------------------------------
+explode:
+	CreateThing(tplExplode, expos);
+	Sleep(0.25);
+	for (j = 0; j < 50; j = j + 1)
+	{
+	# Make a bubble
+		bubs = CreateThing(tplBubble, expos);
+	# Set the life left to a random value
+		SetLifeLeft(bubs, Rand() * 20.0);
+	# Set it to die when it hits air
+		SetThingFlags(bubs, 0x10000000);
+	# Animate the bubble sprite
+		AnimateSpriteSize(bubs, '0.001 0.001 1.0', '0.06 0.06 1.0', 0.5);
+	# Set the bubble to a random velocity
+		bubsVel = VectorSet(Rand() - 0.35, Rand() - 0.35, Rand() + 0.5);
+		bubsVel = VectorScale(bubsVel, 0.4);
+		if (Rand() < 0.5)
+		{
+            bubsVel = VectorSet(-VectorX(bubsVel), VectorY(bubsVel), VectorZ(bubsVel));
+		}
+		if (Rand() < 0.5)
+		{
+            bubsVel = VectorSet(VectorX(bubsVel), -VectorY(bubsVel), VectorZ(bubsVel));
+		}
+		SetThingVel(bubs, bubsVel);
+	}
+	return;
+#=====================================================================
+#		Wrong Item lines
+#=====================================================================
+randwrongitemlines:
+
+	while (wi_newline == wi_oldline)
+	{		
+		wi_newline = RandBetween(0, 19);
+		if (wi_newline < 15)
+		{	
+			wi_newline = RandBetween(0, 3); # ~1/5 chance for lines 0 thru 3
+		}
+		if (wi_newline == 19)
+		{
+			wi_newline = 6; # 1/20 chance for line 6 
+		}
+		if (wi_newline > 16)
+		{
+			wi_newline = 5; # 1/10 chance for line 5 
+		}
+		if (wi_newline > 14)
+		{
+			wi_newline = 4; # 1/10 chance for line 4
+		}
+	}
+	wi_oldline = wi_newline;	
+	lineindex = wrongitemoffset + wi_newline;
+	speak0 = PlayVoice(player, in_itemline0[lineindex], 1, 1);
+	return;
+
+#=====================================================================
+#		Not Lined Up.
+#=====================================================================
+notlinedup:
+	while (l_newline == l_oldline)
+	{		
+		l_newline = RandBetween(0, 5);
+	}
+	l_oldline = l_newline;
+	
+	speak0 = PlayVoice(player, in_wrongspot0[l_newline], 1, 0);
+
+	doplay = Randbetween(0, 2);
+	if ((doplay == 0) || (played == 0))
+	{
+		PlayKey(player, in_bothup, 4, 0x12, 0);
+		played = 1;
+	}
+	WaitForSound(speak0);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	return;
+
+
+end
+

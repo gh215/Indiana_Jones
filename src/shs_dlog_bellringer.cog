@@ -1,0 +1,148 @@
+# Jones 3D Cog Script
+#
+# shs_Dlog_bellringer.cog
+#
+# Say the line, Indy.
+#  
+#
+# [JWC & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+message 	startup
+message 	crossed
+message		activated
+message		entered
+
+keyframe	in_rtarmup=0in_armsout_1_1.key		local
+
+sound		in_interesting=Inxj001a.wav			local
+sound		in_important=Inxj233.wav			local
+sound		in_whathere=Inxj005.wav				local
+sound		in_lookwell=Inxj232.wav				local
+sound		in_gadget=Inxj153.wav				local
+
+sound		in_bellringer=Ss04j02.wav			local
+
+sound		in_gotlucky=Inxj106.wav				local
+sound		in_itworked=Inxj111.wav				local
+
+thing		cube   									 # gives BR some collision
+thing		player								local
+thing		bellringer
+ 	
+sector		enterBN
+
+surface 	bellread
+
+int			keyUsed=0							local
+int			played=0							local
+int			filter=0							local
+int			bellseen=0							local
+
+int			oldladykey=115						local # Indy gets this from HW
+int			newline=50							local
+int			oldline=50							local
+int			saidbell=0							local
+int			doneline=0							local
+int			cursound							local
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+    
+	player = GetLocalPlayerThing();
+ 	SetThingFlags(cube, 0x400000);
+
+    return;
+
+
+crossed:
+	
+	# note if Indy has seen bell
+	if ((GetSenderRef() == bellread) && (bellseen == 0))
+	{
+       bellseen = 1;
+	}
+
+    return;
+
+entered:
+
+    # note if indy has used oldlady key
+	if ((GetSenderRef() == enterBN)	&& (keyUsed == 0))
+	{
+		Print("used key...");
+		keyUsed=1;		
+	}
+	return;
+
+activated:
+
+    # Note bellringer
+	if ((GetSenderRef() == bellringer) && (filter == 0))
+	{
+		filter = 1;
+
+		MakeMeStop();
+		StartCutscene(1);
+
+		SetExtCamOffset('0.15 -0.08 -0.05');
+		Sleep(0.3);
+
+		if (bellseen == 0)
+		{
+			while (newline == oldline)
+			{		
+				newline = RandBetween(0, 4);
+			}
+			if (saidbell == 0)
+			{
+				newline = 4;
+				saidbell = 1;
+			}
+			oldline = newline;
+			PlayVoice(player, in_interesting[newline], 1.0, 1);
+		}
+		else
+		{
+			# "...is ring bell"
+			if ((GetInv(player, oldladykey) == 0) && (keyUsed == 0)) # checks for key and use
+			{
+				cursound = PlayVoice(player, in_bellringer, 1.0, 0);
+				Sleep(1.5);
+				PlayKey(player, in_rtarmup, 4, 0x12, 1);
+				WaitForSound(cursound);
+			}
+			else
+			{
+				# bell has already rung...	
+				doneline = RandBetween(0, 1);
+				if (doneline == 0)
+				{
+					PlayVoice(player, in_gotlucky, 1.0, 1);
+				}
+				else
+				{
+					PlayVoice(player, in_itworked, 1.0, 1);
+				}
+			}
+		}
+    }
+
+	Sleep(0.2);
+	RestoreExtCam();
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	filter = 0;
+	return;
+
+end

@@ -1,0 +1,45 @@
+# ===================================================================
+# Jones 3D Cog Script
+#
+# actor_AIBazooka.cog
+#
+# [RandyT]
+#
+# Actor script for cutscene actor AI with a bazooka.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ===================================================================
+
+symbols
+
+message		created
+
+keyframe	draw=02h_pull_bazooka.key	local
+
+model		bazooka=weap_bazooka.3do	local
+	
+thing		bandito						local
+		
+end
+
+# ===================================================================
+
+code
+
+created:
+
+	bandito = GetSenderRef();
+
+	# Swap in the weapon model
+    SetThingMesh(bandito, 8, bazooka, 0);
+
+	# Set the fire offset
+    SetThingFireOffset(bandito, '-0.003 0.065 0.01');
+
+	# Play the draw animation
+	PlayKey(bandito, draw, 4, 0x14, 0);
+
+	return;
+
+end
+

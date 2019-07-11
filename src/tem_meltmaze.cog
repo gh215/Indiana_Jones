@@ -1,0 +1,183 @@
+# Jones 3D Cog Script
+#
+# TEM_MeltMaze.cog
+#
+# [RT] [MDR] [TRM]
+#
+# Cog to control the movement of the lava rocks in Palawan Melt Maze.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+	
+# ************************** MISC LINKED GEOM *******************
+    thing		t_rock0
+	thing		t_rock1
+	thing		t_rock2
+	int		    numRocks=3						local
+    
+    thing       t_trigForward		linkid=1
+    thing       t_trigReverse		linkid=1
+    sector      sec_trigForward		linkid=2
+    sector      sec_trigReverse		linkid=2
+    
+# ************************** LINKED TIMING VARS ****************
+    flex		uptime=5.0
+	flex 		delay=4.0
+	flex		speed=1.0
+	flex		startTime=1.0
+    
+# ************************** subroutines ***********************
+    flex        animateRocks        local
+
+# ************************** MISC LOCAL VARS *******************
+	int			nCrntRock						local
+	int			nNextRock						local
+	int			nDirection						local
+	int			idx								local
+    int         dif_Level                       local
+
+end
+
+# ========================================================================================
+
+code
+
+# ........................................................................................
+startup:
+
+	nDirection	= 1;
+    Sleep(startTime);
+
+	call animateRocks;
+
+    return;
+
+
+# ........................................................................................
+entered:
+
+	# Remember current direction
+	idx = nDirection;
+
+	# Set a direction based on triggers
+    if( (GetSenderRef() == t_trigForward) && (GetSenderID() == 1) )
+    {
+        Print("MM: forward direction THING trigger");
+        nDirection = 1;
+    }
+
+    if( (GetSenderRef() == t_trigReverse) && (GetSenderID() == 1) )
+    {
+        Print("MM: reverse direction THING trigger");
+        nDirection = -1;
+    }
+
+    if( (GetSenderRef() == sec_trigForward) && (GetSenderID() == 2) )
+    {
+        Print("MM: forward direction SECTOR trigger");
+        nDirection = 1;
+    }
+
+    if( (GetSenderRef() == sec_trigReverse) && (GetSenderID() == 2) )
+    {
+        Print("MM: reverse direction SECTOR trigger");
+        nDirection = -1;
+    }
+
+	# Only reset rock animation if direction actually changed
+	if ( nDirection != idx )
+	{
+		call animateRocks;
+	}
+        
+    return;
+
+
+# ========================================================================================
+#	Subroutines
+# ========================================================================================
+# ........................................................................................
+animateRocks:
+	# Squash any previous execution contexts
+	Reset();
+    
+    # Set next and current rock control vars
+	if ( nDirection == 1 )
+	{
+		nCrntRock	= 0;
+	}
+	else
+	{
+		nCrntRock	= numRocks - 1;
+	}
+	nNextRock	= nCrntRock + nDirection;
+
+	# Put the rocks in their proper start pos
+    for (idx = 0; idx < numRocks; idx = idx + 1) 
+    {
+		if ( idx == nCrntRock )
+		{
+			MoveToFrame(t_rock0[idx], 0, speed);
+		}
+		else
+		{
+			MoveToFrame(t_rock0[idx], 1, speed);
+		}
+    }
+
+	# Loop animate the rocks position
+    while (1) 
+    {
+		dif_Level = GetDifficulty();
+        
+        // Animate current and next rock in line
+		
+        if(dif_Level < 3) Sleep(uptime);            # easy
+        else if(dif_Level == 3) Sleep(uptime - 2);  # med
+        else if(dif_Level >= 4) Sleep(uptime - 3.5);  # hard
+        
+        MoveToFrame(t_rock0[nNextRock], 0, speed);
+        
+        if(dif_Level < 3) Sleep(delay);             # easy
+        else if(dif_Level == 3) Sleep(delay - 2);   # med
+        else if(dif_Level >= 4) Sleep(delay - 2.5);   # hard
+        
+        MoveToFrame(t_rock0[nCrntRock], 1, speed);
+
+		// update rock controller values and keep them in range
+		nCrntRock = nCrntRock + nDirection;
+
+		if ( nCrntRock < 0 )
+		{
+			nCrntRock = numRocks-1;
+		}
+		if ( nCrntRock >= numRocks )
+		{
+			nCrntRock = 0;
+		}
+
+		nNextRock = nCrntRock + nDirection;
+        
+        if ( nNextRock < 0 )
+		{
+			nNextRock = numRocks-1;
+		}
+		if ( nNextRock >= numRocks )
+		{
+			nNextRock = 0;
+		}
+	}
+    
+	return;
+
+
+# ========================================================================================
+
+end
+

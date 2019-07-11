@@ -1,0 +1,584 @@
+
+# Jones 3D Cog Script
+#
+# nub_hint2.cog
+#
+# Hint Script
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		activated
+message		touched
+message		entered
+message		exited
+message		arrived
+message		damaged
+message		killed
+message		user0
+message		user1
+message		user2
+message		user3
+message		user4
+message		user5
+message		user6
+message		user7
+
+thing		hint1		#jump to shimmy ledge above rubble
+thing		hint2		#drop to hallway and pass sarcophagi
+thing		hint3		#examing statue with missing arm
+thing		hint4		#cut torn tapestry behind pushable statue
+thing		hint5		#pull lever to raise door
+thing		hint6		#pull block out of hallway behind slashable tapestry
+thing		hint7		#jump to bottom of unbroken ladder on right
+thing		hint8		#push button to bring out statue in chapel
+thing		hint9		#drop to platform across from arm
+thing		hint10		#take arm (hint moves with arm when whipped)
+thing		hint11		#get to hallway (same as hint2)
+thing		hint12		#place arm on statue
+
+thing		hint13		#use imp3 to climb to top
+thing		hint14		#push upper stair button, bringing in commies
+thing		hint15		#push upper stair button again to lower stairs
+thing		hint16		#push lower stair button to gain access to maze
+thing		hint17		#push lower maze block to trap Dr.V
+thing		hint18		#push block B to trap Dr.V
+thing		hint19		#trap Dr.V and take gear
+thing		hint20		#approach pull block behind slashable tapestry
+thing		hint21		#jump to opening
+thing		hint22		#pull lever to raise door
+thing		hint23		#go behind block
+thing		hint24		#take key
+thing		hint25		#use key on gate to open door
+thing		hint26		#place gear on elevator
+thing		hint27		#push block onto elevator
+thing		hint28		#swing onto block
+
+thing		hint29		#climb out of elevator bottom to "bridge" area
+thing		hint30		#pull underwater switch to raise bull
+thing		hint31		#jump across bull
+thing		hint32		#whipclimb to upper lab perimeter
+thing		hint33		#hallway to imp3 to lab top
+#thing		hint34		#move block A to center
+#thing		hint35		#move block b to center
+#thing		hint36		#move block c to center
+thing		hint37		#raise ball
+thing		hint38		#push switch A once                             
+thing		hint39		#push switch B twice							
+thing		hint40		#jump into pool
+thing		hint41		#climb to top of tower and take imp4
+thing		hint42		#use imp4 to open drawbridge
+thing		hint43		#use imp4 to open shortcut back to elevator bottom
+thing		hint44		#use imp4 to power elevator                      
+thing		hint45		#pull block off of elevator
+thing		hint46		#push elevator button to ascend to top
+
+thing		hint47		#use imp4 to open door
+thing		hint48		#open casket
+thing		hint49		#use imp4 to rotate Nub
+thing		hint50		#take eye
+thing		hint51		#place eye on robot
+thing		hint52		#robot boss (solved upon boss death)
+thing		hint53		#push button to lower bridge
+
+thing		player			local
+
+surface		rubbleShimmySurf
+surface		overBullSurf
+surface		aboveLabClimbSurf
+surface		slashTap				mask=0x8
+surface		lowerPad				mask=0x480
+
+sector		sarcHallSect
+sector		behindBlockSect
+sector		ladderSect
+sector		aboveJewelSect
+sector		keySect
+sector		openTapSect
+sector		bridgeSect
+sector		imp3HallSect
+sector		poolPulloutSect
+sector		lowerSolveSec0			mask=0x480
+sector		lowerSolveSec1			mask=0x480
+
+thing		whipPlatform
+thing		counterweight
+thing		elevatorCharger			mask=0x8
+thing		robotDoorCharger        mask=0x8
+thing		sarcCharger				mask=0x8
+thing		storageDoor
+thing		drawbridge
+thing		shortcutDoor
+thing		upperStairButton
+thing		lowerStairButton
+thing		crocLever
+thing		key
+thing		lock
+thing		turtle
+thing		bullSwitch
+thing		ballSwitch
+thing		h20SwitchA
+thing		h20SwitchB
+thing		imp4
+thing		arm
+thing		armitem
+thing		elevButton
+thing		nubSarc
+thing		bossHead
+thing		exitSwitch
+thing		noArmGuy
+thing		boss
+
+int			gotArm=0		local
+int			keyOnce=0		local
+int			sarcOpen=0		local
+int			buttonOnce=0	local
+int			blockCorrect=0	local
+int			volCaught=0		local
+int			ballup=0		local
+int			buttonApush=0	local
+int			buttonBpush=0	local
+
+thing		volodnikov
+thing		storageBlock
+thing		labTopBlockL
+thing		labTopBlockC
+thing		labTopBlockR
+thing		lowerMazeBlock
+thing		lowerMazeBlock2
+thing		upperMazeBlock
+thing		elevatorBlock
+
+end
+
+# ========================================================================================
+code
+startup:
+player = GetLocalPlayerThing();
+AttachThingToThing(hint6, storageBlock);
+#AttachThingToThing(hint34, labTopBlockL);
+#AttachThingToThing(hint35, labTopBlockC);
+#AttachThingToThing(hint36, labTopBlockR);
+AttachThingToThing(hint17, lowerMazeBlock);
+AttachThingToThing(hint18, upperMazeBlock);
+AttachThingToThing(hint27, elevatorBlock);
+AttachThingToThing(hint45, elevatorBlock);
+#AttachThingToThing(hint52, boss);
+AttachThingToThing(hint19, Volodnikov);
+#AttachThingToThing(hint10, arm);
+
+return;
+
+# ........................................................................................
+exited:
+if (((GetSourceRef() == lowerMazeBlock) || (GetSourceRef() == lowerMazeBlock2)) && (GetSenderRef() == lowerPad))
+{
+	if (VolCaught == 1) return;
+	SetHintUnSolved(hint17);
+	return;
+}
+if ((GetSourceRef() == upperMazeBlock) && ((GetSenderRef() == lowerSolveSec0) || (GetSenderRef() == lowerSolveSec1)))
+{
+	if (VolCaught == 1) return;
+	SetHintUnSolved(hint18);
+	return;
+}
+
+return;
+# ........................................................................................
+entered:
+PRINT("entered");
+if (((GetSourceRef() == lowerMazeBlock) || (GetSourceRef() == lowerMazeBlock2)) && (GetSenderRef() == lowerPad))
+{
+    if (VolCaught == 1) return;
+	SetHintSolved(hint17);
+	return;
+}
+
+if ((GetSourceRef() == upperMazeBlock) && ((GetSenderRef() == lowerSolveSec0) || (GetSenderRef() == lowerSolveSec1)))
+{
+	SetHintSolved(hint18);
+#AttachThingToThing(hint19, Volodnikov);
+}
+
+
+if (GetSenderRef() == rubbleShimmySurf)
+{
+	SetHintSolved(hint1);
+	return;
+}
+if (GetSenderRef() == sarcHallSect)
+{
+	if (gotArm == 0)
+    {
+		SetHintSolved(hint2);
+		return;
+	}
+	else
+	{
+		SetHintSolved(hint11);
+		return;
+	}
+	return;
+}
+if (GetSenderRef() == behindBlockSect)
+{
+	SetHintSolved(hint6);
+	return;
+}
+if (GetSenderRef() == ladderSect)
+{
+	SetHintSolved(hint7);
+	return;
+}
+if (GetSenderRef() == whipPlatform)
+{
+	SetHintSolved(hint9);
+	return;
+}
+if (GetSenderRef() == aboveJewelSect)
+{
+	SetHintSolved(hint13);
+	return;
+}
+if (GetSenderRef() == keySect)
+{
+	if (keyOnce == 0)
+	{
+		SetHintSolved(hint20);
+		keyOnce = 1;
+        return;
+	}
+	else
+	{
+		SetHintSolved(hint23);
+		return;
+	}
+}
+if (GetSenderRef() == openTapSect)
+{
+	SetHintSolved(hint21);
+	return;
+}
+if (GetSenderRef() == counterWeight)
+{
+	SetHintSolved(hint28);
+	return;
+}
+if (GetSenderRef() == bridgeSect)
+{
+	SetHintSolved(hint29);
+	return;
+}
+if (GetSenderRef() == overBullSurf)
+{
+	SetHintSolved(hint31);
+	return;
+}
+if (GetSenderRef() == aboveLabClimbSurf)
+{
+	SetHintSolved(hint32);
+	return;
+}
+if (GetSenderRef() == imp3HallSect)
+{
+	SetHintSolved(hint33);
+	return;
+}
+if (GetSenderRef() == poolPulloutSect)
+{
+	SetHintSolved(hint40);
+	return;
+}
+return;
+
+
+# ........................................................................................
+damaged:
+if ((GetSenderRef() == slashTap) && (GetParam(1) == 0x20))
+{
+	SetHintSolved(hint4);
+	return;
+}
+if ((GetSenderRef() == elevatorCharger) && (GetParam(1) == 0x4000))
+{
+	SetHintSolved(hint44);
+	SetHintSolved(hint43);
+	SetHintSolved(hint42);
+	return;
+}
+if ((GetSenderRef() == robotDoorCharger) && (GetParam(1) == 0x4000))
+{
+	SetHintSolved(hint47);
+	return;
+}
+if ((GetSenderRef() == SarcCharger) && (GetParam(1) == 0x4000))
+{
+#	DEBUGPRINT("Hint 49 and 50 solved");
+	SetHintSolved(hint49);
+	SetHintSolved(hint50);
+	SarcOpen = 1;
+	return;
+}
+
+return;
+# ........................................................................................
+arrived:
+if (GetSenderRef() == storageDoor)
+{
+	SetHintSolved(hint5);
+	return;
+}
+if (GetSenderRef() == drawbridge)
+{
+	SetHintSolved(hint42);
+	return;
+}
+if (GetSenderRef() == shortCutDoor)
+{
+	SetHintSolved(hint43);
+	return;
+}
+
+
+return;
+
+# ........................................................................................
+activated:
+if (GetSenderRef() == upperStairButton)
+{
+    if (buttonOnce == 0)
+	{
+		buttonOnce = 1;
+		SetHintSolved(hint14);
+		return;
+	}
+	else
+	{
+		SetHintSolved(hint15);
+		return;
+	}
+}
+if (GetSenderRef() == lowerStairButton)
+{
+    SetHintSolved(hint16);
+	return;
+}
+
+if (GetSenderRef() == crocLever)
+{
+	SetHintSolved(hint22);
+	return;
+}
+if (GetSenderRef() == key)
+{
+	SetHintSolved(hint24);
+	return;
+}
+if ((GetSenderRef() == lock) && (GetCurItem(player) == 68))
+{
+	SetHintSolved(hint25);
+	return;
+}
+if ((GetSenderRef() == turtle) && (GetCurItem(player) == 67))
+{
+	SetHintSolved(hint26);
+	return;
+}
+if (GetSenderRef() == bullSwitch)
+{
+	SetHintSolved(hint30);
+	return;
+}
+if (GetSenderRef() == ballSwitch)
+{
+	ballup = (1 - ballup);
+	if (ballup == 0)
+	{
+		SetHintUnsolved(hint37);
+	}
+	if (ballup == 1)
+	{
+		SetHintSolved(hint37);
+	}
+	return;
+}
+
+
+
+
+if (GetSenderRef() == h20SwitchA)
+{
+	if (GetCurFrame(h20SwitchA) == 1) 
+	{
+		Print("switch not in position: bailing");
+		return;
+	}
+	
+
+	buttonApush = buttonApush + 1;
+	if (buttonApush == 1)
+	{
+		SetHintSolved(hint38);
+	}
+	if (buttonApush != 1)
+	{
+		SetHintUnSolved(hint38);
+	}
+	if (buttonApush == 4)
+	{
+		buttonApush=0;
+	}
+	return;
+}
+
+
+if (GetSenderRef() == h20SwitchB)
+{
+	if (GetCurFrame(h20SwitchB) == 1)
+	{
+		Print("switch not in position: bailing");
+		return;
+	}
+
+
+	buttonBpush = buttonBpush + 1;
+	if (buttonBpush == 3)
+	{	
+		SetHintSolved(hint39);
+	}
+	if (buttonBpush != 3)
+	{	
+		SetHintUnSolved(hint39);
+	}
+	if (buttonBpush == 4)
+	{	
+		buttonBpush = 0;
+	}
+	return;
+}
+
+if (GetSenderRef() == imp4)
+{
+#	DEBUGPRINT("Solved hint 41");	
+	SetHintSolved(hint41);
+	return;
+}
+
+if (GetSenderRef() == armitem)
+{
+	Print("solved hint!");
+    SetHintSolved(hint10);
+    gotArm = 1;
+    return;
+}
+if (GetSenderRef() == elevButton)
+{
+#	DEBUGPRINT("Solved hint 46");	
+    SetHintSolved(hint46);
+    return;
+}
+if (GetSenderRef() == nubSarc)
+{
+    if (SarcOpen == 0)
+	{
+#		DEBUGPRINT("Solved hint 48");	
+        SetHintSolved(hint48);
+		return;
+	}
+	
+}
+if (GetSenderRef() == exitSwitch)
+{
+	SetHintSolved(hint53);
+	return;
+}
+return;
+
+# ........................................................................................
+touched:
+if (GetSenderRef() == noArmGuy)
+{
+	SetHintSolved(hint3);
+    return;
+}
+return;
+
+# ........................................................................................
+#message that Indy brought the "armed" statue forward
+user0:
+	SetHintSolved(hint8);
+	return;
+
+# ........................................................................................
+#message that Indy placed the arm.
+user1:
+	Print("placed the arm and solved Hint12");
+	SetHintSolved(hint12);
+	SetHintSolved(hint3);
+	return;
+
+# ........................................................................................
+user2:								#was killed:
+	Print("Boss dead: solved Hint52");
+	SetHintSolved(hint52);
+	return;
+
+# ........................................................................................
+#message that Indy has pushed the upper volBlock into position
+user3:
+	#SetHintSolved(hint18);
+	#AttachThingToThing(hint19, Volodnikov);
+	return;
+
+# ........................................................................................
+#message that Indy took the gear from Volodnikov
+user4:
+	SetHintSolved(hint19);
+	volCaught=1;
+	return;
+
+# ........................................................................................
+#message that Indy pushed the block onto the elevator
+user5:
+	SetHintSolved(hint27);
+	return;
+
+# ........................................................................................
+# Message that indy placed eye in floor socket
+user6:
+#	DEBUGPRINT("placed eye, solved hint 51");	
+	SetHintSolved(hint51);
+	return;
+
+#message that Indy pushed LabTopBlocks into place
+#if (blockCorrect == 0)
+#{
+#	SetHintSolved(hint34);
+#}
+#if (blockCorrect == 1)
+#{
+#    SetHintSolved(hint35);
+#}
+#if (blockCorrect == 2)
+#{
+#	SetHintSolved(hint36);
+#}
+#blockCorrect = blockCorrect + 1;
+#return;
+
+# ........................................................................................
+user7:
+#message that Indy pulled the block off of the elevator
+SetHintSolved(hint45);
+return;
+
+
+# ........................................................................................
+end
+

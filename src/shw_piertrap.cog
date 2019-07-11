@@ -1,0 +1,173 @@
+# Jones 3D Cog Script
+#
+# gen_Door.cog
+#
+# Generic Door Script
+#
+# [IS]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+		
+	message	startup	
+	message	entered	
+	message	arrived		
+	message	touched		
+			
+	#	PROPS
+	thing		pier0           linkid=1
+	thing		pier1           linkid=1        
+	thing		pier2           linkid=1        
+	
+    #	ACTORS
+	thing		player          local                  
+
+	#	CAMERAS
+	thing		camera                  
+
+	
+	#	TRIGGERS
+	surface     trigger0        linkid=2
+	surface     trigger1        linkid=2
+	surface     trigger2        linkid=2
+	surface     trigger3        linkid=2
+	surface     trigger4        linkid=2
+	surface     trigger5        linkid=2
+	surface     trigger6        linkid=2
+	surface     trigger7        linkid=2
+	surface     trigger8        linkid=2
+	surface     trigger9        linkid=2
+	surface     trigger10       linkid=2
+	surface     trigger11       linkid=2
+        
+    sector  trapArea            linkID=3
+    sector  cueArea                
+        
+    #	SOUNDS
+	sound   blockhit=nub_stonedoor_stop_c.wav	local
+    sound   blockprime=teo_teobut_pull_c.wav	local
+    sound   blockdrop=nub_3mledge_stop_c.wav	local
+    
+	#MUSIC AND VOICE LINES
+	sound   dangercue=mus_gen_danger2.wav		local
+	sound   in_sensetrap=INXJ042.wav		local
+    
+	#	TEMPLATES
+    template    tempRef=indy_actor       
+
+	#	KEYFRAMES
+    keyframe    inDie=in_die_buckle.key     local
+    
+	#	VARS
+    flex	fallSpeed=8.0
+	flex	sleepTime=.25
+    int     sprung=0	local
+    int     cued=0		local
+    int     clicked=0	local
+    int		curCam		local
+    int		safe=0		local
+    int     dead=0          local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+        player = GetLocalPlayerThing();
+        return;
+
+
+# ========================================================================================
+entered:
+        If ((GetSenderID() == 3) && (clicked == 0))
+                {
+                clicked = 1;
+                PlaySoundLocal(blockprime, 1.0, 0, 0x0000, 1);
+                }
+		
+		If ((GetSenderRef() == cueArea) && (cued == 0))
+                {
+                cued = 1;
+				PlaySoundLocal(dangercue, 1.0, 0.0, 0x0, 0);
+				Sleep(0.5);
+				PlayVoice(player, in_sensetrap, 1.0, 0);
+                }
+                
+ 
+        
+        If ((GetSenderID() == 2) && (sprung == 1)) return;
+        If ((GetSenderID() == 2) && (sprung == 0))
+                {
+                sprung = 1;
+                curCam = GetCurrentCamera();
+                SetCurrentCamera(2);
+                SetCameraFocus(2, camera);
+                SetCamerasecondaryFocus(2, player);
+                sleep(.4);
+                PlaySoundLocal(blockdrop, .25, 0, 0x0000, 0);
+                movetoframe(pier0, 1, fallSpeed);
+                sleep(sleepTime);
+                PlaySoundLocal(blockdrop, .25, 0, 0x0000, 0);
+                movetoframe(pier1, 1, fallSpeed);
+                sleep(sleepTime);
+                PlaySoundLocal(blockdrop, .25, 0, 0x0000, 0);
+                movetoframe(pier2, 1, fallSpeed);
+                sprung = 1;
+                sleep(.5);
+                SetCurrentCamera(curCam);
+                SetCameraFocus(curCam, player);
+                }
+                
+        return;
+# ........................................................................................
+
+arrived:
+
+	if (GetSenderID() == 1)
+                {
+        	PlaySoundLocal(blockhit, 1.0, 0, 0x0000, 0);
+                }
+        if (GetSenderRef() == pier2)
+                {
+                safe = 1;
+                }        
+             return;
+
+# ........................................................................................
+
+touched:
+        if ((dead == 1) || (safe == 1))
+        	{
+		return;
+	        }
+        if(GetSenderID() == 1)
+		{
+                DamageThing(player, 1000.0, 0x1, (GetSenderRef()));
+		Print("Player Damaged");
+		SetCollideType(pier0, 0);
+		SetCollideType(pier1, 0);
+		SetCollideType(pier2, 0);
+		
+		# Disable and hide player
+		SetThingFlags(player, 0x80000);
+		
+		deadIndy = CreateThing(tempRef, player);
+		CaptureThing(deadIndy);
+		
+		# Show actor Indy and play Keyframe
+		ClearThingFlags(deadIndy, 0x80000);
+		PlayKey(deadIndy, inDie, 10, 0x14, 0);
+
+            dead = 1;
+                }
+                
+return;
+# ........................................................................................
+
+end
+

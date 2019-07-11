@@ -1,0 +1,95 @@
+# Jones 3D Cog Script
+#
+# shs_Dlog_poetics.cog   Say the line, Indy.  
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message 	startup
+message 	activated
+                                                          
+sound		in_poetics=Ss06j04.wav		local
+sound		in_notsure=Inxj061.wav		local # Not sure good idea
+sound		in_dangerous=Inxj056.wav	local # That looks dangerous
+sound		in_uhoh=Inxj011.wav			local # Uh-oh!
+sound		in_ouch=inxj017f.wav		local # Ouch!
+
+thing	 	trigger			   
+thing		player			local
+thing 		interpcam
+
+int			filter=0		local
+int			spoken=0		local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+      	
+	player = GetLocalPlayerThing();
+    return;
+
+activated:
+	
+	if ((GetSenderRef() == trigger) && (filter == 0)) 
+	{
+	    filter=1;
+        print("activated");
+		MakeMeStop();
+        StartCutscene(1);
+	  	
+		# Camera stuff
+		SetExtCamOffsetToThing(interpCam);
+        sleep(.2);
+		PlayMode(player, 60, 0); # push button anim
+		sleep(.3);
+			
+		if (spoken == 0)
+		{
+			spoken=1;
+			# "Aristotle's..."
+			PlayVoice(player, in_poetics, 1.0, 1);
+        }
+		else if (spoken == 1)
+		{
+			spoken=2;
+            PlayVoice(player, in_notsure, 1.0, 1);
+        }
+        else if (spoken == 2)
+		{
+			spoken=3;
+            PlayVoice(player, in_dangerous, 1.0, 1);
+        }
+		else if (spoken == 3)
+		{
+			spoken=4;
+            PlayVoice(player, in_uhoh, 1.0, 1);
+			
+		}
+
+		RestoreExtCam();
+        ClearActorFlags(player, 0x200000); # player in control
+        EndCutscene();
+    	if (spoken == 4)
+		{
+			PlayVoice(player, in_ouch, 1.0, 1);
+            DamageThing(player, 31, 0x100, player);
+		}
+		filter=0;
+	}
+	
+return;
+     
+
+end
+
+

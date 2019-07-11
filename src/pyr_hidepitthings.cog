@@ -1,0 +1,57 @@
+# Jones 3D Cog Script
+#
+# pyr_hidepitthings.cog
+#	
+# Hide non-actor, untagged stuff in a given sector
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message user1
+message	user2
+message	entered
+
+sector	hidesector	linkid=3
+
+thing	donthideme	nolink
+thing	donthideme2	nolink
+
+int		curthing=0		local	
+end
+
+code
+entered:
+user1:
+	curthing = FirstThingInSector(hidesector);
+	
+	while (curthing != -1)
+	{
+		if ((GetThingType(curthing) == 7) && (curthing != donthideme) && (curthing != donthideme2))
+		{
+			ClearThingFlags(curthing, 0x10);
+		}
+
+		curthing = NextThingInSector(curthing);
+	}
+	
+	return;
+
+user2:
+	curthing = FirstThingInSector(hidesector);
+	
+	while (curthing != -1)
+	{
+		if ((GetThingType(curthing) == 7) && (curthing != donthideme) && (curthing != donthideme2))
+		{
+			SetThingFlags(curthing, 0x10);
+		}
+		
+		curthing = NextThingInSector(curthing);
+	}
+
+	return;
+
+end

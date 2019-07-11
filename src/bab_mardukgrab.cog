@@ -1,0 +1,78 @@
+# Jones 3D Cog Script
+#
+# BAB_MardukGrab.cog
+#
+# Indy picks up the tablets & comments
+#
+# [HB from a cog by SXC]
+#
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+	
+	sound		in_wellwell=Inxj232.wav		local
+	sound		in_marduk=Bb10j01.wav		local
+
+    thing       player						local
+    thing       idol
+    thing       swingpos        
+    
+    int         idolnum=83					local 
+	int			grabcheck=0					local  
+    int         cursound					local 
+             
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+
+    return;
+           
+# ..............................................................................
+
+activate:
+
+    If ((GetSenderRef() == idol) && (grabcheck == 0) && (GetCurItem(player) == 0) && (GetCurWeapon(player) == 0))
+    {
+        grabcheck = 1;
+		MakeMeStop();
+        StartCutscene(0);
+
+        SetExtCamOffsetToThing(swingpos);
+
+		PlayVoice(player, in_wellwell, 1.0, 1);
+		cursound = PlayVoice(player, in_marduk, 1.0, 0);	
+		Sleep(1.8);
+
+        PlayMode(player, 60, 0);
+		Sleep(0.35);
+
+		DestroyThing(idol);
+        ChangeInv(player, idolnum, 1);
+        SetInvAvailable(player, idolnum, 1);
+        JonesInvItemChanged(idolnum);
+		Sleep(0.5);
+		
+        WaitForSound(cursound);
+        Sleep(0.5);
+        RestoreExtCam();
+		Sleep(0.5);
+
+		EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }
+    
+return;
+        
+end

@@ -1,0 +1,439 @@
+# Jones 3D Cog Script
+#
+# PYR_Hint.cog
+#
+# Solves hints
+#
+# [SXC] + [RKD]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	activated
+message	arrived
+message	entered
+message	taken
+
+thing	player	local
+
+#thing	hint1
+
+#thing	hint2
+
+thing	hint3
+surface	hint3face
+
+thing	hint4
+sector	hint4sector
+
+#thing	hint5	<--->  handled by pyr_pyr1smashout.cog
+
+thing	hint6
+surface	hint6face
+
+thing	hint7
+thing	hint7button
+
+thing	hint8
+sector	hint8sector
+
+thing	hint9
+sector	hint9sector
+
+thing	hint10
+sector	hint10sector
+
+thing	hint11
+thing	hint11box
+
+#thing	hint12
+
+thing	hint13
+surface	hint13face
+
+thing	hint14
+thing	hint14chain
+
+thing	hint15
+thing	hint15lever
+thing	hint15chain
+
+thing	hint16
+thing	hint16watch
+
+thing	hint17
+surface	hint17face
+
+#thing	hint18	<--->  handled by hyenakill cog
+
+thing	hint19
+thing	hint19gem
+
+#thing	hint20
+
+thing	hint21
+sector	hint21sector
+
+thing	hint22
+sector	hint22sector
+
+#thing	hint23
+
+#thing	hint24	<--->	handled by blockrise.cog
+
+#thing	hint25	<--->	handled by blockrise.cog
+
+thing	hint26
+surface	hint26face
+
+thing	hint27
+sector	hint27sector
+
+#thing	hint28
+
+thing	hint29
+sector	hint29sector
+
+#thing	hint30
+
+thing	hint31
+thing	hint31box
+
+thing	hint32
+thing	hint32gem
+
+#thing	hint33
+
+thing	hint34
+sector	hint34sector
+
+#thing	hint35
+
+thing	hint36
+sector	hint36sector
+
+#thing	hint37
+
+thing	hint38
+thing	hint38kindling
+
+thing	hint39
+sector	hint39sector
+
+thing	hint40
+thing	hint40box
+
+#thing	hint41
+
+thing	hint42
+thing	hint42bucket
+
+thing	hint43
+thing	hint43bucket
+
+thing	hint44
+thing	hint44gem
+
+#thing	hint45
+
+thing	hint46
+sector	hint46sector
+
+#thing	hint47
+
+thing	hint48
+sector	hint48sector
+
+thing	hint49
+sector	hint49sector
+
+#thing	hint50
+
+#thing	hint51 <---->  handled by johplatform cog
+
+#thing	hint52
+
+thing	hint53
+sector	hint53sector
+
+thing	hint54
+thing	hint54box
+
+thing	hint55
+thing	hint55gem
+
+thing	hint56
+thing	hint56car
+
+#thing	hint57 <----> handled by gashint.cog
+
+thing	hint58
+thing	hint58wheel
+
+#thing	hint59 <----> handled by minecar fixing cog
+
+thing	hint60
+sector	hint60sector
+
+end
+
+
+# ========================================================================================
+code
+activated:
+    player = GetLocalPlayerThing();
+
+	# player pushes button to get into pyramid 1 door
+	if (GetSenderRef() == hint7button)
+	{
+		SetHintSolved(hint7);
+	}
+
+	# player activates chain in shack
+	if (GetSenderRef() == hint14chain)
+	{
+		SetHintSolved(hint14);
+	}
+
+	# player activates lever on dirtmover while drive chain is visible
+	if ((GetSenderRef() == hint15lever) && (!BitTest(GetThingFlags(hint15chain), 0x10)))
+	{
+		SetHintSolved(hint15);
+	}
+
+	# watch taken (activated)
+	if (GetSenderRef() == hint16watch)
+	{
+		SetHintSolved(hint16);
+	}
+
+	# player activates gemeye on monojackal 1 with gemeye as current item
+	if ((GetSenderRef() == hint19gem) && (GetCurItem(player) == 65))
+	{
+		SetHintSolved(hint19);
+	}
+
+	# player activates gemeye on monojackal 1 with gemeye as current item
+	if ((GetSenderRef() == hint32gem) && (GetCurItem(player) == 65))
+	{
+		SetHintSolved(hint32);
+	}
+
+	# kindling activated/taken
+	if (GetSenderRef() == hint38kindling)
+	{
+		SetHintSolved(hint38);
+	}
+
+	# player activates bucket on bucket machine with bucket as current item
+	if ((GetSenderRef() == hint43bucket) && (GetCurItem(player) == 117))
+	{
+		SetHintSolved(hint43);
+	}
+
+	# player activates gemeye on monojackal 1 with gemeye as current item
+	if ((GetSenderRef() == hint44gem) && (GetCurItem(player) == 65))
+	{
+		SetHintSolved(hint44);
+	}
+
+	# player activates gemeye on monojackal 1 with gemeye as current item
+	if ((GetSenderRef() == hint55gem) && (GetCurItem(player) == 65))
+	{
+		SetHintSolved(hint55);
+	}
+
+	# player activates minecar with nothing as current item
+	if ((GetSenderRef() == hint56car) && (GetCurItem(player) == 0))
+	{
+		SetHintSolved(hint56);
+	}
+
+	# player activates wheel on old minecar in pit
+	if (GetSenderRef() == hint58wheel)
+	{
+		SetHintSolved(hint58);
+	}
+
+	return;
+
+# ========================================================================================
+entered:
+	if (global2 == 1)
+	{
+		return;
+	}
+
+	player = GetLocalPlayerThing();
+
+	# face at bottom of first climb
+	if (GetSenderRef() == hint3face)
+	{
+		SetHintSolved(hint3);
+	}
+
+	# sector at top of climb
+	if (GetSenderRef() == hint4sector)
+	{
+		SetHintSolved(hint4);
+	}
+
+	# climbable face over block
+	if (GetSenderRef() == hint6face)
+	{
+		SetHintSolved(hint6);
+	}
+
+	# upper hallway above entry hall 1
+	if (GetSenderRef() == hint8sector)
+	{
+		SetHintSolved(hint8);
+	}
+
+	# room with stomper buttons
+	if (GetSenderRef() == hint9sector)
+	{
+		SetHintSolved(hint9);
+	}
+
+   	# sector on other side of stomper puzzle
+	if (GetSenderRef() == hint10sector)
+	{
+		SetHintSolved(hint10);
+	}
+
+	# if player enters kid-trigger face and hyenas are all dead
+	if ((GetSenderRef() == hint13face) && (global8 == 11))
+	{
+		SetHintSolved(hint13);
+	}
+
+	# if player enters kid-trigger face with watch in hand and all hyenas are dead
+	if ((GetSenderRef() == hint17face) && (GetInv(player, 100) == 1) && (global8 == 11))
+	{
+		SetHintSolved(hint17);
+	}
+
+	# entrance to undertunnel in pyramid 1
+	if (GetSenderRef() == hint21sector)
+	{
+		SetHintSolved(hint21);
+	}
+
+	# hole behind snake sarcophagus
+	if (GetSenderRef() == hint22sector)
+	{
+		SetHintSolved(hint22);
+	}
+
+	# face on far end of shimmy puzzle
+	if (GetSenderRef() == hint26face)
+	{
+		SetHintSolved(hint26);
+	}
+
+	# sector above closeable coffin in 2
+	if (GetSenderRef() == hint27sector)
+	{
+		SetHintSolved(hint27);
+	}
+
+	# sectorabove pyramid 2 entrance
+	if (GetSenderRef() == hint29sector)
+	{
+		SetHintSolved(hint29);
+	}
+
+	# sector on other side of both smashable walls in coffin room
+	if (GetSenderRef() == hint34sector)
+	{
+		SetHintSolved(hint34);
+	}
+
+	# sector opposite start of shimmy maze
+	if (GetSenderRef() == hint36sector)
+	{
+		SetHintSolved(hint36);
+	}
+
+	# sector over whip climb
+	if (GetSenderRef() == hint39sector)
+	{
+		SetHintSolved(hint39);
+	}
+
+	# sector on other side of eyeblock puzzle
+	if (GetSenderRef() == hint46sector)
+	{
+		SetHintSolved(hint46);
+	}
+
+	# crypt center
+	if (GetSenderRef() == hint48sector)
+	{
+		SetHintSolved(hint48);
+	}
+
+	# top of climbable crypt
+	if (GetSenderRef() == hint49sector)
+	{
+		SetHintSolved(hint49);
+	}
+
+	# topmost sector of IMP3 column
+	if (GetSenderRef() == hint53sector)
+	{
+		SetHintSolved(hint53);
+	}
+
+	# level end
+	if (GetSenderRef() == hint60sector)
+	{
+		SetHintSolved(hint60);
+	}
+
+	return;
+
+# ========================================================================================
+arrived:
+	# pyr 1 lightbox arrives
+	if (GetSenderRef() == hint11box)
+	{
+		SetHintSolved(hint11);
+	}
+
+	# pyr 2 lightbox arrives
+	if (GetSenderRef() == hint31box)
+	{
+		SetHintSolved(hint31);
+	}
+
+	# pyr 3 lightbox arrives
+	if (GetSenderRef() == hint40box)
+	{
+		SetHintSolved(hint40);
+	}
+
+	# pyr 4 lightbox arrives
+	if (GetSenderRef() == hint54box)
+	{
+		SetHintSolved(hint54);
+	}
+
+	return;
+
+# ========================================================================================
+taken:
+	# bucket taken
+	if (GetSenderRef() == hint42bucket)
+	{
+		SetHintSolved(hint42);
+	}
+
+	return;
+
+# ========================================================================================
+
+end
+

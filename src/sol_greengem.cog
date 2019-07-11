@@ -1,0 +1,123 @@
+# Jones 3D Cog Script
+#
+# SOL_GreenGem.cog
+#
+# [TRM]
+#
+# GemA = 95
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     activated
+    
+    thing       player      local
+    thing       gem
+    thing       gemCam
+    thing       camPos
+    
+    sound       snd_Gem1=Inxj193.wav    local   # First gem: One of King Sol's jewels.
+    sound       snd_Gem2=Inxj194.wav    local   # Second gem: Another Jewel...
+    sound       snd_Gem3=Inxj195.wav    local   # Third gem: A third gem...
+    
+    cog         blueGem
+    cog         redGem
+    cog         talkCog             local
+    
+    int         gemsFound=0         local
+    int         gotIt=0             local
+    int         curCam              local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetThingLight(gem, '0.3 0.8 0.3', 0.01, 0.1);
+    return;
+
+# ========================================================================================
+
+user0:
+
+    gemsFound = gemsFound + 1;
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+
+    if((GetSenderRef() == gem) && (gotIt == 0))
+    {
+        gotIt = 1;
+        StartCutscene(1);
+        
+        # increase gemsFound in the other cogs
+        SendMessage(blueGem, user0);
+        SendMessage(redGem, user0);
+        
+        # disable player
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        
+        # switch to gemCam
+        SetCameraFocus(2, gemCam);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        Sleep(0.5);
+        
+        # Call the Pickup Lines cog
+        talkCog = GetCogByIndex(0);
+    	SendMessage(talkCog, 27);
+        
+        # sleep to wait for talkCog
+        Sleep(1.0);
+        
+        # play dialog as gems spins into inventory
+        if(gemsFound == 0)
+        {
+            PlayVoice(player, snd_Gem1, 1.0, 1);
+        }
+        
+        else if(gemsFound == 1)
+        {
+            PlayVoice(player, snd_Gem2, 1.0, 1);
+        }
+        
+        else if(gemsFound == 2)
+        {
+            PlayVoice(player, snd_Gem3, 1.0, 1);
+        }
+        
+        # increase gemsFound in this cog
+        gemsFound = gemsFound + 1;
+        
+        # restore controls
+        ClearActorFlags(player, 0x200000);
+        
+        # return camera to player
+        SetCameraPosition(curCam, GetThingPos(camPos));
+        SetCurrentCamera(curCam);
+        
+        EndCutscene();
+    }
+
+    return;
+            
+# ========================================================================================
+        
+end
+

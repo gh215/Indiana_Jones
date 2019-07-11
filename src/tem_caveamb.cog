@@ -1,0 +1,86 @@
+# Jones 3D Cog Script
+#
+# TEM_CaveAmb.cog
+#
+# Produces random ambient cave sounds when attatched to a ghost object.
+# Based on code from TEO_Drops.cog by SXC.
+#
+# [TRM & SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     pulse
+    
+    thing       ghost
+        
+    sound       sndCave0=gen_cave_a1.wav    local
+    sound       sndCave1=gen_cave_a2.wav    local
+    sound       sndCave2=gen_cave_a3.wav    local
+    sound       sndCave3=gen_cave_a4.wav    local
+    sound       sndCave4=gen_cave_a5.wav    local
+    sound       sndCave5=gen_cave_a6.wav    local
+        
+    float       caveFreq        local
+    
+    flex        pulseTime=2.0
+    flex        vol=1.0
+    flex        minDist=-1
+    flex        maxDist=-1
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetPulse(pulseTime);
+    
+    return;
+    
+# ========================================================================================
+
+pulse:
+    
+    caveFreq = Rand();
+
+    if (caveFreq < 0.16)
+        {
+            PlaySoundThing(sndCave0, ghost, vol, minDist, maxDist, 0x0);
+        }
+        
+    if ((caveFreq > 0.16) && (caveFreq < 0.32))
+        {
+            PlaySoundThing(sndCave1, ghost, vol, minDist, maxDist, 0x0);
+        }
+        
+    if ((caveFreq > 0.32) && (caveFreq < 0.48))
+        {
+            PlaySoundThing(sndCave2, ghost, vol, minDist, maxDist, 0x0);
+        }
+    
+    if ((caveFreq > 0.48) && (caveFreq < 0.64))
+        {
+            PlaySoundThing(sndCave3, ghost, vol, minDist, maxDist, 0x0);
+        }
+    
+    if ((caveFreq > 0.64) && (caveFreq < 0.80))
+        {
+            PlaySoundThing(sndCave4, ghost, vol, minDist, maxDist, 0x0);
+        }
+    
+    if ((caveFreq > 0.80) && (caveFreq < 0.96))
+        {
+            PlaySoundThing(sndCave5, ghost, vol, minDist, maxDist, 0x0);
+        }
+        
+    return;
+    
+# ========================================================================================
+        
+end

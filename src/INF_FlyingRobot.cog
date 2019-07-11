@@ -1,0 +1,408 @@
+# Jones 3D Cog Script
+#
+# INF_FlyingRobot.cog
+# Controls the robot sector thing
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     activate
+    message     startup
+    message     pulse
+    message     arrived
+    message     timer
+    
+    message     user0       # right imp part inserted
+    message     user1       # wrong part inserted
+    message     user2       # no part inserted
+    
+    cog         exitcog
+    cog         hintcog
+    
+    sector      aethsector
+    
+    surface     safeface0
+    surface     safeface1
+    surface     safeface2
+    
+    surface     aethadjoin0
+    surface     aethadjoin1
+    surface     aethadjoin2
+    surface     aethadjoin3
+    surface     aethadjoin4
+    surface     aethadjoin5
+    surface     aethadjoin6
+    surface     aethadjoin7
+    surface     aethadjoin8
+    surface     aethadjoin9
+    surface     aethadjoin10
+    surface     aethadjoin11
+    surface     aethadjoin12
+    surface     aethadjoin13
+    surface     aethadjoin14
+    surface     aethadjoin15
+    
+    thing       player                                      local
+    thing       actorindy
+    thing       horseman                                    
+    
+    thing       robo_tgt0
+    thing       robo_tgt1
+    thing       robo_cam0
+    thing       robo_cam1
+    thing       robo_cam2
+    
+    thing       cam_pos0
+    thing       cam_tgt0
+    
+    keyframe    head_on_anim=0mr_headon.key                 local
+    
+    thing       whipstrut
+    thing       whipstrut1 
+    
+    thing       impstand                                        
+    thing       marduk_leggs
+
+    thing       bigdoor0                                    linkid=4
+    thing       bigdoor1                                    linkid=4
+    sector      doorsector
+    
+    thing       generator_pos
+    
+    sound       horsemanline=im11i02.wav                    local
+    sound       doorslide=olv_quetzdoor_move_c.wav          local
+    sound       doorstop=olv_quetzdoor_stop_c.wav           local
+    sound       horsemusic=mus_inf_horseride.wav            local
+    sound       strutrotate=shs_clock_gears.wav             local
+    sound       strutstop=nub_elev_stop_c.wav               local
+    
+    #horseman sounds
+    sound       horsewalk=mus_inf_chapel.wav                local
+    sound       horse_headopen=inf_mr_headopen.wav          local
+    sound       mardukline=im11i02.wav                      local
+    
+    # just won't open lines...
+	sound	    in_line0=Inxj096.wav				        local # I can't open it-->insayline[25]
+	sound	    in_line1=Inxj097.wav			            local # For some reason...won't open.
+	sound	    in_line2=Inxj098.wav				        local # It won't budge.
+	sound	    in_line3=Inxj099.wav			            local # Something is holding this door closed.
+	sound	    in_line4=Inxj102.wav				        local # must be way...don't know how.
+    
+    int         x                                           local
+    int         y                                           local
+    int         doorchan                                    local
+    int         headchannel                                 local
+    int         headkey                                     local
+    int         strutchan                                   local
+    int         doneonce=0                                  local
+    int         levitatorin=1                               local
+    int         toggleint=0                                 local
+    int         headchannel                                 local
+    int         blocker=0                                   local
+    int         voiceflag=0                                 local
+    template    e_pool=EnergyWhirlpool                      local
+    
+    material    botmat=mrhdfr.mat                           local
+    thing       m_voiceactor
+      
+end
+
+
+code
+#........................................................................................
+startup:
+
+    //inital conditions
+    SectorAdjoins(doorsector, 0);
+    
+    //AISetCutsceneMode(horseman);
+    SetThingFlags(horseman, 0x80000);
+    ClearThingFlags(whipstrut, 0x80000000);     //non whip
+    ClearThingFlags(whipstrut1, 0x80000000);     //non whip
+    ClearAdjoinFlags(safeface0, 0x2);
+    ClearAdjoinFlags(safeface1, 0x2);
+    ClearAdjoinFlags(safeface2, 0x2);
+    player = GetLocalPlayerThing();
+    Sleep(1);
+    
+    //setting adjoins to 80 opacity
+    for(y=0; y<=15; y=y+1)
+    {
+        SetAdjoinAlpha(aethadjoin0[y], 80);
+        Sleep(0.01);
+    }
+    
+    //Rotate Spars downward
+    Rotate(whipstrut, -90, 2, 3);
+    Rotate(whipstrut1, -90, 2, 3);
+    SetPulse(2);
+    
+return;
+
+#........................................................................................
+activate:
+
+    If ((GetSenderID() == 4) && (GetCurFrame(bigdoor0) == 0) && (blocker == 0))
+    {
+        blocker = 1;
+        StartCutscene(1);
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        DeselectWeaponWait(player);
+        PlayVoice(player, in_line0[(RandBetween(0,4))], 1, 1);
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        blocker = 0;
+    }
+    
+return;
+
+#........................................................................................
+    
+//right part
+user0:
+
+    SendMessage(hintcog, user0);
+    SetPulse(0);
+    //prep cameras
+    SetCameraLookInterp(2, 0);
+    SetCameraPosInterp(2, 0);
+    SetCameraInterpSpeed(2, 0);
+    Sleep(0.001);
+    
+    //cut around to front pointing at head slightly below bot
+    SetCameraSecondaryFocus(2, robo_tgt0);
+    SetCameraFocus(2, robo_cam0);
+    SetCurrentCamera(2);
+    SetCameraFOV(40, 0, 0);
+    sleep(0.01);
+    SetCameraFOV(30, 1, 8);
+	PlaySoundLocal(horsemusic, 0.65, 0, 0x0, 0);
+    
+    //destroy the old static marduk
+    DestroyThing(marduk_leggs);
+    DestroyThing(impstand);
+    
+    //reveal the actor marduk
+    SetThingLight(horseman, '1 1 1', 0.02, 0);
+    ClearThingFlags(horseman, 0x80000);
+    AISetCutsceneMode(horseman);
+    AttachThingtoThing(robo_tgt0, horseman);
+    PlaySoundThing(horse_headopen, horseman, 1, 10, 20, 0x0080);
+    headkey = PlayKey(horseman, head_on_anim, 2, 0x14, 0);
+    SetTimer(0.1);
+    voiceflag=0;
+    //PlayVoice(player, mardukline, 1, 1);
+    PlayVoice(m_voiceactor, mardukline, 1, 1);
+    voiceflag=1;
+    SetMaterialCel(botmat, 1);
+    Sleep(1);
+    
+    //start the horseman walking
+    AISetMoveSpeed(horseman, 1);
+    AISetMoveFrame(horseman, 1);
+    SetCollideType(horseman, 0);
+    Sleep(3.5);
+    
+    //cut around to front of door
+    SetCameraFocus(2, robo_cam1);
+    SetCurrentCamera(2);
+    SetCameraFOV(70, 0, 0);
+    AttachThingtoThing(robo_cam1, horseman);
+    
+    //doors opening
+    SectorAdjoins(doorsector, 1);
+    doorchan=PlaySoundThing(doorslide, bigdoor0, 0.75, 30, 50, 0x0081);
+    MoveToFrame(bigdoor0, 1, 1);
+    MoveToFrame(bigdoor1, 1, 1);
+    Sleep(1);
+    AIWaitForStop(horseman);
+    Sleep(1);
+    SetCameraFocus(2, robo_cam2);
+    SetCurrentCamera(2);
+    SetCameraFOV(40, 0, 0);
+    Sleep(1);
+    //StopKey(horseman, headkey, 1);
+    headchannel = PlaySoundThing(horse_headopen, horseman, 1, 10, 20, 0x0080);
+    WaitForSound(headchannel);
+    SetMaterialCel(botmat, 0);
+    Sleep(0.5);
+                                        
+    //return control to player
+    CopyOrientAndPos(actorindy, player);
+    SetThingFlags(actorindy, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    ClearThingFlags(player, 0x10);
+    ClearThingFlags(player, 0x80000);
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0);
+    EndCutscene();
+    SetCollideType(horseman, 3);    
+
+    //sets okaytofinish to 1 in INF_Cinematic_Exit
+    SendMessage(exitcog, user7);
+    
+return;
+
+#........................................................................................
+// the levitator part
+user1:
+
+    levitatorin=1;
+    StartCutscene(1);
+    SetActorFlags(player, 0x200000);
+    StopThing(player);
+    SetCameraFocus(2, cam_pos0);
+    SetCameraSecondaryFocus(2, cam_tgt0);
+    SetCurrentCamera(2);
+    SetCameraFOV(100, 0, 0);
+    
+    //fade the aeth sector in
+    for(x=0; x<=80; x=x+20)
+    {
+        for(y=0; y<=15; y=y+1)
+        {
+            SetAdjoinAlpha(aethadjoin0[y], x);
+            Sleep(0.001);
+        }
+        
+    }
+    SetSectorFlags(aethsector, 0x0100);
+    ClearThingFlags(whipstrut, 0x80000000);     //non whip
+    ClearThingFlags(whipstrut1, 0x80000000);     //non whip
+    
+    strutchan=PlaySoundThing(strutrotate, whipstrut, 1, 30, 50, 0x0081);
+    Rotate(whipstrut, -90, 2, 3);
+    Rotate(whipstrut1, -90, 2, 3);
+    Sleep(3.5);
+    StopSound(strutchan, 0);
+    PlaySoundThing(strutstop, whipstrut, 1, 30, 50, 0x0080);
+    
+    //no move
+    ClearAdjoinFlags(safeface0, 0x2);
+    ClearAdjoinFlags(safeface1, 0x2);
+    ClearAdjoinFlags(safeface2, 0x2);
+    SetPulse(2);
+    Sleep(5);
+    
+    CopyOrientAndPos(actorindy, player);
+    SetThingFlags(actorindy, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    ClearThingFlags(player, 0x10);
+    ClearThingFlags(player, 0x80000);
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0);
+    EndCutscene();
+    
+return;
+
+#........................................................................................
+//no part
+user2:
+
+    if (levitatorin != 1) return;
+    Sleep(1);
+    levitatorin = 0;
+    StartCutscene(1);
+    //print("hit startcutscene");
+    SetActorFlags(player, 0x200000);
+    
+    StopThing(player);
+    SetCameraFocus(2, cam_pos0);
+    SetCameraSecondaryFocus(2, cam_tgt0);
+    SetCurrentCamera(2);
+    SetCameraFOV(110, 0, 0);
+    
+    //make moveable
+    SetAdjoinFlags(safeface0, 0x2);
+    SetAdjoinFlags(safeface1, 0x2);
+    SetAdjoinFlags(safeface2, 0x2);
+    
+    //fade the aeth sector out
+    for(x=80; x>=0; x=x-20)
+    {
+        for(y=0; y<=15; y=y+1)
+        {
+            SetAdjoinAlpha(aethadjoin0[y], x);
+            Sleep(0.001);
+        }
+        
+    }
+    ClearSectorFlags(aethsector, 0x0100);
+    SetThingFlags(whipstrut, 0x80000000);       //make strut whippable
+    SetThingFlags(whipstrut1, 0x80000000);     //non whip
+    
+    strutchan=PlaySoundThing(strutrotate, whipstrut, 1, 30, 50, 0x0081);
+    Rotate(whipstrut, 90, 2, 3);
+    Rotate(whipstrut1, 90, 2, 3);
+    Sleep(3.5);
+    StopSound(strutchan, 0);
+    PlaySoundThing(strutstop, whipstrut, 1, 30, 50, 0x0080);
+    
+    SetPulse(0);
+    Sleep(4);
+    
+    CopyOrientAndPos(actorindy, player);
+    SetThingFlags(actorindy, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    ClearThingFlags(player, 0x10);
+    ClearThingFlags(player, 0x80000);
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0);
+    EndCutscene();
+        
+return;
+
+#........................................................................................
+//particle generation
+pulse:
+        
+    CreateThing(e_pool, generator_pos);
+    
+return;
+    
+#........................................................................................
+timer:
+    toggleint=1-toggleint;
+    if (voiceflag == 1)
+    {
+        return;
+    }
+    
+    if(toggleint == 0)
+    {
+        SetMaterialCel(botmat, 1);
+        SetTimer(RandBetween(1, 2)*0.05);
+        return;
+    }
+    
+    if(toggleint == 1)
+    {
+        SetMaterialCel(botmat, 0);
+        SetTimer(RandBetween(1, 2)*0.05);
+        return;
+    }
+    
+return;
+
+#........................................................................................
+
+arrived:
+    
+    If (GetSenderRef() == bigdoor0)
+    {
+        StopSound(doorchan, 0);
+        PlaySoundThing(doorstop, bigdoor0, 1, 30, 50, 0x0080);
+    }
+    
+return;
+    
+#........................................................................................
+
+end
+
+

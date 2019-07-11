@@ -1,0 +1,442 @@
+# Jones 3D Cog Script
+#
+# TEO_MirrorGod.cog
+#
+# Controls the final descent of the mirror god.
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message     startup
+	message     activate
+    message     taken
+    message     crossed
+    
+    surface     endsurf
+    thing       fadeplate
+    thing       finishcam
+    thing       finalactor 
+    
+    cog         godoorcog
+    
+    template    jagtemplate=jagidolmove      local
+    template    fishtemplate=fshidolmove     local
+    template    birdtemplate=brdidolmove     local
+    
+    thing       jagpos
+    thing       fishpos
+    thing       birdpos
+    
+    thing       jagnewidol      local
+    thing       fishnewidol     local
+    thing       birdnewidol     local
+    
+    thing       jagkey          linkid=2
+    thing       fishkey         linkid=2
+    thing       birdkey         linkid=2
+    
+    thing       gear0
+    thing       gear1
+    thing       gear2
+    thing       gear3
+    
+    thing       jagstand        linkid=4
+    thing       fishstand       linkid=4
+    thing       birdstand       linkid=4
+    
+    thing       jagcam
+    thing       jagcam_tgt
+    thing       birdcam
+    thing       birdcam_tgt
+    thing       fishcam
+    thing       fishcam_tgt
+    thing       statuecampos
+    
+    thing       statue
+    thing       column
+    thing       column1
+    thing       column2
+    thing       gear
+
+	thing       player          local
+
+	flex		moveSpeed=0.5
+    flex        statSpeed=2
+    flex        waittime        
+    
+    sound       idolplacesound=fol_in_landearth.wav local
+    sound       indyline0=to06j05.wav               local
+    
+    sound       indylinea0=To05j01.wav   local
+    sound       indylinea1=Bb11j02.wav   local
+    
+    sound       indylineb0=Inxj089.wav      local
+    sound       indylineb1=Inxj090.wav      local
+    sound       indylineb2=Inxj092.wav      local
+    sound       indylineb3=Inxj060.wav      local
+    sound       indylineb4=Inxj087.wav      local
+    sound       indylineb5=Inxj088.wav      local
+    
+    sound       indyaltar0=TO06J04.wav      local
+    sound       indyaltar1=TO06J05.wav      local
+    sound       indyaltar2=TO06J06.wav      local
+    sound       statsound=teo_spike_block_c.wav local
+    sound       finalwav=mus_gen_awechord2.wav    local
+    sound       doorstop=olv_quetzdoor_stop_c.wav   local
+
+	int		    idolcount		            local
+    int         mirrorcount                 local
+    int         actcheck=0                  local
+    int         birdidol=74                 local
+    int         fishidol=75                 local
+    int         jagidol=76                  local
+    int         eventcheck=0                local
+    int         wepnum=1                    local
+    int         lastrand=-1                 local
+    int         currand=0                   local
+	int		    statchannel=0			    local   
+    int         finalflag=0                 local
+    int         bin74=0                     local
+    int         bin75=0                     local
+    int         bin76=0                     local
+    
+    vector      playervec                   local
+    vector      playery                     local
+    vector      playerx                     local
+    vector      resetvec                    local
+    
+                      
+    
+end
+
+# ========================================================================================
+
+code
+
+# ........................................................................................
+startup:
+
+	player = GetLocalPlayerThing();
+    resetvec = VectorSet(0, 180, 0);
+    SetThingAlpha(fadeplate, 0);
+    
+return;
+
+# ........................................................................................
+crossed:
+
+    if ((GetSenderRef() == endsurf) && (finalflag == 0) && (GetSourceRef() == player))
+    {
+        finalflag=1;
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        MakeMeStop(player);
+        DeselectWeaponWait(player);
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(finalactor, 0x80000);
+        AISetCutsceneMode(finalactor);
+        AISetMoveSpeed(finalactor, 1.1);
+        CopyPlayerHolsters(player, finalactor);
+        StartCutscene(1);
+        SetCameraFocus(2, finishcam);
+        SetCameraSecondaryFocus(2, finalactor);
+        SetCurrentCamera(2);
+        PlaySoundLocal(finalwav, 1, 0, 0, 0);
+        SetCameraFOV(100, 0, 0);
+        AISetMoveFrame(finalactor, 1);
+        AttachThingToThing(fadeplate, finishcam);
+        ThingFadeAnim(fadeplate, 0, 1, 2.5, 0);
+        Sleep(2.5);
+        JonesEndLevel();
+    }
+    
+return;
+
+# ........................................................................................
+
+activate:
+
+    bin74=GetInv(player, 74);
+    bin75=GetInv(player, 75);
+    bin76=GetInv(player, 76);
+    
+    playervec = GetThingLVec(player);
+    playery = VectorY(playervec);
+    playerx = Vectorx(playervec);
+    
+    if ((GetCurItem(player) == 0) && 
+        (GetSenderID() == 4))        
+    {
+        StopThing(player);
+        StartCutscene(0);
+        SetActorFlags(player, 0x200000);
+        if ((bin74 + bin75 + bin76) == 1)
+        {
+            PlayVoice(player, indyaltar0, 1, 1);
+        }
+        
+        if ((bin74 + bin75 + bin76) == 2)
+        {
+            PlayVoice(player, indyaltar1, 1, 1);
+        }
+        
+        if ((bin74 + bin75 + bin76) == 0)
+        {
+            PlayVoice(player, indyaltar2, 1, 1);
+        }
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+        return;
+    }
+    
+    //create the Jaguar idol    
+    if ((GetSenderRef() == jagstand) && 
+        (GetCurItem(player) == 76) && 
+        (actcheck == 0))
+    {
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player);
+            DeselectWeaponWait(player);
+            DeselectWeapon(player);
+        }
+        actcheck = 1;
+        SetCameraFocus(2, jagcam);
+        SetCameraSecondaryFocus(2, jagcam_tgt);
+        SetCurrentCamera(2);
+        SetCameraFOV(50, 0, 0);
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        ChangeInv(player, 76, -1);
+        PlayMode(player, 61, 0);
+        sleep(0.35);
+        jagnewidol = CreateThing(jagtemplate, jagpos);
+        CaptureThing(jagnewidol);
+        AttachThingToThing(jagnewidol, jagstand);
+        PlaySoundThing(idolplacesound, jagnewidol, 1, 10, 20, 0x0080);
+        SetThingLight(jagnewidol, '0 1 0', 0.05, 0.5);
+        Sleep(1);
+        MoveToFrame(jagstand, 1, moveSpeed);
+        WaitForStop(jagstand);
+        sleep(1);
+        SetCameraFOV(90, 0 ,0);
+        SetCurrentCamera(1);
+        EndCutScene();
+        ClearActorFlags(player, 0x200000);
+        actcheck = 0;
+        wepnum = 1;
+        mirrorcount = mirrorcount + 1;
+    }
+    
+    //Create the Bird Idol
+    if ((GetSenderRef() == birdstand) && 
+        (GetCurItem(player) == 74) && 
+        (actcheck == 0))
+    {
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player);
+            DeselectWeaponWait(player);
+            DeselectWeapon(player);
+        }
+        //print("creating bird");
+        actcheck = 1;
+        SetCameraFocus(2, birdcam);
+        SetCameraSecondaryFocus(2, birdcam_tgt);
+        SetCurrentCamera(2);
+        SetCameraFOV(50, 0, 0);
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        PlayMode(player, 61, 0);
+        sleep(0.35);
+        birdnewidol = CreateThing(birdtemplate, birdpos);
+        CaptureThing(birdnewidol);
+        AttachThingToThing(birdnewidol, birdstand);
+        PlaySoundThing(idolplacesound, birdnewidol, 1, 10, 20, 0x0080);
+        SetThingLight(birdnewidol, '1 1 0', 0.05, 0.5);
+        ChangeInv(player, 74, -1);
+        Sleep(1);
+        MoveToFrame(birdstand, 1, moveSpeed);
+        WaitForStop(birdstand);
+        sleep(1);
+        SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0);
+        EndCutScene();
+        ClearActorFlags(player, 0x200000);
+        actcheck = 0;
+        wepnum=1;
+        mirrorcount = mirrorcount + 1;
+    }
+    
+    //Create the Fish Idol
+    if ((GetSenderRef() == fishstand) && 
+        (GetCurItem(player) == 75) && 
+        (actcheck == 0))
+    {
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player);
+            DeselectWeaponWait(player);
+            DeselectWeapon(player);
+        }
+        actcheck = 1;
+        SetCameraFocus(2, fishcam);
+        SetCameraSecondaryFocus(2, fishcam_tgt);
+        SetCurrentCamera(2);
+        SetCameraFOV(50, 0, 0);
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        PlayMode(player, 61, 0);
+        sleep(0.35);
+        fishnewidol = CreateThing(fishtemplate, fishpos);
+        CaptureThing(fishnewidol);
+        AttachThingToThing(fishnewidol, fishstand);
+        PlaySoundThing(idolplacesound, fishnewidol, 1, 10, 20, 0x0080);
+        SetThingLight(fishnewidol, '0 0 1', 0.05, 0.5);
+        ChangeInv(player, 75, -1);
+        Sleep(1);
+        MoveToFrame(fishstand, 1, moveSpeed);
+        WaitForStop(fishstand);
+        sleep(1);
+        SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0);
+        EndCutScene();
+        ClearActorFlags(player, 0x200000);
+        actcheck = 0;
+        wepnum=1;
+        mirrorcount = mirrorcount + 1;    
+    }
+    
+    //Send the statue down on the last item creation
+    if ((mirrorcount == 3) && (actcheck == 0))
+    {
+        actcheck = 1;
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        SetCameraFocus(2, statuecampos);
+        SetCameraSecondaryFocus(2, statue);
+        SetCurrentCamera(2);
+        SetCollideType(gear0, 0);
+        SetCollideType(gear1, 0);
+        SetCollideType(gear2, 0);
+        SetCollideType(gear3, 0);
+        SetCollideType(statue, 0);
+        SetCollideType(column, 0);
+        SetCollideType(column1, 0);
+        SetCollideType(column2, 0);
+        SetCollideType(gear, 0);
+        Sleep(0.15);
+        statchannel=PlaySoundThing(statsound, statue, 1, 30, 50, 0x0081);
+        MoveToFrame(statue, 0, statSpeed);
+        MoveToFrame(column, 0, statSpeed);
+        MoveToFrame(column1, 0, statSpeed);
+        MoveToFrame(column2, 0, statSpeed);
+        MoveToFrame(gear, 0 , statSpeed);
+        WaitForStop(statue);
+        PlaySoundLocal(doorstop, 1, 0, 0, 0);
+        StopSound(statchannel, 0.0);
+        RotateToPYR(statue, resetvec, 1);
+        RotateToPYR(gear, resetvec, 1);
+        Sleep(1);
+        SetCollideType(statue, 3);
+        SetCollideType(column, 3);
+        SetCollideType(column1, 3);
+        SetCollideType(column2, 3);
+        SetCollideType(gear, 3);
+        SetCollideType(gear0, 3);
+        SetCollideType(gear1, 3);
+        SetCollideType(gear2, 3);
+        SetCollideType(gear3, 3);
+        SetCurrentCamera(1);
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+        return;
+    }
+    
+    //Send message to big door cog        
+    if ((GetSenderRef() == statue) &&
+        (GetCurItem(player) == 63) &&
+        (mirrorcount == 3) && 
+        (GetCurFrame(statue) == 0) &&
+        (actcheck == 1) &&
+        (playery > 0) &&
+        (playerx < 0.984))
+    {
+        While(wepnum !=0)
+        {
+            wepnum = DeselectWeapon(player);
+            DeselectWeaponWait(player);
+        }
+        SendMessage(godoorcog, user0);
+        return;
+    }
+    else if ((GetSenderRef() == statue) &&
+             (GetCurItem(player) == 63) &&
+             (mirrorcount < 3))
+    {
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        StartCutscene(1);
+        SetExtCamOffset('0.15 -0.05 0.04');
+        PlayVoice(player, indylinea1, 1, 1);
+        Sleep(1);
+        EndCutscene();
+        RestoreExtCam();
+        ClearActorFlags(player, 0x200000);
+        return;
+    }
+    else if ((GetSenderRef() == statue) && 
+             (GetCurItem(player) != 63))
+    {
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        StartCutscene(1);
+        SetExtCamOffset('0.15 -0.05 0.04');
+        PlayVoice(player, indylinea0, 1, 1);
+        Sleep(1);
+        EndCutscene();
+        RestoreExtCam();
+        ClearActorFlags(player, 0x200000);
+        return;
+    }
+    
+    if ((GetCurItem(player) != 0) && (GetSenderID() == 4))
+    {
+        StopThing(player);
+        StartCutscene(0);
+        SetActorFlags(player, 0x200000);
+        currand = RandBetween(0, 5);
+        While (lastrand == currand)
+        {
+            currand = RandBetween(0, 5);
+        }
+        PlayVoice(player, indylineb0[currand], 1, 1);
+        lastrand = currand;
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+        return;
+    }
+        
+    return;
+                            
+# ........................................................................................                
+taken:
+
+	if (GetSenderID() == 2)
+	{
+        idolcount=idolcount + 1;
+	}
+    if (GetSenderID() == 3)
+    {
+        mirrorcount = 0;
+    }            
+    
+return;
+
+# ........................................................................................
+end
+
+

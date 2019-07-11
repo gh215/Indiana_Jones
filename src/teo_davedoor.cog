@@ -1,0 +1,60 @@
+# Jones 3D Cog Script
+#
+# TEO_MirrorDoor.cog
+#
+# Controls the opening of the final door.
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    message     activate
+    
+    cog         doorcog
+        
+    thing       door0
+    thing       door1
+    
+    thing       bolt0
+    thing       bolt1
+    thing       bolt2
+    thing       bolt3
+    
+    thing       statue
+    thing       mirror
+    
+    int         check=0     local
+    
+    end
+
+# ========================================================================================
+
+code
+
+# ........................................................................................
+activate:
+    if((GetSenderRef() == statue) && (check == 0))
+    {
+        check=1;
+        SendMessage(doorcog, user0);
+        Sleep(30);
+        print("Hey DAVE! I'M RESETTING THE DOORS NOW");    
+        MoveToFrame(door0, 0, 3);
+        MoveToFrame(door1, 0, 3);
+        WaitForStop(door0);
+        For(count = 0; count <= 4; count=count + 1)
+            {
+                MoveToFrame(bolt0[count], 0, 3);
+            }
+            
+        check=0;
+            
+    }
+	return;
+
+# ........................................................................................
+
+end
+

@@ -1,0 +1,68 @@
+# Jones 3D Cog Script
+#
+# Jeep_Cutscene_pyr.cog
+#
+# [PKM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		created
+	message		user0
+	message		user1
+
+	thing		jeep								local
+
+	int			jeepMesh							local
+	int			meshRef								local
+
+	model		jeepGasCan=gascan_pyr_jeep.3do		local
+
+end
+
+# ========================================================================================
+
+code
+
+created:
+	jeep = GetSenderRef();
+	jeepMesh = GetMeshByName(jeep, "jeep_body");
+	meshRef = SetThingMesh(jeep, jeepMesh, jeepGasCan, 0);
+
+	SetThingUserData(jeep, meshRef);
+	return;
+
+user0:
+	jeep = GetParam(0);
+	meshRef = GetThingUserData(Jeep);
+	if (meshRef != -1)
+	{
+		// The gas can is currently attached to the jeep - remove it.
+
+		RestoreThingMesh(jeep, meshRef);
+		SetThingUserData(jeep, -1);
+	}
+	return;
+
+user1:
+	jeep = GetParam(0);
+	meshRef = GetThingUserData(Jeep);
+	if (meshRef != -1)
+	{
+		// The gas can is currently attached to the jeep - remove it.
+
+		RestoreThingMesh(jeep, meshRef);
+		SetThingUserData(jeep, -1);
+	}
+
+	// The gas can is not on the jeep - put it back.
+	jeepMesh = GetMeshByName(jeep, "jeep_body");
+	meshRef = SetThingMesh(jeep, jeepMesh, jeepGasCan, 0);
+
+	SetThingUserData(jeep, meshRef);
+
+	return;
+end

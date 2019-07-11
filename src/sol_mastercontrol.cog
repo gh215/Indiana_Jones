@@ -1,0 +1,437 @@
+# Jones 3D Cog Script
+#
+# SOL_MasterControl.cog
+#
+# Controls the little green lights on the control panel.
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     user0
+    message     pulse
+    message     timer
+    
+    # ** Panel switches **
+    surface     switch1
+    surface	    switch2
+    surface	    switch3
+    surface	    switch4
+    surface	    switch5
+    
+    # ** Loop 1 **
+    surface     loop1Lt0
+    surface     loop1Lt1
+    surface     loop1Lt2
+    surface     loop1Lt3
+    surface     loop1Lt4
+    surface     loop1Lt5
+    
+    # ** Loop 2 **
+    surface     loop2Lt0
+    surface     loop2Lt1
+    surface     loop2Lt2
+    surface     loop2Lt3
+    surface     loop2Lt4
+    surface     loop2Lt5
+    
+    # ** Loop 3 **
+    surface     loop3Lt0
+    surface     loop3Lt1
+    surface     loop3Lt2
+    surface     loop3Lt3
+    surface     loop3Lt4
+    surface     loop3Lt5
+
+    # ** Loop 4 **
+    surface     loop4Lt0
+    surface     loop4Lt1
+    surface     loop4Lt2
+    surface     loop4Lt3
+    surface     loop4Lt4
+    surface     loop4Lt5
+    surface     loop4Lt6
+
+    # ** Loop 5 **
+    surface     loop5Lt0
+    surface     loop5Lt1
+    surface     loop5Lt2
+    
+    # ** Loop 6 **
+    surface     loop6Lt0
+    surface     loop6Lt1
+    surface     loop6Lt2
+    surface     loop6Lt3
+    surface     loop6Lt4
+    surface     loop6Lt5
+    
+    # ** Start Loops **
+    int         startLoop1=0        local
+    int         startLoop2=0        local
+    int         startLoop3=0        local
+    int         startLoop4=0        local
+    int         startLoop5=0        local
+    int         startLoop6=0        local    
+
+    # ** Loop Timers **
+    int         loop1Time=0         local
+    int         loop2Time=0         local
+    int         loop3Time=0         local
+    int         loop4Time=0         local
+    int         loop5Time=0         local
+    int         loop6Time=0         local
+    
+    # ** math **
+    int         count1=0            local
+    int         count2=0            local
+    int         count3=0            local
+    int         count4=0            local
+    int         count5=0            local
+    int         count6=0            local
+    
+    # ** misc **
+    thing       ghostPos
+    sound       bing=sol_panel_position_c.wav       local
+    int         pause=2.0           local
+
+end
+
+# ========================================================================================
+
+code
+
+user0:
+
+    startLoop1 = 1;
+    SetPulse(1.0);
+    return;
+        
+# ========================================================================================
+
+pulse:
+
+    PlaySoundThing(bing, ghostPos, 0.5, 4.0, 8.0, 0x0);
+    
+# LOOP 1
+    if(count1 == 6)
+    {
+        count1 = 0;
+        #Print("reset 1");
+    }
+        
+    
+    if(startLoop1 == 1)
+    {
+        #Print("Loop1");
+        SetPulse(3.0);
+        count1 = count1 + 1;
+        SetWallCel(loop1Lt0[count1-1], 1);
+        #PrintInt(count1-1);
+        loop1Time = 1;
+        SetTimer(2.0);
+
+        if((GetWallCel(loop1Lt2) == 1) && (GetWallCel(switch1) == 2))
+        {
+            count2 = 0;
+            count4 = 0;
+            count6 = 0;
+            startLoop1 = 0;
+            Sleep(2.0);
+            SetWallCel(loop1Lt2, 0);
+            Sleep(1.0);
+            startLoop2 = 1;
+        }
+    }
+        
+# LOOP 2
+    if(count2 == 6)
+    {
+        count2 = 0;
+        #Print("reset 2");
+    }
+        
+    if(startLoop2 == 1)
+    {
+        #Print("Loop2");
+        SetPulse(3.0);
+        count2 = count2 + 1;
+        SetWallCel(loop2Lt0[count2-1], 1);
+        #PrintInt(count2-1);
+        loop2Time = 1;
+        SetTimer(pause);
+        
+        # If switch1 is thrown do this    
+        if((GetWallCel(loop2Lt4) == 1) && (GetWallCel(switch1) == 1))
+        {
+            count1 = 3;
+            startLoop2 = 0;
+            Sleep(2.0);
+            SetWallCel(loop2Lt5, 0);
+            # Sleep(1.0);
+            startLoop1 = 1;
+        }
+            
+        # If switch2 is thrown do this    
+        if((GetWallCel(loop2Lt1) == 1) && (GetWallCel(switch2) == 2))
+        {
+            count3 = 0;
+            startLoop2 = 0;
+            Sleep(2.0);
+            SetWallCel(loop2Lt1, 0);
+            Sleep(1.0);
+            startLoop3 = 1;
+        }
+        
+        # If switch3 is thrown do this    
+        if((GetWallCel(loop2Lt2) == 1) && (GetWallCel(switch3) == 2))
+        {
+            startLoop2 = 0;
+            Sleep(2.0);
+            SetWallCel(loop2Lt2, 0);
+            Sleep(1.0);
+            startLoop4 = 1;
+        }
+        
+        # If switch4 is thrown do this
+        if((GetWallCel(loop2Lt0) == 1) && (GetWallCel(switch4) == 2))
+        {
+            startLoop2 = 0;
+            Sleep(2.0);
+            SetWallCel(loop2Lt0, 0);
+            Sleep(1.0);
+            startLoop5 = 1;
+        }
+    }
+        
+# LOOP 3
+    if(count3 == 6)
+    {
+        count3 = 0;
+        #Print("reset 3");
+    }
+    
+    if(startLoop3 == 1)
+    {
+        #Print("Loop3");
+        SetPulse(3.0);
+        count3 = count3 + 1;
+        SetWallCel(loop3Lt0[count3-1], 1);
+        #PrintInt(count3-1);
+        loop3Time = 1;
+        SetTimer(pause);
+
+        # If switch1 is thrown do this    
+        if((GetWallCel(loop3Lt3) == 1) && (GetWallCel(switch1) == 1))
+        {
+            startLoop3 = 0;
+            Sleep(2.0);
+            SetWallCel(loop3Lt3, 0);
+            # Sleep(1.0);
+            startLoop1 = 1;
+        }
+            
+        # If switch2 is thrown do this    
+        if((GetWallCel(loop3Lt5) == 1) && (GetWallCel(switch2) == 1))
+        {
+            startLoop3 = 0;
+            Sleep(2.0);
+            SetWallCel(loop3Lt5, 0);
+            # Sleep(1.0);
+            startLoop2 = 1;
+        }
+        
+        # If switch4 is thrown do this
+        if((GetWallCel(loop3Lt4) == 1) && (GetWallCel(switch4) == 2))
+        {
+            count6 = 0;
+            startLoop3 = 0;
+            Sleep(2.0);
+            SetWallCel(loop3Lt4, 0);
+            Sleep(1.0);
+            startLoop5 = 1;
+        }
+    }
+        
+# LOOP 4
+    if(count4 == 7)
+    {
+        count4 = 0;
+        #Print("reset 4");
+    }
+    
+    if(startLoop4 == 1)
+    {
+        #Print("Loop4");
+        SetPulse(3.0);
+        count4 = count4 + 1;
+        SetWallCel(loop4Lt0[count4-1], 1);
+        #PrintInt(count4-1);
+        loop4Time = 1;
+        SetTimer(pause);
+    
+        # If switch1 is thrown do this    
+        if((GetWallCel(loop4Lt3) == 1) && (GetWallCel(switch1) == 1))
+        {
+            startLoop4 = 0;
+            Sleep(2.0);
+            SetWallCel(loop4Lt3, 0);
+            # Sleep(1.0);
+            startLoop1 = 1;
+        }
+            
+        # If switch2 is thrown do this    
+        if((GetWallCel(loop4Lt5) == 1) && (GetWallCel(switch2) == 2))
+        {
+            startLoop4 = 0;
+            # Sleep(2.0);
+            # SetWallCel(loop4Lt5, 0);
+            # Sleep(1.0);
+            startLoop3 = 1;
+        }
+        
+        # If switch3 is thrown do this    
+        if((GetWallCel(loop4Lt6) == 1) && (GetWallCel(switch3) == 1))
+        {
+            startLoop4 = 0;
+            Sleep(2.0);
+            SetWallCel(loop4Lt6, 0);
+            Sleep(1.0);
+            startLoop2 = 1;
+        }
+        
+        # If switch4 is thrown do this
+        if((GetWallCel(loop4Lt4) == 1) && (GetWallCel(switch4) == 2))
+        {
+            startLoop4 = 0;
+            Sleep(2.0);
+            SetWallCel(loop4Lt4, 0);
+            Sleep(1.0);
+            startLoop5 = 1;
+        }
+    }
+        
+# LOOP 5 -- dead end loop
+    if(count5 == 3)
+    {
+        #Print("cutscene of commies flying off tracks");
+        SetPulse(0);
+        return;
+    }
+    
+    if(startLoop5 == 1)
+    {
+        #Print("Loop5");
+        SetPulse(3.0);
+        count5 = count5 + 1;
+        SetWallCel(loop5Lt0[count5-1], 1);
+        #PrintInt(count5-1);
+        loop5Time = 1;
+        SetTimer(pause);
+        
+        # If switch5 is thrown do this    
+        if((GetWallCel(loop5Lt0) == 1) && (GetWallCel(switch5) == 2))
+        {
+            count5 = 0;
+            startLoop5 = 0;
+            Sleep(2.0);
+            SetWallCel(loop5Lt0, 0);
+            Sleep(1.0);
+            startLoop6 = 1;
+        }
+    }
+
+# LOOP 6
+    if(count6 == 6)
+    {
+        count6 = 0;
+        #Print("reset 6");
+    }
+    
+    if(startLoop6 == 1)
+    {
+        #Print("Loop6");
+        SetPulse(3.0);
+        count6 = count6 + 1;
+        SetWallCel(loop6Lt0[count6-1], 1);
+        #PrintInt(count6-1);
+        loop6Time = 1;
+        SetTimer(pause);
+    
+        # If switch1 is thrown do this    
+        if((GetWallCel(loop6Lt3) == 1) && (GetWallCel(switch1) == 1))
+        {
+            startLoop6 = 0;
+            Sleep(2.0);
+            SetWallCel(loop6Lt3, 0);
+            # Sleep(1.0);
+            startLoop1 = 1;
+        }
+            
+        # If switch4 is thrown do this
+        if((GetWallCel(loop6Lt4) == 1) && (GetWallCel(switch4) == 1))
+        {
+            count2 = 1;
+            startLoop6 = 0;
+            Sleep(2.0);
+            SetWallCel(loop6Lt4, 0);
+            # Sleep(1.0);
+            startLoop2 = 1;
+        }
+    
+        # If switch5 is thrown do this
+        if((GetWallCel(loop6Lt5) == 1) && (GetWallCel(switch5) == 1))
+        {
+            count5 = 1;
+            startLoop6 = 0;
+            Sleep(2.0);
+            SetWallCel(loop6Lt5, 0);
+            # Sleep(1.0);
+            startLoop5 = 1;
+        }
+    }
+        
+return;
+        
+# ========================================================================================
+
+timer:
+
+    if(loop1Time == 1)
+    {
+        SetWallCel(loop1Lt0[count1-1], 0);
+    }
+    
+    if(loop2Time == 1)
+    {
+        SetWallCel(loop2Lt0[count2-1], 0);
+    }
+    
+    if(loop3Time == 1)
+    {
+        SetWallCel(loop3Lt0[count3-1], 0);
+    }
+    
+    if(loop4Time == 1)
+    {
+        SetWallCel(loop4Lt0[count4-1], 0);
+    }
+    
+    if(loop5Time == 1)
+    {
+        SetWallCel(loop5Lt0[count5-1], 0);
+    }
+    
+    if(loop6Time == 1)
+    {
+        SetWallCel(loop6Lt0[count6-1], 0);
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

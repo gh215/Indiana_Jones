@@ -1,0 +1,365 @@
+# Jones 3d Cog Script
+#
+# SOL_ExplodingDebris.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     activated
+    message     entered
+    message     damaged
+    message     pulse
+    
+    thing       player          local
+    thing       indy            local
+    thing       dustThing       local    
+    thing       coffinCam
+    thing       coffin
+    thing       ghost
+    thing       target
+    thing       target1
+    thing       ghostSnake1
+    thing       ghostSnake2
+    thing       ghostSnake3
+    thing       ghostSnake4
+    thing       ghostSnake5
+    thing       indyCam
+    thing       interpCam
+    thing       dustPos         # dust cloud origin
+    thing       debrisPos1
+    thing       debrisPos2
+    
+    template    tplCoffin=opnsarc           local
+    template    tplSnake1=snake_a           local
+    template    tplSnake2=snake_b           local
+    template    tplActor=indy_sh_actor      local
+    template	dust=dustcloud              local
+    template    tpl_Debris=+dummy_debris    local
+           
+    surface     front       mask=0x408
+    surface     back
+    surface     inside
+    
+    surface     shelf1
+    surface     shelf2
+    surface     shelf3
+    surface     shelf4
+    
+    surface     step1
+    surface     step2
+    surface     step3
+    surface     step4
+    surface     step5
+    
+    surface     surf_BlockIt0
+    surface     surf_BlockIt1
+    
+    surface     sayIt
+    
+    # ** sound fx **
+    sound		sfx_Explode=shw_wall_crash.wav          local   # like, bang.
+    #sound       charging=nub_aethlight_on_c.wav         local
+    
+    # snake voice lines
+    sound       inSay1=Inxj069.wav                      local   # snakes
+    sound       inSay2=Inxj073.wav                      local   # why did it...
+    
+    # shakey wall voice lines
+    sound       inVibrate=Inxj026.wav                   local   # A little vibration...
+    sound       inCrumble=Inxj025.wav                   local   # ...ready to crumble.
+    
+    material	dustMat=gen_a4sfx_dustcloud.mat	            local
+    
+    cog         hintCog
+    cog         cameraShake
+    
+    vector      liteval             local
+    vector      nolite              local
+    vector      playerVec           local
+    vector      dustStart           local
+    vector      dustEnd         local
+    
+    int         done=0              local
+    int         curCam              local
+    int         coffin2             local
+    int         playing=0           local
+    int         saidIt=0            local
+    
+    flex        count=0             local
+    flex        playerY=0           local
+    flex        playerX=0           local
+    
+    # ** subroutines **
+    flex        vibeLine            local        
+    
+end
+# ========================================================================================
+
+code
+
+startup:
+
+    liteval = VectorSet(0.25, 0.55, 1.0);
+    nolite = VectorSet(0, 0, 0);
+    
+    SetFaceGeoMode(step1, 0);
+    SetFaceGeoMode(step2, 0);
+    SetFaceGeoMode(step3, 0);
+    SetFaceGeoMode(step4, 0);
+    SetFaceGeoMode(step5, 0);
+    
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    player = GetLocalPlayerThing();
+
+    if((GetSenderRef() == front) && (done == 0) && (playing == 0))
+    {
+        # player activated with an IMP part so bail out
+        if((GetCurWeapon(player) >= 14) && (GetCurWeapon(player) <= 18)) return;
+        
+        # player activated with lighter
+        else if(GetCurWeapon(player) == 13)
+        {
+            playing = 1;
+            
+            # put away the lighter
+            DeselectWeapon(player);
+            DeselectWeaponWait(player);
+            
+            Call vibeLine;
+            playing = 0;
+        }
+        
+        # normal activation
+        else
+        {
+            playing = 1;
+            
+            # wait for weapon to be put away
+            DeselectWeaponWait(player);
+            
+            Call vibeLine;
+            playing = 0;
+        }
+    }   
+
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    playerVec = GetThingLVec(player);
+	playerY = VectorY(playerVec);
+	playerX = VectorX(playerVec);
+
+	if((GetSenderRef() == sayIt) && (saidIt == 0))
+    {
+        if((playerY < 0) && ((playerX > -0.7) && (playerX < 0.7)))  # south
+    	{
+    	    saidIt = 1;
+            playing = 1;
+            PlayVoice(player, inCrumble, 1.0, 1);
+            playing = 0;
+    	}
+    }
+    
+    return;   
+        
+# ========================================================================================
+
+damaged:
+
+    player = GetLocalPlayerThing();
+    
+    if((GetParam(1) == 0x1000) && (done == 0))
+    {
+        done = 1;
+        
+        # do cutscene stuff
+        MakeMeStop();
+        StartCutscene(1);
+        
+        # Switch to indyCam
+        SetCameraFocus(2, indyCam);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+        
+        # start cameraShake
+        SendMessage(cameraShake, user2);
+        
+        # fire up IMP#1
+        SetCameraFOV(70, 1, 1.5);
+        #PlaySoundLocal(charging, 1.0, 0.0, 0x0, 0);
+        SetThingLight(player, liteval, 5.0, 2.0);
+        Sleep(1.5);
+        
+        # Switch to coffinCam and zoom out...
+        SetCameraFocus(2, coffinCam);
+        SetCameraSecondaryFocus(2, target);
+        SetCurrentCamera(2);
+        SetCameraFOV(110, 1, 3.0);
+        Sleep(2.0);
+        
+        # BANG!                                                                        	            
+        PlaySoundThing(sfx_Explode, target, 1.0, 10.0, 20.0, 0);
+        SetFaceGeoMode(front, 0);       # no draw
+        SetFaceGeoMode(inside, 0);
+        SetAdjoinFlags(front,2);        # move
+        SetAdjoinFlags(back,2);
+        SetThingLight(player, nolite, 0.001, 2.0);
+        
+        # create dust cloud
+        dustStart = VectorSet(0.2, 0.2, 0.5);
+        dustEnd	= VectorSet(1.2, 1.2, 0.0);
+        dustThing = CreateThing(dust, dustPos);
+        CaptureThing(dustThing);
+        
+        # animate dust cloud
+        SetMaterialCel(dustMat, 0);
+        MaterialAnim(dustMat, 8.0, 1);
+        AnimateSpriteSize(dustThing, dustStart, dustEnd, 7.0);
+        
+        # create debris
+        CreateThing(tpl_Debris, debrisPos1);
+        CreateThing(tpl_Debris, debrisPos2);
+    
+        # Fling the coffin and watch it go by
+        MoveToFrame(coffin, 1, 8.0);
+        Sleep(0.2);
+        SetFaceGeoMode(shelf1, 0);
+        SetFaceGeoMode(shelf2, 0);
+        SetFaceGeoMode(shelf3, 0);
+        SetFaceGeoMode(shelf4, 0);
+        SetFaceGeoMode(step1, 4);
+        SetFaceGeoMode(step2, 4);
+        SetFaceGeoMode(step3, 4);
+        SetFaceGeoMode(step4, 4);
+        SetFaceGeoMode(step5, 4);
+        MoveToFrame(target, 1, 6.2);
+        MoveToFrame(coffinCam, 1, 4.5);
+        
+        # kill coffin and fire up coffin2
+        DestroyThing(coffin);
+        coffin2 = CreateThing(tplCoffin, ghost);
+        CaptureThing(coffin2);
+        Sleep(0.1);
+        MoveToFrame(coffin2, 1, 5.0);
+       
+        # stop cameraShake
+        SendMessage(cameraShake, user3);
+        
+        # reset coffin collision
+        SetCollideType(coffin2, 3);
+        
+        # Create first wave of snakes
+        CreateThing(tplSnake1, ghostSnake3);
+        CreateThing(tplSnake2, ghostSnake4);
+        CreateThing(tplSnake1, ghostSnake5);
+        
+        # Create second wave of snakes
+        Sleep(2.0);
+        CreateThing(tplSnake1, ghostSnake1);
+        CreateThing(tplSnake2, ghostSnake2);
+        
+        # create more snakes
+        #SetPulse(2.0);
+        
+        # put away IMP#1
+        DeselectWeapon(player);
+        DeselectWeaponWait(player);
+        
+        # hide player, create actor
+        SetThingFlags(player, 0x80000);
+        indy = CreateThing(tplActor, player);
+        CaptureThing(indy);
+        CopyPlayerHolsters(player, indy);
+        ClearThingFlags(indy, 0x80000);
+        
+        # Indy takes a few steps, complains about snakes
+        PlaySoundLocal(inSay1, 1.0, 0.0, 0x0, 1);
+        MoveToFrame(target, 2, 0.7);
+        AISetMoveSpeed(indy, 1.0);
+        AISetLookThing(indy, coffin2);
+        AISetMoveThing(indy, target1, 1.2);
+        PlaySoundLocal(inSay2, 1.0, 0.0, 0x0, 0);
+        Sleep(3.0);
+        
+        # block access to coffin2
+        SetAdjoinFlags(surf_BlockIt0, 0x10);    # no player move
+        SetAdjoinFlags(surf_BlockIt1, 0x10);
+        
+        # Get the player into position
+        CopyOrientAndPos(indy, player);
+        
+        # hide indy show player
+        SetThingFlags(indy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        
+        # return camera and controls to player
+        ClearActorFlags(player, 0x200000);
+        SetCurrentCamera(1);
+        
+        EndCutscene();
+        
+        # tell hintCog to solve hint24
+        SendMessage(hintCog, user0);
+    }
+    
+    return;
+    
+# ========================================================================================
+
+vibeLine:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # interp camera
+    SetExtCamOffsetToThing(interpCam);
+    #Sleep(0.5);
+    
+    # activate face and say line
+    #PlayMode(player, 60, 0);
+    #Sleep(0.3);
+    PlayVoice(player, inVibrate, 1.0, 1);
+    
+    # restore controls and camera
+    ClearActorFlags(player, 0x200000);
+    RestoreExtCam();
+    
+    EndCutscene();
+    
+    return;
+    
+# ========================================================================================
+
+pulse:
+
+    if(count == 2)
+    {
+        SetPulse(0.0);
+    }
+        
+    count = count + 1;
+    
+    CreateThing(tplSnake1, ghostSnake1);
+    CreateThing(tplSnake2, ghostSnake2);
+    
+    return;
+
+# ========================================================================================
+
+end
+

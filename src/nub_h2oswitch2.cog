@@ -1,0 +1,885 @@
+# Jones 3D Cog Script
+#
+# nub_h2oswitch.cog
+#
+# [TL] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	startup
+message	arrived
+message	activated
+message	entered
+message	timer
+
+thing	target		local
+int		originIndex	local
+
+thing	origin0
+thing	origin1
+thing	origin2
+thing	origin3
+
+thing	targetArray00
+thing	targetArray01
+thing	targetArray02
+
+thing	targetArray10
+thing	targetArray11
+thing	targetArray12
+
+thing	targetArray20
+thing	targetArray21
+thing	targetArray22
+
+thing	targetArray30
+thing	targetArray31
+thing	targetArray32
+
+material	lightningmat0=aet_4sfx_lightning_v2_a.mat	local	# Mats for the lightning.
+material	lightningmat1=aet_4sfx_lightning_v2_b.mat	local
+material	lightningmat2=aet_4sfx_lightning_v2_c.mat	local
+material	lightningmat3=aet_4sfx_lightning_v2_d.mat	local
+material	lightningmat4=aet_4sfx_lightning_v2_e.mat	local
+
+sound		strike0=aet_lightning_01.wav				local
+sound		strike1=aet_lightning_02.wav				local
+sound		strike2=aet_lightning_03.wav				local
+sound		strike3=aet_lightning_04.wav				local
+
+thing	player		local
+thing	switchA		# Controls paddle0top and paddle0bottom
+thing	switchB		# Controls paddle1top and paddle1bottom
+thing	h2o			# Water surface 3do.
+thing	camera0		# Camera for pool.
+thing	camera1
+thing	paddleAtop	  	linkID=2
+thing	paddleAbottom	linkID=2
+thing	paddleBtop	  	linkID=2
+thing	paddleBbottom	linkID=2
+thing	paddleTarget
+
+sector	twater0		linkID=1	# Top water sectors.
+sector	twater1		linkID=1
+sector	twater2		linkID=1
+sector	twater3		linkID=1
+sector	twater4		linkID=1
+sector	twater5		linkID=1
+sector	twater6		linkID=1
+sector	twater7		linkID=1
+
+sector	trigger
+
+sector	bwater0		# Bottom water sectors.
+sector	bwater1
+sector	bwater2
+sector	bwater3
+#sector	bwater4
+
+sector	ptsec0
+sector	ptsec1
+sector	ptsec2
+
+sector	pbsec0
+sector	pbsec1
+sector	pbsec2
+
+surface	surface0a	# Top water surface adjoins.
+surface	surface0b
+surface	surface0c
+surface	surface0d
+surface	surface0e
+surface	surface0f
+surface	surface0g
+surface	surface0h
+surface	surface0i
+
+surface	surface1a	# Middle water surface adjoins.
+surface	surface1b
+surface	surface1c
+surface	surface1d
+surface	surface1e
+surface	surface1f
+surface	surface1g
+surface	surface1h
+
+surface	electroSurf0
+surface	electroSurf1
+surface	electroSurf2
+surface	electroSurf3
+surface	electroSurf4
+surface	electroSurf5
+surface	electroSurf6
+surface	electroSurf7
+
+int		elecTrac0		local
+int		elecTrac1		local
+int		elecTrac2		local
+int		elecTrac3		local
+int		elecTrac4		local
+int		elecTrac5		local
+int		elecTrac6		local
+int		elecTrac7		local
+
+
+int		full=0		local	#
+int		curcam		local	# Duh.
+int		firstPushA=0	local
+int		firstPushB=0	local
+int		toggle=0		local
+int		cnt				local
+int		randnum			local
+int		topHoleA		local
+int		topHoleB		local
+int		bottomHoleA		local
+int		bottomHoleB		local
+int		open=1			local
+int		closed=0		local
+int		lightning=0		local
+int		firstEnter=0	local
+int		solved=0		local
+sector	currentSector	local
+vector	veclight		local
+vector	nolight			local
+vector	lesslight		local
+
+flex	countdown			# Speed of water draining or filling.
+flex	paddlecheck		local
+							
+cog		lightningcog		# Cog which controls the lightning strikes.
+
+end
+
+# ========================================================================================
+code
+
+startup:
+player = GetLocalPlayerThing();
+full=1;
+
+# Light up paddles
+SetThingLight(paddleAtop, VectorSet(1.0, 1.0, 1.0), 0.01, 1.0);
+SetThingLight(paddleAbottom, VectorSet(1.0, 1.0, 1.0), 0.01, 1.0);
+SetThingLight(paddleBtop, VectorSet(1.0, 1.0, 1.0), 0.01, 1.0);
+SetThingLight(paddleBbottom, VectorSet(1.0, 1.0, 1.0), 0.01, 1.0);
+
+# Turn off the moving water 3do.
+SetThingFlags(h2o, 0x80000);
+SetCollideType(h2o, 0);
+
+# Turn off middle level water adjoins.
+SetFaceGeoMode(surface1a, 0);
+SetFaceGeoMode(surface1b, 0);
+SetFaceGeoMode(surface1c, 0);
+SetFaceGeoMode(surface1d, 0);
+SetFaceGeoMode(surface1e, 0);
+SetFaceGeoMode(surface1f, 0);
+SetFaceGeoMode(surface1g, 0);
+SetFaceGeoMode(surface1h, 0);
+# ...make bottom water light...
+SetSectorLight(bwater0, veclight, 2);
+SetSectorLight(bwater1, veclight, 2);
+SetSectorLight(bwater2, veclight, 2);
+SetSectorLight(bwater3, veclight, 2);
+#SetSectorLight(bwater4, veclight, 2);
+
+# ...make bottom paddle sectors light...
+SetSectorlight(pbsec0, veclight, 2);
+SetSectorlight(pbsec1, veclight, 2);
+SetSectorlight(pbsec2, lesslight, 2);
+
+# ...make top water light...
+SetSectorLight(twater0, veclight, 2);
+SetSectorLight(twater1, veclight, 2);
+SetSectorLight(twater2, veclight, 2);
+SetSectorLight(twater3, veclight, 2);
+SetSectorLight(twater4, veclight, 2);
+SetSectorLight(twater5, veclight, 2);
+SetSectorLight(twater6, veclight, 2);
+SetSectorLight(twater7, veclight, 2);
+
+# ...make top paddle sectors light...
+SetSectorlight(ptsec0, veclight, 2);
+SetSectorlight(ptsec1, veclight, 2);
+SetSectorlight(ptsec2, lesslight, 2);
+
+topHoleA=closed;
+topHoleB=closed;
+bottomHoleA=closed;
+bottomHoleB=closed;
+
+veclight = VectorSet(0, 0.2, 0.8);
+nolight = VectorSet(0, 0, 0);
+lesslight = VectorSet(0, 0.1, 0.5);
+
+return;
+
+# ........................................................................................
+activated:
+# At startup, all 4 paddles are closed.
+
+# First push of SwitchA opens paddleAtop.
+if ((GetSenderRef() == switchA) && (firstPushA == 0))
+{
+    firstPushA = 1;
+    StartCutscene(1);
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+	MakeMeStop();
+	ResetThing(player);
+	SetCameraFocus(2, camera1);
+    SetCameraSecondaryFocus(2, paddletarget);
+	SetCurrentCamera(2);
+    SetCameraFOV(120, 0, 0.0);
+    MoveToFrame(camera1, 1, 0.25);
+	MoveToFrame(paddletarget, 1, 0.25);
+	
+    MoveToFrame(paddleAtop, 1 - (GetCurFrame(paddleAtop)), 0.5);
+	
+    TopHoleA=open;
+	Print("top paddle A is open");
+	call paddlecheck;
+
+	Sleep(4.0);
+
+
+	# ...return camera to player...
+	SetCameraFocus(2, camera0);
+	SetCameraSecondaryFocus(2, h2o);
+	SetCurrentCamera(2);
+    SetCameraFOV(90, 1, 5.0);
+	Sleep(5.0);
+
+	SetCurrentCamera(1);
+    ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	MoveToFrame(camera1, 0, 10.0);
+	MoveToFrame(paddletarget, 0, 10.0);
+    
+	return;
+}
+
+# Second push of SwitchA closes paddleAtop and opens paddleAbottom.
+# Subsequent pushes toggle the paddles.
+if ((GetSenderRef() == switchA) && (firstPushA == 1))
+{
+    StartCutscene(1);
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+	MakeMeStop();
+	ResetThing(player);
+	SetCameraFocus(2, camera1);
+    SetCameraSecondaryFocus(2, paddletarget);
+	SetCurrentCamera(2);
+    SetCameraFOV(120, 0, 0.0);
+    MoveToFrame(camera1, 1, 0.25);
+	MoveToFrame(paddletarget, 1, 0.25);
+	MoveToFrame(paddleAtop, 1 - (GetCurFrame(paddleAtop)), 0.5);
+    MoveToFrame(paddleAbottom, 1 - (GetCurFrame(paddleAbottom)), 0.5);
+
+    
+    if (TopHoleA == open)
+	{
+		Print("top paddle A is closed");
+		Print("bottom paddle A is open");
+		
+		TopHoleA = closed;
+		BottomHoleA = open;
+    }
+	else
+	{
+		Print("top paddle A is open");
+		Print("bottom paddle A is closed");
+		
+		TopHoleA = open;
+		BottomHoleA = closed;
+	}
+    call paddlecheck;
+
+    Sleep(4.0);
+    
+    SetCameraFocus(2, camera0);
+	SetCameraSecondaryFocus(2, h2o);
+	SetCurrentCamera(2);
+    SetCameraFOV(90, 1, 5.0);
+	Sleep(5.0);
+
+	
+	# ...return camera to player...
+	SetCurrentCamera(1);
+    ClearActorFlags(player, 0x200000);
+	EndCutscene();
+    MoveToFrame(camera1, 0, 10.0);
+	MoveToFrame(paddletarget, 0, 10.0);
+    
+	return;
+}
+
+# First push of SwitchB opens paddleBbottom.
+if ((GetSenderRef() == switchB) && (firstPushB == 0))
+{
+    firstPushB = 1;
+	
+	StartCutscene(1);
+	SetActorFlags(player, 0x200000);
+	StopThing(player);			 
+	MakeMeStop();
+	ResetThing(player);
+    
+	SetCameraFocus(2, camera1);
+	SetCameraSecondaryFocus(2, paddletarget);
+	SetCurrentCamera(2);
+    SetCameraFOV(120, 0, 0.0);
+    MoveToFrame(camera1, 1, 0.25);
+	MoveToFrame(paddletarget, 1, 0.25);
+	MoveToFrame(paddleBbottom, 1 - (GetCurFrame(paddleBbottom)), 0.5);
+
+	
+	bottomHoleB = open;
+	Print("bottom paddle B is open");
+    call paddlecheck;
+	
+	
+	Sleep(4.0);
+    
+	SetCameraFocus(2, camera0);
+	SetCameraSecondaryFocus(2, h2o);
+	SetCurrentCamera(2);
+    SetCameraFOV(90, 1, 5.0);
+	Sleep(5.0);
+
+    
+	# ...return camera to player...
+    SetCurrentCamera(1);
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+    MoveToFrame(camera1, 0, 10.0);
+	MoveToFrame(paddletarget, 0, 10.0);
+    
+	return;
+}
+# Second push of SwitchB closes paddleBbottom and opens paddleBtop.
+# Subsequent pushes toggle the paddles.
+if ((GetSenderRef() == switchB) && (firstPushB == 1))
+{
+    StartCutscene(1);
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+	MakeMeStop();
+	ResetThing(player);
+					   
+	SetCameraFocus(2, camera1);
+    SetCameraSecondaryFocus(2, paddletarget);
+	SetCurrentCamera(2);
+	SetCameraFOV(120, 0, 0.0);
+    MoveToFrame(camera1, 1, 0.25);
+	MoveToFrame(paddletarget, 1, 0.25);
+	MoveToFrame(paddleBtop, 1 - (GetCurFrame(paddleBtop)), 0.5);
+    MoveToFrame(paddleBbottom, 1 - (GetCurFrame(paddleBbottom)), 0.5);
+	
+	if (bottomHoleB == open)
+	{
+		Print("bottom paddle B is closed");
+		Print("top paddle B is open");
+		
+		bottomHoleB = closed;
+		topHoleB = open;
+	}
+	else
+	{
+		Print("bottom paddle B is open");
+		Print("top paddle B is closed");
+	
+		bottomHoleB = open;
+		topHoleB = closed;
+	}
+    call paddlecheck;
+	
+	Sleep(4.0);
+
+    SetCameraFocus(2, camera0);
+	SetCameraSecondaryFocus(2, h2o);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 1, 5.0);
+	Sleep(5.0);
+
+    # ...return camera to player...
+	SetCurrentCamera(1);
+    ClearActorFlags(player, 0x200000);
+	EndCutscene();
+    MoveToFrame(camera1, 0, 10.0);
+	MoveToFrame(paddletarget, 0, 10.0);
+    
+    return;
+}
+
+return;
+
+# ........................................................................................
+arrived:
+# If "water moving button" is pressed all the way in, return it to out position and call 
+# "lightning cog. 
+if ((GetSenderRef() == switchA) && (GetCurFrame(switchA) == 1))
+	{
+	Sleep(0.5);
+	MoveToFrame(switchA, 0, 1.0);
+    }
+
+# If "water stoping button" is pressed all the way in, return it to out position and call 
+# "lightning cog. 
+if ((GetSenderRef() == switchB) && (GetCurFrame(switchB) == 1))
+	{
+    Sleep(0.5);
+	MoveToFrame(switchB, 0, 1.0);   
+    }
+
+# If water surface 3do reaches top...
+if ((GetSenderRef() == h2o) && (GetCurFrame(h2o) == 0))
+{
+    Print("water stopped moving at top");
+    
+	SendMessage(lightningcog, user1);
+	Print("sending user1");
+	
+	#animate electroSurfaces
+    Print("starting electrodes because water 3do arrived at top");
+	if (GetSurfaceAnim(electroSurf0) == -1)
+	{
+		electrac0 = SurfaceAnim(electroSurf0, 5, 0x1);
+		electrac1 = SurfaceAnim(electroSurf1, 5, 0x1);
+		electrac2 = SurfaceAnim(electroSurf2, 5, 0x1);
+		electrac3 = SurfaceAnim(electroSurf3, 5, 0x1);
+		electrac4 = SurfaceAnim(electroSurf4, 5, 0x1);
+		electrac5 = SurfaceAnim(electroSurf5, 5, 0x1);
+		electrac6 = SurfaceAnim(electroSurf6, 5, 0x1);
+		electrac7 = SurfaceAnim(electroSurf7, 5, 0x1);
+	}
+    
+    # ...turn off water 3do...
+	SetThingFlags(h2o, 0x80000);
+	
+	# ...turn on top water level adjoins...	
+	SetFaceGeoMode(surface0a, 4);
+	SetFaceGeoMode(surface0b, 4);
+	SetFaceGeoMode(surface0c, 4);
+	SetFaceGeoMode(surface0d, 4);
+	SetFaceGeoMode(surface0e, 4);
+	SetFaceGeoMode(surface0f, 4);
+	SetFaceGeoMode(surface0g, 4);
+	SetFaceGeoMode(surface0h, 4);
+	SetFaceGeoMode(surface0i, 4);
+	
+	# ...turn on top water level sectors...
+	SetSectorFlags(twater0, 0x2);
+	SetSectorFlags(twater1, 0x2);
+	SetSectorFlags(twater2, 0x2);
+	SetSectorFlags(twater3, 0x2);
+	SetSectorFlags(twater4, 0x2);
+	SetSectorFlags(twater5, 0x2);
+	SetSectorFlags(twater6, 0x2);
+	SetSectorFlags(twater7, 0x2);
+    
+}
+
+# If water 3do reaches middle level...
+if ((GetSenderRef() == h2o) && (GetCurFrame(h2o) == 1) && (solved == 1))
+	{
+    solved=0;
+    Print("water stopped moving at middle");
+    
+	# ...turn off water 3do...
+	SetThingFlags(h2o, 0x80000);
+	
+	# ...turn on the middle water level adjoins.
+	SetFaceGeoMode(surface1a, 4);
+	SetFaceGeoMode(surface1b, 4);
+	SetFaceGeoMode(surface1c, 4);
+	SetFaceGeoMode(surface1d, 4);
+	SetFaceGeoMode(surface1e, 4);
+	SetFaceGeoMode(surface1f, 4);
+	SetFaceGeoMode(surface1g, 4);
+	SetFaceGeoMode(surface1h, 4);
+	
+    }
+
+# If water 3do reaches bottom...
+if ((GetSenderRef() == h2o) && (GetCurFrame(h2o) == 2))
+{
+    Print("water stopped moving at bottom");
+    
+	# ...turns off water 3do...
+	#SetThingFlags(h2o, 0x80000);
+    
+}
+return;
+
+# ........................................................................................
+entered:
+# If pool is full and player enters the pool, then kill the player.
+if (full != 1)	return;
+if (GetSourceRef() != player) return;
+
+if (GetSenderID() == 1)
+	{
+	DamageThing(player, 1000, 0x02, 0);
+	toggle=1;
+	}
+	
+# If player approaches the pool for the first time.
+if ((GetSenderRef() == trigger) && (firstEnter == 0))
+{
+    firstEnter=1;
+	lightning=1;
+	Print("lightning on");
+	SetTimer(Rand() * 2.5);
+	
+	Print("starting electrodes because player showed up");
+	if (GetSurfaceAnim(electroSurf0) == -1)
+	{
+		electrac0 = SurfaceAnim(electroSurf0, 5, 0x1);
+		electrac1 = SurfaceAnim(electroSurf1, 5, 0x1);
+		electrac2 = SurfaceAnim(electroSurf2, 5, 0x1);
+		electrac3 = SurfaceAnim(electroSurf3, 5, 0x1);
+		electrac4 = SurfaceAnim(electroSurf4, 5, 0x1);
+		electrac5 = SurfaceAnim(electroSurf5, 5, 0x1);
+		electrac6 = SurfaceAnim(electroSurf6, 5, 0x1);
+		electrac7 = SurfaceAnim(electroSurf7, 5, 0x1);
+	}
+}
+
+return;
+# ........................................................................................
+timer:
+
+# Lightning code.
+if (toggle == 0)
+	{
+	for (cnt = 2; cnt <= RandBetween(2, 5); cnt = cnt + 1)
+		{
+		originIndex = RandBetween(0, 3);
+		if (originIndex == 0)
+		{
+			target = targetArray00[RandBetween(0, 2)];
+		}
+		else if (originIndex == 1)
+		{
+			target = targetArray10[RandBetween(0, 2)];
+		}
+		else if (originIndex == 2)
+		{
+			target = targetArray20[RandBetween(0, 2)];
+		}
+		else if (originIndex == 3)
+		{
+			target = targetArray30[RandBetween(0, 2)];
+		}
+			
+   
+		CreatePolylineThing(origin0[originIndex], target, '0 0 0', lightningmat0[RandBetween(0, 4)], 0.1, 0.1, 0.05);
+	    randnum = RandBetween(0, 3);
+		PlaySoundThing(strike0[randnum], target, 0.2, 5, 10, 0);			#was target0
+		Sleep(0.05);
+		}
+	}
+if (toggle == 1)
+	{
+		currentSector=GetThingSector(GetLocalPlayerThing());
+	
+		if (currentSector == twater0)
+		{
+			originIndex=0;
+			target = targetArray00[RandBetween(0, 2)];
+		}
+		else if (currentSector == twater1)
+
+		{
+			originIndex=1;
+			target = targetArray10[RandBetween(0, 2)];
+		}
+		else if (currentSector == twater2)
+
+		{
+			originIndex=2;
+			target = targetArray20[RandBetween(0, 2)];
+		}
+		else if (currentSector == twater3)
+
+		{
+			originIndex=3;
+			target = targetArray30[RandBetween(0, 2)];
+		}
+   
+	
+		CreatePolylineThing(origin0[originIndex], player, '0 0 0', lightningmat0[RandBetween(0, 4)], 0.1, 0.1, 0.15);
+		CreatePolylineThing(player, target, '0 0 0', lightningmat0[RandBetween(0, 4)], 0.1, 0.1, 0.15);
+        randnum = RandBetween(0, 3);
+		PlaySoundThing(strike0[randnum], target, 0.2, 5, 10, 0);			#was target0
+    }
+if (lightning == 1)
+{
+	SetTimer(Rand() * 2.5);
+}
+return;
+
+# ........................................................................................
+paddlecheck:
+
+DebugLocalSymbols("paddlecheck");
+
+if ((bottomHoleA == open) && (bottomHoleB == open))
+{
+	Print("water at bottom and lightning off");
+	
+	# ...turn off top water surface adjoins...
+	SetFaceGeoMode(surface0a, 0);
+	SetFaceGeoMode(surface0b, 0);
+	SetFaceGeoMode(surface0c, 0);
+	SetFaceGeoMode(surface0d, 0);
+	SetFaceGeoMode(surface0e, 0);
+	SetFaceGeoMode(surface0f, 0);
+	SetFaceGeoMode(surface0g, 0);
+	SetFaceGeoMode(surface0h, 0);
+	SetFaceGeoMode(surface0i, 0);
+	
+	# Turn off middle level water surface adjoins.
+	SetFaceGeoMode(surface1a, 0);
+	SetFaceGeoMode(surface1b, 0);
+	SetFaceGeoMode(surface1c, 0);
+	SetFaceGeoMode(surface1d, 0);
+	SetFaceGeoMode(surface1e, 0);
+	SetFaceGeoMode(surface1f, 0);
+	SetFaceGeoMode(surface1g, 0);
+	SetFaceGeoMode(surface1h, 0);
+
+	# ...turn off top water sectors...
+	ClearSectorFlags(twater0, 0x2);
+	ClearSectorFlags(twater1, 0x2);
+	ClearSectorFlags(twater2, 0x2);
+	ClearSectorFlags(twater3, 0x2);
+	ClearSectorFlags(twater4, 0x2);
+	ClearSectorFlags(twater5, 0x2);
+	ClearSectorFlags(twater6, 0x2);
+	ClearSectorFlags(twater7, 0x2);
+
+	# ...turn off top water light...
+	SetSectorLight(twater0, nolight, 2);
+	SetSectorLight(twater1, nolight, 2);
+	SetSectorLight(twater2, nolight, 2);
+	SetSectorLight(twater3, nolight, 2);
+	SetSectorLight(twater4, nolight, 2);
+	SetSectorLight(twater5, nolight, 2);
+	SetSectorLight(twater6, nolight, 2);
+	SetSectorLight(twater7, nolight, 2);
+	
+	# ...turn off bottom water sectors...
+    ClearSectorFlags(bwater0, 0x2);
+	ClearSectorFlags(bwater1, 0x2);
+	ClearSectorFlags(bwater2, 0x2);
+	ClearSectorFlags(bwater3, 0x2);
+	#ClearSectorFlags(bwater4, 0x2);
+	
+	# ...turn off bottom light...
+    SetSectorLight(bwater0, nolight, 2);
+    SetSectorLight(bwater1, nolight, 2);
+    SetSectorLight(bwater2, nolight, 2);
+    SetSectorLight(bwater3, nolight, 2);
+    #SetSectorLight(bwater4, nolight, 2);
+	
+	# ...turn off top paddle sector lights...
+	SetSectorLight(ptsec0, nolight, 2);
+    SetSectorLight(ptsec1, nolight, 2);
+	SetSectorLight(ptsec2, nolight, 2);
+
+	# ...turn off bottom paddle sector lights...
+	SetSectorLight(pbsec0, nolight, 2);
+	SetSectorLight(pbsec1, nolight, 2);
+    SetSectorLight(pbsec2, nolight, 2);
+	
+    #stop animating electrosurfaces
+    Print("stop electrodes because both bottom paddles open");
+	
+	StopAnim(elecTrac0);
+    StopAnim(elecTrac1);
+    StopAnim(elecTrac2);
+    StopAnim(elecTrac3);
+    StopAnim(elecTrac4);
+    StopAnim(elecTrac5);
+    StopAnim(elecTrac6);
+    StopAnim(elecTrac7);
+		
+	# ...turn off water 3do...
+	#ClearThingFlags(h2o, 0x80000);
+	
+    SendMessage(lightningcog, user0);
+	Print("sending user0");
+	
+    #moves water to bottom position
+    ClearThingFlags(h2o, 0x80000);
+	MoveToFrame(h2o, 2, countdown);
+	full = 0;
+	lightning=0;
+	SetTimer(0.0);
+	return;
+}
+
+if ((topHoleA == open) && (topHoleB == open))
+{
+	Print("water at middle and lightning off");
+    Print("The water has stoped in the middle!");
+	solved=1;
+	
+    # ...turn off top water surface adjoins...
+	SetFaceGeoMode(surface0a, 0);
+	SetFaceGeoMode(surface0b, 0);
+	SetFaceGeoMode(surface0c, 0);
+	SetFaceGeoMode(surface0d, 0);
+	SetFaceGeoMode(surface0e, 0);
+	SetFaceGeoMode(surface0f, 0);
+	SetFaceGeoMode(surface0g, 0);
+	SetFaceGeoMode(surface0h, 0);
+	SetFaceGeoMode(surface0i, 0);
+	
+	# ... middle water surface adjoins turned on when h2o 3do arrives
+
+    # ...turn bottom water sectors on...
+	SetSectorFlags(bwater0, 0x2);
+	SetSectorFlags(bwater1, 0x2);
+	SetSectorFlags(bwater2, 0x2);
+	SetSectorFlags(bwater3, 0x2);
+	#SetSectorFlags(bwater4, 0x2);
+	
+	# ...make bottom water light...
+	SetSectorLight(bwater0, veclight, 2);
+	SetSectorLight(bwater1, veclight, 2);
+	SetSectorLight(bwater2, veclight, 2);
+	SetSectorLight(bwater3, veclight, 2);
+	#SetSectorLight(bwater4, veclight, 2);
+	
+	# ...make bottom paddle sector lights...
+    SetSectorLight(pbsec0, veclight, 2);
+	SetSectorLight(pbsec0, veclight, 2);
+	SetSectorLight(pbsec0, lesslight, 2);
+
+	# ...turn off top water sectors...
+	ClearSectorFlags(twater0, 0x2);
+	ClearSectorFlags(twater1, 0x2);
+	ClearSectorFlags(twater2, 0x2);
+	ClearSectorFlags(twater3, 0x2);
+	ClearSectorFlags(twater4, 0x2);
+	ClearSectorFlags(twater5, 0x2);
+	ClearSectorFlags(twater6, 0x2);
+	ClearSectorFlags(twater7, 0x2);
+
+	# ...turn off top water light...
+	SetSectorLight(twater0, nolight, 2);
+	SetSectorLight(twater1, nolight, 2);
+	SetSectorLight(twater2, nolight, 2);
+	SetSectorLight(twater3, nolight, 2);
+	SetSectorLight(twater4, nolight, 2);
+	SetSectorLight(twater5, nolight, 2);
+	SetSectorLight(twater6, nolight, 2);
+	SetSectorLight(twater7, nolight, 2);
+
+	# ...turn off top paddle sector lights...
+	SetSectorLight(ptsec0, nolight, 2);
+	SetSectorLight(ptsec1, nolight, 2);
+	SetSectorLight(ptsec2, nolight, 2);
+    
+    # ...turn on water 3do and move it to center position...
+	ClearThingFlags(h2o, 0x80000);
+	MoveToFrame(h2o, 1, countdown);
+	
+	lightning=0;
+	SetTimer(0.0);
+    full = 0;
+	
+	Sleep(1.0);
+	
+    SendMessage(lightningcog, user0);
+	Print("sending user0");
+	
+	Print("stopping electrodes because both middle holes are open");
+	#stop animating electrosurfaces
+    StopAnim(elecTrac0);
+    StopAnim(elecTrac1);
+    StopAnim(elecTrac2);
+    StopAnim(elecTrac3);
+    StopAnim(elecTrac4);
+    StopAnim(elecTrac5);
+    StopAnim(elecTrac6);
+    StopAnim(elecTrac7);
+	return;
+}
+else
+{
+	Print("put water at top and turn on lightning.");
+	
+	# Turn off middle level water adjoins.
+	SetFaceGeoMode(surface1a, 0);
+	SetFaceGeoMode(surface1b, 0);
+	SetFaceGeoMode(surface1c, 0);
+	SetFaceGeoMode(surface1d, 0);
+	SetFaceGeoMode(surface1e, 0);
+	SetFaceGeoMode(surface1f, 0);
+	SetFaceGeoMode(surface1g, 0);
+	SetFaceGeoMode(surface1h, 0);
+	
+    # ...turn bottom water sectors on...
+	SetSectorFlags(bwater0, 0x2);
+	SetSectorFlags(bwater1, 0x2);
+	SetSectorFlags(bwater2, 0x2);
+	SetSectorFlags(bwater3, 0x2);
+	#SetSectorFlags(bwater4, 0x2);
+	
+
+	# ...make bottom water light...
+	SetSectorLight(bwater0, veclight, 2);
+    SetSectorLight(bwater1, veclight, 2);
+	SetSectorLight(bwater2, veclight, 2);
+	SetSectorLight(bwater3, veclight, 2);
+	#SetSectorLight(bwater4, veclight, 2);
+	
+	# ...make bottom paddle sectors light...
+	SetSectorlight(pbsec0, veclight, 2);
+	SetSectorlight(pbsec1, veclight, 2);
+	SetSectorlight(pbsec2, lesslight, 2);
+    
+	# ...turn top water sectors on...
+	SetSectorFlags(twater0, 0x2);
+	SetSectorFlags(twater1, 0x2);
+	SetSectorFlags(twater2, 0x2);
+	SetSectorFlags(twater3, 0x2);
+	SetSectorFlags(twater4, 0x2);
+	SetSectorFlags(twater5, 0x2);
+	SetSectorFlags(twater6, 0x2);
+	SetSectorFlags(twater7, 0x2);
+
+	# ...make top water light...
+	SetSectorLight(twater0, veclight, 2);
+	SetSectorLight(twater1, veclight, 2);
+	SetSectorLight(twater2, veclight, 2);
+	SetSectorLight(twater3, veclight, 2);
+	SetSectorLight(twater4, veclight, 2);
+	SetSectorLight(twater5, veclight, 2);
+	SetSectorLight(twater6, veclight, 2);
+	SetSectorLight(twater7, veclight, 2);
+
+	# ...make top paddle sectors light...
+    SetSectorlight(ptsec0, veclight, 2);
+	SetSectorlight(ptsec1, veclight, 2);
+	SetSectorlight(ptsec2, lesslight, 2);
+
+	# ...turn on water 3do and move it to top position...
+	ClearThingFlags(h2o, 0x80000);
+    MoveToFrame(h2o, 0, countdown);
+	
+	full = 1;
+	lightning=1;
+	SetTimer(Rand() * 2.5);
+}
+return;
+# ........................................................................................
+end

@@ -1,0 +1,267 @@
+# Jones 3D Cog Script
+#
+# TEM_MazeImp1.cog
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activated
+    message     entered
+    message     damaged
+    
+    thing       player          local
+    thing       rocks           local
+    thing       dustThing       local
+    thing       debris          # debris origin
+    thing       dustPos         # dust cloud origin
+    thing       offsetCam
+    thing       indyCam
+    thing       dustTarg        # move dust to this pos
+    thing       debrisPos
+    
+    surface     shakeMe         mask=0x408
+    surface     sayIt
+    
+    template    debris0=stoneshrapbm_nc         local
+    template    tpl_Debris=+dummy_debris        local
+    template	dust=dustcloud                  local
+    
+    #template    debris1=stoneshrapas_nc         local
+    #template    debris2=stoneshrapbm_nc         local
+    #template    debris3=stoneshrapas_nc         local
+    #template    debris4=stoneshrapbm_nc         local
+    #template    debris5=stoneshrapas_nc         local
+    #template    debris6=stoneshrapbm_nc         local
+    #template    debris7=stoneshrapas_nc         local
+    
+    # ** voice lines **
+    sound       inCrumble=Inxj025.wav                   local   # ...ready to crumble.
+    sound       inVibrate=Inxj026.wav                   local   # A little vibration...
+    
+    # ** sound fx **
+    sound       sfxCharge=imp1_chargeup.wav             local
+    sound		sfx_Explode=shw_wall_crash.wav          local   # like, bang.
+    
+    # ** music **
+    sound       mus_Eerie=mus_gen_eerie1.wav            local
+    
+    material	dustMat=gen_a4sfx_dustcloud.mat	        local
+    
+    cog         cameraShake
+    cog         cog_Hint
+    
+    vector      playervec       local
+    vector      playery         local
+    vector      playerx         local
+    vector      vecPos          local
+    vector      rocksVel        local
+    vector      dustStart       local
+    vector      dustEnd         local
+    
+    # ** subroutines **
+    flex        vibeLine        local
+    
+    int         i=0             local
+    int         saidIt=0        local
+    int         playing=0       local
+    int         numDebris=40    local
+    int         done=0          local
+        
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    ClearAdjoinFlags(shakeMe, 2);         # no move
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    player = GetLocalPlayerThing();
+
+    if((GetSenderRef() == shakeMe) && (done == 0) && (playing == 0))
+    {
+        # player activated with an IMP part so bail out
+        if((GetCurWeapon(player) >= 14) && (GetCurWeapon(player) <= 18)) return;
+        
+        # player activated with lighter
+        else if(GetCurWeapon(player) == 13)
+        {
+            playing = 1;
+            
+            # put away the lighter
+            DeselectWeapon(player);
+            DeselectWeaponWait(player);
+            
+            Call vibeLine;
+        }
+        
+        # normal activation
+        else
+        {
+            playing = 1;
+            
+            # wait for weapon to be put away
+            DeselectWeaponWait(player);
+            
+            Call vibeLine;
+        }
+    }   
+
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    playervec = GetThingLVec(player);
+	playery = VectorY(playervec);
+	playerx = VectorX(playervec);
+
+	if((GetSenderRef() == sayIt) && (saidIt == 0))
+    {
+        if ((playery > 0) && ((playerx > -0.7) && (playerx < 0.7)))     # north
+    	{
+    	    saidIt = 1;
+            PlayVoice(player, inCrumble, 1.0, 1);
+    	}
+    }
+    
+    return;   
+        
+# ========================================================================================
+
+damaged:
+
+    player = GetLocalPlayerThing();
+    
+    if((GetParam(1) == 0x1000) && (done == 0))
+    {
+        done = 1;
+        
+        # solve hint5
+        SendMessage(cog_Hint, user0);
+        
+        # do cutscene stuff
+        MakeMeStop();
+        StartCutscene(2);
+        
+        # Switch to indyCam
+        SetCameraFocus(2, indyCam);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+        
+        # start cameraShake
+        SendMessage(cameraShake, user2);
+        
+        # alter fov for zoom-in effect
+        SetCameraFOV(70, 1, 2.5);
+        
+        # play temp sfx
+        PlaySoundLocal(sfxCharge, 1.0, 0.0, 0x0, 0);
+        
+        # light up the player
+        SetThingLight(dustPos, '0.25 0.55 1.0', 5.0, 2.0);
+        Sleep(2.5);
+        
+        # reset fov
+        SetCameraFOV(90, 0, 0.0);
+        
+        # kill dynamic light
+        SetThingLight(dustPos, '0.0 0.0 0.0', 5.0, 2.0);
+        
+        # create dust cloud
+        dustStart = VectorSet(0.2, 0.2, 0.5);
+	    dustEnd	= VectorSet(1.2, 1.2, 0.0);
+    	dustThing = CreateThing(dust, dustPos);
+        CaptureThing(dustThing);
+    	
+        # animate dust cloud
+        SetMaterialCel(dustMat, 0);
+    	MaterialAnim(dustMat, 8.0, 1);
+        AnimateSpriteSize(dustThing, dustStart, dustEnd, 5.0);
+        
+        MoveThingToPos(dustThing, GetThingPos(dustTarg), 4.0);
+        
+        # play explosion sfx
+        PlaySoundLocal(sfx_Explode, 1.0, 0.0, 0x0, 0);
+        
+        # alter adjoin
+        SetFaceGeoMode(shakeMe, 0);     # no draw
+        SetAdjoinFlags(shakeMe, 2);     # move
+        
+        # create debris
+        CreateThing(tpl_Debris, debrisPos);
+        
+        # drop debris
+        #for(i=0; i<numDebris; i=i+1)                                                        	            
+        #{                                                                                    	            
+        #    vecPos = VectorSet(rand()*0.3, rand()*0.2, 0.0);
+        #    #rocks = CreateThingAtPos(debris0[RandBetween(0, 7)], GetThingSector(debris), VectorAdd(GetThingPos(debris), VectorAdd('-0.05 -0.05 0.0', vecPos)), '0 0 0');
+        #    rocks = CreateThingAtPos(debris0, GetThingSector(debris), VectorAdd(GetThingPos(debris), VectorAdd('-0.05 -0.05 0.0', vecPos)), '0 0 0');
+        #    rocksVel = VectorSet(0, 0, 0.01);
+        #    SetThingVel(rocks, VectorScale(rocksVel, 0.7));
+        #}
+        
+        # rest for a bit
+        Sleep(0.5);
+        
+        # stop cameraShake
+        SendMessage(cameraShake, user3);
+        
+        # restore camera
+        SetCameraPosition(1, GetThingPos(indyCam));
+        SetCurrentCamera(1);
+        
+        # restore controls
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        
+        # play music cue (temp?)
+        PlaySoundLocal(mus_Eerie, 1.0, 0.0, 0x0, 0);
+    }
+
+    return;
+
+# ========================================================================================
+
+vibeLine:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # interp camera
+    SetExtCamOffsetToThing(offsetCam);
+    Sleep(0.3);
+    
+    # activate face and say line
+    #PlayMode(player, 60, 0);
+    #Sleep(0.3);
+    PlayVoice(player, inVibrate, 1.0, 1);
+    
+    # restore controls and camera
+    ClearActorFlags(player, 0x200000);
+    RestoreExtCam();
+    
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+end
+

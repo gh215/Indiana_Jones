@@ -1,0 +1,45 @@
+# Jones 3D Cog Script
+#
+# SOL_SayLine.cog
+#
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    
+    thing       player      local
+
+    sector      sec_SayIt
+    
+    sound       snd_Line
+
+    int         done=0          local
+
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    player = GetLocalPlayerThing();
+    Sleep(0.1);
+    
+    if((GetSenderRef() == sec_SayIt) && (done == 0))
+    {
+        done = 1;
+        PlayVoice(player, snd_Line, 1.0, 0);
+    }
+        
+    return;
+
+# ========================================================================================
+
+end
+

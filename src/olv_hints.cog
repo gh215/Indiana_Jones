@@ -1,0 +1,357 @@
+# Jones 3D Cog Script
+#
+# olv_hints.cog
+#
+# level hints    
+#
+# [DS]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+	message		startup
+	message		entered
+	message		crossed
+	message		exited
+	message		removed			
+	message		user0			#head1 cog
+	message		user1			#head2 cog
+	message		user2			#drainwater cog
+	message		user3			#Timed door cog
+	message		user4			#snake bridge cog
+	message		user5			#Quatzl cog.
+	message		user6			# bossarena cog
+        
+	thing			hint1
+	thing			hint2
+	thing			hint3
+	thing			hint4
+	thing			hint5
+	thing			hint6
+	thing			hint7
+	thing			hint8
+	thing			hint9
+	thing			hint10
+	thing			hint11
+	thing			hint12
+	thing			hint13
+	thing			hint14
+	thing			hint15
+	thing			hint16
+	thing			hint17
+	thing			hint18
+	thing			hint19
+	thing			hint20
+	thing			hint21
+	thing			hint22
+	thing			hint23
+	thing			hint24
+	thing			hint25
+	thing			hint26
+	thing			hint27
+	thing			hint28
+	thing			hint29
+	thing			hint30
+	thing			hint31
+	thing			hint32
+	thing			hint33
+	thing			hint34
+	thing			hint35
+
+	thing			hint50
+
+	thing		head1
+	thing		head2
+	thing		head3
+	sector	enter_valley
+	sector	exit_node1
+	surface	node2_south
+	sector	temple1_path
+	sector	temple1_entry
+	sector	head1_fallsector
+	surface	bridge_pad1			mask=0x480
+	sector	temple2_entry
+	sector	temple2_door
+	sector	temple2_block
+	surface	bridge_pad2			mask=0x480
+	sector	node2_north
+	sector	b1b2_path
+	sector	b2b3_path
+	sector	raingod_path
+	sector	raingod_temple
+	sector	across_bridge1
+	sector	across_bridge2
+	sector	across_bridge3
+	sector	b3_path0
+	sector	b3_path1
+	sector	last_chasm
+	sector	see_temple
+	thing		imp3
+	sector	exit
+    	sound		music0=mus_gen_machinepart.wav	Local
+	thing		player					local
+	int		pad2_solved=0				local
+	int		s						local
+
+	cog		commie_introcog
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	AttachThingToThing(hint24, head3);
+	return;
+
+crossed:
+	if(getsenderref() == node2_south)
+	{
+	SetHintSolved(hint3);
+	}
+	return;
+
+exited:
+	if((getsenderref() == bridge_pad1) && (GetSourceRef() == head1))
+	{
+	SetHintUnsolved(hint9);
+	return;
+	}
+	if((getsenderref() == bridge_pad2) && (GetSourceRef() == head2))
+	{
+	SetHintUnsolved(hint16);
+	SetHintUnsolved(hint17);
+	pad2_solved=0;
+	return;
+	}
+	return;
+
+removed:
+	if(GetSenderRef() == imp3)
+	{
+	sleep(1.0);
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+	SetHintSolved(hint34);
+	}
+	return;
+
+        
+entered:
+	if(getsenderref() == enter_valley)
+	{
+	SetHintSolved(hint1);
+	return;
+	}
+	if(getsenderref() == exit_node1)
+	{
+	SetHintSolved(hint2);
+	return;
+	}
+	if(getsenderref() == temple1_path)
+	{
+	SetHintSolved(hint4);
+		if(pad2_solved == 1)
+		{
+		SetHintUnsolved(hint10);
+		}
+	return;
+	}
+	if(getsenderref() == temple1_entry)
+	{
+	SetHintSolved(hint5);
+	return;
+	}
+	if(getsenderref() == head1_fallsector)
+	{
+	SetHintSolved(hint6);
+	return;
+	}
+	if((getsenderref() == bridge_pad1) && (GetSourceRef() == head1))
+	{
+	SetHintSolved(hint9);
+	return;
+	}
+	if(getsenderref() == across_bridge1)
+	{
+	SetHintSolved(hint10);
+		if(pad2_solved == 1)
+		{
+		SetHintUnsolved(hint18);
+		}
+	return;
+	}
+	if(getsenderref() == temple2_entry)
+	{
+	SetHintSolved(hint11);
+	return;
+	}
+	if(getsenderref() == temple2_door)
+	{
+	SetHintSolved(hint12);
+	return;
+	}
+	if(getsenderref() == temple2_block)
+	{
+	SetHintSolved(hint13);
+	return;
+	}
+	if((getsenderref() == bridge_pad2) && (GetSourceRef() == head2))
+	{
+	SetHintSolved(hint16);
+	SendMessage(commie_introcog, user0);
+	pad2_solved=1;
+	return;
+	}
+	if(getsenderref() == node2_north)
+	{
+		if(pad2_solved == 1)
+		{
+		SetHintSolved(hint17);
+		SetHintUnsolved(hint4);
+		}
+	return;
+	}
+	if(getsenderref() == b1b2_path)
+	{
+	SetHintSolved(hint18);
+		if(pad2_solved == 1)
+		{
+		SetHintUnsolved(hint19);
+		}
+	return;
+	}
+	if(getsenderref() == across_bridge2)
+	{
+	SetHintSolved(hint19);
+	SetHintUnsolved(hint20);
+	return;
+	}
+	if(getsenderref() == b2b3_path)
+	{
+	SetHintSolved(hint20);
+	SetHintUnsolved(hint21);
+	}
+	if(getsenderref() == raingod_path)
+	{
+	SetHintSolved(hint21);
+	SetHintUnsolved(hint22);
+	return;
+	}
+	if(getsenderref() == raingod_temple)
+	{
+		for (s=0; s<=21; s=s+1)
+		{
+		SetHintSolved(hint1[s]);		#1-22 Solved. Cleanup.
+		}
+	return;
+	}
+	if(getsenderref() == across_bridge3)
+	{
+	SetHintSolved(hint25);
+	SetHintUnsolved(hint26);
+	return;
+	}
+	if(getsenderref() == b3_path0)
+	{
+	SetHintSolved(hint26);
+	SetHintUnsolved(hint27);
+	return;
+	}
+	if(getsenderref() == b3_path1)
+	{
+	SetHintSolved(hint27);
+	return;
+	}
+	if(getsenderref() == last_chasm)
+	{
+	SetHintSolved(hint31);
+	SetHintUnsolved(hint32);
+	return;
+	}
+	if(getsenderref() == see_temple)
+	{
+	SetHintSolved(hint32);
+	SetHintUnsolved(hint33);
+	return;
+	}
+# ----------------------------------------------
+	if(getsenderref() == exit)
+	{
+	SetHintSolved(hint50);
+	}
+	return;                           
+
+user0:							# Head1 cog.
+	if(getparam(0) == 1)				# On release pad.
+	{
+	SetHintSolved(hint7);
+	return;
+	}
+	if(getparam(0) == 2)				# Rock Head on valley floor.
+	{
+	SetHintSolved(hint8);
+	}
+	return;
+
+user1:							# Head2 cog.
+	if(getparam(0) == 1)				# On release pad.
+	{
+	SetHintSolved(hint14);
+	return;
+	}
+	if(getparam(0) == 2)				# Rock Head on valley floor.
+	{
+	SetHintSolved(hint15);
+	}
+	return;
+
+user2:							# Drainwater cog.
+	if(getparam(0) == 1)				# Water Drained.
+	{
+	SetHintSolved(hint23);
+	return;
+	}
+	if(getparam(0) == 2)				# Rock Head Blown.
+	{
+	SetHintSolved(hint24);
+	}
+	return;
+
+user3:							# timed door cog.
+	if(getparam(0) == 0)				# Reset.
+	{
+	SetHintUnsolved(hint28);
+	SetHintUnsolved(hint29);
+	return;
+	}
+	if(getparam(0) == 1)				# Switch activated.
+	{
+	SetHintSolved(hint28);
+	return;
+	}
+	if(getparam(0) == 2)				# Entered Door.
+	{
+	SetHintSolved(hint28);
+	SetHintSolved(hint29);
+	}
+	return;
+
+user4:							# Snake bridge cog.
+	SetHintSolved(hint30);
+	return;
+
+user5:							# Quatzl cog.
+	SetHintSolved(hint34);				#Clean Up.
+	SetHintSolved(hint35);
+	return;
+
+user6:							# Boss arena entry cog.
+	SetHintSolved(hint33);
+	return;
+
+end
+

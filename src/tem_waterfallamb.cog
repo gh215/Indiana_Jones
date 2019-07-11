@@ -1,0 +1,47 @@
+# Jones 3D Cog Script
+#
+# TEM_WaterfallAmb.cog
+#
+# Plays ambient waterfall sound
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+	message	    startup
+    message	    timer
+    
+	thing		ghost
+
+	sound		waterfall=gen_waterfall_a.wav       local
+
+	float		minDist=-1
+	float		maxDist=-1
+	float		vol=1.0
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	SetTimer(0.5);
+    
+	return;
+
+# ========================================================================================
+
+timer:
+
+    PlaySoundThing(waterfall, ghost, vol, minDist, maxDist, 0x0001);
+        
+    return;
+
+# ========================================================================================
+
+end
+

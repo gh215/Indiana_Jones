@@ -1,0 +1,101 @@
+# Jones 3D Cog Script
+#
+# pyr_jackalblocktrigger.cog
+#	
+# Monitor block movement around monojackal4
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message		entered
+message		exited
+
+# world things
+thing	player		nolink	local
+thing	flame		nolink			# primary flame in pyramid 4 lightroom
+thing	block1		nolink
+thing	block2		nolink
+thing	block3		nolink
+
+# cogs
+cog		monojackal4	nolink
+
+# trigger to send jackal up; responds to block/player entry
+surface	statuetrigger	mask=0x480	linkid=1
+
+# places that blocks can be pushed onto from statuetrigger; respond only to pushblocks
+surface	pushtrigger1	mask=0x080	linkid=2	
+surface pushtrigger2	mask=0x080	linkid=2
+surface	pushtrigger3	mask=0x080	linkid=2
+surface	pushtrigger4	mask=0x080	linkid=2
+
+# variables
+int		indyinplace=0	local
+int		blockmoving=2	local
+int		locked=0		local
+end
+
+code
+entered:
+# ---> pushTrigger and statueTrigger faces
+	
+	#if flame isn't lit or trigger already sent, exit
+	if (GetThingFlags(flame) & 0x10) return;
+	if (locked) return;
+
+	#if player enters trigger
+	player = GetLocalPlayerThing();
+	if (GetSourceRef() == player)
+	{
+		#if Indy is pushing a block, note his position on trigger, otherwise tell the monojackal cog
+		if (blockmoving == 1)
+		{
+			indyinplace = 1;
+		}
+		else
+		{
+			SendMessage(monojackal4, user1);
+			locked = 1;
+		}
+	}
+
+	#if block enters an adjacent spot and Indy is on the trigger, tell the monojackal cog
+	if ((GetSourceRef() == block1) || (GetSourceRef() == block2) || (GetSourceRef() == block3))
+	{
+		blockmoving = 0;
+		
+		if (indyinplace)
+		{
+			SendMessage(monojackal4, user1);
+			locked = 1;
+		}
+	}
+	
+	return;
+
+exited:
+# ---> StatueTrigger
+	
+	# if not sent by StatueTrigger face or lightbox isn't up, exit
+	if (GetThingFlags(flame) & 0x10) return;
+	if (GetSenderRef() != statuetrigger) return;
+
+	# if player steps off that face, take note
+	player = GetLocalPlayerThing();
+	if (GetSourceRef() == player)
+	{
+		indyinplace == 0;
+	}
+
+	# if any of the blocks leave that face, take note
+	if ((GetSourceRef() == block1) || (GetSourceRef() == block2) || (GetSourceRef() == block3))
+	{
+		blockmoving = 1;
+	}
+	return;
+	
+end
+

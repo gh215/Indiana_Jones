@@ -1,0 +1,93 @@
+
+# Jones 3D Cog Script
+#
+# PRU_spikepits.cog    Blocks fall when touched, revealing spikepits.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message		entered
+message		timer
+message		startup
+message		arrived
+
+sector		pit
+surface		hangLedge
+
+thing		block
+thing		player		local
+
+sound		sndDie=tem_temspikes_up_kill_c.wav		local
+#sound		crash=nub_stonedoor_start_c.wav			local
+
+keyframe	impaled=in_die_buckle.key		local
+                                            
+template    tempRef=indy_sh_actor			local
+
+int			once=0		local
+int			deadIndy	local
+int			victim		local
+
+end
+
+# ========================================================================================
+
+code
+startup:
+	player = GetLocalPlayerThing();
+    ClearSurfaceFlags(hangLedge, 0x1000000);
+	return;
+# .................................................................................	
+
+entered:
+	if (GetSenderRef() == pit)
+	{
+		DamageThing(player, 1000.0, 0x1, victim);
+        PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+		SetThingFlags(player, 0x80000);
+        deadIndy = CreateThing(tempRef, player);
+        CaptureThing(deadIndy);
+		ClearThingFlags(deadindy, 0x80000);
+		PlayKey(deadindy, impaled, 4, 0x14, 0);
+		return;
+	}          
+	
+	if (once < 1)
+	{
+		if ((GetMoveStatus(player) >= 3) && (GetMoveStatus(player) <= 5))
+		{
+			Print("Tim has a big new car");
+            MakeMeStop();
+			Sleep(0.01);
+			ClearActorFlags(player, 0x200000);
+		}
+        
+		Print("touched");
+        MoveToFrame(block, 1, 1);
+		SetTimer(0.75);
+    }		
+    return;
+
+# .................................................................................
+
+timer:
+	RotatePivot(block, 2, 0.25);
+	once = once + 1;
+#	PlaySoundThing(crash, block, 1.0, -1.0, -1.0, 0x0);
+	return;
+	
+arrived:
+if (GetSenderRef() == block)
+{
+	Sleep(1.0);
+    SetSurfaceFlags(hangLedge, 0x1000000);
+	Sleep(5.0);
+	SetCollideType(block, 0);
+}	
+return;
+end

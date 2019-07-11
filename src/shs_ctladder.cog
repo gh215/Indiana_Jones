@@ -1,0 +1,162 @@
+# Jones 3D Cog Script
+#
+# SHS_ctladder.cog      Make the roof ladder of the clock tower move.  
+#
+# [JWC, RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message 	entered
+
+keyframe	in_falling=in_jump_fall.key			local //159x
+keyframe	in_landhard=in_jump_land_hard.key	local //57x
+
+sound		laddermove=shs_ladder_creak_c.wav		local
+sound		ladderstop=shs_ladderroll_stop.wav		local
+sound		ladderfall=shs_ladder_moving.wav		local
+sound 		music=mus_gen_magic2.wav				local
+sound   	in_whoa=inxj007.wav   					local
+sound    	inOof=inxj016a.wav      				local   # ooof...
+
+
+surface		climable
+surface		land			mask=0x004
+
+thing   	ladder1         	        # roof ladder
+                            
+thing		indy
+thing		cam1
+thing		c1_t1
+thing		c1_t2
+thing		player				local
+thing		posGhost
+thing		dummycam  
+thing 		in_mk0
+
+int  		locked=0 			local
+int			doorpos=0			local	# position of roof ladder 0=closed, 1=open
+int			curCam				local
+int			in_track0			local
+
+int			pl_colltype			local
+
+cog			NoWorkTalkcog
+
+end
+
+# ========================================================================================
+
+code
+
+entered:
+	
+	# open roof ladder when Indy steps on it, like a trap
+    
+	if (GetSenderRef()==ladder1)
+	{
+        if (doorpos==1) return;
+		
+		# make this fast and jerky
+		doorpos=1;
+		player = GetLocalPlayerThing();
+        curCam = GetCurrentCamera(); 
+        sleep(.1);	 	# to allow indy to be on the ladder
+		AISetCutsceneMode(indy);
+        MakeMeStop();
+        StartCutscene(0);
+        CopyPlayerHolsters(player, indy); # make sure our actor has matching props
+		
+        # cut to inside clock tower
+		
+		# Prep camera & cut...
+		SetCameraLookInterp(2, 0); # no pan & tilt
+		SetCameraPosInterp(2, 0); # no dolly
+		SetCameraFocus(2, cam1);
+		SetCameraSecondaryFocus(2, c1_t1);
+		Sleep(0.01);
+		SetCurrentCamera(2);
+		SetCameraFOV(70, 0, 0.0);
+		
+		DetachThing(player);
+		TeleportThing(player, posGhost); # put player in safe spot
+        pl_colltype = GetCollideType(player);
+		SetCollideType(player, 0);
+		SetThingFlags(player, 0x10); # hide player
+       	   		
+		sleep(.01);
+        
+		Setcollidetype(ladder1, 0);
+		Rotate(ladder1, 90, 0, .5);    # opens roof ladder
+		PlaySoundLocal(ladderfall, 1.0, 0, 0x0000, 0);
+		PlayVoice(indy, in_whoa, 1.0, 0);
+        WaitForStop(ladder1);
+        SetCollideType(ladder1, 3);					# give ladder collision
+        
+		ClearThingFlags(indy, 0x80000); # actor visible
+
+		CopyOrientAndPos(in_mk0, indy); #  orient actor
+
+		//Indy drops down
+		ClearThingFlags(indy, 0x4000); //shadow off
+		in_track0 = PlayKey(indy, in_falling, 6, 0x10, 0);
+		#Print("Falling!");
+		PrintInt(in_track0);
+		ClearThingFlags(indy, 0x4000); //shadow off
+		#return;
+	}
+
+	if (GetSenderRef() == land)
+	{
+		#Print("the beagle has landed");
+		SetThingFlags(indy, 0x4000); //shadow on
+		StopKey(indy, in_track0, 0);
+		# oof!
+        PlayVoice(indy, inOof, 1.0, 0);
+		PlayKey(indy, in_landhard, 4, 0x12, 1); //ouch
+
+		TeleportThing(player, indy);
+		
+        # make adjoin climable
+		ClearAdjoinFlags(climable, 0x2); 	# make adjoin no move
+        
+		# pan to bellringer
+        SetCameraLookInterp(2, 1); 			# pan & tilt
+    	SetCameraInterpSpeed(2, 3.0);
+        Sleep(0.01);			   	
+    	SetCameraSecondaryFocus(2, c1_t2);
+    
+        # play music
+        PlaySoundLocal(music, 1.0, 0, 0x0000, 0);
+		
+       	
+	    # close in
+		SetCameraFOV(55, 1, 3.0);
+				
+		sleep(4.0);
+
+		# cleanup
+       
+		SetThingFlags(indy, 0x80000); 					# hide actor	
+		ClearThingFlags(player, 0x10);
+		SetCollideType(player, pl_colltype);
+
+		# prep for camera to swing back
+		SetCameraPosition(1, VectorAdd(VectorTransformToOrient(player, '-0.25 -0.1 0.0'), GetThingPos(player)));	 # from the left side of indy
+		SetCurrentCamera(curCam);
+		ResetCameraFOV(0, 0.0);
+		
+		ClearActorFlags(player, 0x200000); 				# player in control
+		EndCutscene();
+	  	
+	}
+
+   
+	   
+	return;
+	
+
+end

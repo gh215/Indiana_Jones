@@ -1,0 +1,186 @@
+# Jones 3D Cog Script
+#
+# shw_hammer_cam.cog
+#
+# The Hammer Cam Cog, heh
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+			
+#	MESSAGES   	
+	#message	startup
+    message entered
+    message	blocked		
+	message	user0		
+	message	user1
+	message	arrived
+    
+    sector  hammerOn
+    sector  hammerOff
+	
+#	MATERIALS   	
+    material	animmat=drive_4cam_belt.mat		local
+        
+#	COGS   	
+    cog     millblock0			
+    cog     millblock1
+    cog     millblock2
+
+#	PROPS   	
+	thing	hammercam
+    thing	drivemech
+    thing	hammercampos
+        
+#	VARIABLES   	
+    int         index=0	local
+    int         running=0	local
+    int         mechrun	local
+    int         camrun		local
+    int         tracknum0	local
+    int         strack		local
+    int		    campos		local
+    int         track_Wheel local
+
+    flex	    fps=15.0	local
+    
+#	KEYFRAMES  	
+    #keyframe        spin=shw_hamr_cam.key   local
+    keyframe	drivepower=shw_drive_whel.key	local
+        
+	sound	camsound=nub_weight_move_c.wav	local
+    sound   snd_Wheel=nub_bull_move2_c.wav  local
+
+end
+
+# ========================================================================================
+code
+
+entered:
+
+    if((GetSenderRef() == hammerOn) && (running == 0))
+    {
+        running = 1;
+        TeleportThing(hammercam, hammercampos);
+    	campos = 0;
+    	
+        Sleep(1.0);
+        
+        running = 1;
+        mechrun = PlayKey(drivemech, drivepower, 4, 0x0, 0);
+        Rotate(hammercam, 180, 0, 4.5);
+        campos = 1;
+        strack = playsoundthing(camsound, hammercam, 1.0, 20, 35, 1);
+        track_Wheel = playsoundthing(snd_Wheel, drivemech, 1.0, 15, 30, 1);
+        tracknum0 = materialanim(animmat, fps, 1);
+    
+        # set the blocks in motion initially
+        Sleep(0.62);
+        Sendmessage(millblock0, user1);
+        Sleep(1.1);
+        Sendmessage(millblock1, user1);
+        Sleep(2.2);		
+        Sendmessage(millblock2, user1);
+        
+        # add some light to 3dos
+        SetThingLight(drivemech, '0.25 0.25 0.35', 0.001, 0.1);
+    }
+    
+    else if((GetSenderRef() == hammerOff)  && (running == 1))
+    {
+        StopSound(strack, 3.0);
+        StopKey(drivemech, mechrun, 1.0);
+        StopAnim(tracknum0);
+		running = 0;
+    }
+    
+    return;
+
+# ========================================================================================
+
+blocked:
+	Print("hammer_cam: Blocked");
+#	?????	
+	return;
+
+# ........................................................................................
+
+user1:
+
+#If H2O diverted into Div2, start animation, start hammer movements
+        
+        running = 1;
+		mechrun = PlayKey(drivemech, drivepower, 4, 0x0, 0);
+        Rotate(hammercam, 180, 0, 4.5);
+		campos = 1;
+		strack = playsoundthing(camsound, drivemech, 1.0, 10, 35, 1);
+        tracknum0=materialanim(animmat, fps, 1);
+
+        # set the blocks in motion initially
+		Sleep(0.62);
+		Sendmessage(millblock0, user1);
+		Sleep(1.1);
+		Sendmessage(millblock1, user1);
+		Sleep(2.2);		
+		Sendmessage(millblock2, user1);
+
+        
+        
+        return;        
+
+# ........................................................................................
+
+user0:
+
+#If H2O diverted away from Div2, stop animation, stop hammer movements
+        
+        If (running == 1)
+		{
+        StopSound(strack, 3.0);
+        StopKey(drivemech, mechrun, 1.0);
+        StopAnim(tracknum0);
+		running = 0;
+		}
+		return;
+        
+# ........................................................................................
+arrived:
+
+If ((GetSenderRef() == hammercam) && (running == 1))
+{
+    
+	campos = campos + 1;
+	If (campos == 2)	# if the cam has rotated 360 degrees
+	{
+        # reset the cam
+		TeleportThing(hammercam, hammercampos);
+        campos =0;
+	}
+	# keep it rotating
+    Rotate(hammercam, 180, 0, 4.5);
+	
+	# set the blocks in motion
+	Sleep(0.62);
+    Sendmessage(millblock0, user1);
+    Sleep(1.1);
+    Sendmessage(millblock1, user1);
+    Sleep(2.2);
+    Sendmessage(millblock2, user1);
+    return;
+}
+
+
+If ((GetSenderRef() == hammercam) && (running == 0))
+{
+	StopThing(hammercam, 0);
+    TeleportThing(hammercam, hammercampos);
+	campos = 0;
+    return;
+}
+
+# ........................................................................................
+
+end
+

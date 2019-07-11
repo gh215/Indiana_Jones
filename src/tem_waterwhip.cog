@@ -1,0 +1,88 @@
+# Jones 3D Cog Script
+#
+# TEM_WaterWhip.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     damaged
+    message     entered
+        
+    thing       player      local
+    thing       strut       #mask=0x8
+    thing       whipCam1
+    
+    surface     thisSide
+    surface     thatSide1   linkID=1
+    surface     thatSide2   linkID=1
+    
+    sound       mus_Cue=mus_gen_indywhip1.wav       local
+    
+    int         side1=1         local
+    int         side2=0         local
+    int         firstTime=1     local
+    
+end
+
+
+# ========================================================================================
+
+code
+
+damaged:
+
+    player = GetLocalPlayerThing();
+    
+    if(GetParam(1) == 0x10)
+    {
+        if(firstTime == 1)
+        {
+            firstTime = 0;
+            Sleep(1.5);
+            PlaySoundLocal(mus_Cue, 1.0, 0.0, 0x0, 0);
+        }
+        
+        # disable controls, switch camera
+        SetActorFlags(player, 0x200000);
+        SetCameraFocus(2, whipCam1);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+        SetCameraFOV(70, 0, 0.0);
+    }
+                
+    return;
+
+# ========================================================================================
+
+entered:
+    
+    # land on gem side
+    if((GetSenderID() == 1) && (side2 == 0))
+    {
+        side2 = 1;
+        ClearActorFlags(player, 0x200000);
+        SetCameraFOV(90, 0, 0.0);
+        SetCurrentCamera(1);
+    }
+    
+    # land on blockade side
+    if((GetSenderRef() == thisSide) && (side2 == 1))
+    {
+        side2 = 0;
+        side1 = 1;
+        ClearActorFlags(player, 0x200000);
+        SetCameraFOV(90, 0, 0.0);
+        SetCurrentCamera(1);
+    }
+        
+    return;
+               
+# ========================================================================================
+
+
+end
+

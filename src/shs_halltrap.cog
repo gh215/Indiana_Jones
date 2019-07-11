@@ -1,0 +1,242 @@
+# Jones 3D Cog Script
+#
+# shs_Halltrap.cog     Make the planks break and pendulums swing.  
+#
+# [JWC, SXC]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message startup
+message arrived
+message entered
+message touched
+message	crossed
+
+keyframe	smashed=in_die_fall.key         local
+
+sound	sndDie=tem_temspikes_up_kill_c.wav	local
+sound	sndLog=shs_log_pendulum.wav			local
+sound	in_wronghere=Inxj042.wav			local # Something wrong-->in_sayline[4]
+sound	mus_Cue=mus_gen_danger3.wav	
+
+surface trigger0
+surface trigger1
+surface trigger2		linkid=1
+surface trigger3		linkid=1
+surface	linetrigger
+ 
+# near elevator
+surface	soundOn			linkid=2
+surface	soundOff		linkid=3
+
+# near statue
+surface	soundOn1		linkid=2
+surface	soundOff1		linkid=3
+
+thing   log      			mask=0x405
+thing	player				local
+thing 	cam1
+thing	cam2
+
+thing	logGhost1
+thing	logGhost2
+thing	logGhost3
+
+int		curCam				local   
+int		enterflag=0			local
+int		hearSound=0			local
+int 	spoken=0			local
+
+int		logPitch0=10		local
+int		logPitch1=25		local
+int		logPitch2=110		local
+int		logPitch3=25		local
+int		logPitch4=10		local
+
+flex	logTime0=0.2		local		// Time it takes to get between positions 0 and 1, and vice versa.
+flex	logTime1=0.2		local		// Time it takes to get between positions 1 and 2, and vice versa.
+flex	logTime2=0.45		local		// Time it takes to get between positions 2 and 3, and vice versa.
+flex	logTime3=0.2		local		// Time it takes to get between positions 3 and 4, and vice versa.
+flex	logTime4=0.2		local		// Time it takes to get between positions 4 and 5, and vice versa.
+
+int		logDirection=1		local
+int		nextLogTime=0		local
+int		nextLogPosition=0	local
+
+vector	logPYR				local
+
+#SUB-ROUTINES
+
+flex	rotatelog			local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+	SetThingLight(log, '0.30 0.30 0.25', 0.01, 0.01);
+	AttachThingToThingEx(logGhost3, log, 0x08);
+	return;      
+
+entered:
+
+	if (GetSenderRef() == trigger0) 	
+	{
+				
+		# Prep camera & cut...
+    	SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+    	SetCameraPosInterp(2, 0);			# kill dolly mode too
+    	SetCameraFocus(2, cam1);
+    	SetCameraSecondaryFocus(2, player);
+    	Sleep(0.01);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		print("entered");
+        
+		if (enterflag == 0)
+		{	
+			enterflag=1;
+            call rotatelog;
+        }
+	}
+	
+	# Switch cameras
+	if (GetSenderRef() == trigger1)
+	{
+		Print("cam should switch");
+		# Prep camera & cut...
+    	SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+    	SetCameraPosInterp(2, 0);			# kill dolly mode too
+		SetCameraFocus(2, cam2);
+		SetCameraSecondaryFocus(2, player);
+		Sleep(0.01);
+		SetCurrentCamera(2);
+	    ResetCameraFOV(0, 0.0);
+	}
+	
+	# Warning music and line
+	if ((GetSenderRef() == linetrigger) && (spoken == 0))
+	{
+		spoken=1;
+        PlaySoundLocal(mus_Cue, 1.0, 0.0, 0x0, 0);
+		sleep(1);
+        PlayVoice(player, in_wronghere, 1, 0);
+	}
+
+	return;
+
+crossed:
+
+	# Return to normal camera
+    if (GetSenderId() == 1)
+	{
+		Print("exited");
+		SetCameraPosition(1, GetThingPos(cam1));	# prep for camera to swing back
+		SetCameraLookInterp(2, 0); # kill pan & tilt mode
+		SetCameraPosInterp(2, 0); # kill dolly mode
+		Sleep(0.01);
+		SetCurrentCamera(1);
+	}
+	
+	# Sound in range
+	if (GetSenderId() == 2)
+	{
+		hearSound=1;
+		ClearThingFlags(log, 0x10);
+    }
+	# Sound out of range
+	if (GetSenderId() == 3)
+	{
+		hearSound=0;
+		SetThingFlags(log, 0x10);
+    }
+	
+	return;
+
+
+
+
+arrived:
+	if (GetSenderRef() == log) 	
+	{
+//		DebugLocalSymbols();
+//		DebugWaitForKey();
+        call rotatelog;
+	}
+
+	return;
+
+touched:
+
+	if ((GetSenderRef() == log) && (GetSourceRef() == player))
+	{
+		DamageThing(player, 1000, 0x1, log);
+		SetCollideType(log, 0);
+		PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+	    PlayKey(player, smashed, 10, 0x14, 0);
+    }
+    return;
+
+rotatelog:
+	
+    
+	if (((nextLogPosition == 4) && (logDirection == -1)) ||
+		((nextLogPosition == 0) && (logDirection == 1)))
+	{
+		// We're at the top of outr swing, so snap us to a good position and then
+		// hesitate a bit before reversing direction.
+
+		if (nextLogPosition == 0)
+			CopyOrient(logGhost1, log);
+		else
+			CopyOrient(logGhost2, log);
+
+		Sleep(0.05);
+	    
+		if (hearSound) 
+		{
+			# log sound
+			PlaySoundThing(sndLog, logGhost3, 1.0, 5, 12, 0);
+		}
+	}
+
+	if (logDirection == 1)
+		Rotate(log, logPitch0[nextLogPosition], 0, logTime0[nextLogTime]);
+	else
+		Rotate(log, -logPitch0[nextLogPosition], 0, logTime0[nextLogTime]);
+    
+	
+	nextLogPosition = nextLogPosition + logDirection;
+	nextLogTime = nextLogTime + logDirection;
+
+	if (nextLogPosition > 4)
+	{
+		logDirection = -1;
+		nextLogPosition = 4;
+		nextLogTime = 4;
+	}
+	else
+	{
+		if (nextLogPosition < 0)
+		{
+			logDirection = 1;
+			nextLogPosition = 0;
+			nextLogTime = 0;
+		}
+	}
+
+	return;
+
+end
+
+
+

@@ -1,0 +1,70 @@
+# Jones 3D Cog Script
+#
+# TEO_CommieCreator.cog
+#
+# Creates a bunch of enemies in the Temple of the sun after indy has left the rooms
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message     startup
+    message     crossed
+
+	surface	    triggersurf
+
+	thing		player          local
+    
+    template    commie0
+    template    commie1
+    template    commie2
+    
+    thing       pos0
+    thing       pos1
+    thing       pos2
+    thing       pos3
+    thing       pos4
+    thing       pos5
+    
+    thing       currentai       local
+    
+    int         enemytype       local
+    int         position        local
+    int         crosonce        local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    crosonce = 0;
+    position = 0;
+    player = GetLocalPlayerThing();
+    return;
+    
+
+# ........................................................................................
+crossed:
+	if ((GetSenderRef() == triggersurf) && (GetSourceRef() == player) && (crosonce == 0))
+    {
+        crosonce = 1;
+        //print("past adjoin");
+        For (position = 0; position <= 6; position = position + 1)
+        {
+            enemytype = (rand()*3);
+            //printint(enemytype);
+            currentai = CreateThing(commie0[enemytype], pos0[position]);
+            //printint(AiGetMode(currentai));
+        }
+    }                    
+	return;
+	
+# ........................................................................................
+end
+
+

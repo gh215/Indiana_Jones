@@ -1,0 +1,260 @@
+# Jones 3D Cog Script
+#
+# PRU_whipspike.cog    Pick up spike, place in hole in wall, go around to other side, whip climb!
+#
+# [GGJ]
+# 11/16/98  Much help from Randy
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		activated
+#message		arrived
+message		callback
+message		damaged
+message		entered
+message		exited
+
+cog			talkCog		local
+
+thing		pikespot			//ghost object where the pike is placed
+thing		player		local
+thing		placeCam			#camera that shows Indy placing the pike
+thing		climbCam			#camera that shows pike sliding into place
+thing		indy				#actor
+thing		target				#ghost for climbCam to target
+thing		placedpike	local
+thing		pikeObject
+thing		pikeGrabCam
+thing		grabGhost
+
+model		pikeHand=hand_in_pike.3do 	local
+
+template	piketemplate		//the pike after it is placed
+
+keyframe	pikeplace=in_putpike.key	local
+keyframe	get=in_pickup_low.key		local
+
+sound		success=inxj112.wav						local
+sound		insertSnd=pru_whipspike_insert_c.wav	local
+sound		climbMus=mus_gen_indywhip1.wav			local
+sound		foundPike=inxj233.wav					local
+
+surface		pikeSurf
+
+surface		hole				//hole opening
+
+surface		hangshort
+surface		opening
+
+int			tempcam		local
+int			curcam		local
+int			placed=0	local
+int			handMesh	local
+int			swapRef		local
+int			once=0		local
+int			grabbed=0	local
+int			musOnce=0	local
+int			talking=0	local
+vector		v_targetpos	local
+
+cog			voiceline
+cog			hint
+
+end
+# ========================================================================================
+code
+
+startup:
+
+	SetCollideType(pikeObject, 0);
+	player = GetLocalPlayerThing();
+	handMesh = GetMeshByName(player, "inrhand");
+	
+	return;
+# .................................................................................
+
+activated:
+if ((GetSenderRef() == pikeSurf) && (grabbed == 0))
+{
+    # Disable player controls and stuff
+	if (MakeMeStop() == -1)
+		return;
+	DeselectWeaponWait(player);
+
+    grabbed=1;
+
+    StartCutscene(0);
+	
+	SetExtCamOffsetToThing(pikeGrabCam);
+	SetExtCamLookOffsetToThing(grabGhost);
+
+	talkCog = GetCogByIndex(0);
+	SendMessage(talkCog, 27);
+    
+	CaptureThing(player);
+	PlayKey(player, get, 5, 0x12, 0);
+	return;
+}
+
+	if ((GetSenderRef() == hole) && (GetCurItem(player) == 72) && (placed == 0))
+	{
+        Sleep(0.25);
+
+		# Disable player controls and stuff
+		if (MakeMeStop() == -1)
+			return;
+		DeselectWeaponWait(player);
+        
+		curCam = GetCurrentCamera();
+		StartCutscene(1);
+        placed = 1;
+        
+		#switch to a cutscene camera
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+        SetCameraFocus(2, placeCam);
+		SetCameraSecondaryFocus(2, pikespot);
+        SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		
+        SetThingFlags(player, 0x80000);		#turn invisible
+        CopyPlayerHolsters(player, indy);
+		ClearThingFlags(indy, 0x80000);		#make visible
+		
+		#swap actor's hand for one with pike, & capture Indy so we'll get callback
+        swapRef = SetThingMesh(indy, handMesh, pikeHand, 0);
+        CaptureThing(indy);
+		
+		#remove whip pike from inventory
+		ChangeInv(player, 72, -1);
+        
+		#animate the actor (The animation will send the callback message)
+		MoveToFrame(placeCam, 1, 0.5);
+		PlayKey(indy, pikeplace, 4, 0x12, 0);
+		Sleep(1.0);
+
+        PlaySoundThing(insertSnd, pikeSpot, 1.0, -1.0, -1.0, 0x0);
+
+        return;
+    }
+	else if ((GetSenderRef() == hole) && (GetCurItem(player) != 72) && (placed == 0) && (talking == 0))
+	{
+		talking = 1;
+		PlayVoice(player, foundPike, 1.0, 1);
+		talking = 0;
+		return;
+	}
+		   
+	return;
+
+# .................................................................................
+#arrived:
+#	if (GetSenderRef() == placedpike)
+#	{
+#		DEBUGPRINT("pike thing done moving");
+#	}
+
+	return;
+
+# .................................................................................
+callback:
+if (GetSenderRef() == player)
+{
+	ReleaseThing(player);
+	DestroyThing(pikeObject);
+	ChangeInv(player, 72, 1.0);
+	SetInvAvailable(player, 72, 1);
+	JonesInvItemChanged(72);
+	Sleep(1.0);
+	PlayVoice(player, foundPike, 1.0, 0);
+	RestoreExtCam();
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	return;
+}
+
+if (GetSenderRef() == indy)
+{
+	
+	if (once != 0) return;
+	
+	once=1;
+#    DEBUGPRINT("Entered MSG::callback");
+
+	# switch to camera on other side of wall
+    SetCameraFocus(2, climbCam);
+	SetCameraSecondaryFocus(2, target);
+	SetCurrentCamera(2);
+	MoveToFrame(climbCam, 1, 0.5);
+
+	ReleaseThing(indy);
+	RestoreThingMesh(indy, swapRef);
+	placedpike = CreateThing(piketemplate, pikespot);
+		
+	CaptureThing(placedpike);
+	
+	#switch back to the player while the camera isn't looking.
+	SetThingFlags(indy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	
+	MoveToFrame(placedpike, 1, 1);
+	
+	WaitForStop(placedpike);
+	Sleep(1.0);
+    
+    # revert cam
+	v_targetpos = VectorAdd(VectorTransformToOrient(player, '0.2 -0.05 0.0'), GetThingPos(player));	
+	SetCameraPosition(1, v_targetpos);
+	
+	SetCurrentCamera(curCam);
+	
+	#"That ought to do it..."
+    PlayVoice(player, success, 1, 1);
+    
+	#return player control
+    ClearActorFlags(player, 0x200000);
+    
+	EndCutscene();
+	
+	SendMessage(voiceline, user0);							 
+	SendMessage(hint, user3);
+}
+    
+    return;
+	
+damaged:
+if ((GetSenderRef() == placedPike) && (musOnce == 0))
+{
+    musOnce = 1;
+	Sleep(1.5);
+	PlaySoundLocal(climbMus, 1.0, 0.0, 0x0, 0);
+}
+return;
+
+# .................................................................................	
+entered:
+if (GetSenderRef() == hangshort)
+{
+	ClearAdjoinFlags(opening, 0x2);
+	return;
+}
+return;
+
+# .................................................................................	
+exited:
+if (GetSenderRef() == hangshort)
+{
+	Sleep(2.0);
+    SetAdjoinFlags(opening, 0x2);
+	return;
+}
+return;
+
+
+# .................................................................................	
+end
+

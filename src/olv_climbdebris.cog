@@ -1,0 +1,132 @@
+# Jones 3D Cog Script
+#
+# gen_ClimbDebris.cog
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     timer
+    
+    thing       player          local
+    thing       rocks           local
+    thing       origin          local
+    
+    sector      tempSect        local
+    
+    surface     climbFace
+    
+    template    debris0=stnshrapas_nc_ns        local
+    template    debris1=stnshrapbs_nc_ns        local
+    
+    sound       sndFalling=gen_fallingrock_c.wav        local
+    
+    vector      RHPos           local
+    vector      LHPos           local
+    vector      RFPos           local
+    vector      LFPos           local
+    vector      rocksVel        local
+    vector      rocksRotVel     local
+    vector      rvec            local
+    
+    int         i=0             local
+    int         randNum         local
+    int         numDebris=2     local
+    int         sound1          local
+    
+	flex		rockvelocity		local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+
+# ========================================================================================
+
+entered:
+
+    if(GetSenderRef() == climbFace)
+    {
+        SetTimer(RandBetween(2, 3));
+    }
+    
+    return;
+        
+# ========================================================================================
+
+timer:
+
+    randNum		= RandBetween(0, 3);	# Which appendage to drop a load from
+	numDebris	= RandBetween(1, 3);	# How many rocks to drop
+    origin		= GetThingPos(player);
+    tempSect    = GetThingSector(player);
+    
+    RVec = GetThingRVec(player);
+    RHPos = VectorSet(0.035 * VectorX(RVec), 0.035 * VectorY(RVec), 0.07);
+    LHPos = VectorSet(-0.035 * VectorX(RVec), -0.035 * VectorY(RVec), 0.07);
+    RFPos = VectorSet(0.03 * VectorX(RVec), 0.03 * VectorY(RVec), -0.08);
+    LFPos = VectorSet(-0.03 * VectorX(RVec), -0.03 * VectorY(RVec), -0.08);
+    
+    # if player is moving up, down, left or right -- generate debris
+    if((GetMoveStatus(player) >= 22) && (GetMoveStatus(player) <= 25))
+    {
+        PlaySoundLocal(sndFalling, 1.0, 0.0, 0x0, 0);
+        
+		# Drop a load!
+        for(i=0; i<numDebris; i=i+1)                                                        	            
+        {
+            rocks = CreateThingAtPos(debris0[RandBetween(0, 1)], tempSect, VectorAdd(origin, RHPos[randNum]), '0 0 0');
+            Call rockVelocity;
+            Sleep(0.1);
+        }
+
+        SetTimer(RandBetween(1, 3));
+    }
+    
+    # if player climbs over the top, generate some debris and stop the pulse
+    else if(GetMoveStatus(player) == 26)
+    {
+        PlaySoundLocal(sndFalling, 1.0, 0.0, 0x0, 0);
+
+		# Just drop a load from the left foot
+        for(i=0; i<numDebris; i=i+1)                                                        	            
+        {
+            rocks = CreateThingAtPos(debris0[RandBetween(0, 1)], tempSect, VectorAdd(origin, LFPos), '0 0 0');
+            Call rockVelocity;
+            Sleep(0.1);
+        }
+    }
+
+    # if player is stopped, don't do anything except reset the timer to check again later
+    else if(GetMoveStatus(player) == 9) 
+    {
+        SetTimer(RandBetween(1, 3));
+    }
+    
+    return;
+        
+# ========================================================================================
+
+rockVelocity:
+
+    rocksVel = VectorSet(0, 0, 0.01);
+    rocksRotVel = VectorSet(0.0, 0.0, 360.0);
+    SetThingVel(rocks, VectorScale(rocksVel, 0.7));
+    SetThingRotVel(rocks, rocksRotVel);
+    return;
+        
+# ========================================================================================
+
+end
+

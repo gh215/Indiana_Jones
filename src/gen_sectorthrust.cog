@@ -1,0 +1,47 @@
+# Jones 3D Cog Script
+#
+# gen_SectorThrust.cog
+#
+# generic sector thrust script
+#
+# This script will control 1-8 sector thrust sectors thrusting in the same direction
+# and with the same velocity.  The thrusts run continuously.
+#
+# [YB]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup	
+
+	vector	vec0			desc=thrust_direction
+	float		speed=1.0	desc=thrust_speed
+
+	sector	sector0		nolink
+	sector	sector1 		nolink
+	sector	sector2		nolink
+	sector	sector3		nolink
+	sector	sector4		nolink
+	sector	sector5		nolink
+	sector	sector6		nolink
+	sector	sector7		nolink
+end
+
+
+code
+
+# ........................................................................................
+
+startup:
+	if (sector0 >= 0) SetSectorThrust(sector0, vec0, speed);
+	if (sector1 >= 0) SetSectorThrust(sector1, vec0, speed);
+	if (sector2 >= 0) SetSectorThrust(sector2, vec0, speed);
+	if (sector3 >= 0) SetSectorThrust(sector3, vec0, speed);
+	if (sector4 >= 0) SetSectorThrust(sector4, vec0, speed);
+	if (sector5 >= 0) SetSectorThrust(sector5, vec0, speed);
+	if (sector6 >= 0) SetSectorThrust(sector6, vec0, speed);
+	if (sector7 >= 0) SetSectorThrust(sector7, vec0, speed);
+	return;
+
+end

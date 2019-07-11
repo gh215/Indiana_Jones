@@ -1,0 +1,73 @@
+# Jones 3D Cog Script
+#
+# pyr_SpikesUp.cog
+#
+# Player is killed when he falls on spikes that are up.
+#
+# [TRM] && [RKD]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message	startup
+message	entered
+message	touched
+
+thing	spikes
+thing	deadindy	local
+thing	player		local
+
+surface		spikefloor
+
+template	tempRef=indy_sh_actor       local
+
+keyframe	inDie=in_die_buckle.key     local
+
+sound	sndDie=tem_temspikes_up_kill_c.wav      local
+sound	indyDie=Inxj033a.wav					local
+
+int		locked=0	local
+end
+
+# ========================================================================================
+
+code
+startup:
+	sleep(.01);
+	SetThingLight(spikes, '.2 .2 .4', .001, .01);
+
+    return;
+
+# ========================================================================================
+
+entered:
+touched:
+	if (locked) return;
+	locked = 1;
+
+	player = GetLocalPlayerThing();
+	
+	PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+	PlaySoundThing(indyDie, player, 1, -1, -1, 0);
+
+	SetThingFlags(player, 0x10);
+
+	deadIndy = CreateThing(tempRef, spikes);
+	CaptureThing(deadIndy);
+
+	CopyPlayerHolsters(player, deadindy);
+	CopyOrient(player, deadIndy);
+										
+	# Show actor Indy and play Keyframe
+	ClearThingFlags(deadIndy, 0x80000);
+	PlayKey(deadIndy, inDie, 4, 0x14, 0);
+
+	DamageThing(player, 1000.0, 0x1, player);
+	sleep(.01);
+
+	return;
+
+end
+

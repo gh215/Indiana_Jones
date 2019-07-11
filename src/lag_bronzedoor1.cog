@@ -1,0 +1,158 @@
+# Jones 3D Cog Script
+#
+#	lag_bronzedoor1.cog
+#
+#	Converted from:  gen_DoorDouble.cog
+#
+#	[SXC & DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup		
+	message	activate
+	message	timer	
+
+	thing		door0
+	thing		door1
+	thing		actorindy
+	thing		campos
+	thing		proppos
+	template	proptem
+	template	shovtem
+	flex		movespeed=0.6
+	cog		hints			#send message when complete. 
+
+	sector	doorsector		local
+	int		doorstatus		local
+	int		movestatus		local
+	int		showing=0		local
+	thing		player		local
+	sector  	doorsector		local
+	thing		shovkey		local
+	thing		propkey		local
+	sound		doorsnd=teo_stonebar_slide_c.wav	local
+	sound		doorstop=teo_teobut_pull_c.wav	local
+	sound		breakit=lag_propbreak_c.wav		local
+	int		doormove					local
+	int		actit						local
+	int		curcam					local
+	flex		checkstatus					local
+	keyframe	in_activate=0in_uw_useprop.key	local 
+
+end
+
+#========================================================================================
+
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	doorsector = getthingsector(door0);
+	SetSectorAdjoins(doorsector, 0);
+
+	return;
+
+# .................................................................................................
+
+activate:
+	call checkstatus;
+	if (movestatus) return;
+	if(doorstatus != 0) return;
+	curCam = GetCurrentCamera();
+	if(GetCurItem(player) == 94)			# Propeller.
+	{
+	if(showing == 1) return;
+	showing=1;
+	SetSectorAdjoins(doorsector, 1);
+      StartCutscene(1);
+	SetThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	CopyPlayerHolsters(player, actorindy);
+	ClearThingFlags(actorindy, 0x80000);
+	SetCameraLookInterp(2, 0);			# turns off interp to lookthing.
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, actorindy);
+	SetCurrentCamera(2);
+	SetCameraFOV(70, 0, 0);
+	SetTimer(1.0);
+	actit = PlayKey(actorindy, in_activate, 4, 0x12, 1);
+	ChangeInv(player, 94, -1);
+	ResetCameraFOV(0, 0.0);
+	SetCurrentCamera(curCam);
+	SetThingFlags(actorindy, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	showing=0;
+	EndCutscene();
+	return;
+	}
+      if(GetCurItem(player) == 62)			#shovel, Break.
+	{
+	if(showing == 1) return;
+	showing=1;
+      StartCutscene(1);
+	SetThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	CopyPlayerHolsters(player, actorindy);
+	ClearThingFlags(actorindy, 0x80000);
+	SetCameraLookInterp(2, 0);			# turns off interp to lookthing.
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, actorindy);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0);				# makes sure set to default.	
+	shovkey = CreateThing(shovtem, proppos);
+	CaptureThing(shovkey);
+	ChangeInv(player, 62, -1);
+	actit = PlayKey(actorindy, in_activate, 4, 0x12, 0);
+
+	sleep(2.0);
+	PlaySoundThing(breakit, shovkey, 1.0, 25, 40, 0);
+	DestroyThing(shovkey);
+	sleep(1.5);
+	StopKey(actit, 0.01);
+
+	SetCurrentCamera(curCam);
+	SetThingFlags(actorindy, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	showing=0;
+	EndCutscene();
+	return;
+	}
+	else
+	{
+	return;
+	}
+
+# .................................................................................................
+
+timer:
+	propkey = CreateThing(proptem, proppos);
+	CaptureThing(propkey);
+	SetCollideType(propkey, 0);
+	Sleep(0.6);
+	MoveToFrame(propkey, 1, 0.45);
+	movetoframe(door0, 1, movespeed);
+	movetoframe(door1, 1, movespeed);
+	doormove=PlaySoundThing(doorsnd, door0, 1, 35, 50, 1);
+	WaitForStop(door0);
+	PlaySoundThing(breakit, propkey, 1.0, 25, 40, 0);
+	DestroyThing(propkey);
+	StopSound(doormove, 0.1);
+	PlaySoundThing(doorstop, door0, 1, 35, 50, 0);
+	SendMessageEx(hints, user6, 0, 0, 0, 0);
+	return;
+
+# .................................................................................................
+
+checkstatus:
+	movestatus = ismoving(door0);
+	if (door1 >= 0) movestatus = movestatus + ismoving(door1);
+
+	doorstatus = getcurframe(door0);
+	if (door1 >= 0) doorstatus = doorstatus + getcurframe(door1);
+	return;
+
+end

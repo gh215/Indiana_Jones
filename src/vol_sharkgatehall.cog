@@ -1,0 +1,145 @@
+# Jones 3D Cog Script
+#
+# VOL_SharkGateHall.cog
+#
+# This cog causes 3 spiders to attack upon an entered message. One skitters down a web
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message	startup
+message	entered
+
+
+#............ACTORS..........
+thing	player									local
+
+thing	spider0	
+thing	spider1	
+thing	spider2									local	
+thing	spider3									local	
+
+
+#............TRIGGERS..........
+sector	attack_sect
+surface	draw_surf
+
+
+#............AI MOVE TARGETS..........
+thing	spider0_mv0	
+thing	spider1_mv0	
+
+	
+
+
+#............AI EVENT SPOTS..........
+thing	spider2pos
+thing	spider3pos
+
+
+#............VARIABLES..........
+int		music									local
+int		spider2									local
+int		drawn=0									local
+int		attacked=0								local
+
+
+#............TEMPLATES..........
+template	tpl_Spider=spider_wall				local
+
+
+#............SOUNDS..........
+sound	attack_cue=mus_gen_eerie1.wav				local
+
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    GetThingClassCog(spider2);
+	
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+
+	# disable spiders
+	AISetCutSceneMode(spider0);
+    AISetCutSceneMode(spider1);
+	SetThingFlags(spider0, 0x80000);
+	SetThingFlags(spider1, 0x80000);
+
+return;
+
+# ========================================================================================
+entered:
+
+If ((GetSenderRef() == draw_surf) && (drawn == 0))
+	{
+	#print("spiders have been drawn");
+	drawn = 1;
+	ClearThingFlags(spider0, 0x80000);
+	ClearThingFlags(spider1, 0x80000);
+	}
+
+
+If ((GetSenderRef() == attack_sect) && (attacked == 0))
+	{
+	#print("spiders are attacking");
+	attacked = 1;
+    Sleep(0.5);
+	# danger cue
+	PlaySoundLocal(attack_cue, 1.0, 0.0, 0x0, 0);
+    
+	# spiders look at player
+	AISetLookThing(spider0, player);
+	AISetLookThing(spider1, player);
+
+	# spiders move toward player
+	AISetMoveSpeed(spider0, 1.0);
+	AISetMoveThing(spider0, spider0_mv0, 0);
+
+    AISetMoveSpeed(spider1, 1.0);
+	AISetMoveThing(spider1, spider1_mv0, 0);
+
+	Sleep(2.0);
+
+	# spiders resume AI and attack
+	AIClearCutSceneMode(spider0);
+	AIClearCutSceneMode(spider1);
+
+	Sleep(1.0);
+    
+	# create the ceiling drop spider
+    spider2 = CreateThing(tpl_Spider, spider2pos);
+	
+	#sends message to spider_wall's class cog, saying "user0" (27)
+    SendMessageEx(GetThingClassCog(spider2), user0, spider2, 0, 0, 0);
+    
+
+    Sleep(2.0);
+    
+	# create the ceiling drop spider
+    spider3 = CreateThing(tpl_Spider, spider3pos);
+	
+	#sends message to spider_wall's class cog, saying "user0" (27)
+    SendMessageEx(GetThingClassCog(spider3), user0, spider3, 0, 0, 0);
+	}
+
+
+return;
+
+
+
+# ========================================================================================
+end
+
+
+
+

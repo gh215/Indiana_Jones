@@ -1,0 +1,73 @@
+# Jones 3D Cog Script
+#
+# lag_WaterLightRand.cog
+#
+#  [RT]
+#  Modified & localized settings for Lag underwater ship interior from gen_LightAnimRand.cog [DS]
+#
+#	This cog randomly animates up to 8 dynamic light sources, allowing the designer to
+#  specify minimum and maximum completion times, pause times and RGB values.
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message	startup
+	message	timer
+
+	thing		light0
+	thing		light1
+	thing		light2
+	thing		light3
+	thing		light4
+	thing		light5
+	thing		light6
+	thing		light7
+	
+	flex		minR=0.0		local		// Minimum RGB values
+	flex		minG=0.0		local		
+	flex		minB=0.0		local			  	
+	flex		minTime=0.1		local		// Minimum time to complete lighting change
+	flex		minPause=0.1	local		// Minimun time to pause between cycles
+
+	flex		rangeR=0.1		local		// How far above minimum values do we go? Min + Range = Max
+	flex 		rangeG=0.8		local
+	flex		rangeB=1.0		local
+	flex		rangeTime=2.0	local
+	flex		rangePause=0.25	local
+
+	int		i			local
+	int		numLights=0		local
+	float		changeTime		local
+	
+	vector	vecLight		local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	for (i = 0; i < 8; i = i + 1)
+		if (light0[i] >= 0)
+			numLights = numLights + 1;
+   
+	SetTimer(0.1);
+   return;
+
+timer:
+
+	vecLight = VectorSet(minR + (rand() * rangeR), minG + (rand() * rangeG), minB + (rand() * rangeB));
+	changeTime = minTime + (rand() * rangeTime);
+   
+	for (i = 0; i < numLights; i = i + 1)
+      SetThingLight(light0[i], vecLight, 0.5, changeTime);
+
+   Sleep(changeTime);
+   SetTimer(.01 + minPause + (rand() * rangePause));
+	return;
+
+end

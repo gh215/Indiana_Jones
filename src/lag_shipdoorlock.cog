@@ -1,0 +1,220 @@
+# Jones 3D Cog Script
+#
+# lag_shipdoorlock.cog
+#
+# Locked Ships Rotating Door Script
+#
+# [DS]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# =======================================================================================
+
+symbols
+	message	startup
+	message	activate	
+	message	blocked
+
+   	thing		door0
+	thing		lock0
+	thing		bar0
+	thing		indyactor
+	thing		campos
+	cog		hints			#send message when complete. 
+	thing		player						local
+	int		open=1						local
+	int		usekey						local
+	int		curcam						local
+	keyframe	in_activate=in_activate_medium.key		local
+	sound		opensnd=lag_rustydoor_c.wav			local
+	sound		lockturn=lag_rustydoor_key.wav		local
+	flex		OpenDoors						local
+	flex		randwrongitemlines				local
+	flex		randlocklines					local
+	int		speak0						local
+	int		wrongitemoffset					local
+	int		lockoffset						local
+
+# .............. INDY SAY LINES ..................................................
+	int	lineindex					local # indexes sound array
+
+# locked lines...	
+	sound	in_nokey0=inxj077.wav			local	# It's locked.
+	sound	in_nokey1=Inxj076.wav			local # This...locked-->in_sayline[18]
+	sound	in_nokey2=Inxj078.wav			local # Locked.
+	sound	in_nokey3=Inxj082.wav			local # keyhole here...just need key.
+	sound	in_nokey4=Inxj079.wav			local # Locked again.
+	sound	in_nokey5=Inxj080.wav			local # Locked...luck never changes.
+	sound	in_nokey6=Inxj081.wav			local # Oh no...why...always locked?
+	int	dl_newline=50				local
+	int	dl_oldline=50				local
+
+
+# wrong item...
+	sound	in_itemline0=Inxj089.wav		local # That didn't work.
+	sound	in_itemline1=Inxj090.wav		local # ...something wrong.
+	sound	in_itemline2=Inxj092.wav		local # Hmm...didn't quite work.
+	sound	in_itemline3=Inxj060.wav		local # I don't think...right answer.
+	sound	in_itemline4=Inxj087.wav		local # Whoops.
+	sound	in_itemline5=Inxj088.wav		local # Nope.
+	sound	in_itemline6=Inxj091.wav		local # Of course that didn't work.	
+	int	wi_newline=50				local
+	int	wi_oldline=50				local
+
+
+end
+
+# ========================================================================================
+
+code
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+activate:
+	if (GetSenderRef() != lock0) return;
+	if(open == 0) return;
+	if(GetCurItem(player) == 61)			# Padlock key.
+	{
+	curCam = GetCurrentCamera();
+	open = 0;
+	SetActorFlags(player, 0x200000);
+	DeselectWeaponWait(player);
+	CopyPlayerHolsters(player, indyactor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyactor, 0x80000);
+	CopyOrientAndPos(indyactor, player);
+	StartCutscene(1);
+	SetCameraLookInterp(2, 0);			# turns off interp to lookthing.
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, indyactor);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0);				# makes sure set to default.	
+	Sleep(0.5);
+PlayKey(indyactor, in_activate, 4, 0x12, 0);
+Sleep(0.4);
+usekey=PlaySoundThing(lockturn, lock0, 1.0, 4, 12, 0);
+WaitForSound(usekey);
+	DestroyThing(lock0);
+	ChangeInv(player, 61, -1);
+	PlaySoundThing(opensnd, bar0, 0.7, 4, 12, 0);
+	Rotate(bar0, -95, 0, 0.5);
+	WaitForStop(bar0);
+	SendMessage(hints, user3);
+	call OpenDoors;
+	return;
+	}
+	else
+	{
+		SetActorFlags(player, 0x200000);
+		StopThing(Player);
+		DeselectWeaponWait(player);
+		PlayKey(player, in_activate, 4, 0x12, 0);
+
+	# player is using a wrong item
+	      if (GetCurItem(player) >= 1)
+		{
+		sleep(0.5);
+		call randwrongitemlines;
+		}
+	# player isn't using anything
+		else
+		{
+		sleep(0.5);
+		call randlocklines;
+		}
+
+		WaitForSound(speak0);
+		ClearActorFlags(player, 0x200000);
+		return;
+	}
+
+# ........................................................................................
+
+blocked:
+	Print("Door is blocked");
+	return;
+
+# ........................................................................................
+
+OpenDoors:
+	Rotate(door0, -70, 1, 1);
+	PlaySoundThing(opensnd, door0, 1.0, 4, 12, 0);
+	WaitForStop(door0);
+	DestroyThing(bar0);
+	Rotate(door0, -15, 2, 0.4);
+	WaitForStop(door0);
+	Rotate(door0, 10, 0, 0.4);
+	WaitForStop(door0);
+	Sleep(1.0);
+	EndCutscene();
+	SetCurrentCamera(curCam);
+	SetThingFlags(indyactor, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	SetCameraLookInterp(2, 1);			#default.
+	return;
+
+#=====================================================================
+#		Wrong Item lines
+#=====================================================================
+randwrongitemlines:
+
+	while (wi_newline == wi_oldline)
+	{		
+		wi_newline = RandBetween(0, 19);
+		if (wi_newline < 15)
+		{	
+			wi_newline = RandBetween(0, 3); # ~1/5 chance for lines 0 thru 3
+		}
+		if (wi_newline == 19)
+		{
+			wi_newline = 6; # 1/20 chance for line 6 
+		}
+		if (wi_newline > 16)
+		{
+			wi_newline = 5; # 1/10 chance for line 5 
+		}
+		if (wi_newline > 14)
+		{
+			wi_newline = 4; # 1/10 chance for line 4
+		}
+	}
+	wi_oldline = wi_newline;	
+	lineindex = wrongitemoffset + wi_newline;
+	speak0 = PlayVoice(player, in_itemline0[lineindex], 1, 1);
+	return;
+
+#=====================================================================
+#		Locked lines
+#=====================================================================
+randlocklines:
+
+	while (dl_newline == dl_oldline)
+	{		
+		dl_newline = RandBetween(0, 19);
+		if (dl_newline < 14)
+		{	
+			dl_newline = RandBetween(0, 2); # ~1/4 chance for 0 thru 2
+		}
+
+		if (dl_newline > 17)
+		{
+			dl_newline = (dl_newline - 13); # 1/20 chance for 5 or 6 
+		}	
+		if (dl_newline > 15)
+		{
+			dl_newline = 4; # 1/10 chance
+		}
+		if (dl_newline > 13)
+		{
+			dl_newline = 3; # 1/10 chance
+		}
+	}
+	dl_oldline = dl_newline;
+	lineindex = lockoffset + dl_newline;
+	speak0 = PlayVoice(player, in_nokey0[lineindex], 1.0, 0);
+	return;
+
+end
+

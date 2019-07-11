@@ -1,0 +1,212 @@
+# Jones 3D Cog Script
+#
+# weap_IMP5.cog
+#
+# [RT]
+#
+# Controls Infernal Machine Part #5, the Reality Dialator.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		activated
+message		deactivated
+message		selected
+message		deselected
+message		callback
+message		timer
+message		pulse
+message		changed
+
+model		impOn=imp5_dial_on.3do		local	# Autoloaded
+model		impOff=imp5_dial.3do		local	# Autoloaded
+
+sound		pull=gen_grenade_pull.wav	local	# Autoloaded
+sound		put=gen_grenade_put.wav		local	# Autoloaded
+sound		pow=imp5_chargeup.wav		local	# Autoloaded
+sound		on=imp5_powerup.wav			local	# Autoloaded
+sound		off=imp5_powerdown.wav		local	# Autoloaded
+sound		loop=imp5_on_loop.wav		local	# Autoloaded
+
+template	projectile=+imp5			local	# Autoloaded
+template	tplGlow=+imp5_glow			local	# Autoloaded
+
+thing		player						local
+thing		glow						local
+
+int			weaponNum=18				local
+int			handMesh					local
+int			handNode					local
+int			callNum						local
+int			curSound					local
+#int			index						local
+
+int			bDisabled=0					local
+int			bFiring=0					local
+
+vector		firePos						local
+vector		dustPos						local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	handMesh = GetMeshByName(player, "inrhand");
+	handNode = GetNodeByName(player, "inrhand");
+
+	return;
+
+# -------------------------------------------------------------------
+
+fire:
+
+	if (bDisabled)
+	{
+		bDisabled = 0;
+		return;
+	}
+
+	SetThingMesh(player, handMesh, impOn, 0);
+
+	firePos = GetThingJointPos(player, handNode);
+	FireProjectile(player, projectile, pow, -1, firePos, '0 0 0', 1.0, 0x0, 0.0, 0.0);
+
+	dustPos = GetThingJointPos(player, handNode);
+	dustPos = VectorAdd(dustPos, '0 0 0.025'); 
+	MakeFairyDust(player, dustPos);
+
+	IMPStartFiring(18);
+    bFiring = 1;
+
+	SetFireWait(player, 3.5);
+	SetTimer(3.0);
+    SetPulse(0.1);
+
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+	ActivateWeapon(player, 0.01);
+	return;
+
+# -------------------------------------------------------------------
+
+deactivated:
+
+	DeactivateWeapon(player);
+	return;
+
+# -------------------------------------------------------------------
+
+selected:
+
+	SetAimWait(player, 0.0);
+	SetMountWait(player, 0.7);
+
+	SetArmedMode(player, 5);
+	SetCurWeapon(player, weaponNum);
+	SetThingFireOffset(player, '0.0 0.0 0.0'); 
+
+	CaptureThing(player);
+	PlayMode(player, 66, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deselected:
+
+	SetMountWait(player, 1.0);
+	StopMode(player, 66, 0);
+
+	CaptureThing(player);
+	PlayMode(player, 67, 0);
+
+	SetArmedMode(player, 0);
+
+    StopSound(curSound, 0.0);
+	PlaySoundThing(off, player, 1, -1, -1, 0x880);
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	callNum = GetParam(1);
+	ReleaseThing(player);
+
+	if (callNum == 28)
+	{
+		# Model swaps & FX
+		SetWeaponModel(player, weaponNum);
+		glow = AttachThingToThingMesh(player, tplGlow, handMesh);
+		
+		# Sounds
+		PlaySoundThing(pull, player, 1, -1, -1, 0x880);
+		PlaySoundThing(on, player, 1, -1, -1, 0x880);
+		Sleep(0.25);
+		curSound = PlaySoundThing(loop, player, 1, -1, -1, 0x881);
+	}
+	else if (callNum == 29)
+	{
+		if (bFiring)
+		{
+			IMPEndFiring(18);
+			SetPulse(0);
+            bFiring = 0;
+		}
+
+		# Cleanup...
+        ResetWeaponModel(player);
+		DetachThingMesh(glow);
+
+        PlaySoundThing(put, player, 1, -1, -1, 0x880);
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+timer:
+
+	if (bFiring)
+	{
+		SetThingMesh(player, handMesh, impOff, 0);
+		IMPEndFiring(18);
+		SetPulse(0);
+	}
+
+    bFiring = 0;
+    return;
+
+# -------------------------------------------------------------------
+
+pulse:
+
+	dustPos = GetThingJointPos(player, handNode);
+	dustPos = VectorAdd(dustPos, '0 0 0.025'); 
+	MakeFairyDust(player, dustPos);
+	return;
+
+# -------------------------------------------------------------------
+
+changed:
+
+	# This message is called when an IMP is activated on an IMP stand
+	bDisabled = 1;
+	return;
+
+end

@@ -1,0 +1,1671 @@
+# Jones 3D Cog Script
+#
+# olv_quetzalcoatl.cog
+#
+# AI enhancements for Quetzalcoatl
+#
+# []
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+#
+# ===================================================================
+
+# ===================================================================
+symbols
+
+message		startup
+message		created
+message		aievent
+message		timer
+message		damaged
+message		entered
+message		exited
+message		touched
+message		user0
+message		killed 
+message		user1		# Added by Don for cutscene.
+
+# ************************** GLOBAL VARIABLES *************************
+thing		t_PatrolPt00
+thing		t_PatrolPt01
+thing		t_PatrolPt02
+thing		t_PatrolPt03
+thing		t_PatrolPt04
+thing		t_PatrolPt05
+thing		t_PatrolPt06
+thing		t_PatrolPt07
+thing		t_InMainTunnelPt
+
+thing		t_SpikePatrolPt00
+thing		t_SpikePatrolPt01
+thing		t_SpikePatrolPt02
+thing		t_SpikePatrolPt03
+thing		t_SpikePatrolPt04		// one in front of main tunnel
+thing		t_OffSpikePatrolPt00
+thing		t_OffSpikePatrolPt01
+thing		t_OffSpikePatrolPt02
+thing		t_OffSpikePatrolPt03
+
+thing		t_SpikeTip00
+thing		t_SpikeTip01
+thing		t_SpikeTip02
+thing		t_SpikeTip03
+
+sector		s_MainTunnel
+sector		s_OtherTunnel
+
+#template	tpl_spit=+quetz_spit	local
+#material	spit_mat=olv_4sprite_spittle.mat local
+
+template	tpl_sparks=quetzSparksLG			local	    
+
+# ************************** SOUNDS *******************
+
+sound		move=olv_boss_move.wav			local
+sound		spit=olv_boss_spit.wav			local
+sound		tonguehiss=olv_boss_hiss.wav	local
+sound		hurt1=olv_boss_hurt1.wav		local
+sound		hurt2=olv_boss_hurt2.wav		local
+
+int			n_MoveSoundChannel=-1			local
+
+keyframe	key=qu_tongue.key				local
+
+# ************************** CONSTANTS *******************
+int			NUM_PATROL_POINTS=8		local
+int			NUM_SPIKE_POINTS=5		local
+int			NUM_SPIKES=4			local
+
+int			STANDARD_MODE=0			local # under normal instinct control
+int			PATROL_MODE=1 			local # Indy is known to be on the ground, but can't currently be seen
+int			SPIKE_MODE=2			local # Indy is up on a ledge
+int			THRASH_MODE=3			local # We've been spiked
+
+int			HEAD_SHOT_DAMAGE=350	local 
+int			BODY_SHOT_DAMAGE=150	local 
+
+flex		BASE_SEQUENTIAL_EXPLOSION_TIME=0.22 local
+flex		TONGUE_RELOAD=10.0		local 
+
+int			TIMER_ID_WAKEUP_LITTLE_SNAKE=0	local
+int			TIMER_ID_RELOAD_LITTLE_SNAKE=1	local
+int			TIMER_ID_SPIT_LITTLE_SNAKE=2	local
+int			TIMER_ID_EXPLODE_TAIL_PIECE=3	local
+int			TIMER_ID_ENABLE_TONGUE=4		local
+
+# ************************** MISC LOCAL VARS *******************
+cog			cog_self				local
+
+int			n_eventType				local
+int			n_OldAIMode				local
+int			n_CrntAIMode			local
+int			n_RandNum				local
+int			n_idx					local
+int			n_idx2					local
+flex		f_Val1					local
+flex		f_Val2					local
+vector		v_Temp					local
+vector		v_PosShake				local
+vector		v_PYRShake				local
+vector		indyPos					local
+vector		bossPos					local
+vector		v_BossLook				local
+vector		v_BossRight				local
+flex		zDiff					local
+flex		f_Dist					local
+flex		f_Dot					local
+int			attachFlags				local
+int			n_SpikedIdx				local
+int			n_SpikeDamage			local
+int			b_HeadOnLaunch			local
+int			n_TimerID				local
+int			b_OKToShowTongue		local
+int			b_Temp					local
+
+int			b_AvoidCallStackDepthOverflow=0 local
+
+thing		t_UsableSpikePatrolPt00		local
+thing		t_UsableSpikePatrolPt01		local	
+thing		t_UsableSpikePatrolPt02		local
+thing		t_UsableSpikePatrolPt03		local
+thing		t_UsableSpikePatrolPt04		local
+
+# ************************** LITTLE SNAKE VARIABLES *************************
+template	tpl_LittleSnake=snake_q		local
+
+int			b_OKToLaunchLittleSnake=1	local
+int			b_OKToLaunchLittleSnakeTemp	local
+int			n_LittleSnakesAlive=0		local
+int			n_LittleSnakeIdx			local
+
+flex		f_Force					local
+flex		f_Error					local	
+
+int			MAX_LITTLE_SNAKES=8		local 
+thing		t_LittleSnake00=-1				local
+thing		t_LittleSnake01=-1				local
+thing		t_LittleSnake02=-1				local
+thing		t_LittleSnake03=-1				local
+thing		t_LittleSnake04=-1				local
+thing		t_LittleSnake05=-1				local
+thing		t_LittleSnake06=-1				local
+thing		t_LittleSnake07=-1				local
+
+
+# ************************** INDY VARIABLES *************************
+thing		t_Indy					local
+int			b_IndyInMainTunnel		local 
+int			b_IndyInOtherTunnel		local 
+int			b_IndyOnLedge			local
+int			b_IndyJOH				local
+int			b_OKToDamageIndy=1		local
+
+vector		v_ToIndy				local
+vector		v_ToIndyFlat			local
+vector		v_ToFutureIndy			local
+vector		v_ToFutureIndyFlat		local
+vector		v_IndyLook				local
+vector		v_IndyVel				local
+flex		f_DistToIndy			local
+flex		f_DistToFutureIndy		local
+flex		f_FutureDelta			local
+
+# ************************** PATROLLING VARIABLES *************************
+int			e_Mode					local
+int			n_AtPatrolIdx			local	#return value from SetAtPatrolPt
+int			n_IndyNearestPatrolIdx	local 	#return value from SetIndyNearestPatrolIdx
+int			n_PatrolPtIndexDiff		local
+int			n_PatrolDir				local
+int			n_AtSpikeIdx			local
+int			n_idxDest				local # waypoint index of current destination
+int			n_idxSpikeDest			local # waypoint index of current destination
+int			n_IndyNearestSpikeIdx	local 	#return value from SetIndyNearestSpikeIdx
+
+# ************************** QUETZALCOATL TEMPLATES *************************
+template	tpl_quetz00=quetzalcoatl	local
+template	tpl_quetz01=quetz01			local
+template	tpl_quetz02=quetz02			local
+template	tpl_quetz03=quetz03			local
+template	tpl_quetz04=quetz04			local
+template	tpl_quetz05=quetz05			local
+template	tpl_quetz06=quetz06			local
+template	tpl_quetz07=quetz07			local
+template	tpl_quetz08=quetz08			local
+template	tpl_quetz09=quetz09			local
+template	tpl_quetz10=quetz10			local
+template	tpl_quetz11=quetz11			local
+template	tpl_quetz12=quetz12			local
+template	tpl_quetz13=quetz13			local
+template	tpl_quetz14=quetz14			local
+template	tpl_quetz15=quetz15			local
+template	tpl_quetz16=quetz16			local
+template	tpl_quetz17=quetz17			local
+template	tpl_quetz18=quetz18			local
+template	tpl_quetz19=quetz19			local
+template	tpl_quetz20=quetz20			local
+template	tpl_quetz21=quetz21			local
+template	tpl_quetz22=quetz22			local
+template	tpl_quetz23=quetz23			local
+template	tpl_quetz24=quetz24			local
+template	tpl_quetz_tail=quetz_tail	local
+
+template	tpl_ExplodePiece=+explode2_b	local
+template	tpl_ExplodeBoss=+explode4_b	local # want this to be bigger than piece explosion
+
+
+# ************************** QUETZALCOATL PIECES *************************
+int			MAX_SNAKE_PIECES=26				local #includes head
+thing		t_Boss							local
+thing		t_Piece01						local
+thing		t_Piece02						local
+thing		t_Piece03						local
+thing		t_Piece04						local
+thing		t_Piece05						local
+thing		t_Piece06						local
+thing		t_Piece07						local
+thing		t_Piece08						local
+thing		t_Piece09						local
+thing		t_Piece10						local
+thing		t_Piece11						local
+thing		t_Piece12						local
+thing		t_Piece13						local
+thing		t_Piece14						local
+thing		t_Piece15						local
+thing		t_Piece16						local
+thing		t_Piece17						local
+thing		t_Piece18						local
+thing		t_Piece19						local
+thing		t_Piece20						local
+thing		t_Piece21						local
+thing		t_Piece22						local
+thing		t_Piece23						local
+thing		t_Piece24						local
+thing		t_Piece25						local
+
+template	qdebris0=qubita			local 		
+template	qdebris1=qubitb			local 		
+template	qdebris2=qubitc			local 		
+template	qdebris3=qubitd			local 		
+template	qdebris4=qubite			local 		
+
+
+
+# ===================Don's Added Killed Stuff=========================
+	thing		expos						#position for exploding of wall.
+	surface	wall0
+	surface	wall1	
+	sound		wallexpl=gen_bazooka_fire.wav		local
+	int		pieces=10					local
+	int		i						local
+	thing		fragment					local
+	int		curcam					local
+	template	debris0=stoneshrapa			local 		
+	template	debris1=stoneshrapb			local   		
+	template	debris2=stoneshrapc			local 		
+	template	debris3=stoneshrapas			local 		
+	template	debris4=stoneshrapbs			local
+	sound		music0=mus_olv_snakedead.wav		local
+	thing		boss_hint
+	material	dustmat=gen_a4sfx_dustcloud.mat	local
+	template	dusttemp=dustcloud			local		
+	template	dustghost=ghost				local
+	thing		dustpos					local
+	thing		dust						local
+	thing		player					local
+	thing		deathcampos
+	cog		hints
+
+#	template	projectile=+dummy_debris		local
+
+
+
+# ---------------- subroutines ---------------------------
+	flex		setindyonledge				local
+	flex		setindyJOH					local
+	flex		spikemode					local
+	flex		patrolmode					local
+	flex		considerspit				local
+	flex		considertongue				local
+	flex		spit						local
+	flex		setindynearestpatrolidx			local
+	flex		setatpatrolidx				local
+	flex		choosenextpatrolpt			local
+	flex		settoindy					local
+	flex		settofutureindy				local
+	flex		setindynearestspikeidx			local
+	flex		findnearestspikepatrolpt		local
+	flex		advancetonextspikepatrolpt		local
+	flex		advancetonextpatrolpt			local
+	flex		choosenextspikeidx			local
+
+end
+
+
+# ===================================================================
+code
+
+# ...................................................................
+startup:
+
+		// At some point in the future this message
+	// will have to be sent by one of don's cogs
+
+//	cog_self = GetSelfCog();
+//	SendMessageEx(cog_self, 27, t_InMainTunnelPt, 0, 0, 0);		# (cogRef, User0, Location-Thing, 0, 0, 0)
+	t_Indy = GetLocalPlayerThing();
+
+	n_PatrolDir	= 1;
+	b_IndyInOtherTunnel = 0;
+	b_IndyInMainTunnel = 0;
+	b_IndyOnLedge = 0;
+	b_IndyJOH = 0;
+	e_Mode = PATROL_MODE;	
+	n_idxDest = 0;
+	n_idxSpikeDest = 0;
+	n_SpikedIdx = -1;
+	b_OKToShowTongue = 0;
+
+	t_UsableSpikePatrolPt00 = t_SpikePatrolPt00;
+	t_UsableSpikePatrolPt01 = t_SpikePatrolPt01;
+	t_UsableSpikePatrolPt02 = t_SpikePatrolPt02;
+	t_UsableSpikePatrolPt03 = t_SpikePatrolPt03;
+	t_UsableSpikePatrolPt04 = t_SpikePatrolPt04;
+
+	return;
+
+
+# ...................................................................
+created:
+
+	return;
+
+# ...................................................................
+aievent:
+
+	if ( GetSenderRef() != t_Boss ) return;
+	if (e_Mode == THRASH_MODE)
+	{
+		return;
+	}
+
+	n_eventType		= GetParam(0);
+	n_CrntAIMode	= GetParam(1);
+	n_OldAIMode		= GetParam(2);	// only valid for certain n_eventType values
+
+	if (n_eventType == 0x100)		// SITHAI_EVENTMODECHANGED
+	{
+		// Set PATROL mode if Boss switched to search mode (SITHAI_MODESEARCHING)
+		if ( !BITTEST(n_OldAIMode, 0x4) && BITTEST(n_CrntAIMode, 0x4) && !b_AvoidCallStackDepthOverflow )
+		{
+			call SetIndyOnLedge;
+			if (b_IndyOnLedge && (e_Mode != SPIKE_MODE))
+			{
+				call SpikeMode;
+			}
+			else if (!b_IndyOnLedge && (e_Mode == STANDARD_MODE))
+			{
+				call PatrolMode;
+			}
+			else
+			{
+//				DEBUGPRINT("AIEVENT:: Continuing in custom patrol mode");
+			}
+		}
+		// Boss acquired target visibility (SITHAI_MODETARGETVISIBLE).
+		else if ( !BITTEST(n_OldAIMode, 0x400) && BITTEST(n_CrntAIMode, 0x400) && !b_AvoidCallStackDepthOverflow)
+		{
+			call SetIndyOnLedge;
+			call SetIndyJOH;
+			if (b_IndyOnLedge || b_IndyJOH)
+			{
+				if (e_Mode == SPIKE_MODE)
+				{
+					AIClearMode(t_Boss, 0x622); // turn off attacking, target visible, fire valid, active
+					AISetMode(t_Boss, 0x04); // put in searching
+				}
+//				DEBUGPRINT("AIEVENT:: Boss saw target on ledge");
+				call SpikeMode;
+			}
+			else
+			{
+//				DEBUGPRINT("AIEVENT:: Boss re-acquired target");
+				e_Mode = STANDARD_MODE;
+				AISetGoalThing(t_Boss, GetLocalPlayerThing());
+			}
+		}
+
+		// Check for lost sight of goal
+		if ( BITTEST(n_OldAIMode, 0x20000) && !BITTEST(n_CrntAIMode, 0x20000) )
+		{
+			if (e_Mode == PATROL_MODE)
+			{
+//				DEBUGPRINT("AIEVENT:: Boss lost sight of goal in PATROL mode");
+				call PatrolMode;
+			}
+			else if (e_Mode == SPIKE_MODE)
+			{
+//				DEBUGPRINT("AIEVENT:: Boss lost sight of goal in SPIKE mode");
+				e_Mode = STANDARD_MODE; // Will force SpikeMode to pick new dest
+				call SpikeMode;
+			}
+			else
+			{
+//				DEBUGPRINT("AIEVENT:: Boss lost sight of Indy in STANDARD/THRASH mode");
+				// Engine will switch us to searching mode if sight not regained soon
+			}
+		}
+
+	}
+	else if (n_eventType == 0x800)	// SITHAI_EVENTGOALREACHED
+	{
+		call SetIndyOnLedge;
+		call SetIndyJOH;
+		if (b_IndyOnLedge || (e_Mode == SPIKE_MODE) || b_IndyJOH)
+		{
+//			DEBUGPRINT("AIEVENT:: SITHAI_EVENTGOALREACHED");
+			call SpikeMode;
+		}
+		else if (e_Mode == PATROL_MODE)
+		{
+//			DEBUGPRINT("AIEVENT:: SITHAI_EVENTGOALREACHED in PATROL");
+			call PatrolMode;
+		}
+		call ConsiderSpit;
+		// Calling ConsiderTongue right after consider spit so that
+		// he won't try to do both at same time and spitting gets priority
+		call ConsiderTongue;
+	}
+
+	return;
+
+
+# ...................................................................
+timer:
+	n_TimerID = GetSenderID();
+	if (n_TimerID == TIMER_ID_WAKEUP_LITTLE_SNAKE)
+	{
+		// Force wake up with 0 duration
+		AISpat(GetParam(0), 0, 0);
+	}
+	else if (n_TimerID == TIMER_ID_RELOAD_LITTLE_SNAKE)
+	{
+		b_OKToLaunchLittleSnake = 1;
+	}
+	else if (n_TimerID == TIMER_ID_SPIT_LITTLE_SNAKE)
+	{
+		call Spit;
+	}
+	else if (n_TimerID == TIMER_ID_EXPLODE_TAIL_PIECE)
+	{
+		n_idx = GetParam(0);
+		n_idx2 = (MAX_SNAKE_PIECES - 1 - n_idx); // goes from 0 to MAX_SNAKE_PIECES - 1
+//		DEBUGFLEX(n_idx, "n_idx");
+//		DEBUGFLEX(n_idx2, "n_idx2");
+
+		// For pieces, but not head
+		if (n_idx >= 1)
+		{
+			// Create more debris as we get closer to head
+			for (i = 0; i < ((n_idx2/4)+1); i = i + 1)
+			{
+				fragment = CreateThing(qdebris0[RandBetween(0, 4)], t_Boss[n_idx]);                                 
+				SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.5'), 2));
+				SetThingRotVel(fragment, VectorScale(RandVec(), 900.0));    	            
+			}
+	
+			// A final present from Quetz to Indy
+			if ( (n_LittleSnakesAlive < (MAX_LITTLE_SNAKES + 4)) && (RandBetween(1,100) < 20) )
+			{
+			   fragment = CreateThing(tpl_LittleSnake, t_Boss[n_idx]); 
+			   if (fragment != -1)
+			   {
+				   n_LittleSnakesAlive = n_LittleSnakesAlive + 1;
+				   SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.2'), 1.5));
+				   AISpat(fragment, 1.0, TIMER_ID_WAKEUP_LITTLE_SNAKE);
+			   }
+			}
+
+			PlaySoundThing(wallexpl,  t_Boss[n_idx], 1, 5, 30, 0);
+			
+			// Destroy next piece closer to head in a slightly shorter time interval
+			f_Val1 = BASE_SEQUENTIAL_EXPLOSION_TIME - (n_idx2 * 0.01);
+			if (f_Val1 <= 0.05)
+			{
+				f_Val1 = 0.05;
+			}
+			SetTimerEx(f_Val1 , TIMER_ID_EXPLODE_TAIL_PIECE, n_idx-1, 0 );
+
+			CreateThing(tpl_ExplodePiece, t_Boss[n_idx]);
+			v_PosShake = VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 -0.5'), 0.002);
+			v_PYRShake = VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 -0.5'), 1.0);
+	    	SetPOVShake(v_PosShake, v_PYRShake, 1.0, 15.0);
+
+		}
+		else // It's the head
+		{
+			for (i = 0; i < 12; i = i + 1)
+			{
+				fragment = CreateThing(qdebris0[RandBetween(0, 4)], t_Boss[n_idx]);                                 
+				if (fragment != -1)
+				{
+					// Reposition in middle of head
+					v_Temp = VectorAdd(GetThingLVec(t_Boss), GetThingUVec(t_Boss));
+					v_Temp = VectorScale(v_Temp, 0.1);
+					f_Dist = VectorLen(v_Temp);
+					v_Temp = VectorNorm(v_Temp);
+					SetCollideType(fragment, 0); // don't collide with snake head
+					MoveThing(fragment, v_Temp, f_Dist, 0.0);
+					SetCollideType(fragment, 1);
+
+					// Launch it and spin it.
+					SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.0'), 2));
+					SetThingRotVel(fragment, VectorScale(RandVec(), 900.0));    	            
+				}
+			}
+	
+			PlaySoundThing(wallexpl,  t_Boss[n_idx], 1, 5, 30, 0);
+			
+			// Explosion effect
+// 			DebugPrint("Boss Fragments");
+			fragment = CreateThing(tpl_ExplodeBoss, t_Boss[n_idx]);
+			if (fragment != -1)
+			{
+				// Position in middle of head
+				v_Temp = VectorAdd(GetThingLVec(t_Boss), GetThingUVec(t_Boss));
+				v_Temp = VectorScale(v_Temp, 0.1);
+				f_Dist = VectorLen(v_Temp);
+				v_Temp = VectorNorm(v_Temp);
+				MoveThing(fragment, v_Temp, f_Dist, 0.0);
+			}
+			
+			v_PosShake = VectorSet(0.005, 0.005, 0.005);
+			v_PYRShake = VectorSet(3.0, 2.0, 4.0);
+	    	SetPOVShake(v_PosShake, v_PYRShake, 2.0, 30.0);
+
+			// Kill boss 
+// 			DebugPrint("Final Boss Damage");
+			DamageThing(t_Boss, GetHealth(t_Boss), 0x400000, t_Indy);
+		}
+		
+//		DebugFlex(n_idx, "Destroy Thing");
+		DestroyThing(t_Boss[n_idx]);
+		t_Boss[n_idx] = -1;
+
+	}
+	else if (n_TimerID == TIMER_ID_ENABLE_TONGUE)
+	{
+		b_OKToShowTongue = 1;
+	}
+
+	return;
+
+# ...................................................................
+touched:
+//	DEBUGPRINT("Touched:");
+
+//	DebugFlex(n_SpikedIdx, "Touched: n_SpikedIdx");
+//	DebugFlex(GetSenderRef(), "Touched: GetSenderRef");
+//	DebugFlex(GetSourceRef(), "Touched: GetSourceRef");
+
+//	DEBUGPRINT("Touched: Check for Quetz Piece");
+	// Make sure that a piece of quetz is involved
+	b_Temp = 0;
+	for (n_idx = 0; n_idx < MAX_SNAKE_PIECES; n_idx = n_idx + 1)
+	{
+		if (t_Boss[n_idx] == GetSenderRef())
+		{
+			b_Temp = 1;
+		}
+	}
+		
+	if (!b_Temp)
+	{
+		return;
+	}
+
+	//	Damage indy if quetz touches him,
+	if ( (GetSourceRef() == t_Indy)
+		 && b_OKToDamageIndy
+		 )
+	{
+		DamageThing(t_Indy, 50, 0x01000000, t_Boss);
+		b_OKToDamageIndy=0;
+		Sleep(0.5); // so we don't damage him every frame
+		b_OKToDamageIndy=1;
+	}
+	// See if spike should damage Quetz
+	else if (n_SpikedIdx == -1)
+	{
+//		DEBUGPRINT("Touched: Check for Spike");
+		for (n_idx = 0; n_idx < NUM_SPIKES; n_idx = n_idx + 1)
+		{
+			if (t_SpikeTip00[n_idx] == GetSourceRef())
+			{
+				n_SpikedIdx = n_idx;
+			}
+		}
+
+		if (n_SpikedIdx != -1)
+		{
+//			DEBUGPRINT("Touched: Spiked");
+
+			fragment = CreateThing(tpl_sparks, GetSourceRef());                                 
+			fragment = CreateThing(tpl_sparks, GetSourceRef());                                 
+
+			// Stop movement sound
+			if (n_MoveSoundChannel != -1)
+			{
+				StopSound(n_MoveSoundChannel, 0.25);
+				n_MoveSoundChannel = -1;
+			}
+
+			n_SpikeDamage = 0;
+			if (BITTEST(GetActorFlags(GetSenderRef()),0x200))			
+			{
+//				PRINT("Head Shot");
+				n_SpikeDamage = HEAD_SHOT_DAMAGE;
+			}
+			else if (BITTEST(GetAttachFlags(GetSenderRef()),0x40))
+			{
+//				PRINT("Body Blow");
+				n_SpikeDamage = BODY_SHOT_DAMAGE;
+			}
+
+			// Just to make sure it was snake part that was
+			if (n_SpikeDamage) 
+			{
+				// Reset usuable spike points
+				t_UsableSpikePatrolPt00 = t_SpikePatrolPt00;
+				t_UsableSpikePatrolPt01 = t_SpikePatrolPt01;
+				t_UsableSpikePatrolPt02 = t_SpikePatrolPt02;
+				t_UsableSpikePatrolPt03 = t_SpikePatrolPt03;
+	
+				// Make most recent spike off limits
+				t_UsableSpikePatrolPt00[n_SpikedIdx] = t_OffSpikePatrolPt00[n_SpikedIdx];
+	
+				// Begin sequential explosion if going to die
+				if (GetHealth(t_Boss) - n_SpikeDamage < 1.0)
+				{
+					SetTimerEx(BASE_SEQUENTIAL_EXPLOSION_TIME, TIMER_ID_EXPLODE_TAIL_PIECE, MAX_SNAKE_PIECES-1, 0 );
+					n_SpikeDamage = HEAD_SHOT_DAMAGE; // make it a head shot so quetz is frozen long enough to fully explode
+				}
+				else
+				{
+					DamageThing(t_Boss, n_SpikeDamage, 0x400000, t_Indy);
+				}
+
+				e_Mode = THRASH_MODE;
+				AISetMode(t_Boss, 0x2000); // disable
+				AIClearMode(t_Boss, 0x009);// turn off moving, turning
+				SetActorFlags(t_Boss, 0x40000); // immobile
+				StopThing(t_Boss);
+				if (n_SpikeDamage == HEAD_SHOT_DAMAGE)
+				{
+					PlaySoundThing(hurt2, t_Boss, 1.0, 40.0, 50.0, 0x880);
+					StartQuetzAnim(t_Boss, 3); // thrash
+					Sleep(3.5);
+				}
+				else
+				{
+					PlaySoundThing(hurt1, t_Boss, 1.0, 40.0, 50.0, 0x880);
+					StartQuetzAnim(t_Boss, 5); // thrash small
+					Sleep(2.0);
+				}
+				AIClearMode(t_Boss, 0x2000);
+				ClearActorFlags(t_Boss, 0x40000); // immobile
+				e_Mode = STANDARD_MODE;
+				n_SpikedIdx = -1; // can be spiked
+
+				// Restart move sound if not dead
+				if (GetHealth(t_Boss) > 0)
+				{
+					n_MoveSoundChannel = PlaySoundThing(move, t_Boss, 1.0, 0.0, 70.0, 0x881);
+//					ChangeSoundPitch(n_MoveSoundChannel, 0.70, 0.1);
+				}
+
+			}
+		}
+	}
+
+//	DEBUGPRINT("Touched: Done");
+	
+	return;
+
+# ...................................................................
+damaged:
+
+
+	return;
+
+# ...................................................................
+entered:
+	t_Indy = GetLocalPlayerThing();
+	if (BITTEST( GetActorFlags(t_Indy), 0x80))
+	{
+		// if indy is invisible, then we don't know where he is
+		return;
+	}
+
+	if ( (GetSenderRef() == s_MainTunnel)
+		 && (GetSourceRef() == t_Indy)
+		 )
+	{
+		b_IndyInMainTunnel = 1;
+//		DEBUGPRINT("Indy in main tunnel");
+	}
+
+	if ( (GetSenderRef() == s_OtherTunnel)
+		 && (GetSourceRef() == t_Indy)
+		 )
+	{
+		b_IndyInOtherTunnel = 1;
+//		DEBUGPRINT("Indy in small tunnel");
+	}
+
+	// If patrolling
+	// and Indy has entered a section of interest
+	// then patrol toward where indy is
+	
+	if ( (GetSenderRef() == s_OtherTunnel || GetSenderRef() == s_OtherTunnel)
+		 && GetSourceRef() == t_Indy
+		 && (e_Mode == PATROL_MODE)
+		 )
+	{
+		call PatrolMode;
+	}
+
+	return;
+
+# ...................................................................
+exited:
+	
+	if ( (GetSenderRef() == s_MainTunnel)
+		 && (GetSourceRef() == t_Indy)
+		 )
+	{
+		b_IndyInMainTunnel = 0;
+//		DEBUGPRINT("Indy leaving main tunnel");
+	}
+	
+	if ( (GetSenderRef() == s_OtherTunnel)
+		 && (GetSourceRef() == t_Indy)
+		 )
+	{
+		b_IndyInOtherTunnel = 0;
+//		DEBUGPRINT("Indy leaving small tunnel");
+	}
+
+	return;
+
+# ...................................................................
+// Create the boss at the ghost objects position, 
+// then create and attach all the tail pieces
+user0:
+
+	# Create Quetz at location-THING == GetParam(0) [must be a valid THING]
+	t_Boss = CreateThing(tpl_quetz00, GetParam(0));
+	CaptureThing(t_Boss);
+
+# ------------ Added by Don ------------------------
+	AttachThingToThing(boss_hint, t_Boss);
+	AISetCutsceneMode(t_Boss);
+
+//	DEBUGPRINT("olv_quetzalcoat creating boss");
+
+	n_idx = 1;
+	while( n_idx < MAX_SNAKE_PIECES )
+	{
+//		DEBUGPRINT("Create Piece");
+		t_Boss[n_idx] = CreateThing(tpl_quetz00[n_idx], t_Boss[n_idx-1]);
+//		DEBUGPRINT("Capture Piece");
+		CaptureThing(t_Boss[n_idx]);	
+		n_idx = n_idx + 1;
+	}
+
+	# Attach in reverse order because newly attached piece gets placed first in list	
+	n_idx = MAX_SNAKE_PIECES-1;	
+	while( n_idx > 0 )
+	{
+//		DEBUGPRINT("Attach Piece");
+		AttachThingToThing(t_Boss[n_idx], t_Boss);
+//		DEBUGPRINT("Get Attach flags for Piece");
+		attachFlags = GetAttachFlags(t_Boss[n_idx]);
+//		DEBUGPRINT("Set Attach flags for Piece");
+		SetThingAttachFlags(t_Boss[n_idx], attachFlags | 0x0048); # SITH_ATTACH_NOMOVE | SITH_ATTACH_TAIL	
+		n_idx = n_idx - 1;
+	}
+
+	SetTimerEx(TONGUE_RELOAD, TIMER_ID_ENABLE_TONGUE, 0, 0);
+
+	ReturnEx(t_Boss);	# return Boss THING index to caller
+
+
+//	DebugFlex(t_Boss, "User0: t_Boss");
+//	DebugFlex(t_Indy, "User0: t_Indy");
+//	DebugFlex(t_SpikeTip00, "User0: t_SpikeTip00");
+//	DebugFlex(t_SpikeTip01, "User0: t_SpikeTip01");
+//	DebugFlex(t_SpikeTip02, "User0: t_SpikeTip02");
+//	DebugFlex(t_SpikeTip03, "User0: t_SpikeTip03");
+
+	// These lines are for Steve to use only during testing
+//	Sleep(10.0);	//wait for door to finish
+//	SendMessageEx(GetSelfCog(), 28, 1, 0, 0, 0);	
+
+	return;
+
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+// Figure out where we are and then head in patrol direction that will
+// get us to Indy as quickly as possible
+PatrolMode:
+
+	if (e_Mode != PATROL_MODE)
+	{
+//		DEBUGPRINT("Entering PATROL mode");
+		e_Mode = PATROL_MODE;
+
+		b_AvoidCallStackDepthOverflow = 1;
+		AIClearMode(t_Boss, 0x622); // turn off attacking, target visible, fire valid, active
+		AISetMode(t_Boss, 0x04); // put in searching
+		b_AvoidCallStackDepthOverflow = 0;
+	}
+
+	call SetIndyNearestPatrolIdx; 
+	call SetAtPatrolIdx;
+
+	// If Indy is not invisible we can know where he is
+	if (n_IndyNearestPatrolIdx != -1)
+	{
+
+		if (n_AtPatrolIdx == NUM_PATROL_POINTS)
+		{
+			// means we are in the main tunnel
+			// so force him to get out
+			n_PatrolDir = 1;
+		}
+		else
+		{
+			// Figure out which way to go around arena to get to Indy quickest
+			// If index diff equals (NUM_PATROL_POINTS * 0.5), then
+			// Quetz is halfway around arena from Indy, so assume existing
+			// patrol dir is good
+			n_PatrolPtIndexDiff = n_AtPatrolIdx - n_IndyNearestPatrolIdx;
+			if ( ABS(n_PatrolPtIndexDiff) != (NUM_PATROL_POINTS * 0.5))
+			{
+				if (n_PatrolPtIndexDiff > (NUM_PATROL_POINTS * 0.5))
+				{
+					n_PatrolDir = 1;
+				}
+				else if (n_PatrolPtIndexDiff >= 0.0)
+				{
+					n_PatrolDir = -1;
+				}
+				else if (n_PatrolPtIndexDiff > -(NUM_PATROL_POINTS * 0.5))
+				{
+					n_PatrolDir = 1;
+				}
+				else
+				{
+					n_PatrolDir = -1;
+				}
+			}
+		}
+	}
+
+	call ChooseNextPatrolPt;
+	call AdvanceToNextPatrolPt;
+
+	return;
+
+# ...................................................................
+// Find closest patrol point, put in n_AtPatrolPoint
+// Includes point in main tunnel
+SetAtPatrolIdx:
+	
+	n_AtPatrolIdx = 0;
+	for (n_idx=1; n_idx <= NUM_PATROL_POINTS; n_idx=n_idx + 1)
+	{
+		// Compare test choice to 'current' choice
+		f_Val1 = VectorDist( GetThingPos(t_PatrolPt00[n_idx]), GetThingPos(t_Boss) );
+		f_Val2 = VectorDist( GetThingPos(t_PatrolPt00[n_AtPatrolIdx]), GetThingPos(t_Boss) );
+
+		// If closer, make that our current choice
+		if ( f_Val1 < f_Val2 )
+		{
+			n_AtPatrolIdx = n_idx;
+		}
+	}
+
+//	DEBUGFLEX(n_AtPatrolIdx,"- SetAtPatrolPt:");
+	
+	return;
+
+
+# ...................................................................
+// Set n_IndyNearestPatrolIdx to index of patrol point closest to Indy
+// If Indy is invisible set to -1
+SetIndyNearestPatrolIdx:
+
+	if (BITTEST( GetActorFlags(t_Indy), 0x80))
+	{
+		n_IndyNearestPatrolIdx = -1;
+		return;
+	}
+
+	n_IndyNearestPatrolIdx = 0;
+	for (n_idx=1; n_idx < NUM_PATROL_POINTS; n_idx=n_idx + 1)
+	{
+		// Compare test choice to 'current' choice
+		f_Val1 = VectorDist( GetThingPos(t_PatrolPt00[n_idx]), GetThingPos(t_Indy) );
+		f_Val2 = VectorDist( GetThingPos(t_PatrolPt00[n_IndyNearestPatrolIdx]), GetThingPos(t_Indy) );
+
+		// If closer, make that our current choice
+		if ( f_Val1 < f_Val2 )
+		{
+			n_IndyNearestPatrolIdx = n_idx;
+		}
+	}
+	
+//	DEBUGFLEX(n_IndyNearestPatrolIdx,"SetIndyNearestPatrolIdx:");
+	
+	return;
+
+
+
+# ...................................................................
+// Choose a new destination
+// Based on n_PatrolDir and n_AtPatrolIdx
+ChooseNextPatrolPt:
+	
+//	DEBUGFLEX(n_AtPatrolIdx, "ChooseNextPatrolPt: n_AtPatrolIdx");
+//	DEBUGFLEX(n_PatrolDir, "ChooseNextPatrolPt: n_PatrolDir");
+
+	// If at entrance to tunnel and Indy is known to be in tunnel
+	// then drive into tunnel
+	if ( (n_AtPatrolIdx == 0)
+		 && (b_IndyInMainTunnel)
+		 )
+	{
+		n_idxDest = NUM_PATROL_POINTS; 
+	}
+	else
+	{
+		// Otherwise advance in patrol direction
+		// But skip intermediate patrol points
+		if (BITTEST(n_AtPatrolIdx,0x1))
+		{
+			// we are at an ODD/corner patrol point, so advance by two to next corner
+			n_idxDest = n_AtPatrolIdx + n_PatrolDir + n_PatrolDir;
+		}
+		else
+		{
+			// At intermediate index, advance by only one
+			n_idxDest = n_AtPatrolIdx + n_PatrolDir;
+		}
+	
+		if (n_idxDest < 0)
+			n_idxDest = NUM_PATROL_POINTS - 1;
+		else if( n_idxDest >= NUM_PATROL_POINTS )
+			n_idxDest = 0;
+	}
+
+
+//	DEBUGFLEX(n_idxDest,"-- ChooseNextPatrolPt: New dest");
+
+	return;
+
+
+# ...................................................................
+AdvanceToNextPatrolPt:
+
+//	DEBUGFLEX(n_idxDest,"--- AdvanceToNextPatrolPt:: Advancing to patrol pt");
+	AISetGoalThing(t_Boss, t_PatrolPt00[n_idxDest]);
+
+	return;
+
+
+# ...................................................................
+// Sets b_IndyOnLedge
+SetIndyOnLedge:
+
+	indyPos = GetThingPos(t_Indy);
+	bossPos = GetThingPos(t_Boss);
+
+	zDiff = VectorZ(indyPos) - VectorZ(bossPos);			
+//	DebugFlex(zDiff, "zDiff");
+	if (zDiff > 0.2) // doesn't include puzzle block as on ledge
+	{
+		b_IndyOnLedge = 1;
+	}
+	else
+	{
+		b_IndyOnLedge = 0;
+	}
+	
+	return;
+
+# ...................................................................
+// Sets b_IndyJOH
+SetIndyJOH:
+
+	b_IndyJOH = GetMoveStatus(t_Indy);
+	if ( (b_IndyJOH == 87) || (b_IndyJoh == 88))
+	{
+		b_IndyJOH =1 ;
+	}
+	else
+	{
+		b_IndyJOH = 0;
+	}
+	
+	return;
+
+# ...................................................................
+// Sets v_ToIndy - a normalized vector from boss to indy
+// Sets v_ToIndyFlat - a normalized vector from boss to indy, with no z
+// Set f_DistToIndy
+SetToIndy:
+
+	bossPos = GetThingPos(t_Boss);
+	indyPos = GetThingPos(t_Indy);
+
+	v_ToIndy = VectorSub(indyPos, bossPos);
+	v_ToIndy = VectorNorm(v_ToIndy);
+	v_ToIndyFlat = VectorSet(VectorX(v_ToIndy), VectorY(v_ToIndy), 0.0);
+	v_ToIndyFlat = VectorNorm(v_ToIndyFlat);
+	f_DistToIndy = VectorDist(indyPos, bossPos);
+
+	return;
+
+
+# ...................................................................
+// Expects f_FutureDelta and b_IndyOnLedge to be set
+// Sets v_ToFutureIndy - a normalized vector from boss to indy pos in the future
+// Sets v_ToFutureIndyFlat - a normalized vector from boss to indy pos in future, with no z
+// Sets f_DistToFutureIndy
+SetToFutureIndy:
+
+	bossPos = GetThingPos(t_Boss);
+	indyPos = GetThingPos(t_Indy);
+	call SetIndyNearestSpikeIdx;
+
+	if (!b_IndyOnLedge)
+	{
+		v_IndyVel = GetThingVel(t_Indy);
+		v_Temp = VectorScale(v_IndyVel, f_FutureDelta);
+		indyPos = VectorAdd(indyPos, v_Temp);
+	
+	}
+	// If Indy is on ledge, ignore his velocity, 
+	// just aim several meters away from Indy on ledge he is on
+	else
+	{
+		if (n_IndyNearestSpikeIdx == 0)
+		{
+			v_Temp = VectorSub(GetThingPos(t_SpikePatrolPt01), GetThingPos(t_SpikePatrolPt00)); 
+			v_Temp = VectorNorm(v_Temp);
+		}
+		else if (n_IndyNearestSpikeIdx == 1)
+		{
+			v_Temp = VectorSub(GetThingPos(t_SpikePatrolPt00), GetThingPos(t_SpikePatrolPt01)); 
+			v_Temp = VectorNorm(v_Temp);
+		}
+		else if (n_IndyNearestSpikeIdx == 2)
+		{
+			v_Temp = VectorSub(GetThingPos(t_SpikePatrolPt03), GetThingPos(t_SpikePatrolPt02)); 
+			v_Temp = VectorNorm(v_Temp);
+		}
+		else if (n_IndyNearestSpikeIdx == 3)
+		{
+			v_Temp = VectorSub(GetThingPos(t_SpikePatrolPt02), GetThingPos(t_SpikePatrolPt03)); 
+			v_Temp = VectorNorm(v_Temp);
+		}
+
+		indyPos = VectorAdd(indyPos, VectorScale(v_Temp, .3));
+	}
+	
+	v_ToFutureIndy = VectorSub(indyPos, bossPos);
+	v_ToFutureIndy = VectorNorm(v_ToFutureIndy);
+	v_ToFutureIndyFlat = VectorSet(VectorX(v_ToFutureIndy), VectorY(v_ToFutureIndy), 0.0);
+	v_ToFutureIndyFlat = VectorNorm(v_ToFutureIndyFlat);
+
+	f_DistToFutureIndy = VectorDist(indyPos, bossPos);
+	return;
+
+
+
+# ...................................................................
+SpikeMode:
+	// Just entering spike mode
+//	DebugPrint("Spike Mode");
+	if (e_Mode != SPIKE_MODE)
+	{
+//		DEBUGPRINT("Entering SPIKE mode");
+		e_Mode = SPIKE_MODE;
+
+		b_AvoidCallStackDepthOverflow = 1;
+		AIClearMode(t_Boss, 0x622); // turn off attacking, target visible, fire valid, active
+		AISetMode(t_Boss, 0x04); // put in searching
+		b_AvoidCallStackDepthOverflow = 0;
+		
+		// Go to closest spike patrol point
+		call FindNearestSpikePatrolPt;
+		call AdvanceToNextSpikePatrolPt;
+	}
+	else
+	{
+		// If at desination, choose a new dest
+		//
+		f_Val1 = 1.0 * GetThingMoveSize(t_Boss);
+		if ( VectorDist(GetThingPos(t_Boss), GetThingPos(t_UsableSpikePatrolPt00[n_idxSpikeDest])) <= f_Val1 )
+		{
+			n_AtSpikeIdx = n_idxSpikeDest;
+			call SetIndyNearestSpikeIdx;
+
+			n_idx2 = n_AtSpikeIdx - n_IndyNearestSpikeIdx;
+			
+			// If Q not at point in front of main tunnel
+			if (n_AtSpikeIdx != 4)
+			{
+				if (n_idx2 == 3)
+				{
+					n_PatrolDir = 1;// cw
+				}
+				else if (n_idx2 == 1)
+				{
+					n_PatrolDir = -1;// ccw
+				}
+				else if (n_idx2 == -1)
+				{
+					n_PatrolDir = 1;// cw
+				}
+				else if (n_idx2 == -3)
+				{
+					n_PatrolDir = -1;// ccw
+				}
+			}
+			// Q at point in front of main tunnel
+			else
+			{
+				if (n_IndyNearestSpikeIdx <= 1)
+				{
+					n_PatrolDir = 1;// cw
+				}
+				else
+				{
+					n_PatrolDir = -1;// ccw
+				}
+			}
+			
+
+			// If one point away from Indy, go toward him
+			// otherwise continue in same direction
+			if (n_IndyNearestSpikeIdx - n_AtSpikeIdx == 1)
+			{
+				n_PatrolDir = 1;
+			}
+			else if (n_IndyNearestSpikeIdx - n_AtSpikeIdx == -1)
+			{
+				n_PatrolDir = -1;
+			}
+
+			call ChooseNextSpikeIdx;
+			call AdvanceToNextSpikePatrolPt;
+		}
+	}
+
+	// In the event the Quetz saw indy on a ledge while not in SPIKE_MODE, 
+	// the goal thing needs to be fixed up
+	if (AIGetGoalThing(t_Boss) != t_UsableSpikePatrolPt00[n_idxSpikeDest])
+	{
+		AISetGoalThing(t_Boss, t_UsableSpikePatrolPt00[n_idxSpikeDest]);
+	}
+
+//	DebugPrint("Spike Mode: Done");
+	
+	return;
+
+
+# ...................................................................
+// Set n_IndyNearestSpikeIdx to index of spike point closest to Indy
+// If Indy is invisible set to -1
+SetIndyNearestSpikeIdx:
+
+//	if (BITTEST( GetActorFlags(t_Indy), 0x80))
+//	{
+//		n_IndyNearestSpikeIdx = -1;
+//		return;
+//	}
+
+	n_IndyNearestSpikeIdx = 0;
+	// Ignore last point, which is the one in front of the main tunnel
+	for (n_idx=1; n_idx < NUM_SPIKE_POINTS-1; n_idx=n_idx + 1)
+	{
+		// Compare test choice to 'current' choice
+		f_Val1 = VectorDist( GetThingPos(t_UsableSpikePatrolPt00[n_idx]), GetThingPos(t_Indy) );
+		f_Val2 = VectorDist( GetThingPos(t_UsableSpikePatrolPt00[n_IndyNearestSpikeIdx]), GetThingPos(t_Indy) );
+
+		// If closer, make that our current choice
+		if ( f_Val1 < f_Val2 )
+		{
+			n_IndyNearestSpikeIdx = n_idx;
+		}
+	}
+	
+//	DEBUGFLEX(n_IndyNearestSpikeIdx,"SetIndyNearestSpikeIdx:");
+	
+	return;
+
+
+# ...................................................................
+// Choose a new destination
+// Based on n_PatrolDir and n_AtSpikeIdx
+ChooseNextSpikeIdx:
+	
+//	DEBUGFLEX(n_AtSpikeIdx, "ChooseNextSpikeIdx: n_AtSpikeIdx");
+//	DEBUGFLEX(n_PatrolDir, "ChooseNextSpikeIdx: n_PatrolDir");
+
+	n_idxSpikeDest = n_AtSpikeIdx + n_PatrolDir;
+	
+	// Skips that last point in the array, which is in
+	// front of the main tunnel. Using it makes the snake wiggle less
+	if (n_idxSpikeDest < 0)
+		n_idxSpikeDest = NUM_SPIKE_POINTS - 2;
+	else if( n_idxSpikeDest >= NUM_SPIKE_POINTS - 1 ) 
+		n_idxSpikeDest = 0;
+
+//	DEBUGFLEX(n_idxSpikeDest,"-- ChooseNextSpikeIdx: New dest");
+
+	return;
+
+
+# ...................................................................
+AdvanceToNextSpikePatrolPt:
+
+//	DEBUGFLEX(n_idxSpikeDest,"--- AdvanceToNextSpikePatrolPt:");
+	AISetGoalThing(t_Boss, t_UsableSpikePatrolPt00[n_idxSpikeDest]);
+
+	return;
+
+
+# ...................................................................
+// Find usable spike pt closest to Q current position.  Includes
+// last pt in spike list, which is the point in front of the tunnel
+FindNearestSpikePatrolPt:
+
+	n_idxSpikeDest = 0;
+	for (n_idx=1; n_idx < NUM_SPIKE_POINTS; n_idx=n_idx + 1)
+	{
+		// Compare test choice to 'current' choice
+		f_Val1 = VectorDist( GetThingPos(t_UsableSpikePatrolPt00[n_idx]), GetThingPos(t_Boss) );
+		f_Val2 = VectorDist( GetThingPos(t_UsableSpikePatrolPt00[n_idxSpikeDest]), GetThingPos(t_Boss) );
+
+		// If closer, make that our current choice
+		if ( f_Val1 < f_Val2 )
+		{
+			n_idxSpikeDest = n_idx;
+		}
+	}
+
+//	DEBUGFLEX(n_idxSpikeDest,"- FindNearestSpikePatrolPt:");
+	
+	return;
+
+
+
+# ...................................................................
+ConsiderSpit:
+//	DEBUGPRINT("ConsiderSpit:");
+	if (!b_OKToLaunchLittleSnake)
+	{
+		return;
+	}
+	if (n_LittleSnakesAlive >= MAX_LITTLE_SNAKES)
+	{
+		return;
+	}
+
+	// Is Indy invisible
+	if (BITTEST( GetActorFlags(t_Indy), 0x80))
+	{
+		return;
+	}
+
+	// Don't let quetz spit when he is in the main tunnel.
+	// This prevents him from spitting a snake up on to 
+	// the platform which holds the imp part. Little snake looks silly up there.
+	call SetAtPatrolIdx;
+	if (n_AtPatrolIdx == NUM_PATROL_POINTS)
+	{
+		return;
+	}
+
+	// This keeps quetz from spitting snakes on to little
+	// pedestal and end of tunnel. That looks bad.
+	if (b_IndyInMainTunnel)
+	{
+		return;
+	}
+
+	// Don't spit while Indy is using the Jewel of Heaven
+	call SetIndyJOH;
+	if (b_IndyJOH)
+	{
+		return;
+	}
+
+	call SetToIndy;
+	call SetIndyOnLedge;
+	
+//	Print("Dist");
+//	PrintFlex(f_DistToIndy);
+	if (b_IndyOnLedge)
+	{
+		if (f_DistToIndy < 1.8 || f_DistToIndy > 2.5)
+		{
+			return;
+		}
+		if (RandBetween(1,100) > 80)
+		{
+			return;
+		}
+	}
+	else // not on ledge
+	{
+		if (f_DistToIndy < 1.0 || f_DistToIndy > 2.0)
+		{
+			return;
+		}
+		// Save little snakes for when Indy is on ledge
+		if (n_LittleSnakesAlive <= (MAX_LITTLE_SNAKES/2))
+		{
+			if (RandBetween(1,100) > 60)
+			{
+				return;
+			}
+		}
+		else
+		{
+			return;
+		}
+	}
+
+	v_BossLook = GetThingLVec(t_Boss);
+	f_Dot = VectorDot(v_BossLook, v_ToIndyFlat);
+
+//	Print("Dot");
+//	PrintFlex(f_Dot);
+	if (f_Dot < 0.7)
+	{
+		return;
+	}
+
+	if (HasLos(t_Boss, t_Indy))
+	{
+		b_OKToLaunchLittleSnake = 0;
+		// Buy us a little time to run animation
+		SetTimerEx(0.24, TIMER_ID_SPIT_LITTLE_SNAKE, 0, 0);
+
+		StartQuetzAnim(t_Boss, 2);
+	}
+
+
+//	DEBUGPRINT("ConsiderSpit: Done");
+	return;
+
+
+#=====================================================
+Spit:
+//	DEBUGPRINT("Spit:");
+//	PRINT("Spit");
+
+	call SetToIndy;
+//	PrintFlex(f_DistToIndy);
+
+	// Find an empty slot		
+	n_LittleSnakeIdx = -1;
+	for (n_idx=0; n_idx < MAX_LITTLE_SNAKES; n_idx=n_idx + 1)
+	{
+		if (t_LittleSnake00[n_idx] == -1)
+		{
+			n_LittleSnakeIdx = n_idx;
+		}
+	}
+
+	if (n_LittleSnakeIdx == -1)
+	{
+		Print("No slots available for little snakes");
+		return;
+	}
+
+	t_LittleSnake00[n_LittleSnakeIdx] = CreateThing(tpl_LittleSnake, t_Boss);
+	if (t_LittleSnake00[n_LittleSnakeIdx] != -1)
+	{
+		CaptureThing(t_LittleSnake00[n_LittleSnakeIdx]);
+		PlaySoundThing(spit, t_Boss, 1.0, 0.0, 50.0, 0x880);
+
+		// Position little snake
+		// somewhere in front of quetz's mouth
+		v_Temp = VectorScale(v_ToIndyFlat, 0.1);
+		v_Temp = VectorSet(VectorX(v_Temp), VectorY(v_Temp), 0.1);
+		f_Dist = VectorLen(v_Temp);
+		v_Temp = VectorNorm(v_Temp);
+		MoveThing(t_LittleSnake00[n_LittleSnakeIdx], v_Temp, f_Dist, 0.0);
+	
+		// Launch little snake towards where indy will be
+		// Use lots of empirical values to handle various situations
+		// Indy on ground
+		// Indy on ledge, heading straight toward ledge
+		// Indy on ledge, coming in at angle to ledge
+
+		f_Error = (Rand() - 0.5) * .07;
+		f_FutureDelta = f_DistToIndy * 1.2; // time in future to predict indies position
+		call SetIndyOnLedge; 
+		call SetToFutureIndy;
+		if (b_IndyOnLedge)
+		{
+			// Determine whether head on or glancing approach to Indy on ledge
+			b_HeadOnLaunch = 1; // assume
+			if ( (n_PatrolDir == 1)
+				 &&( (n_idxSpikeDest == 1) || (n_idxSpikeDest == 3))
+				 )
+			{
+//				PrintInt(n_idxSpikeDest);
+				b_HeadOnLaunch = 0;
+			}
+			if ( (n_PatrolDir == -1)
+				 &&( (n_idxSpikeDest == 0) || (n_idxSpikeDest == 2))
+				 )
+			{
+//				PrintInt(n_idxSpikeDest);
+				b_HeadOnLaunch = 0;
+			}
+
+			if (b_HeadOnLaunch)
+			{
+//				Print("Head on");
+				f_Val2 = 1.95 - f_DistToIndy;
+				f_Val2 = f_Val2 * 0.275;
+				f_Force = f_DistToFutureIndy * (52.5 + f_Val2);
+				
+				f_Val2 = 1.95 - f_DistToIndy;
+				f_Val2 = f_Val2 * 0.35;
+				v_Temp = VectorSet(VectorX(v_ToFutureIndyFlat), VectorY(v_ToFutureIndyFlat), (0.63 + f_Val2));
+			}
+			else
+			{
+//				Print("Glancing");
+				f_Val2 = 1.95 - f_DistToIndy;
+				f_Val2 = f_Val2 * 0.275;
+				f_Force = f_DistToFutureIndy * (50.0 + f_Val2);
+				
+				f_Val2 = 1.95 - f_DistToIndy;
+				f_Val2 = f_Val2 * 0.35;
+				v_Temp = VectorSet(VectorX(v_ToFutureIndyFlat), VectorY(v_ToFutureIndyFlat), (0.80 + f_Val2));
+
+				// Reduce error, this is a tough shot
+				f_Error = f_Error * 0.25;
+			}
+		}
+		else
+		{
+			f_Force = f_DistToFutureIndy * 40.0;
+			v_Temp = VectorSet(VectorX(v_ToFutureIndyFlat), VectorY(v_ToFutureIndyFlat), 0.5);
+		}
+		v_Temp = VectorNorm(v_Temp);
+		v_BossRight = GetThingRVec(t_Boss);
+		v_BossRight = VectorScale(v_BossRight, f_Error);
+		v_Temp = VectorAdd(v_Temp, v_BossRight); // a little error
+		v_Temp = VectorScale(v_Temp, f_Force);
+		ApplyForce(t_LittleSnake00[n_LittleSnakeIdx], v_Temp);
+		
+		// Orient towards indy, but flat
+		SetThingLook(t_LittleSnake00[n_LittleSnakeIdx], v_ToFutureIndyFlat);
+
+		// Spit sprite
+//		fragment = CreateThing(tpl_spit, t_LittleSnake00[n_LittleSnakeIdx]);
+//		MaterialAnim(spit_mat, 8.0, 0x80000);
+
+		// Set timer to wakeup snake after it lands
+		AISpat(t_LittleSnake00[n_LittleSnakeIdx], 1.4, TIMER_ID_WAKEUP_LITTLE_SNAKE);
+		n_LittleSnakesAlive = n_LittleSnakesAlive + 1;
+
+		// Prevent Quetz from launching another for a few seconds
+		SetTimerEx(10.0, TIMER_ID_RELOAD_LITTLE_SNAKE, 0, 0);
+
+	}
+
+//	DEBUGPRINT("Spit: Done");
+	return; 
+
+
+# ...................................................................
+ConsiderTongue:
+//	DEBUGPRINT("ConsiderTongue:");
+	if (!b_OKToShowTongue)
+	{
+//		DEBUGPRINT("ConsiderTongue: Done");
+		return;
+	}
+	// Don't show tongue while launching little snake
+	if (!b_OKToLaunchLittleSnake)
+	{
+//		DEBUGPRINT("ConsiderTongue: Done");
+		return;
+	}
+
+//	DEBUGPRINT("ConsiderTongue: SetToIndy");
+	call SetToIndy;
+//	DEBUGPRINT("ConsiderTongue: SetIndyOnLedge");
+	call SetIndyOnLedge;
+
+	// If not invisible
+//	DEBUGPRINT("ConsiderTongue: Check Invisible");
+	if (!BITTEST(GetActorFlags(t_Indy), 0x80))	
+	{
+		// Must be generally facing indy
+//		DEBUGPRINT("ConsiderTongue: Check Facing");
+		v_BossLook = GetThingLVec(t_Boss);
+		f_Dot = VectorDot(v_BossLook, v_ToIndyFlat);
+		if (f_Dot < -0.3)
+		{
+//			DEBUGPRINT("ConsiderTongue: Done");
+			return;
+		}
+	
+		// Don't be too close, we might attack
+		// but if Indy is on a ledge then distance doesn't matter
+		if (!b_IndyOnLedge)
+		{
+			if (f_DistToIndy < 1.0)
+			{
+//				DEBUGPRINT("ConsiderTongue: Done");
+				return;
+			}
+		}
+	
+		// Just sometimes even when can
+//		DEBUGPRINT("ConsiderTongue: Random");
+		if (RandBetween(1,100) > 60)
+		{
+//			DEBUGPRINT("ConsiderTongue: Done");
+			return;
+		}
+	}
+	// Indy is invisible
+	else
+	{
+		if (RandBetween(1,100) > 30)
+		{
+//			DEBUGPRINT("ConsiderTongue: Done");
+			return;
+		}
+	}
+
+//	DEBUGPRINT("ConsiderTongue: HasLos");
+	if (HasLos(t_Boss, t_Indy))
+	{
+//		DebugPrint("Show Tongue");
+		b_OKToShowTongue = 0; 
+		b_OKToLaunchLittleSnakeTemp = b_OKToLaunchLittleSnake;
+		b_OKToLaunchLittleSnake = 0; // don't launch while playing
+//		DEBUGPRINT("ConsiderTongue: PlayKey");
+		PlaySoundThing(tonguehiss, t_Boss, 1.0, 0.0, 60.0, 0x880);
+		PlayKey(t_Boss, key, 5, 0x1A, 1);
+//		DEBUGPRINT("ConsiderTongue: PlayKey done");
+		b_OKToLaunchLittleSnake = b_OKToLaunchLittleSnakeTemp;
+		SetTimerEx(TONGUE_RELOAD, TIMER_ID_ENABLE_TONGUE, 0, 0);
+//		DebugPrint("Done Show Tongue");
+	}
+
+//	DEBUGPRINT("ConsiderTongue: Done");
+
+	return;
+
+
+#==========================Don's Added Stuff===========================
+killed:
+	if(GetSenderRef() == t_boss)
+	{
+		DestroyThing(t_Boss);
+		SendMessage(hints, user5);    # hint solved.
+
+		#---------- music cue -------------
+		PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+
+		player = GetLocalPlayerThing();
+		dustpos = CreateThingAtPos(dustghost, GetSurfaceSector(wall0), GetSurfaceCenter(wall0), VectorSet(0, 0, 0));
+		CaptureThing(dustpos);
+		sleep(2.0);
+		curcam = GetCurrentCamera();
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(1);
+		SetCameraFocus(2, deathcampos);
+		SetCameraSecondaryFocus(2, dustpos);
+		SetCurrentCamera(2);
+		SetCameraFOV(60, 1, 2);
+#		setPulse(0.01);	
+		PlaySoundThing(wallexpl, dustpos, 1, 15, 40, 0);
+		for(i=0; i<pieces; i=i+1)                                                        	            
+		{
+			fragment = CreateThing(debris0[RandBetween(0, 4)], dustpos);                                 
+      		SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.0'), 1.5));
+      		SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 200.0));
+			sleep(0.025);
+		}
+		SetAdjoinFlags(wall0, 2);
+		SetFaceGeoMode(wall0, 0);
+		SetAdjoinFlags(wall1, 2);
+		SetFaceGeoMode(wall1, 0);
+		dust=CreateThing(dusttemp,dustpos);
+		MaterialAnim(dustmat, 8.0, 0);
+		AnimateSpriteSize(dust, '0.02 0.02 1.0', '0.4 0.4 0.5', 1.0);
+		sleep(1.0);
+#		setPulse(0.0);
+		Destroything(dust);
+		sleep(1.0);                                                                                   	            
+		SetCameraFOV(90, 0, 0);
+		SetCurrentCamera(curcam);
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+	}
+	else
+	{	 
+		// check for one of the little snakes
+		for (n_idx=0; n_idx < MAX_LITTLE_SNAKES; n_idx=n_idx + 1)
+		{
+			if (t_LittleSnake00[n_idx] == GetSenderRef())
+			{
+				t_LittleSnake00[n_idx] = -1;
+				n_LittleSnakesAlive = n_LittleSnakesAlive - 1;
+			}
+		}
+	}
+	return;
+
+user1:
+	if(getParam(0) == 1)
+	{
+		AIClearCutsceneMode(t_Boss);
+		AIClearMode(t_Boss, 0x1000); // turn off sleeping bit
+		call PatrolMode;
+		n_MoveSoundChannel = PlaySoundThing(move, t_Boss, 1.0, 0.0, 70.0, 0x881);
+//		ChangeSoundPitch(n_MoveSoundChannel, 0.70, 0.1);
+		return;
+	}
+	if(getParam(0) == 2)
+	{
+		PlaySoundThing(tonguehiss, t_Boss, 1.0, 0.0, 60.0, 0x880);
+		PlayKey(t_Boss, key, 5, 0x1A, 0);
+	}
+	return;
+
+end
+

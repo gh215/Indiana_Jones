@@ -1,0 +1,119 @@
+# Jones 3D Cog Script
+#
+# pyr_wallblast.cog
+#
+# IMP #1 generic dealie
+#
+# [DS] Stolen by RKD
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+symbols
+message	startup
+message	activated
+message	damaged
+
+# blowuppable surface
+surface	crackedwall	mask=0x408
+
+# things
+thing	bombpos		local
+thing	dust		local
+thing	player		local
+
+# sounds and saylines
+sound	explosion=gen_bazooka_fire.wav	local
+sound	indysay=inxj025.wav				local #This wall looks ready to crumble.
+
+# templates
+template	dusttemp=dustcloud			local		
+template	debris=stnshrapas_nc_ns		local
+template	bomb=ghost					local
+
+# materials
+material	dustmat=gen_a4sfx_dustcloud.mat	local
+
+# variables
+int		fragment=0	local
+int		i=0			local
+
+# subroutines
+flex	blowitup=0.0	local
+
+end
+# -------------------------------------------------------------------
+
+code
+startup:
+	Sleep(.01);
+
+	# make wall visible, no move
+	ClearAdjoinFlags(crackedwall, 2);
+	SetFaceGeoMode(crackedwall, 4);
+	ClearAdjoinFlags(GetSurfaceAdjoin(crackedwall), 2);
+	SetFaceGeoMode(GetSurfaceAdjoin(crackedwall), 4);
+	
+	return;
+
+damaged:
+# ---> crackedwall
+	
+	player = GetLocalPlayerThing();
+	
+	if (GetCurWeapon(player) != 14) return;				#if not holding MP1
+	if (GetParam(1) != 0x1000) return;					#if damage wasn't caused by MP1
+	call blowitup;
+	return;
+
+activated:
+# ---> crackedwall
+	
+	player = GetLocalPlayerThing();
+	if (GetCurWeapon(player) == 14) return;
+	
+	if ((GetSenderRef() == crackedwall) && (GetSourceRef() == player))
+	{
+		StopThing(player);
+		SetActorFlags(player, 0x200000);
+		PlayMode(player, 60, 0);
+		PlayVoice(player, indysay, 1.0, 1);
+		ClearActorFlags(player, 0x200000);
+		return;
+	}
+	return;
+	
+blowitup:
+	sleep(0.3);	
+	PlaySoundLocal(explosion, 1, 0, 0x0, 0);
+	
+	SetAdjoinFlags(crackedwall, 2);
+	SetAdjoinFlags(GetSurfaceAdjoin(crackedwall), 2);
+	
+	bombpos = CreateThingAtPos(bomb, GetSurfaceSector(crackedwall), GetSurfaceCenter(crackedwall), '0, 0, 0');
+	CaptureThing(bombpos);
+
+	for(i=0; i<40; i=i+1)
+	{
+		fragment = CreateThing(debris, bombpos);
+		SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 2));
+		SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));    	
+	}
+	
+	SetFaceGeoMode(crackedwall, 0);
+	SetFaceGeoMode(GetSurfaceAdjoin(crackedwall), 0);
+	
+	dust = CreateThing(dusttemp,bombpos);
+	MaterialAnim(dustmat, 8.0, 0);
+	AnimateSpriteSize(dust, '0.02 0.02 1.0', '0.4 0.4 0.5', 1.0);
+	
+	sleep(1.0);
+	
+	Destroything(dust);                                                                                   	
+	return;
+
+end
+
+
+
+

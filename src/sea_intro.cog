@@ -1,0 +1,188 @@
+# Jones 3D Cog Script
+#
+# sea_intro.cog
+#
+#	[DS & HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message     startup
+	message     user0
+
+	keyframe	in_standup=0in_getup_bunkbed.key	local # 35x
+
+	sound		music0=mus_sea_intro.wav			local
+
+	thing		player								local
+	thing		brigindy							local # create on the fly
+
+	thing		fader0								nolink # gen_fadeplat thing
+	thing		fader1								nolink # gen_fadeplat thing
+	thing		fader2								nolink # gen_fadeplat thing
+
+	thing		cam_1								nolink
+	thing		cam_2								nolink
+	thing		brig_cam_1							nolink
+	
+	thing		ct_1								nolink
+	thing		ct_2								nolink
+	thing		brig_ct_1							nolink
+	thing		brig_ct_repeat						local # create on the fly
+
+	thing		brig_mk_1							nolink
+	thing		brig_mk_2							nolink
+	thing		brig_mk_3							nolink
+
+	template	indy_tpl=indy_actor					local
+	template    ghost_tpl=ghost						local
+	
+	int			playCollType						local
+	int			in_track1							local
+
+	int			bSeen=0								local
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	# Start on black...
+	SetCameraFocus(2, cam_1);
+	SetCameraSecondaryFocus(2, ct_1);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCurrentCamera(2);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+#   if you're going to switch the camera to start your level cutscene,
+#	do it first before anything else!
+	SetCameraFocus(2, cam_1);
+	SetCameraSecondaryFocus(2, ct_1);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCurrentCamera(2);
+
+#   cutscene camera is set up and set as current,
+#	now sleep for 0.01 to let the engine generate a frame
+
+	sleep(0.001);
+
+#	then you can do the rest of the stuff you need to start your cutscene.
+#   IMPORTANT! -- don't do a StartCutscene() until after the new camera is set
+#	and has had a chance
+#   to render a frame! 
+
+	player = GetLocalPlayerThing();
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x80000);
+	playCollType = GetCollideType(player);
+	SetCollideType(player, 0);
+	RestoreExtCam();
+	Sleep(0.001);
+	StartCutscene(2);
+	SetThingFlags(fader0, 0x80000);
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+
+	# Hal's intro...
+	SetCameraFOV(70, 0, 0.0);
+	ClearThingFlags(fader0, 0x80000);
+	SetThingAlpha(fader0, 1.0);
+	ClearThingFlags(fader1, 0x80000);
+	SetThingAlpha(fader1, 0.0); # should make it invisible
+	SetThingFlags(fader1, 0x10); # invisible (hack)
+	SetCameraInterpSpeed(2, 10.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.01);
+	ThingFadeAnim(fader0, 1.0, 0.0, 0.6, 0);
+	Sleep(0.2);
+	SetCameraFocus(2, cam_2);
+	SetCameraSecondaryFocus(2, ct_2);
+	SetCameraFOV(20, 1, 10.0);
+	Sleep(10.0);
+	DestroyThing(fader0);
+	ClearThingFlags(fader1, 0x10);
+	ThingFadeAnim(fader1, 0.0, 1.0, 1.5, 0);
+	Sleep(1.5);
+	DestroyThing(fader1);
+
+	# Make an actor and target...
+	brigindy = CreateThing(indy_tpl, brig_mk_3);
+	brig_ct_repeat = CreateThing(ghost_tpl, brig_ct_1);
+
+	# Cut to Indy in the brig...
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCameraFocus(2, brig_cam_1);
+	SetCameraSecondaryFocus(2, brig_ct_repeat);
+	SetCurrentCamera(2);
+	SetCameraFOV(61, 0, 0.0); # was 50
+	ClearThingFlags(brigindy, 0x80000);
+
+
+	# Indy needs to have no weapons or whip.
+	#	CopyPlayerHolsters(player, brigindy);
+
+	in_track1 = PlayKey(brigindy, in_standup, 4, 0x12, 0);
+	PauseKey(brigindy, in_track1); # hold
+	ClearThingFlags(fader2, 0x80000);
+	SetThingAlpha(fader2, 1.0);
+	ThingFadeAnim(fader2, 1.0, 0.0, 1.5, 0);
+	Sleep(1.5);
+	SetThingFlags(fader2, 0x80000);
+
+	# Indy stands up...
+	ResumeKey(brigindy, in_track1);
+	SetCameraFOV(80, 1, 2.2);
+	Sleep(1.2);
+	AttachThingToThing(brig_ct_repeat, brigindy);
+	AISetMoveSpeed(brigindy, 0.8);
+	AISetLookThingEyeLevel(brigindy, brig_mk_1);
+	AISetMoveThing(brigindy, brig_mk_1, 1);
+	AISetLookThingEyeLevel(brigindy, brig_mk_2);
+	Sleep(0.5);
+
+	# Clean up & restore control...
+	ResetCameraFOV(0, 0.0);
+	SetCameraInterpSpeed(2, 1);	# reset default
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(brig_cam_1)); # prep follow-cam
+	SetCurrentCamera(1);
+
+	RestoreExtCam();
+	Sleep(0.001);
+
+	ResetCameraFOV(0, 0.0);
+	TeleportThing(player, brigindy);
+	# SetThingFlags(brigindy, 0x80000);
+	DestroyThing(brigindy);
+	DestroyThing(brig_ct_repeat);
+	ClearThingFlags(player, 0x80000);
+	SetCollideType(player, playCollType);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+end
+

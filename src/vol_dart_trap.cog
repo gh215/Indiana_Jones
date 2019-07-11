@@ -1,0 +1,400 @@
+# Jones 3D Cog Script
+#
+# VOL_Dart_Trap.cog
+#
+# This cog will run a 3 location dart firing sequence upon an entered message.
+#
+# [CM & revised by HB]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+
+#....................MESSAGES.....................#
+message	startup
+message	touched
+message	entered
+message	arrived
+message	pulse
+message	timer
+message	killed
+
+
+#....................ACTORS.....................#
+thing	player												local
+thing	indyActor												
+thing	tempSCORP0											local												
+thing	tempSCORP1											local												
+thing	tempSCORP2											local												
+
+
+#....................CAMERAS.....................#
+
+thing	warningCam
+thing	dooroutsideCam
+thing	doorinsideCam
+thing	doorlookpos
+thing	cam1spot											local
+thing	cam1look											local
+
+#....................COGS.....................#
+cog		doortalkcog
+
+
+#....................EVENT GHOSTS.....................#
+thing	smoke												local
+thing	dartgenpos0
+thing	dartgenpos1
+thing	dartgenpos2
+
+thing	scorpgenPOS
+thing	scorpmovPOS
+
+
+#....................PROPS.....................#
+thing	door
+thing	pushblock
+
+thing	missile0											local
+thing	missile1											local
+thing	missile2											local
+thing	deadmissile											local
+
+#....................TRIGGERS.....................#
+
+sector	in_sect
+sector	out_sect
+sector	primesect
+sector	endSECT
+
+surface	triggersurf0
+surface	triggersurf1
+surface	triggersurf2
+
+#....................KEYFRAMES....................#
+keyframe	in_hat=0in_figithat_4_4.key						local
+keyframe	in_brush=0in_stand1_bd_4.key					local
+keyframe	in_stand4=0in_stand4.key						local
+
+
+#....................TEMPLATES.....................#
+template	dtemp=dart                  					local 
+template	smoketemplate=+dartsmoke_spr					local
+template	scorp=scorpian									local
+template	tpl_ghost=ghost									local
+
+#....................SOUNDS.....................#
+sound	blast=pru_dart_fired_c.wav							local
+sound	tink=shs_bell_dull.wav								local	#must be pitch-bent for proper effect
+sound	readytrap=teo_crush_prime_c.wav						local
+sound	stab=fol_sp_attack.wav								local
+sound	in_creepyfeel=INXJ048.WAV							local
+
+sound	creepy_cue=mus_gen_danger3.wav						local
+
+#....................VARIABLES.....................#
+int		scene=0												local
+int		hitsound											local
+int		snd													local
+int		track												local
+int		playerpos=0											local
+int		scorpCOUNT=0										local
+int		scorpTOTAL=0										local
+int		TIMERID_MAKESCORP=1									local
+int		TIMERID_MOVEIT=2									local
+int		vibe												local
+thing	t_scorpWakeUp										local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	# get the player
+    player = GetLocalPlayerThing();
+	return;
+
+# ========================================================================================
+entered:
+
+	If ((GetSenderRef() == primesect) && (GetSourceRef() == player))
+	{
+        If (scene == 1) return;
+		
+		scene = 1;
+		# stop the player's motion, and swap the actor in
+		MakeMeStop();
+		StartCutScene(1);
+		TeleportThing(indyActor, player);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indyActor, 0x80000);
+		CopyPlayerHolsters(player, indyActor);
+
+		PlaySoundLocal(readytrap, 0.5, 1.0, 0x0, 0);
+					
+		# line up the actor
+		AISetLookThing(indyActor, dartgenpos0);
+
+        # move cam...
+		cam1spot = CreateThing(tpl_ghost, player);
+		CaptureThing(cam1spot);
+		cam1look = CreateThing(tpl_ghost, player);
+		CaptureThing(cam1look);
+		MakeCamera2LikeCamera1(cam1spot, cam1look);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, cam1spot);
+		SetCameraSecondaryFocus(2, cam1look);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		Sleep(0.01);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 0.8);
+		Sleep(0.01);
+		SetCameraFocus(2, warningCam);
+		AIWaitForStop(indyActor);
+
+        PlaySoundLocal(creepy_cue, 0.5, 1.0, 0x0, 0);
+		
+        # play indy's anims and voice line
+		track = PlayKey(indyActor, in_Stand4, 2, 0x0, 0);
+		PlayKey(indyActor, in_brush, 4, 0x12, 1);
+		snd = PlayVoice(indyActor, in_creepyfeel, 0.75, 0);
+		PlayKey(indyActor, in_hat, 4, 0x12, 0);
+		WaitForSound(snd);
+		Sleep(0.8);
+		SetCameraInterpSpeed(2, 1.5);
+		Sleep(0.2);
+
+		# begin screenshake
+		SetPulse(0.04);
+		Sleep(0.1);
+
+		# offset camera target to the door
+		SetCameraSecondaryFocus(2, doorlookpos);
+		Sleep(0.5);
+
+		# close the door forever
+		MoveToFrame(door, 0, 1.0);
+		WaitForStop(door);
+
+		# stop the screenshake
+		SetPulse(0.0);
+
+		# restore the player
+		TeleportThing(player, indyActor);
+		ClearThingFlags(player, 0x80000);
+		SetThingFlags(indyActor, 0x80000);
+        Sleep(0.5);
+
+		# end the scene
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraPosition(1, GetThingPos(warningCam));
+		SetCurrentCamera(1);
+		ResetCameraFOV(0, 0.0);
+
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+		SetTimerEx(4.0, TIMERID_MAKESCORP, 0, 0);
+    }
+
+	If (GetSenderRef() == triggersurf0)
+	{
+        smoke = CreateThing(smoketemplate, dartgenpos0);
+        AnimateSpriteSize(smoke, '0.05 0.05 1.0', '0.2 0.2 0.0', 0.5);
+		missile0 = CreateThing(dtemp, dartgenpos0);
+		CaptureThing(missile0);
+		PlaySoundThing(blast, missile0, 2.0, 0, 20, 0);
+		MoveToFrame(missile0, 1, 10);
+		Sleep(.25);
+	}
+	
+
+	If (GetSenderRef() == triggersurf1)
+	{
+		smoke = CreateThing(smoketemplate, dartgenpos1);
+        AnimateSpriteSize(smoke, '0.05 0.05 1.0', '0.2 0.2 0.0', 0.5);
+        missile1 = CreateThing(dtemp, dartgenpos1);
+		CaptureThing(missile1);
+		PlaySoundThing(blast, missile1, 2.0, 0, 20, 0);
+		MoveToFrame(missile1, 1, 10);
+		Sleep(.25);
+		}
+	
+
+	If (GetSenderRef() == triggersurf2)
+	{
+		smoke = CreateThing(smoketemplate, dartgenpos2);
+        AnimateSpriteSize(smoke, '0.05 0.05 1.0', '0.2 0.2 0.0', 0.5);
+        missile2 = CreateThing(dtemp, dartgenpos2);
+		CaptureThing(missile2);
+		PlaySoundThing(blast, missile2, 2.0, 0, 20, 0);
+		MoveToFrame(missile2, 1, 10);
+		Sleep(.25);
+	}
+
+    If (GetSenderRef() == in_sect)
+	{
+        playerpos=1;
+	}
+
+    If (GetSenderRef() == out_sect)
+		{
+        playerpos=2;
+		}
+
+	If (GetSenderRef() == endSECT)
+	{
+		KillTimerEx(TIMERID_MAKESCORP);
+	}
+	
+return;
+
+# ========================================================================================
+arrived:
+
+    If (GetSenderRef() == missile0)
+        {
+            DestroyThing(missile0);
+            hitsound = PlaySoundLocal(tink, 0.1, -1, 0x0, 0);
+			#ChangeSoundPitch(hitsound, 6, 0);
+        }
+
+	If (GetSenderRef() == missile1)
+        {
+            DestroyThing(missile1);
+            hitsound = PlaySoundLocal(tink, 0.1, -1, 0x0, 0);
+			#ChangeSoundPitch(hitsound, 6, 0);
+        }
+
+    If (GetSenderRef() == missile2)
+        {
+            DestroyThing(missile2);
+            hitsound = PlaySoundLocal(tink, 0.1, -1, 0x0, 0);
+			#ChangeSoundPitch(hitsound, 6, 0);
+        }
+return;
+
+
+# ========================================================================================
+pulse:
+
+	vibe = RandBetween(0, 2);
+	if (vibe == 0)
+	{
+		SetPOVShake('0.0 0.0 0.008', '0.0 0.0 0.0', 80.0, 0.8);
+	}
+		if (vibe == 1)
+	{
+		SetPOVShake('0.01 0.0 0.02', '0.0 0.0 0.0', 80.0, 0.8);
+	}
+	if (vibe == 2)
+	{
+		SetPOVShake('0.0 0.01 0.01', '0.0 0.0 0.0', 80.0, 0.8);
+	}
+    return;
+
+# ========================================================================================
+touched:
+
+
+if ((GetSenderRef() == missile0) && (GetSourceRef() == GetLocalPlayerThing()))
+    {
+    # Print("ouch");
+	DamageThing(GetSourceRef(), 150.0, 0x1, missile0);
+	
+	PlaySoundLocal(stab, 1.0, 0.0, 0x0, 0);
+	DestroyThing(missile0);
+	}
+
+
+if ((GetSenderRef() == missile1) && (GetSourceRef() == GetLocalPlayerThing()))
+    {
+    #Print("ouch");
+	DamageThing(GetSourceRef(), 150.0, 0x1, missile1);
+	
+	PlaySoundLocal(stab, 1.0, 0.0, 0x0, 0);
+	DestroyThing(missile1);
+	}
+
+
+if ((GetSenderRef() == missile2) && (GetSourceRef() == GetLocalPlayerThing()))
+    {
+    #Print("ouch");
+	DamageThing(GetSourceRef(), 150.0, 0x1, missile2);
+	
+	PlaySoundLocal(stab, 1.0, 0.0, 0x0, 0);
+	DestroyThing(missile2);
+	}
+	
+	
+return;
+
+
+
+# ========================================================================================
+
+# ========================================================================================
+timer:
+
+	if ( GetSenderID() == TIMERID_MAKESCORP )
+	{
+		if ( scorpTOTAL == 9 )
+		{
+			return;
+		}
+
+		# renew the timer
+		SetTimerEx(6.0, TIMERID_MAKESCORP, 0, 0);
+
+		If (scorpCOUNT == 3)
+		{
+			return;
+		}
+
+		# scorpion generating routine
+		tempSCORP0[scorpCOUNT]=CreateThing(scorp, scorpgenPOS);
+		if ( tempSCORP0[scorpCOUNT] > -1 )
+		{
+			CaptureThing(tempSCORP0[scorpCOUNT]);
+			AISetCutSceneMode(tempSCORP0[scorpCOUNT]);
+			AISetMoveThing(tempSCORP0[scorpCOUNT], scorpmovPOS, 0);
+		
+			SetTimerEx(1, TIMERID_MOVEIT, tempSCORP0[scorpCOUNT], 0);
+
+			scorpCOUNT = scorpCOUNT + 1;
+			scorpTOTAL = scorpTOTAL + 1;
+		}
+	}
+
+	if ( GetSenderID() == TIMERID_MOVEIT )
+	{
+		t_scorpWakeUp = GetParam(0);
+
+		AIClearCutSceneMode(t_scorpWakeUp);
+		AISetFireTarget(t_scorpWakeUp, player);
+	}
+
+return;
+
+# ========================================================================================
+killed:
+
+if ((GetSenderRef() == tempSCORP0) || (GetSenderRef() == tempSCORP1) || (GetSenderRef() == tempSCORP2))
+	{
+	scorpCOUNT = scorpCOUNT - 1;
+	}
+return;
+
+# ========================================================================================
+end
+
+
+
+

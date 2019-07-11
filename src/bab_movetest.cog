@@ -1,0 +1,111 @@
+# Jones 3D Cog Script
+#
+# BAB_truckjump.cog
+#
+# Babylon entry gate truck puzzle.
+#
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+		message		startup
+		message		activate
+		message		arrived
+
+		surface		startswitch
+		surface		flowswitch
+		surface		flowcont0
+		surface		flowcont1
+
+		thing			target0
+		thing			target1
+		thing			target2
+		thing			target3
+		
+		thing			truck0
+		thing			truck1
+		thing			truck0pos
+		thing			truck1pos
+
+		int			lastframe = 3						//number of last ghost target
+		int			movespeed = 1.0
+
+		template		truck
+end
+
+# ========================================================================================
+code
+
+startup:
+
+		truck0 = CreateThing(truck, truck0pos);	//create entering truck
+		CaptureThing(truck0);
+		truck1 = CreateThing(truck, truck1pos);	//create exiting truck
+		CaptureThing(truck1);
+
+      SetActorFlags(truck0, 0x2000);				//put ai's to hard sleep
+		SetActorFlags(truck1, 0x2000);
+		
+
+		ClearAdjoinFlags(flowcont0,2);				//nomove
+		ClearAdjoinFlags(flowcont1,2);
+
+		SetFaceGeoMode(flowcont0, 3);				   //transluecent
+		SetFaceGeoMode(flowcont1, 3);
+
+		targ0cnt = 0;
+
+return;
+
+# ........................................................................................
+activate:
+
+if (GetSenderRef() == startswitch)
+{
+		AIActorFlags(truck0, 0x1000);				//wake AIs up
+		AIActorFlags(truck1, 0x1000);
+
+		AISetMoveSpeed(truck0, 1.5);				//set ai movespeed
+		AISetMoveSpeed(truck1, 1.5);
+
+		AISetMoveThing(truck0, target0[targ0cnt]);
+
+}
+
+
+if (GetSenderRef() == flowswitch)
+{
+		SetAdjoinFlags(flowcont0,2);				// nomove
+		SetAdjoinFlags(flowcont1,2);
+
+		SetFaceGeoMode(flowcont0, 0);			   //	transparent
+		SetFaceGeoMode(flowcont1, 0);  	
+}
+return;
+
+# .......................................................................................
+arrived:
+
+if ((GetSenderRef() == truck0) &&
+	 (GetCurFrame(truck0) < (lastframe)))
+{
+		targ0cnt = targ0cnt + 1;
+		AISetLookPos(truck0, GetThingPos(target0[targ0cnt]));
+		AISetMoveThing(truck0, target0[targ0cnt]);
+}
+else if (GetCurFrame(truck0) == lastframe)
+{
+		targ0cnt = 0;
+		DestroyThing(truck0);
+}
+return;
+
+end
+
+
+
+

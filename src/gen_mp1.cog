@@ -1,0 +1,287 @@
+# Jones 3D Cog Script
+#
+# gen_MP1 Blaster.cog
+#
+# an all-purpose cog for the IMP#1 effect
+#
+# [CMG] (made generic by [RKD])
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+#	MESSAGES
+message 	startup
+message 	activated
+message		damaged
+message		pulse
+
+#	ACTORS
+thing	player		nolink	local
+
+#	CAMERAS
+thing	saycam
+thing	cam1spot	local
+thing	cam1look	local
+
+#	THINGS
+thing   bombpos	
+thing	fragment	local
+thing	dustthing	local
+
+#	SURFACES
+surface		crackedwall		mask=0x408
+
+#	MATERIALS
+material	dustmat=gen_a4sfx_dustcloud.mat		local
+
+#	SOUND FX
+sound		explosion=shw_wall_crash.wav		local
+sound       sfxCharge=imp1_chargeup.wav     	local
+sound		rumble=imp1_wall_break.wav			local
+
+# ** voice lines **
+sound       inCrumble=Inxj025.wav		local   # ...ready to crumble.
+sound       inVibrate=Inxj026.wav		local   # A little vibration...
+
+#	TEMPLATES
+template	debris=stoneshrapa_nc		local
+template	dust=dustcloud				local
+
+#	VARIABLES
+int		i=0		   			local
+int		locked=0			local
+int		curWeapon=0			local
+flex	shakecounter=0.1	local
+
+#	SUBROUTINES
+flex	vibeline=0.0	local
+flex	fauxdamage=0.0	local
+
+end
+
+# ========================================================================================
+code
+startup:
+	player = GetLocalPlayerThing();
+	Sleep(.3);
+
+	# make wall no-move, no-see, and visible
+	ClearAdjoinFlags(crackedwall, 0x2);
+	ClearAdjoinFlags(GetSurfaceAdjoin(crackedwall), 0x2);
+	ClearAdjoinFlags(crackedwall, 0x1);
+	ClearAdjoinFlags(GetSurfaceAdjoin(crackedwall), 0x1);
+	SetFaceGeoMode(crackedwall, 4);
+	SetFaceGeoMode(GetSurfaceAdjoin(crackedwall), 4);
+
+	return;
+
+# ========================================================================================
+activated:
+# ---> crackedwall	
+	if (GetSenderRef() != crackedwall) return;
+
+	# FOR MARCUS TESTING PURPOSES
+	IF (INEDITOR())
+	{
+		CALL FAUXDAMAGE;
+		RETURN;
+	}
+	
+    # RT: No activations with anything but the lighter
+    curWeapon = GetCurWeapon(player);
+	if ((curWeapon != 0) && (curWeapon != 13))
+		return;
+
+	call vibeLine;
+
+	return;
+	
+# ========================================================================================
+damaged:
+# ---> crackedwall	
+
+    # if cracked wall not damaged with IMP1 return
+	if (GetSenderRef() != crackedwall) return;
+	if (GetParam(1) != 0x1000) return;
+	
+fauxdamage:
+# ---> shortcut to get around "activation with IMP#1"
+
+	if (locked) return;
+	
+	# do cutscene stuff
+	if (MakeMeStop() == -1) return;
+	StartCutscene(1);
+
+	locked = 1;
+	
+	# make adjoins see-through
+	SetAdjoinFlags(crackedwall, 0x1);
+	SetAdjoinFlags(GetSurfaceAdjoin(crackedwall), 0x1);
+	
+	# setup offset camera
+	cam1spot = CreateThing(GetThingTemplate(saycam), saycam);
+	cam1look = CreateThing(GetThingTemplate(saycam), saycam);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+	SetCameraFocus(2, saycam);
+	SetCameraSecondaryFocus(2, bombpos);
+
+	# start cameraShake
+	SetPulse(0.1);
+
+	# alter fov for zoom-in effect
+	SetCameraFOV(70, 1, 2.5);
+
+	# play sfx
+	PlaySoundLocal(sfxCharge, 1.0, 0.0, 0x0, 0);
+
+	# light up the player
+	SetThingLight(bombpos, '0.25 0.55 1.0', 5.0, 2.0);
+	Sleep(1.5);
+	
+	# start up the rumble sound
+	PlaySoundLocal(rumble, 1.0, 0.0, 0x0, 0);
+	Sleep(1);
+
+	# reset fov
+	SetCameraFOV(90, 0, 0.0);
+
+	# kill dynamic light
+	SetThingLight(bombpos, '0.0 0.0 0.0', 5.0, 2.0);
+
+	# play explosion sfx
+	PlaySoundLocal(explosion, 1, 0, 0x0, 0);
+
+	# create the debris
+	for(i=0; i<8; i=i+1)                                                        	
+	{
+		fragment = CreateThing(debris, bombpos);
+		SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 1));
+		SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 200.0));
+		Sleep(0.025);
+	}
+		
+	# alter adjoins
+	SetAdjoinFlags(crackedwall, 0x2);
+	SetAdjoinFlags(GetSurfaceAdjoin(crackedwall), 0x2);
+	SetFaceGeoMode(crackedwall, 0);
+	SetFaceGeoMode(GetSurfaceAdjoin(crackedwall), 0);
+
+	# stop the screenshake
+	SetPulse(0);
+
+	# create and animate the dust sprites
+	SetMaterialCel(dustmat, 0);
+	MaterialAnim(dustmat, 1.0, 1);
+	dustthing = CreateThing(dust, bombpos);
+	AnimateSpriteSize(dustthing, '0.2 0.2 0.5', '0.6 0.6 0.0', 4.0);
+	sleep(.3);
+	dustthing = CreateThing(dust, bombpos);
+	AnimateSpriteSize(dustthing, '0.2 0.2 0.5', '0.6 0.6 0.0', 4.0);
+	
+	# rest for a bit
+	Sleep(0.5);
+
+	# restore camera and get rid of objects
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(saycam));
+	SetCurrentCamera(1);
+	DestroyThing(cam1spot);
+	DestroyThing(cam1look);
+
+	# restore controls
+	RestoreExtCam();
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+# ========================================================================================
+vibeLine:
+    # prepare the player
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+
+	StartCutscene(0);
+	
+	# setup offset camera
+	cam1spot = CreateThing(GetThingTemplate(saycam), saycam);
+	cam1look = CreateThing(GetThingTemplate(saycam), saycam);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+	SetCameraFocus(2, saycam);
+	SetCameraSecondaryFocus(2, bombpos);
+
+    # say line shifts with every activation
+    Sleep(0.3);
+	if (i == 0)
+	{
+		PlayVoice(player, inVibrate, 1.0, 1);
+	}
+	else
+	{
+		PlayVoice(player, inCrumble, 1.0, 1);
+	}
+
+	i = 1 - i;
+
+	# restore camera and get rid of objects
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(saycam));
+	SetCurrentCamera(1);
+	DestroyThing(cam1spot);
+	DestroyThing(cam1look);
+
+	# RT: Let the camera get back into position
+	Sleep(0.5);
+
+	# return control
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+    return;
+
+# ========================================================================================
+pulse:
+	
+	# shake increases over time
+	shakecounter = shakecounter + .2;
+	
+	SetPOVShake(VectorScale(VectorSet(RandBetween(-1, 1), RandBetween(-1, 1), RandBetween(-2, 2)), .005 * shakecounter),
+				' 0 0 0', .4, 50);
+	
+	return;
+
+# ========================================================================================
+
+
+end
+
+
+
+
+
+
+

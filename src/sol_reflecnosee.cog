@@ -1,0 +1,54 @@
+# Jones 3D Cog Script
+#
+# SOL_ReflecNoSee.cog
+# 
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+        message     startup
+        message     entered
+
+        sector      noSeeSec
+        sector      off1
+        sector      off2
+        sector      on1
+        sector      on2
+        
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SectorAdjoins(noSeeSec, 0);
+    return;
+
+# ========================================================================================
+
+entered:
+
+        # Draw beyond
+        if((GetSenderRef() == off1) || (GetSenderRef() == off2))
+            {
+                SectorAdjoins(noSeeSec, 1);
+            }
+            
+        # Hide beyond    
+        if((GetSenderRef() == on1) || (GetSenderRef() == on2))
+            {
+                SectorAdjoins(noSeeSec, 0);
+            }
+
+        return;
+        
+# ========================================================================================
+
+end
+

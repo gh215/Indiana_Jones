@@ -1,0 +1,85 @@
+# Jones 3D Cog Script
+#
+# class_Grenade.cog
+#
+# Splash generator for grenades and satchels.
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+	message		splash
+
+	material	mat=gen_a4sfx_splash.mat	local
+
+	template	tpl_Splash=splashenter		local
+	template	tpl_Spray=+spray			local
+	template	tpl_Ripple=+ripples			local
+
+	thing		grenade						local
+	thing		newThing					local
+
+	sector		createSec					local
+	vector		createPos					local
+
+# ************************ SUBROUTINES *************************
+
+	flex		SplashGenerator				local
+	flex		RippleGenerator				local
+
+end
+
+# ........................................................................................
+
+code
+
+splash:
+
+    if (GetSourceRef() != 1) return; # Check for enter water
+
+    grenade = GetSenderRef();
+
+	createSec = GetThingSector(grenade);
+	createPos = GetThingPos(grenade);
+
+	call SplashGenerator;
+	Sleep(0.4);
+	call RippleGenerator;
+
+	return;
+
+# -------------------------------------------------------------------
+
+SplashGenerator: # Assumes createSec & createPos are already set...
+
+	# Make a splash...
+	CreateThingAtPos(tpl_Splash, createSec, createPos, '0 0 0');
+	MaterialAnim(mat, 12.0, 0x0);
+
+	# ...and some spray
+	newThing = CreateThingAtPos(tpl_Spray, createSec, createPos, '0 0 0');
+	SetThingFlags(newThing, 0x8000000);
+
+	return;
+
+# -------------------------------------------------------------------
+
+RippleGenerator: # Assumes createSec & createPos are already set...
+
+	# Make some ripples
+	newThing = CreateThingAtPos(tpl_Ripple, createSec, VectorAdd(createPos, '0.02 0.0 0.0'), '0 0 0');
+	AnimateSpriteSize(newThing, '0.28 0.28 1.0', '0.5 0.5 0.0', 0.5);
+	newThing = CreateThingAtPos(tpl_Ripple, createSec, VectorAdd(createPos, '-0.02 0.0 0.0'), '0 0 0');
+	AnimateSpriteSize(newThing, '0.28 0.28 1.0', '0.4 0.4 0.0', 0.5);
+	newThing = CreateThingAtPos(tpl_Ripple, createSec, VectorAdd(createPos, '0.0 0.02 0.0'), '0 0 0');
+	AnimateSpriteSize(newThing, '0.28 0.28 1.0', '0.4 0.4 0.0', 0.5);
+	newThing = CreateThingAtPos(tpl_Ripple, createSec, VectorAdd(createPos, '0.0 -0.02 0.0'), '0 0 0');
+	AnimateSpriteSize(newThing, '0.28 0.28 1.0', '0.4 0.4 0.0', 0.5);
+
+	return;
+
+end
+

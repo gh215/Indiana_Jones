@@ -1,0 +1,83 @@
+# Jones 3D Cog Script
+#
+# Riv_TruckMove.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# =======================================================================================
+
+symbols
+
+    message     startup
+    message     entered       
+    
+    thing       truck
+    
+    thing       t_Ghost0
+    thing       t_Ghost1
+    
+    sector      sec_TrigSound
+    sector      trigger0
+    
+    sound       snd_Engine=jep_reverse_loop.WAV     local
+    
+    material    mat_Wheel=obj_a_truck_tire.mat      local
+    
+    int         done=0      local
+    int         n_pos=0     local
+    int         playing=0   local
+    int         running     local
+    
+end
+
+# =======================================================================================
+
+code
+
+startup:
+
+    SetCollideType(truck, 0);
+
+    return;
+
+# =======================================================================================
+
+entered:
+
+    if((GetSenderRef() == sec_TrigSound) && (playing == 0))
+    {
+        playing = 1;
+        running = PlaySoundThing(snd_Engine, truck, 1.0, 8, 20,  0x0081);
+    }
+    
+    if((GetSenderRef() == trigger0) && (done == 0))
+    {
+        done = 1;
+        
+        # prepare the truck
+        ClearThingFlags(truck, 0x80000);    # show
+        #SetPhysicsFlags(truck, 0x10);       # align to surface
+        materialanim(mat_Wheel, 10, 1);
+        
+        Sleep(0.01);
+        
+        AISetMoveSpeed(truck, 4.0);
+        AISetLookThing(truck, t_Ghost0);
+        AISetMoveThing(truck, t_Ghost0, 0);
+        Sleep(3.0);
+        AISetLookThing(truck, t_Ghost1);
+        AISetMoveThing(truck, t_Ghost1, 1);
+        
+        AIWaitForStop(truck);
+        
+        DestroyThing(truck);
+        StopSound(running, 2.0);
+    }
+                
+    return; 
+
+# =======================================================================================
+
+end
+    

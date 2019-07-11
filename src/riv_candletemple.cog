@@ -1,0 +1,357 @@
+# Jones 3D Cog Script
+#
+# RIV_CandleTemple.cog
+#
+# "Scheiá das Fenster!" 	
+# 
+#  [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     entered
+    message     exited
+    message     activated
+    message     damaged
+    
+    thing       player		local
+    thing       pushed      local
+    thing       pulled      local
+    thing		aim_Targ    #mask=0x8
+    thing       lever_Pos
+    thing       offsetCam
+    thing       doorCam
+    thing       targ_Door
+    thing       door
+    thing       indy
+    
+    surface     surf_Glass  mask=0x8
+    surface     surf_Inside
+    surface     surf_Block
+    surface     surf_Spot
+    
+	material	mat_Broken=riv_4window_2.mat        local
+    
+    template	tpl_Shards=stained_class	        local   # stained glass particles
+    template    tplLevPull=pullever                 local
+    template    tplLevPush=pushlever                local
+    
+    keyframe    leverPull=gen_lever_pull.key        local
+    keyframe    leverPush=gen_lever_push.key        local
+    
+    keyframe    indyPull=in_pull_lever.key          local
+    keyframe    indyPush=in_push_lever.key          local
+    
+    # ** sound fx **
+    sound       snd_Lever=gen_lever_pull.wav            local
+    sound		snd_Shatter=shs_glassbreak.wav          local
+    sound       snd_DoorOpen=riv_door_wood_slide.wav    local
+    sound       snd_DoorStop=riv_door_wood_stop.wav     local
+    
+    # ** voice lines **
+    sound       say_Candle=Rv04j01.wav                  local   # is that a candle in there?
+    
+    # ** just won't open lines **
+    sound	    in_DoorLocked0=Inxj096.wav				local # I can't open it-->insayline[25]
+	sound	    in_DoorLocked1=Inxj097.wav              local # For some reason...won't open.
+	sound	    in_DoorLocked2=Inxj098.wav				local # It won't budge.
+	sound	    in_DoorLocked3=Inxj099.wav              local # Something is holding this door closed.
+	sound	    in_DoorLocked4=Inxj102.wav				local # must be way...don't know how.
+    
+    cog         hintCog
+    
+    # ** subroutines **
+    flex        pullLever       local
+    flex        pushLever       local
+    flex        speak           local
+    
+    # ** ints **
+    int         onSpot=0        local
+    int         broken=0        local
+    int         lever_Ready=1   local
+    int         firstTime=1     local
+    int         open=0          local
+    int         playing=0       local
+    int         newComment      local
+    int         oldComment      local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+    player = GetLocalPlayerThing();
+    
+    pushed = CreateThing(tplLevPull, lever_Pos);
+    CaptureThing(pushed);
+    
+    SetThingLight(door, '0.5 0.5 0.5', 0.001, 1.0);
+    
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if(GetSenderRef() == surf_Spot)
+    {
+        Print("on Spot");
+        onSpot = 1;
+    }
+
+    return;
+    
+# ========================================================================================
+
+exited:
+
+    if((GetSenderRef() == surf_Spot) && (GetSourceRef() == player))
+    {
+        Print("off spot");
+        onSpot = 0;
+    }
+    
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    Print("activated");
+    
+    if((GetSenderRef() == pushed) && (lever_Ready == 1) && (onSpot == 1))
+    {
+        Print("pushed");
+        lever_Ready = 0;
+        Call pullLever;
+    }
+    
+    else if((GetSenderRef() == pulled) && (lever_Ready == 1) && (onSpot == 1))
+    {
+        Print("pulled");
+        lever_Ready = 0;
+        Call pushLever;
+    }
+    
+    else if((GetSenderRef() == door) && (open == 0) && (playing == 0))
+    {
+        playing = 1;
+        Call speak;
+    }
+
+    return;
+
+# ========================================================================================
+
+damaged:
+    
+    if(broken == 0)
+    {
+        broken = 1;
+        # Make adjoin move
+        SetAdjoinFlags(surf_Glass, 2);
+        
+        # player can move thru
+        ClearAdjoinFlags(surf_Block, 0x10);
+        
+        # play sfx and create debris
+        PlaySoundLocal(snd_Shatter, 1.0, 0, 0, 0);
+        CreateThing(tpl_Shards, aim_Targ);
+        
+        # swap texture
+        SetSurfaceMat(surf_Glass, mat_Broken);
+        SetSurfaceMat(surf_Inside, mat_Broken);
+        
+        Sleep(0.01);
+        DestroyThing(aim_Targ);
+    }
+	
+    return;
+
+# ========================================================================================
+
+pullLever:
+
+    SendMessage(hintCog, user0);
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    DeselectWeaponWait(player);
+    
+    # outfit Indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, indy);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # show actor hide player
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # pull the lever
+    PlayKey(pushed, leverPull, 4, 0x14, 0);
+    PlayKey(indy, indyPull, 4, 0x12, 0);
+    Sleep(0.8); #0.75
+    PlaySoundLocal(snd_Lever, 1.0, 0.0, 0x0, 1);
+
+    # switch to doorCam
+    SetCameraFocus(2, doorCam);
+    SetCameraSecondaryFocus(2, targ_Door);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    Sleep(0.5);
+    
+    # open the door
+    PlaySoundLocal(snd_DoorOpen, 1.0, 0, 0, 0);
+    MoveToFrame(door, 1, 2.0);
+    WaitForStop(door);
+    
+    # Destroy old lever and create a new one
+    DestroyThing(pushed);
+    pulled = CreateThing(tplLevPush, lever_Pos);
+    CaptureThing(pulled);
+    
+    # stop any unfinished animations
+    ResetThing(indy);
+    
+    Sleep(1.0);
+    
+    # show player and return controls
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    
+    # return camera to player
+    SetCurrentCamera(1);
+    
+    EndCutscene();
+    
+    lever_Ready = 1;
+    open = 1;
+    
+    return;
+    
+# ========================================================================================
+
+pushLever:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    DeselectWeaponWait(player);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, indy);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # show actor hide player
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # push the lever
+    PlayKey(pulled, leverPush, 4, 0x14, 0);
+    PlayKey(indy, indyPush, 4, 0x12, 0);
+    Sleep(0.9); #0.85
+    PlaySoundLocal(snd_Lever, 1.0, 0.0, 0x0, 1);
+    
+    # switch to doorCam
+    SetCameraFocus(2, doorCam);
+    SetCameraSecondaryFocus(2, targ_Door);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    Sleep(0.5);
+    
+    # close the door
+    PlaySoundLocal(snd_DoorOpen, 1.0, 0, 0, 0);
+    MoveToFrame(door, 0, 3.0);
+    WaitForStop(door);
+    PlaySoundLocal(snd_DoorStop, 1.0, 0, 0, 0);
+    
+    # Destroy old lever and create a new one
+    DestroyThing(pulled);
+    pushed = CreateThing(tplLevPull, lever_Pos);
+    CaptureThing(pushed);
+    
+    # stop any unfinished animations
+    ResetThing(indy);
+    
+    Sleep(1.0);
+    
+    # show player and return controls
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    
+    # return camera to player
+    SetCurrentCamera(1);
+    
+    EndCutscene();
+    
+    lever_Ready = 1;
+    open = 0;
+    
+    return;
+    
+# ========================================================================================
+
+speak:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    if(firstTime == 1)
+    {
+        firstTime = 0;
+        PlayVoice(player, say_Candle, 1.0, 1);
+    }
+    
+    else
+    {
+        while (newComment == oldComment) 
+        {
+            newComment = RandBetween(0, 4);
+        }
+        
+        oldComment = newComment;
+        
+        # say success line
+        PlayVoice(player, in_DoorLocked0[newComment], 1.0, 1);
+    }
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+end
+

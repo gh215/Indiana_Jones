@@ -1,0 +1,169 @@
+# Jones 3D Cog Script
+#
+# nub_Croc.cog
+#
+# [TL] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		activated
+message		arrived
+message		entered
+message		exited
+
+thing		croc
+thing		gate
+thing		player							local
+thing		actor
+thing		lever
+thing		crocCam
+thing		crocTarg
+
+surface		leverFace
+
+keyframe	in_pull=in_pull_lever.key		local
+keyframe	lever_down=gen_lever_pull.key	local
+
+material	animmat0=nub_acr_pulley.mat		local
+material	animmat1=rigear.mat				local
+material	animmat2=gen_a4chain.mat		local
+
+sound		leverSound0=nub_lever_pull_c.wav	local
+sound		noSound=inxj088.wav					local		# Nope.
+
+flex		fps=5.9							local
+
+int			tracknum0						local
+int			tracknum1						local
+int			tracknum2						local
+int			done=0							local
+int			position=0						local
+int			curcam							local
+int			speaking=0						local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+activated:
+
+# player activated with an IMP part so bail out
+if((GetCurWeapon(player) >= 14) && (GetCurWeapon(player) <= 18)) return;
+
+if (done == 1)
+{
+	if (speaking == 1) return;
+	speaking=1;
+	PlayVoice(player, nosound, 1, 1);
+    speaking=0;
+	return;
+}
+
+
+if ((GetSenderRef() == lever) && (position == 1))
+{
+    StartCutscene(1);
+	done = 1;
+	
+	# player activated with lighter
+    if(GetCurWeapon(player) == 13)
+	{
+		# put away the lighter
+		DeselectWeapon(player);
+		DeselectWeaponWait(player);
+	}
+	
+	# Remember the current camera
+	curCam = GetCurrentCamera();
+
+	# Prep player
+    SetActorFlags(player, 0x200000);
+    StopThing(player);
+	PlayMode(player, 1, 0);
+    
+	# Cut to cutscene camera
+	SetCameraFocus(2, crocCam);
+	SetCameraSecondaryFocus(2, crocTarg);
+    SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0);
+	
+    CopyPlayerHolsters(player, actor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(actor, 0x80000);
+	
+	# Play the animations - wait for Indy's
+    PlayKey(lever, lever_down, 4, 0x14, 0);
+    PlayKey(actor, in_pull, 4, 0x12, 0);
+	Sleep(1.2);
+    PlaySoundThing(leversound0, lever, 1.0, -1.0, -1.0, 0x0);
+	Sleep(1.4);
+    #PlaySoundThing(leversound1, lever, 1.0, -1.0, -1.0, 0x0);
+    Sleep(0.3);
+	
+
+    MoveToFrame(crocTarg, 1, 0.75);
+	MoveToFrame(gate, 1, 0.5);
+    
+	tracknum0=MaterialAnim(animmat0, fps, 1);
+	tracknum1=MaterialAnim(animmat1, fps, 1);
+	tracknum2=MaterialAnim(animmat2, fps, 1);
+}
+
+return;
+
+# ........................................................................................
+arrived:
+
+if (GetSenderRef() == gate)
+	{
+	StopAnim(tracknum0);
+	StopAnim(tracknum1);
+	StopAnim(tracknum2);
+    
+	# Return control and camera to player
+    Sleep(0.5);
+	
+    SetCameraPosition(1, GetThingPos(crocCam));
+	SetCurrentCamera(1);
+    CopyOrientandPos(actor, player);
+    SetThingFlags(actor, 0x80000);
+    ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	}
+    
+return;
+
+# ........................................................................................
+entered:
+if (GetSenderRef() == leverFace)
+{
+	position=1;
+	
+}
+return;
+# ........................................................................................
+
+exited:
+if (GetSenderRef() == leverFace)
+{
+	position=0;
+}
+return;
+
+# ........................................................................................
+
+end
+

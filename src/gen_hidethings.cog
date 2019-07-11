@@ -1,0 +1,63 @@
+# Jones 3D Cog Script
+#
+# gen_HideThings.cog
+#
+# Hides things at startup until you enter one of two sectors
+# Use (carefully) to hide things too far away or otherwise non-LOS to player
+#
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup
+	message	entered
+
+	thing		hidething0	nolink
+	thing		hidething1	nolink
+	thing		hidething2	nolink
+	thing		hidething3	nolink
+	thing		hidething4	nolink
+	thing		hidething5	nolink
+	thing		hidething6	nolink
+	thing		hidething7	nolink
+	thing		hidething8	nolink
+	thing		hidething9	nolink
+
+	sector	drawthing1
+	sector	drawthing2
+
+	int		i=0	local		// counter	
+	int		drawn=0	local
+end
+
+code
+# ........................................................................................
+
+startup:
+	for (i=0;i<10;i=i+1)
+	{
+		SetThingFlags(hidething0[i], 16);
+	}
+	return;
+
+# ........................................................................................
+
+entered:
+	if (drawn) return;
+	
+	drawn = 1;
+	
+	Sleep(2);
+	for (i=0;i<10;i=i+1)
+	{
+		ClearThingFlags(hidething0[i], 16);
+	}
+	return;
+
+end
+
+
+

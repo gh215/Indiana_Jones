@@ -1,0 +1,34 @@
+# Jones 3D Cog Script
+#
+# actor_IndyActor.cog
+#
+# [RT]
+#
+# Cutscene actor Indy's script.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		created
+
+	thing		indy	local
+
+end
+
+# ===================================================================
+
+code
+
+created:
+
+	indy = GetSenderRef();
+	SetThingVoiceHeads(indy, "inhead", "head_in_msound.3do", "head_in_asound.3do", "head_in_amsound.3do", "head_in_osound.3do");
+
+	return;
+
+# -------------------------------------------------------------------
+
+end

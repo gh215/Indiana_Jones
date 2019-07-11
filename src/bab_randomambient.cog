@@ -1,0 +1,195 @@
+# Jones 3D Cog Script
+#
+# gen_RandomAmbient.cog
+#
+# Plays a random sound at random intervals with random volume and panning
+#
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+## MESSAGES ###############################################################################
+
+	message	    startup
+	message	    timer
+    message     crossed
+
+## THINGS #################################################################################
+
+    thing       player                      local
+
+## SOUNDS #################################################################################
+        
+	sound		out_wav0=bab_gen_a01.wav    local
+	sound		out_wav1=bab_gen_a02.wav    local
+	sound		out_wav2=bab_gen_a07.wav    local
+	sound		out_wav3=bab_gen_a08.wav    local
+	sound		out_wav4=bab_gen_a09.wav    local
+	sound		out_wav5=bab_gen_a06.wav    local
+	sound		out_wav6=bab_gen_a07.wav    local
+	sound		out_wav7=bab_gen_a08.wav    local
+	sound		out_wav8=bab_gen_a09.wav    local
+	sound		out_wav9=bab_gen_a10.wav    local
+    
+    sound       mid_wav0=shw_amb1.wav       local
+    sound       mid_wav1=shw_amb2.wav       local
+    sound       mid_wav2=shw_amb3.wav       local
+    sound       mid_wav3=shw_amb4.wav       local
+    sound       mid_wav4=shw_amb5.wav       local
+    sound       mid_wav5=shw_amb6.wav       local
+    sound       mid_wav6=shw_amb7.wav       local
+    sound       mid_wav7=shw_amb7.wav       local
+    
+	sound		in_wav0=nub_ambient1_a.wav  local
+	sound		in_wav1=nub_ambient2_a.wav  local
+	sound		in_wav2=nub_ambient3_a.wav  local
+	sound		in_wav3=nub_ambient5_a.wav  local
+	sound		in_wav4=teo_gen_a1.wav      local
+	sound		in_wav5=teo_gen_a2.wav      local
+	sound		in_wav6=teo_gen_a3.wav      local
+	sound		in_wav7=teo_gen_a4.wav      local
+	sound		in_wav8=teo_gen_a5.wav      local
+	sound		in_wav9=teo_gen_a6.wav      local
+    
+## SURFACES ###############################################################################
+    
+    surface     outmidcross0                linkid=3    # 3 Sets sound set flag to mid wavs
+    surface     outmidcross1                linkid=4    # 4 Sets sound set flags to out wavs
+    
+    surface     outmidcross2                linkid=3
+    surface     outmidcross3                linkid=4
+    
+    surface     outmidcross4                linkid=3
+    surface     outmidcross5                linkid=4
+    
+    surface     midincross0                 linkid=5    # Sets sound set flags to in wavs
+    surface     midoutcross0                linkid=6    # Sets sound set flags to out wavs
+    
+    surface     nullinsurf0                 linkid=8    # shuts off ambients
+    surface     nullinsurf1                 linkid=8    # shuts off ambients
+    surface     nullinsurf2                 linkid=8
+    surface     nullinsurf3                 linkid=8
+    
+    surface     nulloutsurf2                linkid=9    # returns ambients to normal
+    surface     nulloutsurf3                linkid=9    # returns ambients to normal
+    surface     nulloutsurf4                linkid=9
+    surface     nulloutsurf5                linkid=9
+    
+## MISC ###################################################################################
+
+	flex		min_interval=2
+    flex		range_interval=1
+	flex		min_volume=0.75
+	flex		range_volume=1
+
+	int		    temp		                local
+    int         sndchannel                  local
+    int         soundflag=1                 local
+    int         curflag                     local
+    
+###########################################################################################
+
+end
+
+code
+
+# ........................................................................................
+
+startup:
+    player = GetLocalPlayerThing();
+	settimer(min_interval+(rand()*range_interval));
+	return;
+
+# ........................................................................................
+
+timer:
+    if (soundflag == 0)
+    {
+	    temp = RandBetween(0, 7);
+	    sndchannel = PlaySoundLocal(mid_wav0[temp], (min_volume+(rand()*range_volume)), ((rand()*2)-1.0), 0x0, 0);
+	    settimer(min_interval+(rand()*range_interval));
+    }
+    
+    if (soundflag == 1)
+    {
+	    temp = RandBetween(0, 9);
+	    sndchannel = PlaySoundLocal(out_wav0[temp], (min_volume+(rand()*range_volume)), ((rand()*2)-1.0), 0x0, 0);
+	    settimer(min_interval+(rand()*range_interval));
+        
+    }
+    
+    if (soundflag == 2)
+    {
+	    temp = RandBetween(0, 7);
+	    sndchannel = playsoundlocal(in_wav0[temp], (min_volume+(rand()*range_volume)), ((rand()*2)-1.0), 0x0, 0);
+	    settimer(min_interval+(rand()*range_interval));
+    }
+    
+    if (soundflag == 3)
+    {
+	    SetTimer(1);
+    }
+    
+    
+	return;
+
+# ........................................................................................
+
+crossed:
+
+    if (GetSenderID() == 3)
+    {
+        soundflag = 0;
+        curflag = 0;
+        min_interval=2;
+        range_interval=5;
+        //setting to mid sounds
+    }
+    
+    if (GetSenderID() == 4)
+    {
+        soundflag = 1;
+        curflag = 1;
+        min_interval=4;
+        range_interval=8;
+        //setting to out sounds
+    }
+    
+    if (GetSenderID() == 5)
+    {
+        soundflag = 2;
+        curflag = 2;
+        min_interval=2;
+        range_interval=4;
+        //setting to in sounds
+    }
+    
+    if (GetSenderID() == 6)
+    {
+        soundflag = 1;
+        curflag = 1;
+        min_interval=4;
+        range_interval=8;
+        //setting to mid sounds
+    }
+    
+    if (GetSenderID() == 8)
+    {
+        soundflag = 3;
+        //setting ambients to off
+    }
+    
+    if (GetSenderID() == 9)
+    {
+        soundflag = curflag;
+        //return ambients to last good soundflag
+    }
+    
+    return;
+
+# ........................................................................................
+
+end
+

@@ -1,0 +1,70 @@
+# Jones 3D Cog Script
+#
+# gen_AIPatrol.cog
+#
+# "patroler" goes back and forth between initial position and a ghost object
+#
+# [IS]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup
+	message	pulse
+
+	thing	ghostTarget
+	thing	patroler
+
+	flex    movespeed=0.75
+	flex	thinkRate=1.0
+	flex    ctrlocator=0.25
+
+	int		direction=-1	local
+	vector	position0		local
+	vector	position1		local
+end
+
+# ========================================================================================
+
+code
+startup:
+   AiSetMoveSpeed(patroler, movespeed);
+	position0 = GetThingPos(patroler);
+	position1 = GetThingPos(ghostTarget);
+	SetPulse(thinkRate);
+	return;
+
+# ........................................................................................
+
+pulse:
+	if (direction == 1)
+	{
+		// moving AWAY from initial position
+		if (VectorDist(GetThingPos(patroler), position1) < ctrlocator)
+		{
+			AISetLookPos(patroler, position0);
+			AISetMovePos(patroler, position0);
+			direction = -1;
+		}
+	}
+	else
+	{	
+		// moving TOWARDS initial position
+		if (VectorDist(GetThingPos(patroler), position0) < ctrlocator)
+		{
+			AISetLookPos(patroler, position1);
+			AISetMovePos(patroler, position1);
+			direction = 1;
+		}
+	}
+
+	// check if patroler is dead.
+	if (GetThingHealth(patroler) <= 0.0)
+	{
+		SetPulse(0.0);
+	}
+	return;
+
+end
+

@@ -1,0 +1,33 @@
+# Jones 3D Cog Script
+#
+# PRU_fog.cog    Sectors are turned on and off again as Indy comes by
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+message crossed
+
+surface	fogTrigger0		
+surface	fogTrigger1
+
+
+end
+
+code
+
+crossed:
+if (GetSenderRef() == fogTrigger0)
+{
+	SetFog (1, '0.25 0.25 0.35', 1.0, 175);
+}
+if (GetSenderRef() == fogTrigger1)
+{
+	SetFog (1, '0.2 0.2 0.3', 1.0, 175);
+}
+return;
+
+end
+

@@ -1,0 +1,80 @@
+# Jones 3D Cog Script
+#
+# Generic Script to set a sector to pulse light
+# Min/Max at pulse messages. Pulse runs continuously
+# Steve C.
+#
+# [YB]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message  startup
+	message  pulse
+
+	sector   pulsesector0
+	sector   pulsesector1
+	sector   pulsesector2
+	sector   pulsesector3
+	sector   pulsesector4
+	sector   pulsesector5
+	sector   pulsesector6
+	sector   pulsesector7
+
+	float    pulseval=1.5       //time to Min or Max liteval
+
+	float		maxLightR=1.0	
+	float		maxLightG=1.0	
+	float		maxLightB=1.0	
+
+	float		minLightR=0.0	
+	float		minLightG=0.0	
+	float		minLightB=0.0	
+
+	vector	vecMinLight		local
+	vector	vecMaxLight		local
+
+	int      flag=0      local
+	int      index=0     local
+	int      numsects=0  local
+	int		i=0			local
+end
+
+code
+
+# ........................................................................................
+
+startup:
+	for (i=0; i<=7; i=i+1)
+	{
+		if (pulsesector0[i] >=0) numsects=numsects + 1;
+	}
+   SetPulse(pulseval);
+   return;
+
+# ........................................................................................
+
+pulse:
+	if (flag == 1)
+	{
+		for (index=0; index < numsects; index = index + 1)
+		{
+			SetSectorLight(pulsesector0[index], vecMinLight, pulseval);
+		}
+		flag=0;
+		return;
+	}
+	else if (flag == 0)
+	{
+		for (index=0; index < numsects; index = index + 1)
+		{
+			SetSectorLight(pulsesector0[index], vecMaxLight, pulseval);
+		}
+		flag=1;
+		return;
+	}
+	return;
+end
+
+

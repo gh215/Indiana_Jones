@@ -1,0 +1,154 @@
+# Jones 3D Cog Script
+#
+# SOL_IntroCut.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     entered
+    
+    thing       player      local
+    thing       car         local
+    
+    thing       cam1
+    thing       fadePlate
+    thing       minePlayer
+    thing       mineCar
+    thing       cam_Targ
+    thing       cam_Pos
+    
+    surface     trig1
+    surface     trig2
+    surface     stopface
+    
+    # ** pre-load door sounds **
+    sound       sndOpen=sol_cardoor_open_c.wav      local
+    sound       sndClose=sol_cardoor_close_c.wav    local
+    
+    cog         mineDoors
+    
+    int         done=0          local
+    int         mounted         local
+#	int         dontPlay=1      local
+
+	int			bSeen=0		    local
+    int         track_Open      local
+    int         track_Close     local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	# Start on black...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+    SetCameraFocus(2, cam1);
+    SetCameraSecondaryFocus(2, cam_Targ);
+    SetCurrentCamera(2);
+    SetCameraFOV(75, 0, 0.0);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+    player = GetLocalPlayerThing();
+    
+    # Cut to cam1
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+    SetCameraFocus(2, cam1);
+    SetCameraSecondaryFocus(2, cam_Targ);
+    SetCurrentCamera(2);
+    SetCameraFOV(75, 0, 0.0);
+    
+    # pre-load door sounds
+    track_Open = PlaySoundLocal(sndOpen, 0.0, 0.0, 0x0, 0);
+    track_Close = PlaySoundLocal(sndClose, 0.0, 0.0, 0x0, 0);
+    
+    Sleep(0.01);
+    
+    mounted = BoardVehicle(player);
+    #PrintInt(mounted);
+    
+    #SetCameraSecondaryFocus(2, minePlayer);
+    
+    # start cutscene and disable player
+    StartCutscene(2);
+    SetActorFlags(player, 0x200000);
+    
+    # fade in
+    ThingFadeAnim(fadePlate, 1, 0, 2.0, 0);
+    
+    Sleep(2.0);
+    
+    StopSound(track_Open, 0.0);
+    StopSound(track_Close, 0.0);
+    Sleep(0.1);
+    
+    # open mine doors
+    SendMessage(mineDoors, user0);
+    
+    #Sleep(0.5);
+    
+    # give minePlayer some thrust
+    SetThingThrust(minePlayer, '0.0 3.0 0.0');
+    
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    car = GetSourceRef();
+
+    if((BitTest(GetPhysicsFlags(car), 0x01000000)) && (done == 0))
+    {
+        if(GetSenderRef() == trig1)
+        {
+            # close mine doors
+            SendMessage(mineDoors, user1);
+        }
+        
+        if(GetSenderRef() == trig2)
+        {
+            # restore player controls
+            ClearActorFlags(player, 0x200000);
+            
+            # give camera to player
+			ResetCameraFOV(0, 0.0);
+            SetCameraPosition(1, GetThingPos(cam_Pos));
+            SetCurrentCamera(1);
+            
+            EndCutscene();
+            done = 1;
+            
+            # clear minecar flags
+            ClearSurfaceFlags(stopface, 0x4000);
+        }
+    }
+    
+    return;
+       
+# ========================================================================================
+
+end
+

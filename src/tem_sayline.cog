@@ -1,0 +1,40 @@
+# Jones 3D Cog Script
+#
+# TEM_SayLine.cog
+#
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     crossed
+
+    surface     surf
+    
+    sound       sndSay
+
+    int         beenThere=0     local
+
+end
+
+# ========================================================================================
+
+code
+
+crossed:
+
+    if((GetSenderRef() == surf) && (beenThere == 0))
+        {
+            beenThere = 1;
+            PlaySoundLocal(sndSay, 1.0, 0.0, 0x0, 0);
+        }
+        
+    return;
+
+# ========================================================================================
+
+end
+

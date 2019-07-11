@@ -1,0 +1,78 @@
+# Jones 3D Cog Script
+#
+# gen_LeverPush.cog
+#
+# [HB from RT]
+#
+# Mini-cutscene: Indy pulling a floor lever.
+#
+# Input:
+# 
+# 	thing	indy 	=	Cutscene actor Indy
+# 	thing 	camera 	=	POV cutscene camera
+# 	thing 	lever 	=	The lever...duh.
+#	flex 	FOV		=	Camera field of view		
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		activated
+
+	keyframe	in_pull=in_push_lever.key	local
+	keyframe	lever_down=gen_lever_push.key		local
+   
+	thing		player							local
+
+	thing		indy							nolink
+    thing		camera	
+	thing		lever
+
+	flex		FOV=45
+
+	int			curCam							local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+	# Remember the current camera
+	curCam = GetCurrentCamera();
+
+	# Disable and hide player
+    SetThingFlags(player, 0x80000);
+
+	# Cut to cutscene camera
+	SetCurrentCamera(0);
+	SetCameraFocus(0, camera);
+    SetCameraFOV(FOV, 0, 0.0);
+    ClearThingFlags(indy, 0x80000);
+
+	# Play the animations - wait for Indy's
+    PlayKey(lever, lever_down, 4, 0x12, 0);
+    PlayKey(indy, in_pull, 4, 0x12, 1);
+
+	# Return control and camera to player
+	SetCurrentCamera(curCam);
+	SetCameraFocus(curCam, player);
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+
+	return;
+
+end
+

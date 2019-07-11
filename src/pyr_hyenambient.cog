@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# gen_RandomAmbient.cog
+#
+# Plays a random sound at random intervals with random volume and panning
+#
+# [SXC]	+ [RKD]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	timer
+
+sound	hyenawav0=pyr_amb_hyena_1.wav	local
+sound	hyenawav1=pyr_amb_hyena_2.wav	local
+sound	hyenawav2=pyr_amb_hyena_3.wav	local
+sound	hyenawav3=pyr_amb_hyena_4.wav	local
+
+flex	minInterval=5		local
+flex	rangeInterval=15	local
+flex	minVolume=0.4		local
+flex	rangeVolume=1.2		local
+
+int		cursound=0
+end
+
+code
+
+# ........................................................................................
+
+startup:
+	SetTimer(20);
+	
+	return;
+
+timer:
+	# if all hyenas killed, stop sounds and timer
+	if (global8 > 10) return;
+	
+	# prepare for next sound
+	SetTimer(minInterval + (rand() * rangeInterval));
+	
+	# if player is inside pyramid complex, try again later
+	if (global11 == 1) return;
+
+	cursound = PlaySoundLocal(hyenawav0[RandBetween(0, 3)], (minVolume + (rand() * rangeVolume)), ((rand() *2) - 1.0), 0x0, 0);
+	return;
+end
+

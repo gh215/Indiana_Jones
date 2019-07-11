@@ -1,0 +1,72 @@
+# Jones 3D Cog Script
+#
+# gen_LightAnimRand.cog
+#
+# [RT]
+#
+#	This cog randomly animates up to 8 dynamic light sources, allowing the designer to
+#  specify minimum and maximum completion times, pause times and RGB values.
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message	startup
+	message	timer
+
+	thing		light0
+	thing		light1
+	thing		light2
+	thing		light3
+	thing		light4
+	thing		light5
+	thing		light6
+	thing		light7
+	
+	flex		minR=1.0				// Minimum RGB values
+	flex		minG=1.0		
+	flex		minB=1.0			  	
+	flex		minTime=5.0			// Minimum time to complete lighting change
+	flex		minPause=0.1		// Minimun time to pause between cycles
+
+	flex		rangeR=2.0   		// How far above minimum values do we go? Min + Range = Max
+	flex 		rangeG=2.0
+	flex		rangeB=2.0
+	flex		rangeTime=10.0
+	flex		rangePause=5.0
+
+	int		i						local
+	int		numLights=0			local
+	float		changeTime			local
+	
+	vector	vecLight				local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	for (i = 0; i < 8; i = i + 1)
+		if (light0[i] >= 0)
+			numLights = numLights + 1;
+   
+	SetTimer(0.1);
+   return;
+
+timer:
+
+	vecLight = VectorSet(minR + (rand() * rangeR), minG + (rand() * rangeG), minB + (rand() * rangeB));
+	changeTime = minTime + (rand() * rangeTime);
+   
+	for (i = 0; i < numLights; i = i + 1)
+      SetThingLight(light0[i], vecLight, 1.0, changeTime);
+
+   Sleep(changeTime);
+   SetTimer(.01 + minPause + (rand() * rangePause));
+	return;
+
+end

@@ -1,0 +1,1330 @@
+# Jones 3D Cog Script
+#
+# 11_PYR_KidVsIndy_2.cog
+#
+# Indy must do business with Nubian Kid
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		entered
+	message		exited
+    message		activated
+	message		callback
+	message		pulse
+	
+# .................................. KEYFRAMES .................................
+	
+	keyframe	in_pushHat=0in_figithat_4_4.key			local
+	keyframe	in_botharmsup=0in_armsup_1_1.key		local
+	keyframe	in_ltarmup=0in_leftarm_1_1.key			local
+
+	keyframe	in_armsCrossed=0in_stand2.key			local
+	keyframe	in_handsONhips=0in_stand4.key			local
+	keyframe	in_crossArms=0in_stand1_bd_2.key	   	local
+	keyframe	in_handsTOhips=0in_stand1_bd_4.key	   	local
+	keyframe	in_displaywatch=0in_holdwatchup_1_1.key	local
+	keyframe	in_givewatch=0in_givewatch_1_1.key		local # mark not used
+	keyframe	in_takegem=0in_takeobj_1_1.key			local # marked @ x72/cb22
+
+	keyframe	nu_handsTOhips=0by_stand1_bd_2.key		local
+	keyframe	nu_handsONhips=0by_stand2_handsonhip.key	local
+	keyframe	nu_handsTOside=0by_stand2_bd_1.key		local
+	keyframe	nu_reachforwatch=0by_jumpup_1_1.key		local
+	keyframe	nu_scramble=0by_climb.key				local
+	keyframe	nu_scramwatch=0by_climb_w_watch.key		local
+	keyframe	nu_wearwatch=0by_watchgesture1_1.key	local
+	keyframe	nu_railslow=0by_walk_rail.key			local
+	keyframe	nu_grabgem=0by_getjewel.key				local # marked @ x18/cb21
+	keyframe	nu_getwatch=0by_getwatch_1_1.key		local # marked @ x30/cb21
+	keyframe	nu_givegem=0by_givecrystal_1_1.key		local # marked @ x20/cb21
+	keyframe	nu_industry=0by_triumphant_1_1.key		local
+	keyframe	nu_factory=0by_points_1_1.key			local
+			
+# .................................. MODELS ....................................
+		
+	model  		mod_in_watchhand=hand_in_watch.3do		local
+	model  		mod_in_gemhand=hand_in_gem.3do			local
+	model  		mod_nu_watchhand=hand_by_watch.3do		local
+	model  		mod_nu_gemhand=hand_by_gem.3do			local
+			
+# .................................. SOUNDS ....................................
+
+    # Lines for intro...
+	sound		in_sayline=pr07j01.wav					local # [0]--> "...balance on rail"
+	sound		in_whatthere=Inxj228.wav				local # "What's that over there?"
+	sound		in_somethere=Inxj230.wav				local # "Something...what is it?"
+	sound		in_heything=Inxj231.wav					local # "Hey, something's over there."
+
+	# Lines for encounter 1...
+	sound		nu_thanks=pr08b01.wav					local
+	sound		in_american=pr08j02.wav					local
+	sound		nu_civilized=pr08b03.wav				local
+	sound		in_toosure=pr08j04.wav					local
+	sound		nu_industrialized=pr08b05.wav			local
+	sound		in_helpme=pr08j06.wav					local
+	sound		nu_chaphorner=pr08b07.wav				local
+	sound		in_myth=pr08j08.wav						local
+	sound		nu_ineed=pr08b09.wav					local
+	sound		in_miracles=pr08j10.wav					local
+	sound		nu_observed=pr08b11.wav					local
+	sound		in_sorrykid=pr08j12.wav					local
+	sound		nu_illwait=pr08b13.wav					local
+
+	# Lines for encounter 2...
+	sound		in_youagain=pr08j14.wav					local
+	sound		nu_helloamerican=pr08b15.wav			local
+	sound		in_nowatch=pr08j16.wav					local
+	sound		nu_andyoucall=pr08b17.wav				local
+
+	# Lines for encounter 3...
+	sound		nu_mywatch=pr08b18.wav					local
+	sound		in_cantfind=pr08j19.wav					local
+	sound		nu_donteventry=pr08b20.wav				local
+
+	# Lines for exchange...
+	sound		nu_ahhhh=pr11b04.wav					local
+	sound		in_notsofast=pr11j05.wav				local
+	sound		in_goodcare=pr11j06.wav					local
+	sound		nu_nowiown=pr11b07.wav					local
+	sound		in_astart=pr11j08.wav					local
+	sound		nu_kenya=pr11b09.wav					local
+
+	# Music bits
+	sound		glintmusic=mus_pyr_shinyobject.wav		local
+	sound		kidmusic=mus_pyr_nubianboy.wav			local
+
+	# SFX
+	sound		rattle=pyr_conveyor_move.wav	local
+
+# ............................... ACTOR THINGS .................................
+
+	thing		player									local
+	thing		indy	    							linkid=0
+	thing		nukid
+
+# .............................. OBJECT THINGS .................................
+
+	thing		gem
+	thing		sparkle									nolink
+	thing		badpost									nolink
+
+# .............................. CAMERA THINGS .................................
+
+	thing		cam_1									nolink
+	thing		cam_2									nolink
+	thing		cam_3									nolink
+	thing		cam_4									nolink
+	thing		cam_5									nolink
+	thing		cam_6									nolink
+	thing		cam_7									nolink
+	thing		cam_8									nolink
+	thing		cam_9									nolink
+	thing		cam_10									nolink
+	thing		cam_11									nolink
+	thing		cam_12									nolink
+	thing		cam_13									nolink
+	thing		cam_14									nolink
+	thing		cam_15									nolink
+	thing		cam_16									nolink
+	thing		cam_17									nolink
+	thing		cam_18									nolink
+	thing		cam_19									nolink
+
+	thing		ct_1									nolink
+	thing		ct_2									nolink
+	thing		ct_3 									nolink
+	thing		ct_4									nolink
+	thing		ct_5									nolink
+	thing		ct_6									nolink
+	thing		ct_7									nolink
+	thing		ct_8									nolink
+	thing		ct_9									nolink
+	thing		ct_10									nolink
+	thing		ct_11									nolink
+	thing		ct_12									nolink
+	thing		ct_13									nolink
+	thing		ct_14									nolink
+	thing		ct_15									nolink
+
+	thing		cam1spot								local
+	thing		cam1look								local
+	
+# .............................. TARGET THINGS .................................
+
+	thing		in_mk_1									nolink
+	thing		in_mk_2									nolink
+	thing		in_mk_3									nolink
+
+	thing		nu_mk_1									nolink
+	thing		nu_mk_2									nolink
+	thing		nu_mk_3									nolink
+	thing		nu_mk_4									nolink
+	thing		nu_mk_5									nolink
+	thing		nu_mk_6									nolink
+	thing		nu_mk_7a								nolink
+	thing		nu_mk_7b								nolink
+	thing		nu_mk_8a								nolink
+	thing		nu_mk_8b								nolink
+	thing		nu_mk_9									nolink
+	thing		nu_mk_10								nolink
+	thing		nu_mk_11								nolink
+
+# ............................... VAR THINGS ...................................
+
+	thing		indyCamTarget							local # created on fly
+	thing		kidCamTarget							local # created on fly
+	thing		whichcam								local # var
+	thing		entercam								local # var
+	thing		looker									local # var
+	thing		lookee									local # var
+
+# ........................ OTHER ENGINE REFERENCES .............................
+			
+	cog			caveincog
+
+	sector		replaysector
+	sector		targetsector							local # var
+
+	surface		startkid						
+	surface		resetface
+	surface		replayface
+	surface		railface
+
+	material	sparkmat
+
+	template    tpl_ghost=ghost							local
+	
+# ............................... VARIABLES ....................................
+	
+	vector		v_targetpos								local
+
+	flex		in_rotRate								local
+	flex		nu_rotRate								local
+	flex		viewangle								local
+
+	int			cutSceneState=0							local # overall state var
+	int			cluetalk=0								local # governs Indy comments
+	int			playergone=0							local # allows suicide plunges
+	int			preventscene=0							local # stops bad repeats
+	int			alreadyworking=0						local # stops multiple starts
+	int			camexists=0								local # limits thing creation
+
+	int			oldline									local
+	int			newline									local
+
+	int			in_keyTrack1							local
+	int			nu_keyTrack1							local
+	int			nu_keyTrack2							local
+
+	int			in_swapItem1							local
+	int			in_swapItem2							local
+	int			nu_swapItem1							local
+	int			nu_swapItem2							local
+	int			swapevent=0								local
+			
+	int			sender									local
+	int			source									local
+	int			curSound								local
+	int			curSound2								local
+	int			curCam									local
+
+	int			gemeye=65								local # define
+	int			hornerwatch=100							local # define
+
+# subroutines
+flex	replayintro=0.0		local
+flex	firstvisit=0.0		local
+flex	secondvisit=0.0		local
+flex	thirdvisit=0.0		local
+flex	nukidenter=0.0		local
+flex	nukidexit=0.0		local
+flex	exchange=0.0		local
+flex	generalprep=0.0		local
+flex	backtoplay=0.0		local
+flex	randcluelines=0.0	local
+flex	firstintro=0.0		local
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+//Print("----MOVIECOG START----");
+	
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+
+	# Prep...
+//	curCam = GetCurrentCamera();
+//	viewangle = GetCameraFOV();
+	SetThingFlags(indy, 0x80000);
+	SetThingFlags(nukid, 0x80000);
+	in_rotRate = GetThingMaxRotVel(indy);
+	nu_rotRate = GetThingMaxRotVel(nukid);
+	SetAdjoinFlags(railface, 0x02);
+
+	return;
+
+# ..............................................................................
+
+entered:
+	
+//Print("halcog entered-->");
+
+	# NOTES:
+	#
+	# cutSceneState-->	corresponds to 7 cutscene states:
+	# 0. Indy has yet to notice the sparkle
+	# 1. Indy has yet to talk to kid
+	# 2. Indy has talked to kid once
+	# 3. Indy has talked to kid twice
+	# 4. Indy has talked to kid at least three times
+	# 5. Indy has watch but has yet to exchange it for gemeye
+	# 6. Indy has gemeye at last!
+	
+	sender = GetSenderRef();
+	source = GetSourceRef();
+
+	# moved from startup to avoid crash -- RKD
+	curCam = GetCurrentCamera();
+	viewangle = GetCameraFOV();
+
+	playergone = 0; # reset every entry
+
+	if (sender == resetface)
+	{
+		# Reset semaphor...
+		preventscene = 0;
+		return;
+	}
+
+	if (alreadyworking == 1)
+	{
+		# No multiple starts...
+		return;
+	}
+
+	if (sender != startkid && sender != replayface)
+	{
+		# General filter...
+		return;
+	}
+
+	if (source != player)
+	{
+		# Abort if triggering event wasn't Indy...
+		return;
+	}
+
+	if (cutSceneState == 6)
+	{
+		# Abort if Indy already has the gemeye...
+		return;
+	}
+
+	if (sender == startkid && cutSceneState > 0)
+	{
+		# Abort from this sender if firstintro has already played...
+		return;
+	}
+
+	if (sender == replayface && preventscene > 0)
+	{
+		# Don't re-trigger scene involuntarily unless Indy has moved away meanwhile...
+		return;
+	}
+
+	if (sender == replayface)
+	{
+		Sleep(0.8);
+		if (playergone == 1)
+		{
+			# Abort if Indy dodges in and out (see exited code)...
+			return;
+		}
+	}
+
+//Print("moviecog entered-->");
+
+	call generalprep;
+	
+	#### TEST STATE...
+//	PRINT("BUG: COG THINKS ALL HYENAS ARE DEAD");
+//	GLOBAL8 = 11;
+
+	#### TEST STATEMENT...
+	####if (cutSceneState > 0)
+
+	if (cutSceneState > 1 && GetInv(player, hornerwatch) == 1)
+	{
+		# Detect for watch externally only after Indy has already met kid...
+		cutSceneState = 5;
+	}
+	
+	if (cutSceneState > 0)
+	{
+		call replayintro;
+	}
+	else
+	{
+		call firstintro;
+	}
+
+	call backtoplay;
+
+	return;
+
+# ..............................................................................
+
+activated:
+	
+	if (cutSceneState == 6)
+	{
+		# Abort if Indy already has the gemeye...
+		return;
+	}
+	
+	if (GetSenderRef() == replayface)
+	{
+		call generalprep;
+	
+		#### TEST STATE...
+		//PRINT("BUG: COG THINKS ALL HYENAS ARE DEAD");
+		#### GLOBAL8 = 11;
+		
+		#### TEST STATEMENT...
+		####if (cutSceneState > 0)
+
+		if (cutSceneState > 1 && GetInv(player, hornerwatch) == 1)
+		{
+			# Detect for watch externally only after Indy has already met kid...
+			cutSceneState = 5;
+		}
+
+		call replayintro;
+
+		whichcam = cam_2;
+		call backtoplay;
+	}
+	
+	return;
+
+# ..............................................................................
+
+exited:
+
+	if (GetSenderRef() == replaysector)
+	{
+		playergone = 1;
+	}
+	
+	return;
+	
+# ..............................................................................
+
+firstintro:
+	
+	# Prep...
+	cutSceneState = 1;
+	preventscene = 1; # no quick repeats
+
+	# Turn off future saylines at mine tunnel cave-in...
+	SendMessage(caveincog, user1);
+	
+	# Establish a target near Indy...
+	v_targetpos = VectorAdd(VectorTransformToOrient(indy, '0.0 0.05 0.0'), GetThingPos(indy));	
+	targetsector = FindNewSectorFromThing(indy, v_targetpos);
+	indyCamTarget =
+		CreateThingAtPos(tpl_ghost, targetsector, v_targetpos, '0 0 0');
+	CaptureThing(indyCamTarget); # no capture, no work
+	AttachThingToThing(indyCamTarget, indy); # track his move
+	
+	# Cut to long shot of Indy...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_1);
+	SetCameraSecondaryFocus(2, indyCamTarget);
+	SetCurrentCamera(2);
+	SetCameraFOV(65, 0, 0.0);
+
+	# Walk Indy to the edge of the trestle...
+	AISetMoveSpeed(indy, 1.1);
+	AISetLookThing(indy, in_mk_1);
+	AISetMoveThing(indy, in_mk_1, 0);
+	AIWaitForStop(indy);
+	AISetLookThing(indy, gem);
+
+	# Pan to watch Indy stare across at the tunnel...
+	PlaySoundLocal(glintmusic, .6, 0, 0, 0);
+	AISetLookThing(indy, gem);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 2.5);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_2);
+	SetCameraSecondaryFocus(2, ct_1);
+	SetCameraFOV(80, 1, 2.5);
+	Sleep(0.7);
+		
+	# Indy sees the sparkle...
+	SetMaterialCel(sparkmat, 0);
+	AnimateSpriteSize(sparkle, '0.01 0.01 0.0', '0.2 0.2 1.0', .25);
+	MaterialAnim(sparkmat, 20, 1);
+	Sleep(0.5);
+    AnimateSpriteSize(sparkle, '0.2 0.2 1.0', '0.01 0.01 0.0', .25);
+	Sleep(0.25);
+
+	# Indy: "There's something over there, but...rail..."
+	curSound = PlayVoice(indy, in_sayline[0], 1, 0);
+	WaitForSound(curSound);
+
+	whichcam = cam_1; # in case of early return
+
+	# Kid will not appear until hyenas are gone...
+	if (global8 >= 11)
+	{
+		call firstvisit;
+	}
+
+	# Housekeeping...
+	DestroyThing(indyCamTarget); # its work is done
+	SetCameraPosition(1, GetThingPos(whichcam));
+	SetCurrentCamera(curCam);
+	RestoreExtCam();
+
+	return;
+
+# ..............................................................................
+
+replayintro:
+
+	if (IsThingVisible(gem) == 0)
+	{
+		# Abort if Indy is looking in the wrong direction...
+		return;
+	}
+
+	# Aim Indy...
+	AISetLookThing(indy, gem);
+	AIWaitForStop(indy);
+
+	preventscene = 1; # no quick repeats
+
+	# Swing camera to frame tunnel and Indy...	
+	if (camexists == 0)
+	{
+		cam1spot = CreateThing(tpl_ghost, player);
+		CaptureThing(cam1spot);
+		CreateThing(tpl_ghost, player);
+		CaptureThing(cam1look);
+		camexists = 1;
+	}	
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraInterpSpeed(2, 0.8);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	SetCameraFOV(viewangle, 0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_3);
+	SetCameraSecondaryFocus(2, ct_1);
+	Sleep(0.3);
+
+	# Sparkle again...
+	SetMaterialCel(sparkmat, 0);
+	AnimateSpriteSize(sparkle, '0.01 0.01 0.0', '0.2 0.2 1.0', .25);
+	MaterialAnim(sparkmat, 20, 1);
+	Sleep(0.25);
+	SetThingFlags(sparkle, 0x10); # no see
+    AnimateSpriteSize(sparkle, '0.2 0.2 1.0', '0.01 0.01 0.0', .25);
+	Sleep(0.25);
+	ClearThingFlags(sparkle, 0x10); # visible again
+
+
+	if (cluetalk == 0)
+	{
+		# 2nd time thru...
+		newline = 2; # force "Something's over there...what is it?"
+		oldline = 0;
+		call randcluelines;
+		cluetalk = 1;
+	}
+	else
+	{
+		# 3rd time & thereafter...
+		call randcluelines;
+	}
+
+	whichcam = cam_1; # set here in case of early return
+
+	# Kid will not appear until hyenas are gone...
+	if (global8 >= 11)
+	{
+		if (cutSceneState == 5)
+		{
+			# Prep...
+			entercam = cam_12;
+
+			# Nukid descends the slope...
+			call nukidenter;
+
+			# They face each other...
+			SetThingMaxRotVel(indy, 150.0);
+			AISetLookThing(indy, nu_mk_2);
+			Sleep(0.5);
+			AISetLookThing(nukid, nu_mk_3); # aim his head high
+			AIWaitForStop(nukid);
+			DetachThing(kidCamTarget);
+			
+			curSound = 	PlayVoice(nukid, nu_mywatch, 1, 0);
+			WaitForSound(curSound);
+
+			call exchange;
+		}
+
+		if (cutSceneState == 3 || cutSceneState == 4)
+		{
+			call thirdvisit;
+		}
+		
+		if (cutSceneState == 2)
+		{
+			call secondvisit;
+		}
+
+		if (cutSceneState == 1)
+		{
+			call firstvisit;
+		}
+	}
+
+	# Housekeeping...	
+	SetCameraPosition(1, GetThingPos(whichcam));
+	SetCurrentCamera(curCam);
+	RestoreExtCam();
+
+	return;
+
+# ..............................................................................
+
+firstvisit:
+	
+	# Continue with kid...
+	cutSceneState = 2;
+	entercam = cam_5;
+	call nukidenter;
+
+	# Nukid: "Thanks to English...for killing...hyenas."
+	curSound = PlayVoice(nukid, nu_thanks, 1, 0);
+	AISetLookThing(nukid, nu_mk_3); # aim his head high
+
+	# Indy turns to spot the kid's approach...
+	SetThingMaxRotVel(indy, 150.0);
+	AISetLookThing(indy, nu_mk_2);
+	Sleep(0.5);
+
+	# Camera moves in on the pair...
+	SetCameraInterpSpeed(2, 12.0);
+	SetCameraLookInterp(2, 1);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_6);
+	SetCameraSecondaryFocus(2, ct_3);
+	SetCameraFOV(45, 1, 12.0);
+
+	# They face each other...
+	AISetLookThing(nukid, nu_mk_3); # aim his head high
+	AIWaitForStop(nukid);
+	looker = nukid;
+	lookee = nu_mk_3;
+	SetPulse(0.1);
+	WaitForSound(curSound);
+	SetPulse(0);
+
+	# Indy: "American..."
+	curSound = PlayVoice(indy, in_american, 1, 0);
+	PlayKey(indy, in_botharmsup, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Nukid: "Civilized like English, yes?"
+	curSound = PlayVoice(nukid, nu_civilized, 1, 0);
+	WaitForSound(curSound);
+
+	# Indy: "Don't be too sure."
+	curSound = PlayVoice(indy, in_toosure, 1, 0);
+	in_keyTrack1 = PlayKey(indy, in_handsONhips, 2, 0x10, 0);
+	PlayKey(indy, in_handsTOhips, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Nukid: "Industrialized too...here to re-open the mines!"
+	curSound = PlayVoice(nukid, nu_industrialized, 1, 0);
+	Sleep(3.5);
+	StopKey(indy, in_keyTrack1, 0.5);
+	WaitForSound(curSound);
+	
+	# Indy turns to look back toward the tunnel...
+	SetThingMaxRotVel(indy, 150.0);
+	AISetLookThing(indy, in_mk_2);
+	
+	# Indy: "I think there's something over there I need...want to help me...?"
+	curSound = PlayVoice(indy, in_helpme, 1, 0);
+	AIWaitForStop(indy);
+	Sleep(0.5);
+	PlayKey(indy, in_ltarmup, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Push in on kid...
+	SetCameraInterpSpeed(2, 7.0);
+	SetCameraFocus(2, cam_8);
+	SetCameraSecondaryFocus(2, ct_4);
+	SetCameraFOV(42, 1, 7.0);
+
+	# Nukid: "That chap Horner was very industrialized...King Sol's mines..."
+	curSound = PlayVoice(nukid, nu_chaphorner, 1, 0);
+	WaitForSound(curSound);
+		
+	# Cut to Indy over kid's shoulder...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_7);
+	SetCameraSecondaryFocus(2, ct_5);
+	SetCameraFOV(35, 0, 0.0);
+	
+	# Indy faces kid again...
+	SetThingMaxRotVel(indy, 150.0);
+	AISetLookThing(indy, nukid);
+	
+	# Indy: "Those mines are a myth...help or not?"
+	curSound = PlayVoice(indy, in_myth, 1, 0);
+	WaitForSound(curSound);
+
+	# Nukid: "What if there's something I need...help me?"
+	curSound = PlayVoice(nukid, nu_ineed, 1, 0);
+	nu_keyTrack1 = PlayKey(nukid, nu_handsONhips, 2, 0x10, 0);
+	PlayKey(nukid, nu_handsTOhips, 4, 0x12, 1);
+	Sleep(0.8);
+	StopKey(nukid, nu_keyTrack1, 0.0);
+	PlayKey(nukid, nu_handsTOside, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Cut to close-up of Indy...
+	SetThingFlags(nukid, 0x10); # invisible in this shot
+	SetCameraFocus(2, cam_9);
+	SetCameraSecondaryFocus(2, ct_6);
+	SetCameraFOV(35, 0, 0.0);
+	
+	# Indy: "Maybe...I don't do miracles..."
+	curSound = PlayVoice(indy, in_miracles, 1, 0);
+	AISetLookThing(indy, in_mk_3);
+	in_keyTrack1 = PlayKey(indy, in_armsCrossed, 2, 0x10, 0);
+	PlayKey(indy, in_crossarms, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Cut to close-up of kid...
+	ClearThingFlags(nukid, 0x10); # see kid again
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_10);
+	SetCameraSecondaryFocus(2, ct_7);
+	SetCameraFOV(50, 0, 0.0);
+	WaitForSound(curSound);
+	
+	# Nukid: "I have observed...men wear watches...now if I had a watch..."
+	curSound = PlayVoice(nukid, nu_observed, 1, 0);
+	Sleep(1.5);
+	PlayKey(nukid, nu_wearwatch, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	DetachThing(kidCamTarget); # no longer needed here
+
+	if (GetInv(player, hornerwatch) == 1)
+	##if (1) #### TEST ONLY!
+	{
+		# If Indy has watch, complete transaction right now...
+
+		StopKey(indy, in_keyTrack1, 0.0);
+		call exchange;
+
+		return;
+	}
+		
+	# Position target...
+	TeleportThing(kidCamTarget, ct_8); # move to ref spot
+	
+	# Cut back to wide shot of pair...
+	SetCameraFocus(2, cam_11);
+	SetCameraSecondaryFocus(2, kidCamTarget);
+	SetCameraFOV(75, 0, 0.0);
+	
+	# Indy: "Sorry, kid.  I have no idea what time it is."
+	curSound = PlayVoice(indy, in_sorrykid, 1, 0);
+	StopKey(indy, in_keyTrack1, 0.5);
+	WaitForSound(curSound);
+
+	# Nukid: "I'll wait while you find out."
+	curSound = PlayVoice(nukid, nu_illwait, 1, 0);
+	WaitForSound(curSound);
+
+	# Nukid exits...
+	AttachThingToThing(kidCamTarget, nukid);
+	SetCameraFOV(35, 1, 5.0);
+	call nukidexit;
+
+	# update kidstatus global value
+	global3 = 2;
+
+	# Housekeeping...
+	whichcam = cam_6;
+
+	return;
+
+# ..............................................................................
+
+secondvisit:
+
+	# Prep...
+	cutSceneState = 3;
+	entercam = cam_12;
+
+	# Nukid descends the slope...
+	call nukidenter;
+
+	# They face each other...
+	SetThingMaxRotVel(indy, 150.0);
+	AISetLookThing(indy, nu_mk_2);
+	Sleep(0.5);
+	AISetLookThing(nukid, nu_mk_3); # aim his head high
+	AIWaitForStop(nukid);
+	
+	curSound = PlayVoice(indy, in_youagain, 1, 0);
+	WaitForSound(curSound);
+
+	curSound = PlayVoice(nukid, nu_mywatch, 1, 0);
+	WaitForSound(curSound);
+
+	curSound = PlayVoice(indy, in_cantfind, 1, 0);
+	WaitForSound(curSound);
+
+	curSound = 	PlayVoice(nukid, nu_andyoucall, 1, 0);
+	WaitForSound(curSound);
+		
+	# Kid exits...
+	SetCameraFOV(35, 1, 5.0);
+	call nukidexit;		
+
+	# Housekeeping...
+	whichcam = cam_5;
+
+	return;
+
+# ..............................................................................
+
+thirdvisit:
+
+	# Prep...
+	cutSceneState = 4;
+	entercam = cam_12;
+
+	# Nukid descends the slope...
+	call nukidenter;
+
+	# They face each other...
+	SetThingMaxRotVel(indy, 150.0);
+	AISetLookThing(indy, nu_mk_2);
+	Sleep(0.5);
+	AISetLookThing(nukid, nu_mk_3); # aim his head high
+	AIWaitForStop(nukid);
+	DetachThing(kidCamTarget);
+	
+	curSound = 	PlayVoice(nukid, nu_helloamerican, 1, 0);
+	WaitForSound(curSound);
+
+	curSound = 	PlayVoice(indy, in_nowatch, 1, 0);
+	WaitForSound(curSound);
+
+	curSound = PlayVoice(nukid, nu_donteventry, 1, 0);
+	WaitForSound(curSound);
+		
+	# Nukid exits...
+	SetThingMaxRotVel(indy, 150.0);
+	call nukidexit;
+	AISetLookThing(indy, ct_1);
+	AIWaitForStop(indy);
+		
+	# Housekeeping...
+	whichcam = cam_11;
+
+	return;
+
+# ..............................................................................
+
+nukidenter:
+	# play music for kid
+	PlaySoundLocal(kidmusic, .6, 0, 0, 0);
+
+	# Cut to up-angle on Nubian Kid...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_4);
+	SetCameraSecondaryFocus(2, kidCamTarget);
+	SetCurrentCamera(2);
+	SetCameraFOV(25, 0, 0.0);
+
+	# Spot Indy on his mark while offscreen...
+	CopyOrientAndPos(in_mk_1, indy);
+
+	# Kid appears at edge of pit...
+	ClearThingFlags(nukid, 0x10); # show kid
+	AISetLookThing(nukid, nu_mk_1);
+	AISetMoveThing(nukid, nu_mk_1, 0);
+	AIWaitForStop(nukid);
+
+	# Kid slides down and joins Indy...
+	AttachThingToThing(kidCamTarget, nukid);
+	Sleep(0.01);
+	AISetLookThing(nukid, nu_mk_2);
+	AISetMoveThing(nukid, nu_mk_2, 0);
+	ClearThingFlags(nukid, 0x4000); # shadow off
+
+	SetCameraInterpSpeed(2, 2.5);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.01);
+	SetCameraFocus(2, entercam); # cam varies depending on visit num
+	SetCameraFOV(75, 1, 3.5);
+	Sleep(2.3);
+	SetThingFlags(nukid, 0x4000); # shadow on
+	Sleep(1.2);
+
+	return;
+
+# ..............................................................................
+
+nukidexit:
+	
+	# Track Nukid to slope...
+	AISetLookThing(nukid, nu_mk_4);
+	AISetMoveThing(nukid, nu_mk_4, 0);
+	Sleep(0.5);
+	AISetLookThing(indy, nukid);
+	Sleep(1.4);
+	AISetLookThing(indy, nukid);
+	AIWaitForStop(nukid);
+	
+	if (cutSceneState != 4)
+	{
+		# Nukid scrambles back up slope...
+		nu_keyTrack1 = PlayKey(nukid, nu_scramble, 4, 0x10, 0);
+		v_targetpos = GetThingPos(nu_mk_1);
+		MoveThingToPos(nukid, v_targetpos, 4.0);
+		ClearThingFlags(nukid, 0x4000); # shadow off
+
+		# Orient Indy offscreen...
+		AISetLookThing(indy, nu_mk_1);
+		Sleep(3.3);
+		SetThingFlags(nukid, 0x4000); # shadow on
+	}
+
+	return;
+		
+# ..............................................................................
+
+exchange:
+	
+	# Cut to shot of kid over Indy's shoulder...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_13);
+	SetCameraSecondaryFocus(2, ct_9);
+	SetCameraFOV(50, 0, 0.0);
+
+	# Indy holds up the watch...
+	in_swapItem1 = SetThingMesh(indy, 12, mod_in_watchhand, 0);
+	PlayKey(indy, in_displaywatch, 4, 0x12, 0);
+	Sleep(0.4);
+
+	# Nukid gasps...
+	curSound = 	PlayVoice(nukid, nu_ahhhh, 1, 0);
+
+	# Nukid reaches for watch...
+	PlayKey(nukid, nu_reachforwatch, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Indy: "Hey, not so fast."
+	curSound = 	PlayVoice(indy, in_notsofast, 1, 0);
+	WaitForSound(curSound);
+	Sleep(0.5);
+
+	# Nukid moves past Indy...
+	ClearAdjoinFlags(railface, 0x02); # walk on air
+	AISetMoveSpeed(nukid, 1.7);
+	AISetLookThing(nukid, nu_mk_6);
+	AISetMoveThing(nukid, nu_mk_6, 0);
+	SetThingMaxRotVel(indy, 150.0);
+	AISetLookThing(indy, in_mk_2);
+	SetCameraFOV(65, 1, 2.0);
+	Sleep(0.5);
+	AISetLookThing(nukid, nu_mk_7a);
+	AISetMoveThing(nukid, nu_mk_7a, 0);
+	Sleep(0.7);
+	AISetLookThing(indy, gem);
+	AIWaitForStop(nukid);
+	AISetLookThing(nukid, nu_mk_8a);
+	
+	# Cut to shot of kid on the rail...
+	SetCameraFocus(2, cam_17);
+	SetCameraSecondaryFocus(2, ct_12);
+	ClearThingFlags(nukid, 0x4000); # shadow off
+	
+	# Nukid teeters across...
+	AttachThingToThing(ct_12, nukid);
+	nu_keyTrack1 = PlayKey(nukid, nu_railslow, 4, 0x10, 0);
+	v_targetpos = GetThingPos(nu_mk_8a);
+	nu_keyTrack2 = MoveThingToPos(nukid, v_targetpos, 6.0);
+	SetCameraFOV(80, 1, 6.0);
+	Sleep(6.0);
+
+	# Cut to kid approaching gem...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_15);
+	SetCameraSecondaryFocus(2, ct_11);
+	SetCameraFOV(70, 0, 0.0);
+	StopKey(nukid, nu_keyTrack1, 0.0);
+	StopAnim(nu_keyTrack2);
+
+	# TO DO: fix MoveThingToPos bug that doesn't reset the physics flags...
+	ClearPhysicsFlags(nukid, 0x800000);
+
+	SetThingFlags(nukid, 0x4000); # shadow on
+	AttachThingToThing(cam_15, nukid);
+	AttachThingToThing(ct_11, nukid);
+	AISetMoveSpeed(nukid, 1.5);
+	AISetLookThing(nukid, gem);
+	AISetMoveThing(nukid, nu_mk_9, 0);
+	Sleep(2.5);
+
+	# One last sparkle...
+	SetMaterialCel(sparkmat, 0);
+	AnimateSpriteSize(sparkle, '0.01 0.01 0.0', '0.2 0.2 1.0', .25);
+	MaterialAnim(sparkmat, 20, 1);
+	Sleep(0.2);
+	SetThingFlags(sparkle, 0x10); # no see
+    AnimateSpriteSize(sparkle, '0.2 0.2 1.0', '0.01 0.01 0.0', .25);
+	AIWaitForStop(nukid);
+
+	# Nukid grabs gem...
+	swapevent = 1;
+	PlayKey(nukid, nu_grabgem, 4, 0x12, 1); # anim triggers callback
+	# Sleep(1.0);
+		
+	# Nukid starts back...
+	AISetMoveSpeed(nukid, 1.5);
+	AISetLookThing(nukid, nu_mk_8b);
+	AISetMoveThing(nukid, nu_mk_8b, 0);
+	AIWaitForStop(nukid);
+	
+	# Cut to reverse shot framing Indy and Nukid...
+	SetCameraFocus(2, cam_14);
+	SetCameraSecondaryFocus(2, ct_10);
+	SetCameraFOV(75, 0, 0.0);
+	SetThingMaxRotVel(indy, 180.0);
+	AISetLookThing(indy, nu_mk_8b);
+
+	# Nukid teeters back...
+	nu_keyTrack1 = PlayKey(nukid, nu_railslow, 4, 0x10, 0);
+	v_targetpos = GetThingPos(nu_mk_7b);
+	nu_keyTrack2 = MoveThingToPos(nukid, v_targetpos, 6.0);
+	SetCameraInterpSpeed(2, 6.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(1.0);
+	ClearThingFlags(nukid, 0x4000); # shadow off
+	AISetLookThing(indy, nu_mk_7b);
+	Sleep(0.5);
+	SetCameraFocus(2, cam_16);
+	SetCameraSecondaryFocus(2, ct_14);
+	SetCameraFOV(65, 1, 6.0);
+	Sleep(4.5);
+	StopKey(nukid, nu_keyTrack1, 0.0);
+	StopAnim(nu_keyTrack2);
+
+	# TO DO: fix MoveThingToPos bug that doesn't reset the physics flags...
+	ClearPhysicsFlags(nukid, 0x800000);
+
+	# Nukid rejoins Indy...
+	AISetLookThing(nukid, nu_mk_6);
+	AISetMoveThing(nukid, nu_mk_6, 0);
+	SetThingFlags(nukid, 0x4000); # shadow on
+	SetThingMaxRotVel(indy, 150.0);
+	Sleep(0.5);
+	AISetLookThing(indy, nu_mk_6);
+	AIWaitForStop(nukid);
+
+	# Indy and Nukid exchange items...
+	AISetLookThing(nukid, indy);
+	AISetLookThing(indy, nukid);
+	AIWaitForStop(nukid);
+	swapevent = 2; # gem swap
+	PlayKey(nukid, nu_givegem, 4, 0x12, 0); # anim triggers callback
+	PlayKey(indy, in_takegem, 4, 0x12, 0); # anim triggers callback
+	Sleep(1.0);
+	swapevent = 3; # put away gem
+
+	# Inventory: gain gem (right hands)...
+    ChangeInv(player, gemeye, 1.0);
+	SetInvAvailable(player, gemeye, 1);
+    JonesInvItemChanged(gemeye);
+	Sleep(2.0);
+
+	# Inventory: lose watch (left hand to right hand)...
+	ChangeInv(player, hornerwatch, -1.0);
+	swapevent = 4; # watch swap
+	PlayKey(nukid, nu_getwatch, 4, 0x12, 0); # animation triggers callback
+	PlayKey(indy, in_givewatch, 4, 0x12, 0);
+	Sleep(0.5);
+
+	# Indy: "Take good care...belonged...to man who discovered...mines."
+	curSound = 	PlayVoice(indy, in_goodcare, 1, 0);
+	Sleep(1.0);
+	in_keyTrack1 = PlayKey(indy, in_handsONhips, 2, 0x10, 0);
+	PlayKey(indy, in_handsTOhips, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Cut to angle on kid...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_18);
+	SetCameraSecondaryFocus(2, ct_13);
+	SetCameraFOV(50, 0, 0.0);
+
+	# Nukid: "Now I own a machine!  I am industrialized!"
+	curSound = 	PlayVoice(nukid, nu_nowiown, 1, 0);
+	PlayKey(nukid, nu_industry, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Indy: "It's a start."
+	curSound = 	PlayVoice(indy, in_astart, 1, 0);
+	PlayKey(indy, in_pushhat, 4, 0x12, 0);
+	WaitForSound(curSound);
+	
+	# Nukid scampers away up the slope...
+	AttachThingToThing(ct_13, nukid);
+	AISetMoveSpeed(nukid, 1.5);
+	AISetLookThing(nukid, nu_mk_4);
+	AISetMoveThing(nukid, nu_mk_4, 0);
+	StopKey(indy, in_keyTrack1, 0.5);
+	AIWaitForStop(nukid);
+	nu_keyTrack1 = PlayKey(nukid, nu_scramwatch, 4, 0x10, 0);
+	v_targetpos = GetThingPos(nu_mk_1);
+	nu_keyTrack2 = MoveThingToPos(nukid, v_targetpos, 4.0);
+	ClearThingFlags(nukid, 0x4000); # shadow off
+	
+	# Orient Indy offscreen...
+	AISetLookThing(indy, nu_mk_1);
+	Sleep(3.3);
+
+	# Cut to kid at top of slope...
+	SetThingFlags(nukid, 0x10);
+	SetThingFlags(badpost, 0x10);   #10/16/99  RKD: Hide the post hogging the scene
+	StopKey(nukid, nu_keyTrack1, 0.0);
+	StopAnim(nu_keyTrack2);
+	StopThing(nukid);
+	ResetThing(nukid);
+	SetCameraFocus(2, cam_19);
+	SetCameraSecondaryFocus(2, ct_15);
+	SetCameraFOV(50, 0, 0.0);
+	TeleportThing(nukid, nu_mk_10);
+	ClearThingFlags(nukid, 0x10);
+	SetThingFlags(nukid, 0x4000); # shadow on
+
+	# add in the conveyor rattle
+	cursound2 = PlaySoundLocal(rattle, .2, 0, 1, 0);
+	
+	# Nukid turns back toward Indy...
+	AISetLookThing(nukid, indy);
+	AIWaitForStop(nukid);
+	PlayKey(nukid, nu_factory, 4, 0x12, 0);
+
+	# Nukid: "Today at 11...I leave for Kenya...soon...factory."
+	curSound = 	PlayVoice(nukid, nu_kenya, 1, 0);
+	
+	# TO DO: fix MoveThingToPos bug that doesn't reset the physics flags...
+	ClearPhysicsFlags(nukid, 0x800000);
+
+	WaitForSound(curSound);
+	AISetLookThing(nukid, nu_mk_11);
+	Sleep(0.5);
+	AISetMoveThing(nukid, nu_mk_11, 0);
+	Sleep(2.0);
+
+	# Housekeeping...
+	SetAdjoinFlags(railface, 0x02);
+	whichcam = ct_9;	
+	cutSceneState = 6; # this scene will never run again
+	
+	# update kidstatus global
+	global3 = 3;
+
+   	# kill the rattle
+	StopSound(curSound2, .5);
+
+	return;
+
+# ..............................................................................
+
+generalprep:
+
+	alreadyworking = 1;
+	StartCutScene(1);
+	SetActorFlags(player, 0x200000);
+	ResetCameraFOV(0, 0.0);
+	curCam = GetCurrentCamera();
+	
+	# Prep kid offscreen...
+	ClearThingFlags(nukid, 0x80000);
+	SetThingFlags(nukid, 0x10); # present but invisible
+	AISetCutsceneMode(nukid);
+	CopyOrientAndPos(nu_mk_5, nukid);
+
+	# Make a target...
+	kidCamTarget = CreateThing(tpl_ghost, ct_2); # dupe ref target & frame
+	CaptureThing(kidCamTarget);
+
+	# TO DO: let player finish any move, then stop & stand him...
+
+	ResetThing(player);
+	PlayMode(player, 1, 0);
+	DeselectWeaponWait(player);
+	CopyPlayerHolsters(player, indy);
+	SetThingflags(player, 0x80000);
+	CopyOrientAndPos(player, indy);
+	ClearThingFlags(indy, 0x80000);
+
+	return;
+
+# ..............................................................................
+
+backtoplay:
+
+	# Clean up...
+	SetThingMaxRotVel(indy, in_rotRate);
+	SetThingMaxRotVel(nukid, nu_rotRate);
+	CopyOrientAndPos(indy, player);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	ResetCameraFOV(0, 0.0);		#10/15/99 RKD - wasn't resetting camera 2
+	SetCurrentCamera(curCam);
+	ResetCameraFOV(0, 0.0);
+
+	# put post back in place
+	ClearThingFlags(badpost, 0x10);   #RKD - put the post back
+	
+	# Reset kid...
+	if (cutSceneState == 6)
+	{
+		DestroyThing(nukid);
+	}
+	else
+	{
+		StopKey(nukid, nu_keyTrack1, 0.0);
+		ResetThing(nukid);
+		SetThingFlags(nukid, 0x80000);
+	}
+
+	# Zap target...
+	DestroyThing(kidCamTarget);
+
+	# Restore control...
+	SetThingFlags(nukid, 0x80000);
+	SetThingflags(indy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	EndCutScene();
+	alreadyworking = 0;
+
+	return;
+
+# ...................................................................
+
+callback:
+
+	if (swapevent == 1)
+	{
+		# Nukid takes gem...
+		nu_swapItem1 = SetThingMesh(nukid, 5, mod_nu_gemhand, 0);
+		swapevent = 0; # reset
+
+		# Turn off the gem and sparkle...
+		SetThingFlags(gem, 0x10);
+		SetThingFlags(sparkle, 0x10);
+	}
+
+	if (swapevent == 2)
+	{
+		# Kid gives up gem...
+		RestoreThingMesh(nukid, nu_swapItem1);
+		# Indy takes gem...
+		in_swapItem2 = SetThingMesh(indy, 15, mod_in_gemhand, 0);
+		swapevent = 0; # reset
+	}
+
+	if (swapevent == 3)
+	{
+		# Indy puts gem away...
+		RestoreThingMesh(indy, in_swapItem2);
+		swapevent = 0; # reset
+	}
+
+	if (swapevent == 4)
+	{
+		# Nukid takes watch...
+		RestoreThingMesh(indy, in_swapItem1);
+		nu_swapItem2 = SetThingMesh(nukid, 5, mod_nu_watchhand, 0);
+		swapevent = 0; # reset
+	}
+
+	return;
+
+# ...................................................................
+
+pulse:
+
+	SetThingHeadLookThing(looker, lookee);
+
+	return;
+
+# ...................................................................
+
+randcluelines:
+
+	while (newline == oldline)
+	{
+		newline = RandBetween(0, 9); # 1/10 chance for line 0
+		if (newline != 0)
+		{		
+			newline = RandBetween(1, 3); # ~1/3 chance for lines 1 thru 3
+		}
+	}
+	oldline = newline;
+
+	PlayVoice(indy, in_sayline[newline], 1, 1);
+		
+	return;
+
+end

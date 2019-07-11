@@ -1,0 +1,45 @@
+# Jones 3D Cog Script
+#
+# pyr_aiwakeup.cog
+#
+# Delay and trigger the wakeup of enemies
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	crossed
+
+surface	spiderTrigger
+
+thing	enemy0
+thing	enemy1
+end
+
+# ========================================================================================
+code
+startup:
+	sleep(.1);
+	AISetMode(enemy0, 0x2000);
+	AISetMode(enemy1, 0x2000);
+	return;
+
+crossed:
+	Sleep(RandBetween(1, 2));
+
+	if (enemy0 != -1)
+	{
+		AIClearMode(enemy0, 0x2000);
+	}
+
+	if (enemy1 != -1)
+	{
+		AIClearMode(enemy1, 0x2000);
+	}
+
+	return;
+
+end

@@ -1,0 +1,768 @@
+# Jones 3D Cog Script
+#
+# INF_IMPSWITCHER
+#
+# Switches out imp_parts
+#
+# [SXC]
+#
+# 6/15/99 SXC
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+
+    thing       player                      local
+    thing       actorindy
+    
+    keyframe    in_placelow=in_pickup_low.key   local
+    
+    thing       safepos                    
+    model       indyhand=hand_in.3do        local
+    
+    thing       impstand
+    cog         targetcog
+
+    thing       swingpos        
+    
+    thing       imppartpos
+    thing       curpart
+    
+    int         curpart_itemnum
+    int         curthing_player=0 
+    int         imp_placed = 1
+    int         num_correctpart
+    int         num_wrongpart
+    
+    template    imp1_rumbl=imp1move                     local
+    model       imp1_rumbl_on=imp1_vibrat_inv_on.3do    local
+    
+    template    imp2_invis=imp2move                     local
+    model       imp2_invis_on=imp2_invis_inv_on.3do     local
+                                                        
+    template    imp3_joh=imp3move                       local
+    model       imp3_joh_on=imp3_levit_inv_on.3do       local
+                                                        
+    template    imp4_power=imp4move                     local
+    model       imp4_power_on=imp4_energ_inv_on.3do     local
+                                                        
+    template    mardukhead=roboheadmove               local
+    
+# SOUNDS
+
+    # generic not working lines
+    sound       indylineb0=inxj058.wav                  local
+    sound       indylineb1=inxj059.wav                  local
+    sound       indylineb2=inxj060.wav                  local
+    sound       indylineb3=inxj061.wav                  local
+    sound       indylineb4=inxj090.wav                  local
+    sound       indylineb5=inxj095.wav                  local
+    
+    # saylines to explain the plot
+    sound       indyfirstline0=im05j05.wav              local       # uh-oh Turner stuck the wrong part in there
+    sound       indyfirstline1=im05j11.wav              local       # turner fouled up again
+    sound       indyfirstline2=im05j06.wav              local       # the inscription reads
+    
+    sound       indy_impline1=im05j07.wav               local       # verily I will shake the earth
+    sound       indy_impline2=im05j02.wav               local       # the unseen shall reveal the unimagined
+    sound       indy_impline3=im05j09.wav               local       # thus do I lift man to new heights
+    sound       indy_impline4=im05j10.wav               local       # my power will change the world
+    sound       indy_impline5=im04j01.wav               local       # hmnn..a headless horeseman    
+
+    # stand in sounds for the imp parts
+    sound       imppartplace=aet_gem_place.wav  local
+    sound       imppartwrong=aet_lightning_01.wav       local
+    sound       imppartright=aet_lightning_02.wav       local
+    
+    sound       imppart1loop=imp1_on_loop.wav           local
+    sound       imppart2loop=imp2_on_loop.wav           local
+    sound       imppart3loop=imp3_on_loop.wav           local
+    sound       imppart4loop=imp4_on_loop.wav           local
+    
+    sound       notbudgeline=inxj098.wav                local
+    
+    int         currand                                 local
+    int         lastrand                                local
+    int         screen                                  local
+    int         placechan                               local
+    int         firsttime=0                             
+    int         firstturnertime=0                       local
+    int         safetyflag                              local
+    int         horsestand=0                
+    
+    flex        informlines                             local
+    flex        null_playerarmed                        local
+    flex        null_activ                              local
+    flex        full_playernull                         local
+    flex        do_it_baybee                            local
+    flex        sorry_no_cigar                          local        
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    player = GetLocalPlayerThing();
+    //SetCollideType(curpart, 0);
+return;
+           
+# ========================================================================================
+
+activate:
+    //handles first activate
+    if ((firsttime == 0) && (safetyflag == 0))
+    {
+        call informlines;
+        return;
+    }
+    
+    //weapons and lighter
+    if ((GetCurWeapon(player) != 0) &&
+        (GetCurWeapon(player) != 13) && 
+        (safetyflag == 0))
+    {
+        curthing_player=GetCurWeapon(player);
+        //printint(curthing_player);
+        
+        if (imp_placed == 0)
+        {
+            call null_playerarmed;
+            return;
+        }
+        
+        if (imp_placed == 1)
+        {
+            call null_activ;
+            return;
+        }
+    }
+    
+    //robohead
+    if ((GetCurItem(player) == 112) && 
+        (safetyflag == 0))
+    {
+        curthing_player=112;
+        //printint(curthing_player);
+        
+        if (imp_placed == 0)
+        {
+            call null_playerarmed;
+            return;
+        }
+        
+        if (imp_placed == 1)
+        {
+            call null_activ;
+            return;
+        }
+    }
+    
+    //no item
+    if ((GetCurItem(player) == 0) && 
+        (GetCurWeapon(player) == 0) && 
+        (safetyflag == 0))
+    {
+        curthing_player=0;
+        //printint(curthing_player);
+        if (imp_placed == 0)
+        {
+            call informlines;
+            return;
+        }
+        
+        if (imp_placed == 1)
+        {
+            call full_playernull;
+            return;
+        }
+    }
+    
+    //wrong item
+    if ((GetCurItem(player) != 0) &&
+        (GetCurItem(player) != 112))
+        
+    {
+        call null_activ;
+        return;
+    }
+    
+    if ((safetyflag == 1) && (num_correctpart != 15))
+    {
+        //call null_activ;
+        SetActorFlags(player, 0x200000);
+        MakeMeStop(player);
+        StartCutscene(0);
+        PlayVoice(player, notbudgeline, 1, 1);
+        Sleep(0.5);
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+        return;
+    }
+    
+return;
+
+# ========================================================================================
+
+null_activ:    
+    //NULLACTIV
+    //full or empty stand no current weapon or item or holding something
+    if (screen == 0)
+        {
+            screen = 1;
+            StopThing(player);
+            SetActorFlags(player, 0x200000);
+            MakeMeStop(player);
+            StartCutscene(1);
+            SetExtCamOffsetToThing(swingpos);
+            //SetExtCamLookOffsetToThing(imppartpos);
+            Sleep(0.35);
+            
+            //handling with saylines
+            currand = RandBetween(0, 5);
+            While (lastrand == currand)
+            {
+                currand = RandBetween(0, 5);
+            }
+            PlayVoice(player, indylineb0[currand], 1, 1);
+            lastrand = currand;
+            
+            Sleep(1);
+            ClearActorFlags(player, 0x200000);
+            EndCutscene();
+            RestoreExtCam();
+            screen = 0;
+        }
+        
+return;
+        
+# ========================================================================================
+
+null_playerarmed:
+    //empty stand and the player is activating with an item or weapon
+    if (screen == 0)
+        {
+            screen = 1;
+            MakeMeStop(player);
+            StartCutscene(1);
+            
+            AISetCutsceneMode(actorindy);
+            CopyPlayerHolsters(player, actorindy);
+            StopThing(player);
+            
+            SetCameraFocus(2, swingpos);
+            SetCameraSecondaryFocus(2, imppartpos);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0);
+            
+            SetActorFlags(player, 0x200000);
+            SetCollideType(impstand, 0);
+            SetCollideType(curpart, 0);
+            TeleportThing(player, safepos);
+            ClearThingFlags(actorindy, 0x80000);
+            DeselectWeaponWait(player);
+            SetThingFlags(player, 0x80000);
+            
+//create that part on the stand
+// rumbler part
+            if (curthing_player == 14)
+            {
+                if (horsestand == 1)
+                {
+                    PlayKey(actorindy, in_placelow, 4, 0x12, 0);            
+                    Sleep(0.35);
+                }
+                else
+                {    
+                    PlayMode(actorindy, 61, 0);            
+                    Sleep(0.35);
+                }
+                SetThingMesh(actorindy, 15, indyhand, 0);
+                curpart = CreateThing(imp1_rumbl, imppartpos);
+                CaptureThing(curpart);
+                PlaySoundThing(imppartplace, curpart, 1, 10, 20, 0);
+                curpart_itemnum = 14;
+                imp_placed = 1;
+                ChangeInv(player, 14, -1);
+                Sleep(1);
+                if (curthing_player == num_correctpart)
+                {
+                    call do_it_baybee;
+                    screen=0;
+                    SetCollideType(impstand, 3);
+                    SetCollideType(curpart, 0);
+                    //SetCameraPosition(1, GetThingPos(swingpos));
+                    return;
+
+                }    
+                else if (curthing_player == num_wrongpart)
+                {
+                    call sorry_no_cigar;
+                    SetCollideType(impstand, 3);
+                    SetCollideType(curpart, 3);
+                    SendMessage(targetcog, user1);
+                    //print("sending user1");
+                    screen=0;
+                    return;
+                }
+                else
+                {
+                    call sorry_no_cigar;
+                }
+            }
+            
+// invisibility
+            if (curthing_player == 15)
+            {
+                if (horsestand == 1)
+                {
+                    PlayKey(actorindy, in_placelow, 4, 0x12, 0);            
+                    Sleep(0.35);
+                }
+                else
+                {    
+                    PlayMode(actorindy, 61, 0);            
+                    Sleep(0.35);
+                }
+                SetThingMesh(actorindy, 15, indyhand, 0);
+                curpart = CreateThing(imp2_invis, imppartpos);
+                CaptureThing(curpart);
+                PlaySoundThing(imppartplace, curpart, 1, 10, 20, 0);
+                imp_placed = 1;
+                curpart_itemnum = 15;
+                ChangeInv(player, 15, -1);
+                Sleep(1);
+                if (curthing_player == num_correctpart)
+                {
+                    call do_it_baybee;
+                    screen=0;
+                    SetCollideType(impstand, 3);
+                    SetCollideType(curpart, 0);
+                    //SetCameraPosition(1, GetThingPos(swingpos));
+                    return;
+                }    
+                else if (curthing_player == num_wrongpart)
+                {
+                    call sorry_no_cigar;
+                    SetCollideType(impstand, 3);
+                    SetCollideType(curpart, 3);
+                    SendMessage(targetcog, user1);
+                    //print("sending user1");
+                    screen=0;
+                    return;
+                }
+                else
+                {
+                    call sorry_no_cigar;
+                }
+            }
+            
+// jewel of heaven
+            if (curthing_player == 16)
+            {
+                if (horsestand == 1)
+                {
+                    PlayKey(actorindy, in_placelow, 4, 0x12, 0);            
+                    Sleep(0.35);
+                }
+                else
+                {    
+                    PlayMode(actorindy, 61, 0);            
+                    Sleep(0.35);
+                }
+                SetThingMesh(actorindy, 15, indyhand, 0);
+                curpart = CreateThing(imp3_joh, imppartpos);
+                CaptureThing(curpart);
+                PlaySoundThing(imppartplace, curpart, 1, 10, 20, 0);
+                imp_placed = 1;
+                curpart_itemnum = 16;
+                ChangeInv(player, 16, -1);
+                Sleep(1);
+                if (curthing_player == num_correctpart)
+                {
+                    call do_it_baybee;
+                    screen=0;
+                    SetCollideType(impstand, 3);
+                    SetCollideType(curpart, 3);
+                    SetCameraPosition(1, GetThingPos(swingpos));
+                    return;
+                }    
+                else if (curthing_player == num_wrongpart)
+                {
+                    call sorry_no_cigar;
+                    SetCollideType(impstand, 3);
+                    SetCollideType(curpart, 3);
+                    SendMessage(targetcog, user1);
+                    //print("sending user1");
+                    screen=0;
+                    return;
+                }
+                else
+                {
+                    call sorry_no_cigar;
+                }
+            }
+
+// power part            
+            if (curthing_player == 17)
+            {
+                if (horsestand == 1)
+                {
+                    PlayKey(actorindy, in_placelow, 4, 0x12, 0);            
+                    Sleep(0.35);
+                }
+                else
+                {    
+                    PlayMode(actorindy, 61, 0);            
+                    Sleep(0.35);
+                }
+                SetThingMesh(actorindy, 15, indyhand, 0);
+                curpart = CreateThing(imp4_power, imppartpos);
+                CaptureThing(curpart);
+                PlaySoundThing(imppartplace, curpart, 1, 10, 20, 0);
+                imp_placed = 1;
+                curpart_itemnum = 17;
+                ChangeInv(player, 17, -1);
+                Sleep(1);
+                if (curthing_player == num_correctpart)
+                {
+                    call do_it_baybee;
+                    screen=0;
+                    SetCollideType(impstand, 3);
+                    SetCollideType(curpart, 3);
+                    //SetCameraPosition(1, GetThingPos(swingpos));
+                    return;
+                }    
+                else if (curthing_player == num_wrongpart)
+                {
+                    call sorry_no_cigar;
+                    SetCollideType(impstand, 3);
+                    SetCollideType(curpart, 3);
+                    SendMessage(targetcog, user1);
+                    //print("sending user1");
+                    screen=0;
+                    return;
+                }
+                else
+                {
+                    call sorry_no_cigar;
+                }
+            }
+            
+// robohead
+            if (curthing_player == 112)
+            {
+                if (horsestand == 1)
+                {
+                    PlayKey(actorindy, in_placelow, 4, 0x12, 0);            
+                    Sleep(0.35);
+                }
+                else
+                {    
+                    PlayMode(actorindy, 61, 0);            
+                    Sleep(0.35);
+                }
+                SetThingMesh(actorindy, 15, indyhand, 0);
+                curpart = CreateThing(mardukhead, imppartpos);
+                CaptureThing(curpart);
+                SetThingLight(curpart, '1 1 1', 0.01, 0);
+
+                PlaySoundThing(imppartplace, curpart, 1, 10, 20, 0);
+                imp_placed = 1;
+                curpart_itemnum = 112;
+                ChangeInv(player, 112, -1);
+                Sleep(1);
+                if (curthing_player == num_correctpart)
+                {
+                    call do_it_baybee;
+                    screen=0;
+                    SetCollideType(impstand, 3);
+                    SetCollideType(curpart, 3);
+                    SetCameraPosition(1, GetThingPos(swingpos));
+                    return;
+                }    
+                else if (curthing_player == num_wrongpart)
+                {
+                    call sorry_no_cigar;
+                    SetCollideType(impstand, 3);
+                    SetCollideType(curpart, 3);
+                    SendMessage(targetcog, user1);
+                    //print("sending user1");
+                    screen=0;
+                    return;
+                }
+                else
+                {
+                    call sorry_no_cigar;
+                }
+            }
+            
+            CopyOrientAndPos(actorindy, player);
+            SetThingFlags(actorindy, 0x80000);
+            ClearActorFlags(player, 0x200000);
+            ClearThingFlags(player, 0x10);
+            ClearThingFlags(player, 0x80000);
+            SetCollideType(impstand, 3);
+            //SetCollideType(curpart, 3);
+            SetCameraPosition(1, GetThingPos(swingpos));
+            SetCurrentCamera(1);
+            SetCameraFOV(90, 0, 0);
+            EndCutscene();
+        }
+        screen=0;
+return;    
+
+# ========================================================================================
+
+full_playernull:
+    //
+    //stand has an item and player is activating with no current weapon or item
+    if (screen == 0)
+    {
+        screen = 1;
+        imp_placed = 0;
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        MakeMeStop(player);
+        StartCutscene(1);
+        if (num_correctpart == 112)
+        {
+            PlayMode(player, 24, 0);
+        }
+        else if (num_correctpart != 112)
+        {
+            PlayMode(player, 61, 0);
+        }
+        SetExtCamOffsetToThing(swingpos);
+        Sleep(0.35);
+        
+        //destroy the part on the stand
+        DestroyThing(curpart);
+        
+        //place the item in inventory
+        ChangeInv(player, curpart_itemnum, 1.0);
+        SetInvAvailable(player, curpart_itemnum, 1);
+        JonesInvItemChanged(curpart_itemnum);
+        
+        Sleep(1);
+        EndCutscene();
+        RestoreExtCam();
+        screen = 0;
+        SendMessage(targetcog, user2);
+        ClearActorFlags(player, 0x200000);
+    }
+        
+return;
+
+# ========================================================================================
+
+do_it_baybee:
+
+    if (curthing_player == 14)
+    {
+        MoveToFrame(curpart, 1, 1);
+        WaitForStop(curpart);
+        placechan = PlaySoundThing(imppartright, curpart, 1, 10, 20, 0);
+        SetThingModel(curpart, imp1_rumbl_on);
+        ThingLightAnim(curpart, '0.0 0.5 1.0', 0.2, '0.0 1.0 1.0', 0.2, 1);
+        safetyflag = 1;
+        WaitForSound(placechan);
+        PlaySoundThing(imppart1loop, curpart, 1, 4, 10, 1);
+        Sleep(0.5);
+        SendMessage(targetcog, user0);
+    }
+    
+    if (curthing_player == 15)
+    {
+        MoveToFrame(curpart, 1, 1);
+        WaitForStop(curpart);
+        placechan = PlaySoundThing(imppartright, curpart, 1, 10, 20, 0);
+        SetThingModel(curpart, imp2_invis_on);
+        ThingLightAnim(curpart, '0.0 0.5 1.0', 0.2, '0.0 1.0 1.0', 0.2, 1);
+        //sends message to tell target cog that the right part has been inserted
+        safetyflag = 1;
+        WaitForSound(placechan);
+        PlaySoundThing(imppart2loop, curpart, 1, 4, 10, 1);
+        Sleep(0.5);
+        SendMessage(targetcog, user0);
+    }
+    
+    if (curthing_player == 16)
+    {
+        MoveToFrame(curpart, 1, 1);
+        WaitForStop(curpart);
+        placechan = PlaySoundThing(imppartright, curpart, 1, 10, 20, 0);
+        SetThingModel(curpart, imp3_joh_on);
+        ThingLightAnim(curpart, '0.0 0.5 1.0', 0.2, '0.0 1.0 1.0', 0.2, 1);
+        //sends message to tell target cog that the right part has been inserted
+        safetyflag = 1;
+        WaitForSound(placechan);
+        PlaySoundThing(imppart3loop, curpart, 1, 4, 10, 1);
+        Sleep(0.5);
+        SendMessage(targetcog, user0);
+    }
+    
+    if (curthing_player == 17)
+    {
+        MoveToFrame(curpart, 1, 1);
+        WaitForStop(curpart);
+        placechan = PlaySoundThing(imppartright, curpart, 1, 10, 20, 0);
+        SetThingModel(curpart, imp4_power_on);
+        ThingLightAnim(curpart, '0.0 0.5 1.0', 0.2, '0.0 1.0 1.0', 0.2, 1);
+        //sends message to tell target cog that the right part has been inserted
+        safetyflag = 1;
+        WaitForSound(placechan);
+        PlaySoundThing(imppart4loop, curpart, 1, 4, 10, 1);
+        Sleep(0.5);
+        SendMessage(targetcog, user0);
+    }
+    
+    if (curthing_player == 112)
+    {
+        MoveToFrame(curpart, 1, 1);
+        WaitForStop(curpart);
+        placechan = PlaySoundThing(imppartright, curpart, 1, 10, 20, 0);
+        //sends message to tell target cog that the right part has been inserted
+        safetyflag = 1;
+        WaitForSound(placechan);
+        Sleep(0.25);
+        SendMessage(targetcog, user0);
+        DestroyThing(curpart);
+    }
+    
+return;
+
+# ========================================================================================
+
+sorry_no_cigar:
+
+    PlaySoundThing(imppartwrong, curpart, 1, 10, 20, 0);
+    Sleep(1);
+    
+    currand = RandBetween(0, 5);
+    While (lastrand == currand)
+    {
+        currand = RandBetween(0, 5);
+    }
+    PlayVoice(player, indylineb0[currand], 1, 1);
+    lastrand = currand;
+
+return;
+        
+# ========================================================================================
+
+informlines:
+
+    SetActorFlags(player, 0x200000);
+    StopThing(player);
+    MakeMeStop(player);
+    
+    StartCutscene(1);
+    SetExtCamOffsetToThing(swingpos);
+    //SetExtCamLookOffsetToThing(imppartpos);
+    Sleep(0.35);
+    
+    //handling with saylines
+    if ((firsttime == 0) && (num_correctpart == 14)) 
+    {
+       PlayVoice(player, indyfirstline2, 1, 1);
+       PlayVoice(player, indy_impline1, 1, 1);
+       PlayVoice(player, indyfirstline0, 1, 1);
+       Sleep(0.5);
+       call full_playernull;
+    }
+    
+    if ((firsttime == 0) && (num_correctpart == 15))
+    {
+       PlayVoice(player, indyfirstline2, 1, 1);
+       PlayVoice(player, indy_impline2, 1, 1);
+       PlayVoice(player, indyfirstline0, 1, 1);
+       Sleep(0.5);
+       call full_playernull;
+    }
+    
+    if ((firsttime == 0) && (num_correctpart == 16))
+    {
+       PlayVoice(player, indyfirstline2, 1, 1);
+       PlayVoice(player, indy_impline3, 1, 1);
+       PlayVoice(player, indyfirstline0, 1, 1);
+       Sleep(0.5);
+       call full_playernull;
+    }
+    
+    if ((firsttime == 0) && (num_correctpart == 17))
+    {
+       PlayVoice(player, indyfirstline2, 1, 1);
+       PlayVoice(player, indy_impline4, 1, 1);
+       PlayVoice(player, indyfirstline0, 1, 1);
+       Sleep(0.5);
+       call full_playernull;
+    }
+    
+    if ((firsttime == 0) && (num_correctpart == 112))
+    {
+        //PlayVoice(player, indyfirstline2, 1, 1);
+        PlayVoice(player, indy_impline5, 1, 1);
+        PlayVoice(player, indyfirstline0, 1, 1);
+        Sleep(0.5);
+        call full_playernull;
+    }
+    
+    //second time through
+    if ((firsttime == 1) && (num_correctpart == 14)) 
+    {
+       PlayVoice(player, indyfirstline2, 1, 1);
+       PlayVoice(player, indy_impline1, 1, 1);
+       Sleep(0.5);
+    }
+    
+    if ((firsttime == 1) && (num_correctpart == 15))
+    {
+       PlayVoice(player, indyfirstline2, 1, 1);
+       PlayVoice(player, indy_impline2, 1, 1);
+       Sleep(0.5);
+    }
+    
+    if ((firsttime == 1) && (num_correctpart == 16))
+    {
+       PlayVoice(player, indyfirstline2, 1, 1);
+       PlayVoice(player, indy_impline3, 1, 1);
+       Sleep(0.5);
+    }
+    
+    if ((firsttime == 1) && (num_correctpart == 17))
+    {
+       PlayVoice(player, indyfirstline2, 1, 1);
+       PlayVoice(player, indy_impline4, 1, 1);
+       Sleep(0.5);
+    }
+    
+    if ((firsttime == 1) && (num_correctpart == 112))
+    {
+        //PlayVoice(player, indyfirstline2, 1, 1);
+        PlayVoice(player, indy_impline5, 1, 1);
+        Sleep(0.5);
+    }
+    
+    if (firstturnertime == 0)
+    {
+        Sleep(0.5);
+        firstturnertime=1;
+        firsttime=1;
+    }
+        
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    RestoreExtCam();
+    
+return;
+
+# ========================================================================================
+
+end

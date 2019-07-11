@@ -1,0 +1,267 @@
+# Jones 3D Cog Script
+#
+# SOL_OilShedDoor.cog
+#
+# oilkey = 108
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols		
+	
+    message     startup
+    message     activate
+
+    thing       player      local
+    thing       oilCan      local
+    thing		door
+    thing       cam1
+    thing       cam2        # temp camera for interp
+    thing       camTarg
+    thing       ghostPos
+    thing       oilGhost
+    thing       offsetCam
+    
+    template    tplOil=oilcanmove               local
+    
+    # need a key lines
+    sound       in_WontLine0=Inxj082.wav        local   # there's a key hole...
+    sound       in_WontLine1=Inxj076.wav        local   # This door is locked
+    sound       in_WontLine2=Inxj077.wav        local   # it's locked
+    
+    # using the wong or no item lines
+    sound       in_WrongLine0=Inxj089.wav       local   # that didn't work
+    sound       in_WrongLine1=Inxj058.wav       local   # that won't work.
+    sound       in_WrongLine2=Inxj088.wav       local   # nope
+    
+    sound       snd_OilCan=inxj249.wav          local   # an oil can.
+    
+    cog         talkCog         local
+    cog         hintCog
+    
+    int         open=0          local
+    int         curCam          local
+    int         playing=0       local
+    int         whichLine=0     local
+    int         gotIt=0         local
+    int         newComment      local
+    int         oldComment      local
+    int         curItem         local
+    
+    # ** subroutines **
+    flex        speak           local
+    flex        getOil          local
+    flex        openDoor        local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetThingLight(door, '0.3 0.3 0.35', 0.001, 2.0);
+    return;
+
+# ========================================================================================
+
+activate:
+
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+    curItem = GetCurItem(player);
+    
+    if((GetSenderRef() == door) && (open == 0) && (playing == 0))
+    {    
+        if(curItem == 108)
+        {
+            open = 1;
+            Call openDoor;
+        }
+        
+        # player doesn't have or is not using the key
+        else if(curItem == 0)
+        {
+            playing = 1;
+            whichLine = 0;
+            Call speak;
+        }
+            
+        else
+        {
+            playing = 1;
+            whichLine = 1;
+            Call speak;
+        }
+    }
+    
+    else if((GetSenderRef() == oilCan) && (gotIt == 0))
+    {
+        gotIt = 1;
+        #whichLine = 1;
+        Call getOil;
+    }
+
+    return;
+
+# ========================================================================================
+
+openDoor:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # offset camera and nudge door
+    SetExtCamOffsetToThing(offsetCam);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    ChangeInv(player, 108, -1);
+            
+    # create oilCan item
+    oilCan = CreateThing(tplOil, oilGhost);
+    CaptureThing(oilCan);
+    
+    # disable player, nudge the door
+    SetActorFlags(player, 0x200000);
+    PlayMode(player, 60, 0);
+    Sleep(0.5);
+    
+    # switch to camera inside shed
+    SetCameraFocus(2, cam1);
+    SetCameraSecondaryFocus(2, camTarg);
+    SetCurrentCamera(2);
+    
+    # move player away from door
+    CopyOrientAndPos(ghostPos, player);
+    
+    Sleep(0.5);
+    
+    # open door
+    Rotate(door, 90, 1, 2.0);
+    WaitForStop(door);
+    
+    Sleep(0.5);
+    
+    # restore curCam
+    SetCameraPosition(curcam, GetThingPos(cam2));
+    SetCurrentCamera(curCam);
+    
+    # restore offsetCam and controls
+    RestoreExtCam();
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+
+    return;
+    
+# ========================================================================================
+
+getOil:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # offset camera
+    #SetExtCamOffsetToThing(offsetCam);
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    #Sleep(1.0);
+    
+    # pickup the oilCan
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    DestroyThing(oilCan);
+    
+    # Call the Pickup Lines cog
+    talkCog = GetCogByIndex(0);
+    SendMessage(talkCog, 27);
+    
+    # sleep to wait for talkCog
+    Sleep(1.3);
+    
+    # add oilCan to inventory
+    SetInvAvailable(player, 81, 1);
+    ChangeInv(player, 81, 1.0);
+    JonesInvItemChanged(81);
+        
+    # Johnny, tell the player what he's picked up
+    PlayVoice(player, snd_OilCan, 1.0, 1);
+    
+    Sleep(1.0);
+    
+    # restore camera
+    #RestoreExtCam();
+    SetCurrentCamera(1);
+    
+    # restore player contrls
+    ClearActorFlags(player, 0x200000);
+    
+    EndCutscene();
+    
+    # solve hint13
+    SendMessage(hintCog, user0);
+    
+    return;
+    
+# ========================================================================================
+
+speak:
+
+    while (newComment == oldComment) 
+    {
+        newComment = RandBetween(0, 2);
+    }
+    
+    oldComment = newComment;
+    
+    playing = 1;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # offset camera and nudge door
+    SetExtCamOffsetToThing(offsetCam);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    if(whichLine == 0)
+    {
+        PlayVoice(player, in_WontLine0[newComment], 1.0, 1);
+    }
+    
+    else if(whichLine == 1)
+    {
+        PlayVoice(player, in_WrongLine0[newComment], 1.0, 1);
+    }
+    
+    # restore offsetCam and controls
+    RestoreExtCam();
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+    
+end
+

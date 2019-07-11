@@ -1,0 +1,132 @@
+# Jones 3D Cog Script
+#
+# TEM_Tiki1Door.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     crossed
+    
+    thing       player              local
+    thing       indy                local
+    thing       interpFocus         local
+    
+    thing       interpCam
+    thing       targ_Look
+    thing       targ_Walk
+    thing       focusMoveTarg       # interpFocus moves to this
+    
+    surface     crossThis 
+    
+    sound       stubby=tm03j01.wav      local   # ...stubby little arms.
+    sound       upThere=INXJ003.wav     local   # something's in there.
+    
+    template    tpl_Ghost=ghost             local
+    template    tplActor=indy_sh_actor      local
+    
+    cog         boulder
+    
+    vector      playerPos           local
+    
+    int         curCam              local
+    int         animId              local
+    int         done=0              local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+
+# ========================================================================================
+
+crossed:
+
+    if(done == 0)
+    {
+        done = 1;
+        
+        # disable and stop player.
+        SetActorFlags(player, 0x200000);
+        
+        indy = CreateThing(tplActor, player);
+        CaptureThing(indy);
+        AISetCutsceneMode(indy);
+        CopyPlayerHolsters(player, indy);
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(indy, 0x80000);
+        
+        # offset camera to thing.
+        #SetExtCamLookOffsetToThing(player);
+        SetExtCamOffsetToThing(interpCam);
+        
+        # create target for secondary focus at player position.
+        playerPos = VectorAdd(VectorTransformToOrient(player, '0.0 0.0 0.0'), GetThingPos(player));
+        interpFocus = CreateThingAtPos(tpl_Ghost, GetThingSector(player), playerPos, '0 0 0');
+        CaptureThing(interpFocus);
+        
+        SetCameraFocus(2, interpCam);
+        SetCameraSecondaryFocus(2, interpFocus);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        #Sleep(1.0);
+        
+        animId = MoveThingToPos(interpFocus, GetThingPos(targ_Walk), 5.0);
+        
+        # walk player to Tiki
+        AISetMoveSpeed(indy, 1.0);
+        AiSetLookThing(indy, targ_Look);
+        AiSetMoveThing(indy, targ_Walk, 1);
+        #ResetThing(indy);
+        
+        #AIWaitForStop(player);
+        
+        MoveToFrame(interpCam, 1, 1.0);
+        
+        Sleep(1.0);
+        PlayVoice(player, stubby, 1.0, 0);
+        
+        Sleep(2.0);
+        MoveToFrame(interpCam, 2, 2.0);
+        
+        #Sleep(2.0);
+        MoveToFrame(interpCam, 3, 1.0);
+        
+        #Sleep(4.0);
+        animId = MoveThingToPos(interpFocus, GetThingPos(focusMoveTarg), 4.0);
+        #MoveToFrame(interpCam, 4, 1.0);
+        
+        Sleep(2.0);
+        PlayVoice(player, upThere, 1.0, 1);
+        
+        Sleep(1.0);
+        
+        ClearActorFlags(player, 0x200000);
+        SetThingFlags(indy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        
+        SetCameraPosition(1, GetThingPos(interpCam));
+        SetCurrentCamera(1);
+        RestoreExtCam();
+        
+        SendMessage(boulder, user0);
+    }
+    
+    return;
+
+
+# ========================================================================================
+
+end
+

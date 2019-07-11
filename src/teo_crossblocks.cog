@@ -1,0 +1,91 @@
+# Jones 3D Cog Script
+#
+# TEO_CrossBlocks.cog
+#
+# Crushing Block script
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    message startup
+    message entered
+    message arrived
+    message timer
+    message blocked
+    
+    sound   trapset
+    sound   slidingstone
+    sound   stopsnd
+
+    thing   player0
+    thing   crushblock      linkid=0    mask=0x405
+    thing   triggerblock    linkid=1    mask=0x405
+
+	flex    moveSpeed=1.0
+    int     trigger         local
+    int     triggerloop     local
+    int     crushloop       local
+
+end
+
+# ========================================================================================
+
+code
+
+# ........................................................................................
+startup:
+    player0 = GetLocalPlayerThing();
+    return;
+    
+
+# ........................................................................................
+entered:
+    if ((GetSenderRef() == triggerblock) && (trigger == 0))
+	{
+        trigger = 1;
+        SetTimer(3);
+        PlaySoundThing(trapset, triggerblock, 1, 3, 10, 0);
+	}
+	return;
+
+# ........................................................................................
+timer:
+    MoveToFrame(triggerblock, 1, (moveSpeed * 5));
+    triggerloop = PlaySoundThing(slidingstone, triggerblock, 1, 3, 10, 1);
+    return;
+    
+# ........................................................................................
+arrived:
+    if (GetSenderRef() == triggerblock)
+    {
+        StopSound(triggerloop, 0);
+        PlaySoundThing(stopsnd, triggerblock, 1, 3, 10, 0);
+        MoveToFrame(crushblock, 1, moveSpeed);
+        crushloop = PlaySoundThing(slidingstone, crushblock, 1, 3, 10, 1);
+    }
+    
+    if (GetSenderRef() == crushblock)
+    {
+        StopSound(crushloop, 0);
+        PlaySoundThing(stopsnd, crushblock, 1, 3, 10, 0);
+    }        
+        
+    return;
+    
+# ........................................................................................
+blocked:
+    if (GetSenderRef() == crushblock)
+    {
+        //print("Damaging Indy");
+        DamageThing(player0, 1000, 0x1, crushblock);
+    }
+    return;
+# ........................................................................................
+    
+                        
+
+end
+

@@ -1,0 +1,130 @@
+# Jones 3D Cog Script
+#
+# VOL_Funicular.cog
+#
+# This cog will play the funicular puzzle area in Vol.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+#.......................MESSAGES....................
+message	user0
+message	timer
+
+#.......................ACTORS....................
+thing	player													local
+
+thing	curFighter												local
+
+#.......................WAYPOINT GHOSTS....................
+thing	wp_0
+thing	wp_1
+thing	wp_2
+thing	wp_3
+thing	wp_4
+thing	wp_5
+thing	wp_6
+thing	wp_7
+thing	wp_8
+thing	wp_9
+thing	wp_10
+thing	wp_11
+thing	wp_12
+
+thing	clearghost
+
+#.......................AI MOVE TARGETS....................
+thing	runoff_mv
+
+#.......................EVENT LOCATIONS....................
+thing	wp_com_create
+			
+#.......................COGS....................
+cog		funicularCOG
+
+#.......................TEMPLATES....................
+template	fighter0=jungle_tokarev								local
+template	fighter1=jungle_mauser2								local
+template	fighter2=agent_grenade4								local
+
+#.......................VARIABLES....................
+int		i_total=0			   									local
+int		i_fakecount=0			   								local	# clearing existing waypoints
+int		i_realcount=0			   								local	# setting waypoint grid
+int		fightgen				   								local	# randomize fighter creation
+	       									
+
+end
+# ========================================================================================
+code
+
+user0:
+
+If (GetSenderRef() == funicularCOG)
+	{
+	
+	# clear any existing waypoints
+	for	(i_fakecount = 0; i_fakecount < 60; i_fakecount = i_fakecount + 1)
+		{
+		AISetWpnt(clearghost, i_fakecount);
+		}
+		Sleep(0.25);
+
+	# set the new waypoint grid
+	for	(i_realcount = 0; i_realcount <= 12; i_realcount = i_realcount +1)
+		{
+		AISetWpnt(wp_0[i_realcount], i_realcount);
+		}
+	# connect the waypoints
+	AIConnectWpnts(0, 1);
+	AIConnectWpnts(1, 2);
+	AIConnectWpnts(2, 3);
+	AIConnectWpnts(2, 12);
+	AIConnectWpnts(3, 4);
+	AIConnectWpnts(4, 5);
+	AIConnectWpnts(5, 6);
+	AIConnectWpnts(6, 7);
+	AIConnectWpnts(7, 8);
+	AIConnectWpnts(8, 9);
+	AIConnectWpnts(9, 10);
+	AIConnectWpnts(10, 11);
+	AIConnectWpnts(11, 12);
+
+	SetTimer(6.0);
+	}
+return;
+# ========================================================================================
+timer:
+
+If (i_total == 10) return;		# no more than 10 commies will be created
+
+	i_total = i_total + 1;
+	fightgen=RandBetween(0,2);	# randomize fighter type
+	
+	# fighter gets created and moved off ledge
+	curFighter[i_total]=CreateThing(fighter0[fightgen], wp_com_create);
+	CaptureThing(curFighter[i_total]);
+	AISetCutSceneMode(curFighter[i_total]);
+	AISetLookThing(curFighter[i_total], runoff_mv);
+	AISetMoveSpeed(curFighter[i_total], 2.5);
+	AISetMoveThing(curFighter[i_total], runoff_mv, 1);
+	AIClearCutSceneMode(curFighter[i_total]);
+    
+	# fighter gets on waypoint grid
+	AISetInstinctWpntMode(curFighter[i_total]); 
+	AIWpntHuntTarget(curFighter[i_total], 2.0, 0.0);
+
+	SetTimer(6.0);
+
+return;
+# ========================================================================================
+end
+
+
+
+
+

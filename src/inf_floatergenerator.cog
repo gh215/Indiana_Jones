@@ -1,0 +1,186 @@
+# Jones 3D Cog Script
+#
+# INF_FloaterGenerator.cog
+#
+# [SXC]
+#
+# Controls the spinner bots in the chapel
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message	    startup
+	message	    killed
+    message     timer
+
+	thing		player					        local
+    
+    thing       floatbot0                       
+    thing       floatbot1                       
+    thing       floatbot2                       
+    thing       floatbot3                       
+    thing       floatbot4                       
+    thing       floatbot5                       
+    thing       floatbot6                       
+    thing       floatbot7
+    
+    thing       fbotpos0
+    thing       fbotpos1
+    thing       fbotpos2
+    thing       fbotpos3
+    thing       fbotpos4
+    thing       fbotpos5
+    thing       fbotpos6
+    thing       fbotpos7
+    
+    template    floater=inf_float                       local
+    thing       fbotdummy                               local
+    
+end
+
+# ================================================================================
+    
+code
+
+# --------------------------------------------------------------------------------
+
+startup:
+
+	player = GetLocalPlayerThing();
+    
+return;
+
+# --------------------------------------------------------------------------------
+
+killed:
+
+    if (GetSenderRef() == floatbot0)
+    {
+        sleep(14);
+        floatbot0 = CreateThing(floater, fbotpos0);
+        CaptureThing(floatbot0);
+        AISetCutsceneMode(floatbot0);
+        SetThingFlags(floatbot0, 0x8);
+        SetCollideType(floatbot0, 0);
+        ThingFadeAnim(floatbot0, 1, 0, 0.1, 0);
+        SetTimerEX(1, 3, floatbot0, 0);
+        return;
+    }
+    
+    if (GetSenderRef() == floatbot1)
+    {
+        sleep(14);
+        floatbot1 = CreateThing(floater, fbotpos1);
+        CaptureThing(floatbot1);
+        AISetCutsceneMode(floatbot1);
+        SetThingFlags(floatbot1, 0x8);
+        SetCollideType(floatbot1, 0);
+        ThingFadeAnim(floatbot1, 1, 0, 0.1, 0);
+        SetTimerEX(1, 3, floatbot1, 0);
+        return;
+    }
+    
+    if (GetSenderRef() == floatbot2)
+    {
+        sleep(14);
+        floatbot2 = CreateThing(floater, fbotpos2);
+        CaptureThing(floatbot2);
+        AISetCutsceneMode(floatbot2);
+        SetThingFlags(floatbot2, 0x8);
+        SetCollideType(floatbot2, 0);
+        ThingFadeAnim(floatbot2, 1, 0, 0.1, 0);
+        SetTimerEX(1, 3, floatbot2, 0);
+        return;
+    }
+    
+    if (GetSenderRef() == floatbot3)
+    {
+        sleep(14);
+        floatbot3 = CreateThing(floater, fbotpos3);
+        CaptureThing(floatbot3);
+        AISetCutsceneMode(floatbot3);
+        SetThingFlags(floatbot3, 0x8);
+        SetCollideType(floatbot3, 0);
+        ThingFadeAnim(floatbot3, 1, 0, 0.1, 0);
+        SetTimerEX(1, 3, floatbot3, 0);
+        return;
+    }
+    
+    if (GetSenderRef() == floatbot4)
+    {
+        sleep(14);
+        floatbot4 = CreateThing(floater, fbotpos4);
+        CaptureThing(floatbot4);
+        AISetCutsceneMode(floatbot4);
+        SetThingFlags(floatbot4, 0x8);
+        SetCollideType(floatbot4, 0);
+        ThingFadeAnim(floatbot4, 1, 0, 0.1, 0);
+        SetTimerEX(1, 3, floatbot4, 0);
+        return;    
+    }
+    
+    if (GetSenderRef() == floatbot5)
+    {
+        sleep(14);
+        floatbot5 = CreateThing(floater, fbotpos5);
+        CaptureThing(floatbot5);
+        AISetCutsceneMode(floatbot5);
+        SetThingFlags(floatbot5, 0x8);
+        SetCollideType(floatbot5, 0);
+        ThingFadeAnim(floatbot5, 1, 0, 0.1, 0);
+        SetTimerEX(1, 3, floatbot5, 0);
+        return;
+    }
+    
+    if (GetSenderRef() == floatbot6)
+    {
+        sleep(14);
+        floatbot6 = CreateThing(floater, fbotpos6);
+        CaptureThing(floatbot5);
+        AISetCutsceneMode(floatbot6);
+        SetThingFlags(floatbot6, 0x8);
+        SetCollideType(floatbot6, 0);
+        ThingFadeAnim(floatbot6, 1, 0, 0.1, 0);
+        SetTimerEX(1, 3, floatbot6, 0);
+        return;
+    }
+    
+    if (GetSenderRef() == floatbot7)
+    {
+        sleep(14);
+        floatbot7 = CreateThing(floater, fbotpos7);
+        CaptureThing(floatbot7);
+        AISetCutsceneMode(floatbot7);
+        SetThingFlags(floatbot7, 0x8);
+        SetCollideType(floatbot7, 0);
+        ThingFadeAnim(floatbot7, 1, 0, 0.1, 0);
+        SetTimerEX(1, 3, floatbot7, 0);
+        return;
+    }
+        
+return;
+
+# --------------------------------------------------------------------------------
+
+timer:
+
+    if (GetSenderID() == 3)
+    {
+        fbotdummy = GetParam(0);
+        MakeFairyDust(fbotdummy, GetThingPos(fbotdummy));
+        ThingFadeAnim(fbotdummy, 0, 1, 1, 0);
+        AIClearCutsceneMode(fbotdummy);
+        ClearThingFlags(fbotdummy, 0x8);
+        SetCollideType(fbotdummy, 3);
+    }
+    
+return;
+
+# --------------------------------------------------------------------------------
+
+end
+
+

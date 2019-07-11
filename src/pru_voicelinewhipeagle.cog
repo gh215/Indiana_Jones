@@ -1,0 +1,70 @@
+# Jones 3D Cog Script
+#
+# PRU_voicelineWhipEagle.cog
+#
+# Clue for whipping Eagle.
+#
+# (GGJ)
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+message     entered
+message		sighted
+message		user0
+
+sector		eagleSector
+
+sector		whipSpotSector
+
+sound		whip0=inxj019.wav					local
+sound		whip1=inxj020.wav					local
+
+int			triggered=0							local
+int			positioned=0						local
+
+end
+#=================================================================================================
+code
+entered:
+if (GetSenderRef() != whipspotSector) return;
+
+positioned = 1;
+return;
+
+#=================================================================================================
+sighted:
+if (triggered == 1) return;
+if (GetSenderRef() != eagleSector) return;
+
+if (positioned != 1)
+{
+	Sleep(5.0);
+	#Reset the sector so it "hasn't been seen yet."
+	ClearSectorFlags(eagleSector, 0x4000);
+}
+
+else if (positioned == 1)
+{
+	Sleep(0.75);
+	if (Rand() > 0.5)
+	{
+		PlayVoice(GetLocalPlayerThing(), whip0, 1, 0);
+	}
+	else
+	{
+		PlayVoice(GetLocalPlayerThing(), whip1, 1, 0);
+	}
+	triggered = 1;
+}
+return;
+
+#=================================================================================================
+
+user0:
+triggered=1;
+return;
+
+#=================================================================================================
+end

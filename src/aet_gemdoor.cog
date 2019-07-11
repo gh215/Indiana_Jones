@@ -1,0 +1,382 @@
+# Jones 3D Cog Script
+#
+# aet_GemDoor.cog
+#
+# [TL]
+#
+# 	This cog controls the placing of the three gems/keys in the Aetherium for the three main
+# doors in the boss area.  Places gems, and moves doors.  Also controls the first door for 
+# closing off access to bottom rooms.	
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		activated
+message		arrived
+message		crossed
+
+thing		player							local
+thing		indy0									# Actor Indy0.
+thing		indy1									# Actor Indy1.
+thing		indy2									# Actor Indy2.
+thing		cam0									# Camera 0 for door 0.
+thing		cam1									# Camera 1 for door 1.
+thing		cam2									# Camera 2 for door 2.
+thing		cam_target0								# Camera target for cam0.
+thing		cam_target1								# Camera target for cam1.
+thing		cam_target2								# Camera target for cam2.
+
+thing		door0									# GemDoors themselves.
+thing		door1
+thing		door2
+thing		ghost0									# Ghost attached to first GemDoor.
+
+thing		greenGem								# Actual move item gems in doors.								
+thing		redGem								
+thing		blueGem								
+
+surface		adjoin0									# Cross this adjoin to close first door behind you.		
+surface		adjoin1									# Cross this adjoin to open first door if you need to.		
+surface		adjoinA									# Cross this adjoin to close first door behind you. 
+
+sound		doorstart=aet_gemdoor_start.wav	local	# Gem door starting sound.		
+sound		doormove=aet_gemdoor_move.wav	local	# Gem door moving sound.		
+sound		doorstop=aet_gemdoor_stop.wav	local	# Gem door stoping sound.		
+sound		placeGem=aet_gem_place.wav		local	# Gem placement sound.		
+
+int			done0=0							local	# Int for toggle for crossed message in hallway.
+int			done1=0							local	# Int for toggle for crossed message in hole.
+int			door0done=0						local	# Ints for doors being opened with gems for good.	
+int			door1done=0						local	
+int			door2done=0						local	
+int			movechannel						local	# Gem door0 channel.
+int			startchannel					local	# Gem door0 channel.
+int			stopchannel						local	# Gem door0 channel.
+
+cog			doorTalk								# Hal's door talk cog reference.
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+MoveToFrame(ghost0, 1, 1.0);
+
+player = GetLocalPlayerThing();
+# Attatch first door to ghost0 so it may be rotated AND moved.
+AttachThingToThing(door0, ghost0);
+# Attach gems to doors.
+AttachThingToThing(greenGem, door0);
+AttachThingToThing(blueGem, door1);
+AttachThingToThing(redGem, door2);
+# Turn move item gems invisable.
+SetThingFlags(greenGem, 0x10);
+SetThingFlags(blueGem, 0x10);
+SetThingFlags(redGem, 0x10);
+
+return;
+
+# ........................................................................................
+crossed:
+
+# Crossed to close door behind player once they enter boss room.
+if ((GetSenderRef() == adjoin0) || (GetSenderRef() == adjoinA))
+	{
+	if ((GetSourceRef() == player) && (done0 == 0) && (GetCurFrame(ghost0) == 1))
+		{
+		if (IsThingMoving(ghost0) == 1) return;
+		done0 = 1;
+		MoveToFrame(ghost0, 0, 2.0);
+		startchannel = PlaySoundThing(doorstart, door0, 1.0, -1, -1, 0);
+		movechannel = PlaySoundThing(doormove, door0, 1.0, -1, -1, 0x1);
+		done1 = 0;
+		}
+	}
+# Crossed to open door to allow entrance from above hallway and reset door.
+if ((GetSenderRef() == adjoin1) && (GetSourceRef() == player) && (done1 == 0) && (GetCurFrame(ghost0) == 0))
+	{
+	if (IsThingMoving(ghost0) == 1) return;
+	done1 = 1;
+	MoveToFrame(ghost0, 1, 2.0);
+    done0 = 0;
+	}
+
+return;
+
+# ........................................................................................
+activated:
+
+if ((GetSenderRef() == door0) || (GetSenderRef() == door1) || (GetSenderRef() == door2) && (GetSourceRef() == player))
+	{
+	# Small cutscene for activating doors with no item.
+    if (MakeMeStop() == -1)
+        return;
+    DeselectWeaponWait(player);	
+	StartCutscene(0);
+	PlayMode(player, 60, 0);
+	SendMessageEx(doorTalk, user4, player, 0, 0, 0);
+	while (global15 == 0)
+		{
+		#Wait for line to finish...
+		Sleep(0.01);
+		}
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();   
+	}
+# Code for first door recieving one of the gems and then opening this door.
+if ((GetSenderRef() == greenGem) && (GetSourceRef() == player))
+	{
+	if (door0done == 1)
+		{
+		return;
+		}
+	# Small cutscene for wrong trying wrong items.
+	if (GetCurItem(player) != 95)
+		{
+		if (MakeMeStop() == -1)
+			return;
+		DeselectWeaponWait(player);	
+		StartCutscene(0);	
+        PlayMode(player, 60, 0);
+		SendMessageEx(doorTalk, user3, player, 0, 0, 0);
+		while (global15 == 0)
+			{
+			#Wait for line to finish...
+			Sleep(0.01);
+			}
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();   
+		}
+	if (GetCurItem(player) == 95)
+		{
+		door0done = 1;
+		# Green gem.
+		if (MakeMeStop() == -1)
+			return;
+		DeselectWeaponWait(player);	
+		StartCutscene(0);
+		SetThingFlags(player, 0x80000);
+		CopyPlayerHolsters(player, indy0);
+		ClearThingFlags(indy0, 0x80000);
+        SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+        # Cut to showing Indy place gem.
+		SetCameraFocus(2, cam0);
+		SetCameraSecondaryFocus(2, cam_target0);
+		// insert interp code here...
+		SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+		PlayMode(indy0, 60, 0);
+		
+		Sleep(0.5);
+		
+		# Make green gem visible.
+		ClearThingFlags(greenGem, 0x10);
+		PlaySoundThing(placeGem, greenGem, 1.0, -1, -1, 0);
+		ChangeInv(player, 95, -1);
+        Sleep(1.0);
+
+		MoveToFrame(door0, 1, 1.0);
+		//startchannel = PlaySoundThing(doorstart, door0, 1.0, -1, -1, 0);
+		//movechannel = PlaySoundThing(doormove, door0, 1.0, -1, -1, 0x1);
+		}
+	}
+# Code for second door recieving one of the gems and then opening this door.
+if ((GetSenderRef() == blueGem) && (GetSourceRef() == player))
+	{
+	if (door1done == 1) 
+		{
+		return;
+		}
+	# Small cutscene for wrong trying wrong items.
+	if (GetCurItem(player) != 96)
+		{
+		if (MakeMeStop() == -1)
+			return;
+		DeselectWeaponWait(player);	
+		StartCutscene(0);	
+        PlayMode(player, 60, 0);
+		SendMessageEx(doorTalk, user3, player, 0, 0, 0);
+		while (global15 == 0)
+			{
+			#Wait for line to finish...
+			Sleep(0.01);
+			}
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();   
+		}
+	if (GetCurItem(player) == 96)
+		{
+		door1done = 1;
+		# Blue gem.
+		if (MakeMeStop() == -1)
+			return;
+		DeselectWeaponWait(player);	
+		StartCutscene(0);
+		SetThingFlags(player, 0x80000);
+		CopyPlayerHolsters(player, indy1);
+		ClearThingFlags(indy1, 0x80000);
+        SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		# Cut to showing Indy place gem.
+		SetCameraFocus(2, cam1);
+		SetCameraSecondaryFocus(2, cam_target1);
+		// insert interp code here...
+		SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+		PlayMode(indy1, 60, 0);
+		
+		Sleep(0.5);
+		
+		# Make blue gem visible.
+		ClearThingFlags(blueGem, 0x10);
+		PlaySoundThing(placeGem, blueGem, 1.0, -1, -1, 0);
+		ChangeInv(player, 96, -1);
+        Sleep(1.0);
+		MoveToFrame(door1, 1, 1.0);
+		}
+	}
+
+# Code for third door recieving one of the gems and then opening this door.
+if ((GetSenderRef() == redGem) && (GetSourceRef() == player))
+	{
+	if (door2done == 1) 
+		{
+        return;
+		}
+	# Small cutscene for wrong trying wrong items.
+	if (GetCurItem(player) != 97)
+		{
+		if (MakeMeStop() == -1)
+			return;
+		DeselectWeaponWait(player);	
+		StartCutscene(0);	
+        PlayMode(player, 60, 0);
+		SendMessageEx(doorTalk, user3, player, 0, 0, 0);
+		while (global15 == 0)
+			{
+			#Wait for line to finish...
+			Sleep(0.01);
+			}
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();   
+		}
+	if (GetCurItem(player) == 97)
+		{
+		door2done = 1;
+		# Red gem.
+		if (MakeMeStop() == -1)
+			return;
+		DeselectWeaponWait(player);	
+		StartCutscene(0);
+		SetThingFlags(player, 0x80000);
+		CopyPlayerHolsters(player, indy2);
+		ClearThingFlags(indy2, 0x80000);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		# Cut to showing Indy place gem.
+		SetCameraFocus(2, cam2);
+		SetCameraSecondaryFocus(2, cam_target2);
+		// insert interp code here...
+		SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+		PlayMode(indy2, 60, 0);
+		
+		Sleep(0.5);
+		
+		# Make red gem visible.
+        ClearThingFlags(redGem, 0x10);
+		PlaySoundThing(placeGem, redGem, 1.0, -1, -1, 0);
+		ChangeInv(player, 97, -1);
+        Sleep(1.0);
+		MoveToFrame(door2, 1, 1.0);
+		}
+	}
+
+return;
+
+# ........................................................................................
+arrived:
+
+# Code for turning off adjoins when doors are closed.
+if ((GetSenderRef() == ghost0) && (GetCurFrame(ghost0) == 0))
+	{
+	# Code for playing sounds on first door because the sound class is not being used.
+	StopSound(movechannel, 0);
+	PlaySoundThing(doorstop, door0, 1.0, -1, -1, 0);
+	}
+if ((GetSenderRef() == door0) && (GetCurFrame(door0) == 1))
+	{
+	//crosseddone = 1;
+	StopSound(movechannel, 0);
+	stopchannel = PlaySoundThing(doorstop, door0, 1.0, -1, -1, 0);
+	WaitForSound(stopchannel);
+	SendMessageEx(doorTalk, user1, indy0, 0, 0, 0);
+	while (global15 == 0)
+		{
+		#Wait for line to finish...
+		Sleep(0.01);
+		}
+	# Return to normal.
+	CopyOrientandPos(indy0, player);
+	SetCurrentCamera(1);
+	SetCameraFOV(90, 0, 0.0);
+    SetThingFlags(indy0, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	EndCutScene();
+	}
+if ((GetSenderRef() == door1) && (GetCurFrame(door1) == 1))
+	{
+    Sleep(1.0);
+
+	SendMessageEx(doorTalk, user1, indy1, 0, 0, 0);
+	while (global15 == 0)
+		{
+		#Wait for line to finish...
+		Sleep(0.01);
+		}
+	# Return to normal.
+	CopyOrientandPos(indy1, player);
+	SetCurrentCamera(1);
+	SetCameraFOV(90, 0, 0.0);
+	
+	SetThingFlags(indy1, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	EndCutScene();
+	}
+if ((GetSenderRef() == door2) && (GetCurFrame(door2) == 1))
+	{
+    Sleep(1.0);
+
+	SendMessageEx(doorTalk, user1, indy2, 0, 0, 0);
+	while (global15 == 0)
+		{
+		#Wait for line to finish...
+		Sleep(0.01);
+		}
+	# Return to normal.
+	CopyOrientandPos(indy2, player);
+	SetCurrentCamera(1);
+	SetCameraFOV(90, 0, 0.0);
+	
+	SetThingFlags(indy2, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	EndCutScene();
+	}
+
+return;
+
+# ........................................................................................
+end
+

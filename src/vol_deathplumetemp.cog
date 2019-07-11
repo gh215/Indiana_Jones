@@ -1,0 +1,115 @@
+# Jones 3D Cog Script
+#
+# VOL_lavasprayw/damage.cog
+#
+# [CM]
+#
+# Random screenshakes for unstable areas.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message		startup
+    message		crossed
+    message		pulse
+    message		entered
+    message		exited
+    
+	thing		player								local
+	thing		lavaspot			            	
+	thing		plume								local	#the temp cone object 			
+	
+	sector		deathsect
+
+	template	lavaspray
+	template	lavacone
+    
+	surface		onsurf								linkID=1				
+	surface		onsurf1								linkID=1				
+	surface		offsurf								linkID=2				
+	surface		offsurf1							linkID=2				
+   
+	material	coneskin=vol_a4plume_lava.mat		local
+
+	int			spraysound							local
+	int			waitstart	
+	int			danger=0							local	
+	int			track								local	
+	int			i									local	
+	
+	vector		blastvec
+	
+	sound		blast=olv_waterfall_blast_c.wav		local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	return;
+
+# ========================================================================================
+
+crossed:
+
+	If (GetSenderID() == 1) 
+		{
+			Sleep(.1);
+			SetPulse(6);
+		}
+        
+	If (GetSenderID() == 2)
+		{
+			SetPulse(0);
+		}
+return;
+
+
+# ========================================================================================
+
+pulse:
+
+		PlaySoundThing(blast, lavaspot, 1.0, 8, 30, 0x0);
+		
+        If (danger == 1)
+			{
+				DamageThing(player, 600, 0x4, player);
+				SetSectorThrust(deathsect, blastvec, 4);
+			}
+        
+        SetMaterialCel(coneskin, 0);
+		plume=CreateThing(lavacone, lavaspot);
+		track=materialanim(coneskin, 52, 0);
+		for (i=0; i <= 10; i = i + 1)
+			{
+				CreateThing(lavaspray, lavaspot);
+				Sleep(.025);
+			}
+        SetSectorThrust(deathsect, blastvec, 0);
+		DestroyThing(plume);
+        StopAnim(track);
+		#materialanim(coneskin, 6, 0);
+return;
+
+# ========================================================================================
+entered:
+
+	If ((GetSenderRef() == deathsect) && (GetSourceRef() == player))
+		danger = 1;
+		return;
+# ========================================================================================
+exited:
+
+	If ((GetSenderRef() == deathsect) && (GetSourceRef() == player))
+		danger = 0;
+		return;
+
+# ========================================================================================
+end
+

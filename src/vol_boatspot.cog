@@ -1,0 +1,77 @@
+# Jones 3D Cog Script
+#
+# gen_torchlight.cog
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+#...........MESSAGES...............................
+message     startup
+message     entered
+message     pulse
+
+
+#...........ACTORS...............................
+thing		player									local
+
+#...........TRIGGERS...............................
+surface		view_surf
+
+#...........VARIABLES...............................
+int			in_thespot=0							local
+int			seen=0									local
+
+#...........PROPS...............................
+thing		boat_spot
+
+#...........PROPS...............................
+sound		in_boatline=VL02J01.WAV					local
+
+end
+
+# ========================================================================================
+
+code
+startup:
+	
+player = GetLocalPlayerThing();
+return;
+# ........................................................................................
+entered:
+
+If (seen == 1) return;
+If (GetSenderRef() != view_surf) return;
+If (GetSourceRef() != player) return;
+
+in_thespot = 1;
+SetPulse(0.25);
+return;
+
+# ........................................................................................
+pulse:
+
+If (in_thespot != 1) return;
+If (seen == 1) return;
+
+If (IsGhostVisible(player, boat_spot, 40) == 1)
+   {
+   PlayVoice(player, in_boatline, 1.0, 0);
+   seen = 1;
+   SetPulse(0);
+   }
+
+return;
+# ........................................................................................
+end
+
+
+
+
+
+
+

@@ -1,0 +1,60 @@
+# Jones 3D Cog Script
+#
+# gen_ReplaceEnemy.cog
+#
+# Generic enemy replacer.
+# This works much like a generator, but its purpose is to replace
+# an vital/important/scenic enemy if it has been killed too early.
+#
+# [YB/CR]
+#
+# 7/10/97 - [CR] - Changed COG to use HasLOS verb
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+thing		replacer_pos		desc=replacer_ghost
+thing		player		local	
+template	enemy_tpl		   desc=enemy_to_replace
+	int		delay=10.0        desc=delay_before_respawn
+
+	int		enemy			      local
+
+	message	startup
+	message	killed            mask=0xfff
+end
+
+code
+# ........................................................................................
+
+startup:
+   enemy = CreateThing(enemy_tpl, replacer_pos);
+	CaptureThing(enemy);	
+   Return;
+
+# ........................................................................................
+
+killed:
+   player = GetLocalPlayerThing();
+   Sleep(delay);
+
+   if (HasLOS(replacer_pos, player))
+   {
+      CaptureThing(enemy);
+      return;
+   }
+
+   if (HasLOS(player, replacer_pos))
+   {
+      CaptureThing(enemy);
+      return;
+   }
+
+   enemy = CreateThing(enemy_tpl, replacer_pos);
+   CaptureThing(enemy);
+   return;
+
+end
+
+

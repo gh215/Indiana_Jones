@@ -1,0 +1,142 @@
+# Jones 3D Cog Script
+#
+# TEM_SpikesUp.cog
+# 
+# Player is killed when he falls on spikes that are up.
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message     startup
+    message     entered
+    #message     exited
+    message     touched
+           
+    thing       player      local
+    thing       deadIndy    local
+    thing       cam1
+    
+    thing       spike0
+    thing       spike1
+    thing       spike2
+    thing       spike3
+    thing       spike4
+    thing       spike5
+    thing       spike6
+    
+    surface     safeSpot
+    surface     dangerSpot1
+    surface     dangerSpot2
+    
+    template    tpl_Indy=indy_sh_actor      local
+
+    keyframe    inDie=in_die_buckle.key     local
+    
+    sound       sndDie=tem_temspikes_up_kill_c.wav      local
+    sound       say_Ugh=inxj018a.wav                    local
+    
+    int         victim	        local
+    int         safe=0          local
+    int         deadMan=0       local
+    int         index           local
+    int         numSpikes=7     local
+    
+end
+       
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if((GetSenderRef() == safeSpot) && (safe == 0))
+    {
+        safe = 1;
+    }
+    
+    if(GetSenderRef() == dangerSpot1)
+    {
+        safe = 0;
+    }
+    
+    if(GetSenderRef() == dangerSpot2)
+    {
+        safe = 0;
+    }
+        
+    return;
+
+# ========================================================================================
+
+#exited:
+#
+#    if((GetSenderRef() == safeSpot) && (GetSourceRef() == player))
+#    {
+#        Sleep(1.0);     # hack
+#        safe = 0;
+#    }
+#        
+#    return;
+    
+# ========================================================================================
+
+touched:
+
+    if(safe == 1) return;
+    
+    for (index = 0; index < numSpikes; index = index + 1)
+    {    
+        if((GetSenderRef() == spike0[index]) && (deadMan == 0))
+        {
+            deadMan = 1;
+            
+            SetCollideType(spike0, 0);
+            SetCollideType(spike1, 0);
+            SetCollideType(spike2, 0);
+            SetCollideType(spike3, 0);
+            SetCollideType(spike4, 0);
+            SetCollideType(spike5, 0);
+            SetCollideType(spike6, 0);
+            
+            # kill the player
+            DamageThing(player, 1000.0, 0x1, victim);
+            Sleep(0.1);
+            
+            PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+            PlaySoundLocal(say_Ugh, 1.0, 0.0, 0x0, 0);
+                                
+            # Cut to camera with focus on player
+            SetCurrentCamera(2);
+            SetCameraFocus(2, cam1);
+            SetCameraSecondaryFocus(2, player);
+            SetCameraFOV(90, 0, 0.0);
+            
+            # hide player
+            SetThingFlags(player, 0x80000);
+            
+            deadIndy = CreateThing(tpl_Indy, player);
+            CaptureThing(deadIndy);
+                                
+            # Show actor Indy and play Keyframe
+            ClearThingFlags(deadIndy, 0x80000);
+            PlayKey(deadIndy, inDie, 4, 0x14, 0);
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

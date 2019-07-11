@@ -1,0 +1,271 @@
+# Jones 3D Cog Script
+#
+# SOL_ComControl.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     user1
+    message     user2
+    message     entered
+    message     killed
+    
+    # ** Switch4 and Switch5 Commies **
+    thing       s4_com1
+    thing       s4_com2
+    thing       s5_com1
+    thing       s5_com2
+    thing       s5_com3
+    thing       s5_com4     # hard grenade com
+    
+    # ** control room commies **
+    thing       ctrlCom1
+    thing       ctrlCom2
+    thing       ctrlCom3
+    thing       ctrlCom4
+    thing       ctrlCom_Grenade
+    
+    # ** control room items **
+    thing       ctrl_Grenades
+    
+    # ** control room second wave **
+    thing       ctrlCom5
+    thing       ctrlCom6
+    
+    # ** oil shed second wave **
+    thing       shed_Grenade2
+    thing       shed_Machine1
+    
+    # ** exit comp second wave **
+    thing       exit_Bruiser
+    thing       exit_Machine1
+    
+    # ** explosion positions **
+    thing       shed_Exp1
+    thing       shed_Exp2
+    
+    # ** surfaces **
+    surface     switch2
+    surface     switch3
+    surface     surf_ExpTrig1
+    surface     surf_ExpTrig2
+    surface     surf_Berserk1
+    
+    # ** templates **
+    template    tpl_Explode=+dummy_bazooka      local
+    
+    # ** types **
+    AI			ai_sniper=com_2Hsniper.ai		local
+    
+    int         theyre_Here=0       local
+    int         dif_Level           local
+    int         shed_LowRoad=0      local
+    int         shed_Berserker=0    local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    # hide switch4 and switch5 commies
+    SetThingFlags(s4_com1, 0x80000);
+    SetThingFlags(s4_com2, 0x80000);
+    SetThingFlags(s5_com1, 0x80000);
+    SetThingFlags(s5_com2, 0x80000);
+    SetThingFlags(s5_com3, 0x80000);
+    SetThingFlags(s5_com4, 0x80000);
+    
+    # hide control room commies
+    SetThingFlags(ctrlCom1, 0x80000);
+    SetThingFlags(ctrlCom2, 0x80000);
+    SetThingFlags(ctrlCom3, 0x80000);
+    SetThingFlags(ctrlCom4, 0x80000);
+    SetThingFlags(ctrlCom5, 0x80000);
+    SetThingFlags(ctrlCom6, 0x80000);
+    SetThingFlags(ctrlCom_Grenade, 0x80000);
+    SetThingFlags(ctrl_Grenades, 0x80000);      # inv grenades
+    
+    # hide shed commies
+    SetThingFlags(shed_Machine1, 0x80000);
+    SetThingFlags(shed_Grenade2, 0x80000);
+    
+    # hide exit comp commies
+    SetThingFlags(exit_Machine1, 0x80000);
+    SetThingFlags(exit_Bruiser, 0x80000);
+
+    return;
+
+# ========================================================================================
+
+user0:
+
+    dif_Level = GetDifficulty();
+    Sleep(0.1);
+    
+    # message sent by chase cogs
+    if(theyre_Here == 0)
+    {
+        theyre_Here = 1;
+        # show switch4 and switch5 commies
+        ClearThingFlags(s4_com1, 0x80000);
+        ClearThingFlags(s4_com2, 0x80000);  # simonov sniper
+        ClearThingFlags(s5_com1, 0x80000);
+        ClearThingFlags(s5_com2, 0x80000);
+        ClearThingFlags(s5_com3, 0x80000);
+        
+        if(dif_Level == 5)
+        {
+            ClearThingFlags(s5_com4, 0x80000);  # grenade com
+            AISetClass(s5_com4, ai_sniper);
+        }
+        
+        # turn s5_com2 into a sniper
+        AISetClass(s5_com2, ai_sniper);
+    }
+    
+    UpdateDifficulty(dif_Level);
+    
+    return;
+
+# ========================================================================================
+
+user1:
+
+    # message sent by comEntrance
+    dif_Level = GetDifficulty();
+    Sleep(0.1);
+    
+    # show control room commies
+    ClearThingFlags(ctrlCom1, 0x80000);
+    ClearThingFlags(ctrlCom3, 0x80000);
+    ClearThingFlags(ctrlCom4, 0x80000);     # bruiser
+    
+    if(dif_Level >= 3)
+    {
+        ClearThingFlags(ctrlCom2, 0x80000);
+    }
+    
+    if(dif_Level == 5)
+    {
+        ClearThingFlags(ctrlCom_Grenade, 0x80000);     # grenade
+        AISetClass(ctrlCom_Grenade, ai_sniper);
+        ClearThingFlags(ctrl_Grenades, 0x80000);        # inv grenades
+    }
+    
+    AISetMaxHomeDist(ctrlCom3, 0.5);
+    
+    UpdateDifficulty(dif_Level);
+    
+    return;
+
+# ========================================================================================
+
+user2:
+
+    # message received when player oils switch4
+    dif_Level = GetDifficulty();
+    Sleep(0.1);
+    
+# ************************
+# ** ctrlRm second wave **
+# ************************
+    if(ctrlCom3 == -1)
+    {
+        ClearThingFlags(ctrlCom5, 0x80000);     # simonov on upper track
+        AISetMaxHomeDist(ctrlCom5, 0.4);
+    }
+    
+    if((ctrlCom4 == -1) && (dif_Level >= 3))
+    {
+        ClearThingFlags(ctrlCom6, 0x80000);     # shotgun in doorway
+        AISetMaxHomeDist(ctrlCom6, 0.1);
+    }
+    
+# *************************
+# ** OilShed second wave **
+# *************************
+    # player is taking low road back to ctrl room
+    if((GetWallCel(switch2) == 1) && (GetWallCel(switch3) == 2))
+    {
+        shed_LowRoad = 1;
+        ClearThingFlags(shed_Grenade2, 0x80000);     # grenade
+        AISetClass(shed_Grenade2, ai_sniper);
+    }
+    
+    else if(GetWallCel(switch2) == 2)
+    {
+        shed_LowRoad = 1;
+        ClearThingFlags(shed_Grenade2, 0x80000);     # grenade
+        AISetClass(shed_Grenade2, ai_sniper);
+    }
+    
+    # player is taking high road back to ctrl room
+    else if((GetWallCel(switch2) == 1) && (GetWallCel(switch3) == 1))
+    {
+        shed_Berserker = 1;
+        ClearThingFlags(shed_Machine1, 0x80000);     # machine gun com on track
+        AISetAllowedSurfaceType(shed_Machine1, 0x4000);
+    }
+    
+# ***************************
+# ** Exit comp second wave **
+# ***************************
+    if(dif_Level >= 4)
+    {
+        ClearThingFlags(exit_Bruiser, 0x80000);     # bruiser in doorway
+    }
+    
+    ClearThingFlags(exit_Machine1, 0x80000);     # machine gun
+    
+    UpdateDifficulty(dif_Level);
+    
+    return;
+
+# ========================================================================================
+
+entered:
+
+    if((GetSenderRef() == surf_ExpTrig1) && (shed_LowRoad == 1) && (shed_Grenade2 != -1))
+    {
+        CreateThing(tpl_Explode, shed_Exp1);
+    }
+    
+    if((GetSenderRef() == surf_ExpTrig2) && (shed_LowRoad == 1) && (shed_Grenade2 != -1))
+    {
+        CreateThing(tpl_Explode, shed_Exp2);
+    }
+    
+    if((GetSenderRef() == surf_Berserk1) && (shed_Berserker == 1))
+    {
+        shed_Berserker = 0;
+        AISetMode(shed_Machine1, 0x100000);
+    }
+
+    return;
+
+# ========================================================================================
+
+killed:
+
+    if(GetSenderRef() == ctrlCom1) ctrlCom1 = -1;   # shotgun upper track
+    if(GetSenderRef() == ctrlCom2) ctrlCom2 = -1;   # machine gun near stairs
+    if(GetSenderRef() == ctrlCom3) ctrlCom3 = -1;   # simonov w/max home dist
+    if(GetSenderRef() == ctrlCom4) ctrlCom4 = -1;   # bruiser in ctrl room
+    if(GetSenderRef() == shed_Grenade2) shed_Grenade2 = -1;   # grenade in oil shed
+    if(GetSenderRef() == shed_Machine1) shed_Machine1 = -1;   # oil shed berserker
+
+    return;
+
+# ========================================================================================
+
+end
+

@@ -1,0 +1,282 @@
+# Jones 3D Cog Script
+#
+# TEO_Hint.cog
+#
+# Solves hints    
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+        message         startup
+        message         activate
+        message         entered
+        message         taken
+        
+        thing           player                          local
+
+        thing           hint1
+        thing           hint2
+        thing           h2_doorblock                    # activate block in chamber 1
+        thing           hint4
+        thing           h4_waterkey                     # pickup key trigger
+        thing           hint6
+        sector          h6_gearsector                   # sector before gear_room
+        thing           hint8
+        sector          h8_elevsector                   # elevator in statlockroom
+        thing           hint10
+        sector          h10_centersector                # sector between mirrorlock and statlock
+        thing           hint12
+        sector          h12_mirsidesector               # sector to the side of the mirror and above
+        thing           hint14
+        sector          h14_snakesect0                  # first snake sector
+        thing           hint16
+        sector          h16_snakesect1
+        thing           hint18
+        sector          h18_snakesect2
+        thing           hint20
+        sector          h20_mirsideramp                 # ramp at side of mirror statue
+        thing           hint22
+        sector          h22_uponblock                   # sector just off trap block
+        thing           hint24
+        sector          h24_returndoor                  # door after the mirror room back to statlock
+        thing           hint26
+        sector          h26_fishsector                  # initial fishsector
+        thing           hint28
+        sector          h28_poolkey
+        thing           hint30
+        thing           h30_underwaterswitch 
+        thing           hint32
+        sector          h32_piersector
+        thing           hint34
+        thing           h34_mirror
+        thing           hint36
+        thing           h36_fishidol
+        thing           hint38
+        sector          h38_birdarea
+        thing           hint40
+        sector          h40_boomdoor
+        thing           hint42
+        sector          h42_climbsector
+        thing           hint44
+        sector          h44_chamber2
+        thing           hint46
+        thing           h46_chamber2idol
+        thing           chamber2idol
+        thing           hint48
+        sector          h48_theatre
+        thing           hint50
+        sector          h50_jagchamber
+        thing           hint52
+        thing           h52_jagidol
+        thing           hint54
+        sector          h54_idolsector
+        thing           hint56
+        sector          h56_exitsector
+        
+end
+
+
+# ========================================================================================
+code
+
+startup:
+
+    SetHintSolved(hint1);
+    player = GetLocalPlayerThing();
+    
+return;
+
+# ========================================================================================
+
+activate:
+
+    if ((GetSenderRef() == h2_doorblock) && (GetHintSolved(hint2) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint2);
+        return;
+    }
+    
+    if ((GetSenderRef() == h30_underwaterswitch) && (GetHintSolved(hint30) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint30);
+        return;
+    }
+    
+    if ((GetSenderRef() == h34_mirror) && (GetHintSolved(hint34) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint34);
+        return;
+    }
+    
+    if ((GetSenderRef() == h36_fishidol) && (GetHintSolved(hint36) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint36);
+        return;
+    }
+    
+    if ((GetSenderRef() == h46_chamber2idol) && (GetHintSolved(hint46) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint46);
+        return;
+    }
+    
+    if ((GetSenderRef() == h52_jagidol) && (GetHintSolved(hint52) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint52);
+        return;
+    }
+    
+return;        
+        
+        
+# ========================================================================================
+
+entered:
+        
+    if ((GetSenderRef() == h6_gearsector) && (GetHintSolved(hint6) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint6);
+        return;
+    }
+    
+    if ((GetSenderRef() == h8_elevsector) && (GetHintSolved(hint8) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint8);
+        return;
+    }
+    
+    if ((GetSenderRef() == h10_centersector) && (GetHintSolved(hint10) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint10);
+        return;
+    }
+    
+    if ((GetSenderRef() == h12_mirsidesector) && (GetHintSolved(hint12) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint12);
+        return;
+    }
+    
+    if ((GetSenderRef() == h14_snakesect0) && (GetHintSolved(hint14) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint14);
+        return;
+    }
+    
+    if ((GetSenderRef() == h16_snakesect1) && (GetHintSolved(hint16) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint16);
+        return;
+    }
+    
+    if ((GetSenderRef() == h18_snakesect2) && (GetHintSolved(hint18) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint18);
+        return;
+    }
+    
+    if ((GetSenderRef() == h20_mirsideramp) && (GetHintSolved(hint20) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint20);
+        return;
+    }
+    
+    if ((GetSenderRef() == h22_uponblock) && (GetHintSolved(hint22) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint22);
+        return;
+    }
+    
+    if ((GetSenderRef() == h24_returndoor) && (GetHintSolved(hint24) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint24);
+        return;
+    }
+    
+    if ((GetSenderRef() == h26_fishsector) && (GetHintSolved(hint26) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint26);
+        return;
+    }
+    
+    if ((GetSenderRef() == h28_poolkey) && (GetHintSolved(hint28) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint28);
+        return;
+    }
+    
+    if ((GetSenderRef() == h32_piersector) && (GetHintSolved(hint32) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint32);
+        return;
+    }
+    
+    if ((GetSenderRef() == h38_birdarea) && (GetHintSolved(hint38) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint38);
+        return;
+    }
+    
+    if ((GetSenderRef() == h40_boomdoor) && (GetHintSolved(hint40) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint40);
+        return;
+    }
+    
+    if ((GetSenderRef() == h42_climbsector) && (GetHintSolved(hint42) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint42);
+        return;
+    }
+    
+    if ((GetSenderRef() == h44_chamber2) && (GetHintSolved(hint42) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint44);
+        return;
+    }
+    
+    if ((GetSenderRef() == h48_theatre) && (GetHintSolved(hint48) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint48);
+        return;
+    }
+    
+    if ((GetSenderRef() == h50_jagchamber) && (GetHintSolved(hint50) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint50);
+        return;
+    }
+    
+    if ((GetSenderRef() == h54_idolsector) && (GetHintSolved(hint54) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint54);
+        return;
+    }
+    
+    if ((GetSenderRef() == h56_exitsector) && (GetHintSolved(hint56) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint56);
+        return;
+    }
+        
+return;        
+
+# ========================================================================================
+taken:
+
+    if ((GetSenderRef() == h4_waterkey) && (GetHintSolved(hint4) == 0))
+    {
+        SetHintSolved(hint4);
+        return;
+    }
+        
+return;
+
+# ========================================================================================
+
+end
+

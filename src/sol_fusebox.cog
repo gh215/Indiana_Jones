@@ -1,0 +1,310 @@
+# Jones 3D Cog Script
+#
+# SOL_FuseBox.cog
+#
+# Putting fuse in fusebox gives player 10 points of damage.
+# This cog turns on the levers and master control.
+#
+# 77 = FUSE
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     activated
+    
+    # ** Things **
+    thing       player      local
+    thing       box         local
+    thing       shockIndy   local
+    thing       bolt        local
+    thing       fuseBox
+    thing       ghostBox
+    thing       interpCam
+    thing       box_Orient
+    
+    # ** Panel switches **
+    surface     switch1
+    surface	    switch2
+    surface	    switch3
+    surface	    switch4
+    surface	    switch5
+    
+    # ** COG links **
+    cog         lever1
+    cog         lever2
+    cog         lever3
+    cog         lever4
+    cog         lever5
+    cog         panelSay
+    cog         masterCtrl
+    
+    # ** sounds **
+    sound       shock=sol_fuse_shock_c.wav      local       # zzzap!
+    sound       inFixed=inxj017a.wav            local       # Yeow!
+    
+    sound       in_Line0=Sl03j01.wav            local       # I think somebody blew a fuse
+    sound       in_Line1=Sl03j02.wav            local       # the fuse is blown
+    sound       in_Line2=Sl03j02a.wav           local       # I just need a fuse
+    
+    # ** Templates **
+    template    tplActor=indy_sh_actor      local
+    template    tplBox=boxfuse              local
+    template    tplRedSparks=redsparks      local
+    template    tplBlueSparks=bluesparks    local
+    
+    material    mat0=gen_a4sprite_rbblast.mat       local
+    material    mat1=gen_a4sprite_flash_purple.mat  local
+    
+    keyframe    inShocked=in_activate_medium_shock.key    local
+    
+    cog         hintCog
+    
+    # ** misc **
+    int         on=0                local
+    int         visit1=1            local
+    int         visit2=0            local
+    int         playing=0           local
+    int         i=0                 local
+    int         bolts=5             local
+    int         curHealth           local
+    
+    int         zap                 local
+    int         victim              local
+    
+    int         newComment          local
+    int         oldComment          local
+    
+    int         curItem             local
+    
+    vector      vecTarg             local
+    vector      vecPos              local
+    
+    # ** subroutines **
+    flex        powerOn             local
+    flex        speak               local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    
+    SetThingLight(fuseBox, '0.3 0.3 0.2', 0.2, 0.5);
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    player = GetLocalPlayerThing();
+    curItem = GetCurItem(player);
+
+    if((GetSenderRef() == fuseBox) && (on == 0) && (playing == 0))
+    {
+        # player is correctly using fuse
+        if(curItem == 77)
+        {
+            on = 1;
+            Call powerOn;
+        }
+            
+        # player doesn't have or is not using fuse
+        else if(curItem == 0)
+        {
+            playing = 1;
+            Call speak;
+        }
+        
+        else
+        {
+            playing = 1;
+            Call speak;
+        }
+    }
+        
+    return;
+    
+# ========================================================================================
+
+powerOn:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # align the player to the fuse box
+    CopyOrient(box_Orient, player);
+    
+    # switch to interpCam
+    SetExtCamOffsetToThing(interpCam);
+    Sleep(0.5);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # nudge fuse box
+    PlayMode(player, 60, 0);
+    Sleep(0.6);
+                        
+    # create shockIndy
+    shockIndy = CreateThing(tplActor, player);
+    CaptureThing(shockIndy);
+    
+    # outfit shockIndy actor
+    CopyPlayerHolsters(player, shockIndy);
+    
+    # hide player show actor
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(shockIndy, 0x80000);
+    
+    # stop unfinished animations
+    ResetThing(player);
+    
+    # play shocked key
+    PlayKey(shockIndy, inShocked, 4, 0x12, 0);
+    Sleep(0.2);
+    
+    # play zap sfx
+    zap = PlaySoundLocal(shock, 1.0, 0.0, 0x0, 0);
+    
+    # damage player
+    if(GetThingHealth(player) > 55)
+    {
+        curHealth = GetThingHealth(player);
+        SetThingHealth(player, curHealth - 50);
+        
+        # play yeow! voice line
+        PlayVoice(shockIndy, inFixed, 1.0, 0);
+    }
+    
+    # light up the area
+    SetThingLight(fuseBox, '0.7 0.2 0.8', 15.0, 0.01);
+    
+    # create and animate sparks
+    CreateThingAtPos(tplRedSparks, GetThingSector(player), VectorAdd(GetThingPos(fuseBox), '0.015 0.025 -0.125'), '0 0 0');
+    #CreateThing(tplRedSparks, fusebox);
+    MaterialAnim(mat0, 10, 1);
+    MaterialAnim(mat1, 10, 1);
+    
+    # create bolts
+    for(i=0; i<bolts; i=i+1)                                                        	            
+    {                                                                                    	            
+        vecPos = VectorSet(0.0, 0.0, rand()*0.05);
+        vecTarg = VectorAdd(GetThingPOS(player), vecPos);
+        bolt = CreateLightning(fuseBox, '0.015 0.025 -0.125', vecTarg, 0.005, 0.005, 0.4);  # 0.05
+        
+        if(i == 1)
+        {
+            Sleep(0.2);
+            CreateThingAtPos(tplRedSparks, GetThingSector(player), VectorAdd(GetThingPos(fuseBox), '0.015 0.025 -0.125'), '0 0 0');
+            #CreateThing(tplRedSparks, fusebox);
+        }
+    
+        if(i == 3)
+        {
+            Sleep(0.05);
+            CreateThingAtPos(tplBlueSparks, GetThingSector(player), VectorAdd(GetThingPos(fuseBox), '0.015 0.025 -0.125'), '0 0 0');
+            #CreateThing(tplBlueSparks, fusebox);
+        }
+        Sleep(Rand()*0.05+0.01);
+    }
+    
+    # destroy old fuse box
+    DestroyThing(fuseBox);
+    
+    # swap in fuse box with fuse
+    box = CreateThing(tplBox, ghostBox);
+    CaptureThing(box);
+    
+    # remove fuse from inventory
+    ChangeInv(player, 77, -1);
+    
+    # wait for zap sfx to finish
+    WaitForSound(zap);
+    
+    # give new fusebox some light
+    SetThingLight(box, '0.3 0.3 0.2', 0.2, 1.0);
+    
+    # hide actor show player
+    SetThingFlags(shockIndy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # restore controls and camera
+    ClearActorFlags(player, 0x200000);
+    RestoreExtCam();
+    
+    EndCutscene();
+    
+    # solve hint6
+    SendMessage(hintCog, user0);
+    
+    # turn on control panel
+    SetWallCel(switch1, 1);
+    SetWallCel(switch2, 1);
+    SetWallCel(switch3, 1);
+    SetWallCel(switch4, 1);
+    SetWallCel(switch5, 1);
+    
+    # turn on related cogs
+    SendMessage(lever1, user0);
+    SendMessage(lever2, user0);
+    SendMessage(lever3, user0);
+    SendMessage(lever4, user0);
+    SendMessage(lever5, user0);
+    #SendMessage(masterCtrl, user0);
+    #SendMessage(panelSay, user0);
+            
+    return;
+
+# ========================================================================================
+
+speak:
+
+    while (newComment == oldComment) 
+    {
+        newComment = RandBetween(0, 2);
+    }
+    
+    oldComment = newComment;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # align the player to the fuse box
+    CopyOrient(box_Orient, player);
+    
+    # switch to interpCam
+    SetExtCamOffsetToThing(interpCam);
+    Sleep(0.5);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # play voice line
+    PlayVoice(player, in_Line0[newComment], 1.0, 1);
+    
+    # restore controls and camera
+    ClearActorFlags(player, 0x200000);
+    RestoreExtCam();
+    
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+
+# ========================================================================================
+
+end
+

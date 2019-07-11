@@ -1,0 +1,64 @@
+# Jones 3D Cog Script
+#
+# pyr_climbcam.cog
+#	
+# Zoom out the FOV when the player climbs the outside of the pyramids
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	entered
+
+# maze entry surfaces for western face of pyramid 1
+surface	entry1		linkid=1
+surface	entry2		linkid=1
+surface	entry3		linkid=1
+
+# maze entry surfaces for southern face of pyramid 1
+surface	entry4		linkid=1
+surface	entry5		linkid=1
+
+# maze exit surfaces for western face of pyramid 1
+surface RestoreCam1		linkid=2
+surface	RestoreCam2		linkid=2
+surface	RestoreCam3		linkid=2
+surface	RestoreCam4		linkid=2
+
+# maze exit surfaces for southern face of pyramid 1
+surface RestoreCam5		linkid=2
+surface	RestoreCam11	linkid=2
+surface	RestoreCam12	linkid=2
+surface	RestoreCam13	linkid=2
+
+# maze exit sectors for southern face of pyramid 1
+sector	RestoreCam6		linkid=2
+sector	RestoreCam7		linkid=2
+sector	RestoreCam8		linkid=2
+sector	RestoreCam9		linkid=2
+sector	RestoreCam10	linkid=2
+
+# maze exit things for southern face of pyramid 1
+thing	block			linkid=2
+
+end
+
+code
+entered:
+# ---> all faces
+	
+	if (GetSenderID() == 1)
+	{
+		SetCameraFOV(110, 1, 1);
+	}
+
+	if (GetSenderID() == 2)
+	{
+		SetCameraFOV(90, 1, 1);
+	}
+
+	return;
+
+end

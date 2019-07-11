@@ -1,0 +1,81 @@
+# Jones 3D Cog Script
+#
+# pyr_torch.cog
+#	An alternative to gen_torchlight if hardcoded values are preferable.
+#	Indy reach animation plays dependent on value of reach. Flame is present but invisible at startup 
+#	Best use: Rename for target level and adjust hardcoded values as required. 
+#
+# [SXC] [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message     activated
+message     startup
+message     timer
+
+thing       torch            	//the thing you light
+thing       flame	nolink		//flame, hidden at startup
+
+sound       burning=gen_torch_burnin_c.wav  local
+sound       lite=gen_torchlitet_c.wav       local
+
+vector      minlite		local
+vector      maxlite		local
+
+flex		minradius=0.25	local
+flex		maxradius=0.3	local
+			
+flex		reach=0		//0 for medium, 1 for high
+flex		islit=0		//set to 1 if torch lights at startup
+flex		flicker=1	//set to 0 to eliminate flicker
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    player = GetLocalPlayerThing();
+	minlite = VectorSet(0.87, 0.55, 0.06);
+	maxlite = VectorSet(0.89, 0.64, 0.30);	
+	SetThingFlags(flame, 0x10);
+	SetThingLight(torch, VectorSet(0.0, 0.0, 0.0), 0.3, 0.1);
+
+	if (islit) call lightit;	
+	return;
+
+# ........................................................................................
+activated:
+	if (islit) return;
+	if ((GetCurWeapon(player) != 13) && (!InEditor())) return;
+	
+	PlayMode(player, (60 + reach), 0);
+	Sleep(0.5);		//no return, falls through to lightit
+
+# ........................................................................................
+
+lightit:
+	ClearThingFlags(flame, 0x10);
+	SetThingLight(torch, minlite, 0.3, 0.5);                           
+		
+	Sleep(0.5);
+    PlaySoundThing(lite, torch, 1.0, 5, 15, 0x0);                                 
+	PlaySoundThing(burning, torch, 1.0, 5, 15, 0x1);
+    islit = 1;
+	
+	if (flicker == 0) return;
+	ThingLightAnim(torch, minlite, minradius, maxlite, maxradius, 2);
+	return;
+        
+end
+
+
+
+
+
+
+

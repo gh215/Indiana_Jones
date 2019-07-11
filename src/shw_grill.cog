@@ -1,0 +1,79 @@
+# Jones 3D Cog Script
+#
+# shw_portcullis.cog
+#
+# Sluiceway Alternating Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message activate
+message arrived
+message user0
+message user1
+
+
+thing   grill0
+thing   switch0
+
+int     thaw=0  
+
+end
+
+# ========================================================================================
+
+code
+
+activate:
+
+
+        If ((GetSenderRef() == switch0) && (thaw == 0))
+                {
+                print("it's out of power");
+                return;
+                }        
+
+
+        If ((GetSenderRef() == switch0) && (thaw == 1))        
+             {   
+                If (Getcurframe(grill0) == 0)
+                {
+                        Movetoframe(switch0, 1, .5);
+                        Movetoframe(grill0, 1, .3);
+                }
+                
+        else
+                
+                If (Getcurframe(grill0) == 1)
+                {
+                        Movetoframe(switch0, 1, .5);
+                        Movetoframe(grill0, 0, 6);
+                }
+             }
+return;
+
+# ========================================================================================                
+arrived:
+
+                If (GetsenderRef() == grill0)
+                
+                Movetoframe(switch0, 0, 3);
+                return;
+                
+# ========================================================================================
+user0:
+
+        thaw = 0;
+        return;
+        
+user1:
+        thaw = 1;
+        return;
+
+# ========================================================================================
+
+end

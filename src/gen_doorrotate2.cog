@@ -1,0 +1,52 @@
+# Jones 3D Cog Script
+#
+# gen_DoorRotate2.cog
+#
+# "Simplified" rotating Door Script.
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols		
+	
+    message     startup
+    message     activate	
+
+    thing		door0
+	thing		player		local
+
+    int         doorsopen=0          local
+
+	flex        openspeed=2.0
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+
+# ========================================================================================
+
+activate:
+
+    if (GetSenderRef() == door0)
+        {
+            if (doorsopen == 1) return;
+            doorsopen = 1;
+            PlayMode(player, 60, 1);
+            Rotate(door0, -90, 1, openspeed);
+        }
+
+    return;
+
+# ========================================================================================
+
+end
+

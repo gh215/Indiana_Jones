@@ -1,0 +1,58 @@
+# Jones 3D Cog Script
+#
+# SHW_Div2Voice.cog
+#
+# Say line control for the Div Room2 in SHW
+#
+# [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols		
+	
+    message     startup
+    message     touched
+    
+    thing       player      local
+          
+    thing     gatedev     
+    
+    
+    sound       inhmm=Sw01j05.wav      local       # a sluice gate...
+    
+    int touched=0       local
+    
+    
+    
+    
+    
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+    
+# ========================================================================================
+
+touched:
+
+    if (touched == 1) return;    
+    if ((GetSenderRef() == gatedev) && (GetSourceRef() == player))
+        {    
+            touched = 1;
+            PlayVoice(player, inhmm, 1.0, 1);
+           
+        }    
+    return;
+
+# ========================================================================================
+    
+end
+

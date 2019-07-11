@@ -1,0 +1,463 @@
+# Jones 3D Cog Script
+#
+# shs_CommieWave.cog
+#
+# Damn Commies keep showing up.
+#
+# [JWC]
+#
+# 
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+	message		activated
+	message		exited
+	message		entered
+	message 	pulse
+	message		damaged
+	message		arrivedwpnt
+	message		killed
+
+	sector		plant0		
+	sector		s_SendMessenger
+    sector		showSector	#  in the UN
+	
+	surface 	hideSurface	# by the climbing puzzle
+   
+    AI          AI_Sniper=com_2Hsniper.ai   local
+	
+
+    # trigger items	
+    thing		seal
+    thing		bulb
+		
+	# ice chickens
+	thing		ice0  	linkid=1  	# in BN
+	thing		ice1	linkid=1	# in LN
+	thing		ice2	linkid=1	# in LN
+    
+	# wave 1: got seal
+	
+	int 		MESSENGER_COMMIE_INDEX=0	local
+
+    thing       commie0		mask=0x409 # this will be the alert commie in LN
+	thing       commie1		# in BN
+	thing       commie2		# in CT
+	thing       commie3		# on roof CT, sniper
+    thing       commie4	   	# in BN
+	
+	# wave 2: got bulb
+	thing       commie5	   	# in CT
+	thing       commie6	   	# in LN
+	
+    # wave 3: got bud 
+    thing       commie7	   	# in BN
+	thing       commie8	   	# in CT
+	thing       commie9	   	# in CT
+      
+    # waypoints
+	int			NUM_WAYPOINTS=16	local
+	thing		ghost0
+    thing		ghost1
+    thing		ghost2
+    thing		ghost3
+	thing		ghost4
+    thing		ghost5
+    thing		ghost6
+    thing		ghost7
+	thing		ghost8
+    thing		ghost9
+    thing		ghost10
+    thing		ghost11
+    thing		ghost12
+    thing		ghost13
+    thing		ghost14
+    thing		ghost15
+    	
+	int			x				local
+    int			y				local
+	int			seal=87			local
+    int			plantbulb=104 	local
+    int			plantbud=106 	local
+    int			commiesAwake=0	local
+
+	thing		player			local
+		
+#.......................SOUNDS.....................
+	sound		com_alertline=INXH1010.WAV		local		# "...capitalist stooge" 
+	sound 		music=mus_shs_gunfight.wav		local
+
+
+# ======================VARIABLES===================================================
+	int			b_IndyCrossed=0					local				
+	int			b_MessengerSent=0				local
+	int			b_CommiesHunting=0				local				
+	int			b_MessengerStopped=0			local				
+	int			b_WpntsActive=0					local
+
+
+	vector		v_IndyPos						local
+	vector		v_IndyLook						local
+	vector		v_CommiePos						local
+	vector		v_IndyToCommie					local 
+	flex		f_dot 							local
+
+# ====================== CONSTANTS ===================================================
+
+	int    		MESSENGER_FLEE_TO_WAYPOINT=7	local 
+	int 		MESSENGER_YELL_WAYPOINT=6		local
+	int			HUNT_COMMIE_1_INDEX=1			local
+	int			HUNT_COMMIE_2_INDEX=4			local
+
+# ====================== SUBROUTINES ===================================================
+
+	flex		SendMessenger					local
+	flex		WakeupWave1						local
+	flex		ActivateWaypoints				local
+	flex		DeactivateWaypoints				local
+
+end
+
+# ========================================================================================
+
+code
+
+# ========================================================================================
+startup:
+	
+    player = GetLocalPlayerThing();
+    for (x=0; x<=9; x=x+1)
+    {
+		SetThingFlags(commie0[x], 0x80000); #make invisible
+	    AISetCutsceneMode(commie0[x]);
+	}
+    
+	// Make sure this guy doesn't move until we want him to.
+	// He is the messenger.
+	AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "dodge", 0);
+	AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "humancombatmove", 0);
+	AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "basicfollow", 0);
+	AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "circlestrafe", 0);
+	AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "listen", 0);
+
+	#
+    AISetClass(commie3, AI_sniper);
+	// Just for testing
+//	call ActivateWaypoints;
+
+	return;		
+		           
+
+# ========================================================================================
+activated:
+    
+	# wave 1
+    if(GetSenderRef() == seal)
+	{	
+		call ActivateWaypoints;
+		commiesAwake=1;
+
+		# Prevent ice chickens from getting underfoot
+        if(ice0 != -1) DestroyThing(ice0);
+        if(ice1 != -1) DestroyThing(ice1);
+		if(ice2 != -1) DestroyThing(ice2);
+		
+		ice0 = -1;
+        ice1 = -1;
+		ice2 = -1;
+		
+	}
+	# wave 2
+    if(GetSenderRef() == bulb)
+	{	
+		print("wave2");
+		for (x=5; x<=6; x=x+1)
+		{
+			ClearThingFlags(commie0[x], 0x80000); # make visible
+			AIClearCutsceneMode(commie0[x]); 	# wake them up
+        }
+	}
+    
+	return;
+
+# ========================================================================================
+// Send messenger if Indy gets to close
+entered:	
+	if (!b_WpntsActive)
+	{
+		return;
+	}
+	if ((GetSenderRef() == s_SendMessenger) && (GetSourceRef() == player))
+	{
+		if (b_IndyCrossed == 0)
+		{
+			call SendMessenger;
+			b_IndyCrossed = 1;
+		}
+		return;
+	}
+	
+	# Handles potential ugliness if player is stuck outside
+	if ((GetSenderRef() == hideSurface) && (commie3 != -1) && (GetSourceRef() == player))
+    {   
+		SetThingFlags(commie3, 0x80000);
+		return;
+	}
+	
+	if ((GetSenderRef() == showSector) && (GetSourceRef() == player) && (commie3 != -1))
+	{
+	   	if (commiesAwake == 1)
+		{
+			ClearThingFlags(commie3, 0x80000);
+			return;
+		}
+	}
+    return;
+
+
+# ========================================================================================
+exited:
+
+    # wave 3
+    if((GetSenderRef() == plant0) && (GetInv(player, plantbud) == 1))
+	{	
+		print("wave3");
+		
+		for (x=7; x<=9; x=x+1)
+		{
+			ClearThingFlags(commie0[x], 0x80000); # make visible
+			AIClearCutsceneMode(commie0[x]); 	# wake them up
+        }
+	    
+		AISetInstinctWpntMode(commie7);
+		AIEnableInstinct(commie7, "roam", 1);
+		AISetInstinctWpntMode(commie9);
+		AIEnableInstinct(commie9, "roam", 1);
+       	return;
+	}
+	
+  return;
+
+# ========================================================================================
+damaged:
+	// If messenger takes damage he heads out immediately
+    if (GetSenderRef() == commie0[MESSENGER_COMMIE_INDEX])
+	{
+		call SendMessenger;
+	}
+
+	return;
+
+# ========================================================================================
+killed:
+    if (GetSenderRef() == commie0[MESSENGER_COMMIE_INDEX])
+	{
+		call WakeupWave1;// uh oh
+	}
+	if (GetSenderRef(ice0) == 1)
+	{
+		GetSenderRef(ice0) = -1;
+	}
+	if (GetSenderRef(ice1) == 1)
+	{
+		GetSenderRef(ice1) = -1;
+	}
+	if (GetSenderRef(ice2) == 1)
+	{
+		GetSenderRef(ice2) = -1;
+	}
+	if (GetSenderRef(commie3) == 1)
+	{
+		GetSenderRef(commie3) = -1;
+	}
+	
+	return;
+
+# ========================================================================================
+arrivedwpnt:
+	# if messenger reaches the hunt trigger, remaining commies are alerted, and attack
+    if((GetSenderRef() == commie0[MESSENGER_COMMIE_INDEX]) && (GetParam(0) == MESSENGER_YELL_WAYPOINT))
+	{
+		if (b_CommiesHunting == 0)
+		{
+			//Set some of the commies to patrol, or 'roam' in this case
+			
+			// Yell to wake up buddies
+			PlaySoundThing( com_alertline, commie0[MESSENGER_COMMIE_INDEX], 1.0, 0.1, 30.0, 0);	# wake up buddies
+
+			call WakeupWave1;
+			
+			b_CommiesHunting = 1;
+		}
+	}
+
+    if((GetSenderRef() == commie0[MESSENGER_COMMIE_INDEX]) && (GetParam(0) == MESSENGER_FLEE_TO_WAYPOINT))
+	{
+		if (!b_MessengerStopped)
+		{
+			b_MessengerStopped = 1;
+			// Stop the messenger.
+			AIStopFlee(commie0[MESSENGER_COMMIE_INDEX]);
+			AIClearSubMode(commie0[MESSENGER_COMMIE_INDEX], 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION. Was need for FleeToWpnt
+			AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "roam", 1);
+			AIWpntHuntTarget(commie0[MESSENGER_COMMIE_INDEX], 2.0, 0.0);
+		}
+	}
+	
+	return;
+
+
+# ========================================================================================
+pulse:
+
+	// When Indy can see the messenger commie it is time to send the messenger.
+	if ( (!b_MessengerSent) && (commie0[MESSENGER_COMMIE_INDEX] != -1))
+	{
+		v_IndyLook = GetThingLVec(player);
+		v_IndyPos = GetThingPos(player);
+		v_CommiePos = GetThingPos(commie0[MESSENGER_COMMIE_INDEX]);
+
+		v_IndyToCommie = VectorNorm(VectorSub(v_CommiePos, v_IndyPos));
+		f_dot = VectorDot(v_IndyToCommie, v_IndyLook);
+
+		// Check if Indy is facing toward the commie
+		if (f_dot > 0.966)
+		{
+			// Check for unobstructed Line of Sight between the two 
+			if (HasLos(commie0[MESSENGER_COMMIE_INDEX], player))
+			{
+				// Stop checking for LOS to player  
+				SetPulse(0.0);
+				
+//				Sleep(0.5);
+//				PlayVoice(t_commie00[MESSENGER_COMMIE_INDEX], com_alertline, 1.0, 0);	# cuss at jones
+//				Sleep(0.5);
+
+				call SendMessenger;
+			}
+		}
+	}
+
+	return;
+
+# ========================================================================================
+SendMessenger:
+	if (!b_WpntsActive)
+	{
+		return;
+	}
+	if (!b_MessengerSent)
+	{
+		AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "dodge", 1);
+		AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "humancombatmove", 1);
+		AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "basicfollow", 1);
+		AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "circlestrafe", 1);
+		AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "listen", 1);
+
+		b_MessengerSent=1;
+
+		// Flee to waypoint
+		AISetSubMode(commie0[MESSENGER_COMMIE_INDEX], 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION. Required for FleeToWpnt
+		AISetInstinctWpntMode(commie0[MESSENGER_COMMIE_INDEX]);
+		AIFleeToWpnt(commie0[MESSENGER_COMMIE_INDEX], MESSENGER_FLEE_TO_WAYPOINT);
+	   
+		# Play some music to add drama
+		PlaySoundLocal(music, 1.0, 0, 0x0, 0);
+		
+	}
+
+	return;
+
+
+# ========================================================================================
+
+WakeupWave1:
+
+	// wake up everybody now else now.
+	// If they were to wake up earlier they might
+	// respond to gunfire and get in way of messenger.
+	for (x=0; x<=4; x=x+1)
+	{
+		AIClearCutsceneMode(commie0[x]); 	
+	}
+
+	AIEnableInstinct(commie0[HUNT_COMMIE_1_INDEX], "roam", 1);
+	#AIWpntHuntTarget(commie0[HUNT_COMMIE_1_INDEX], 2.0, 0.0);
+	AIEnableInstinct(commie0[HUNT_COMMIE_2_INDEX], "roam", 1);
+	#AIWpntHuntTarget(commie0[HUNT_COMMIE_2_INDEX], 2.0, 0.0);
+
+	return;
+
+# ========================================================================================
+ActivateWaypoints:
+	if (b_WpntsActive)
+	{
+		return;
+	}
+	b_WpntsActive = 1;
+
+	print("wave1");
+	for (x=0; x<=4; x=x+1)
+	{
+		ClearThingFlags(commie0[x], 0x80000); # make visible
+    }
+
+	AIClearCutsceneMode(commie0[MESSENGER_COMMIE_INDEX]); 	# wake messenger
+
+	for (y=0; y < NUM_WAYPOINTS; y=y+1)
+	{
+		AISetWpnt(Ghost0[y], y);
+	}
+	AIConnectWpnts(0, 1);
+	AIConnectWpnts(1, 2);
+    AIConnectWpnts(2, 3);
+    AIConnectWpnts(2, 5);
+    AIConnectWpnts(3, 4);
+    AIConnectWpnts(5, 6);
+    AIConnectWpnts(6, 7);
+    AIConnectWpnts(7, 8);
+    AIConnectWpnts(7, 13);
+    AIConnectWpnts(8, 9);
+    AIConnectWpnts(8, 11);
+    AIConnectWpnts(8, 12);
+    AIConnectWpnts(8, 13);
+    AIConnectWpnts(9, 10);
+    AIConnectWpnts(11, 12);
+    AIConnectWpnts(11, 13);
+    AIConnectWpnts(13, 14);
+    AIConnectWpnts(14, 15);
+		
+	// Start checking if Indy can see messenger
+	SetPulse(0.1);
+
+	AISetInstinctWpntMode(commie0[HUNT_COMMIE_1_INDEX]);
+	AISetInstinctWpntMode(commie0[HUNT_COMMIE_2_INDEX]);
+
+	return;
+
+
+# ========================================================================================
+DeactivateWaypoints:
+
+	if (!b_WpntsActive)
+	{
+		return;
+	}
+	b_WpntsActive = 0;
+
+	AIEnableInstinct(commie0[MESSENGER_COMMIE_INDEX], "roam", 0); // Don't want them milling about without waypoints
+	AIClearInstinctWpntMode(commie0[MESSENGER_COMMIE_INDEX]); 
+	AIEnableInstinct(commie0[HUNT_COMMIE_1_INDEX], "roam", 0); // Don't want them milling about without waypoints
+	AIClearInstinctWpntMode(commie0[HUNT_COMMIE_1_INDEX]); 
+	AIEnableInstinct(commie0[HUNT_COMMIE_2_INDEX], "roam", 0); // Don't want them milling about without waypoints
+	AIClearInstinctWpntMode(commie0[HUNT_COMMIE_2_INDEX]); 
+
+	return;
+
+end
+

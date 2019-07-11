@@ -1,0 +1,76 @@
+# Jones 3D Cog Script
+#
+# pyr_hidetrigger.cog
+#	
+# The trigger cog for multiple cogs to hide stuff in the big pit
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message entered
+message user1
+message	user2
+
+sector	turnon1		linkid=1
+sector	turnon2		linkid=1
+sector	turnon3		linkid=1
+sector	turnon4		linkid=1
+sector	turnon5		linkid=1
+sector	turnon6		linkid=1
+
+sector	turnoff1	linkid=2
+sector	turnoff2	linkid=2
+sector	turnoff3	linkid=2
+sector	turnoff4	linkid=2
+sector	turnoff5	linkid=2
+sector	turnoff6	linkid=2
+
+cog		pithide1
+cog		pithide2
+cog		pithide3
+cog		pithide4
+cog		pithide5
+
+# subroutines
+flex	showthings=0.0		local
+flex	hidethings=0.0		local
+end
+
+code
+entered:
+# ---> turnons, turnoffs
+
+	if (GetSenderID() == 1)
+	{
+		call showthings;
+	}
+	else if (GetSenderID() == 2)
+	{
+		call hidethings;
+	}
+	return;
+
+user1:
+showthings:
+	SendMessage(pithide1, user1);
+	SendMessage(pithide2, user1);
+	SendMessage(pithide3, user1);
+	SendMessage(pithide4, user1);
+	SendMessage(pithide5, user1);
+	
+	return;
+
+user2:
+hidethings:
+	SendMessage(pithide1, user2);
+	SendMessage(pithide2, user2);
+	SendMessage(pithide3, user2);
+	SendMessage(pithide4, user1);
+	SendMessage(pithide5, user1);
+	
+	return;
+
+end

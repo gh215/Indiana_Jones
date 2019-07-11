@@ -1,0 +1,60 @@
+# Jones 3D Cog Script
+#
+# PRU_lagoon.cog    Raft won't sink if Indy enters lagoon from Raiders.
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+message	startup
+message	damaged
+
+thing	raftPlayer
+
+sector	lagoon0
+sector	lagoon1
+sector	lagoon2
+sector	lagoon3
+
+sector	lagoon4
+sector	lagoon5
+sector	lagoon6
+sector	lagoon7
+sector	lagoon8
+sector	lagoon9
+sector	lagoon10
+
+end
+# ========================================================================================
+code
+startup:
+Sleep(0.01);
+CaptureThing(raftPlayer);
+return;
+
+damaged:
+#Checks for raft damage.
+#Could also check player to see if physics flags == 2,000,000 (rafting).
+
+PRINT("DAMAGED");
+PRINTINT(GETPARAM(1));
+#if (skipper != 1) return;
+if (!BitTest(GetParam(1), 0x800000)) return;
+
+if ((GetThingSector(raftPlayer) == lagoon0) || (GetThingSector(raftPlayer) == lagoon1) || 
+	(GetThingSector(raftPlayer) == lagoon2) || (GetThingSector(raftPlayer) == lagoon3) || 
+	(GetThingSector(raftPlayer) == lagoon4) || (GetThingSector(raftPlayer) == lagoon5) || 
+	(GetThingSector(raftPlayer) == lagoon6) || (GetThingSector(raftPlayer) == lagoon7) ||
+	(GetThingSector(raftPlayer) == lagoon8) || (GetThingSector(raftPlayer) == lagoon9) ||
+	(GetThingSector(raftPlayer) == lagoon10))
+
+{
+	PRINT("RETURNING EX TO HEAL RAFT");
+	StopSoundClass(raftPlayer, 65); // hiss
+	ReturnEx(0);
+}
+return;
+
+end

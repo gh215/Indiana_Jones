@@ -1,0 +1,54 @@
+# Jones 3D Cog Script
+#
+# TEM_EntDeathCam.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    
+    thing       player      local
+    thing       cam_Dead
+    
+    surface     surf_Lava0  linkID=1
+    surface     surf_Lava1  linkID=1
+    
+    int         dead=0      local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    player = GetLocalPlayerThing();
+    
+    if((GetSenderID() == 1) && (dead == 0))
+    {
+        dead = 1;
+        # switch to cam_Dead
+        SetCameraFocus(2, cam_Dead);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+        
+        Sleep(2.0);
+        
+        # player is still alive
+        if(GetThingHealth(player) > 0)
+        {
+            SetCurrentCamera(1);
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

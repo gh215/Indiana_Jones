@@ -1,0 +1,340 @@
+# Jones 3D Cog Script
+#
+# PRU_boulderfall.cog    Boulder falls straight down and smashes Indy.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message     startup
+message     entered
+message		touched
+message		arrived
+message		damaged
+message		pulse
+                     
+thing       player  		local
+thing		deadindy	    local		nolink           
+thing       rubble			mask=0x08
+thing       boulder
+thing		debris
+thing 		camera0
+thing		camera1
+thing		camera2
+thing		camera3
+thing		camera4
+thing		fallingrubble	local
+thing		smashedghost
+thing		columnTarget0
+thing		columnTarget1
+thing		columnTarget2
+thing		columnTarget3
+thing		whipCam
+thing		fallTarget0
+thing		smokeGhost
+thing		smoke			local
+
+surface		skull0			linkID=4
+surface		entry
+surface		boulderplatform0
+
+sector		columnbottom	mask=0x080
+
+keyframe	smashed=in_die_buckle.key					local
+
+sound		sndDie=tem_temspikes_up_kill_c.wav			local
+sound		bldrshift=teo_teobut_pull_c.wav				local
+sound		debrisfall=tem_tikidoor_tikikeymove_c.wav	local
+sound		boulderfall=pru_boulder_crash_c.wav			local
+sound		rubblefall=olv_rockhead_hitearth_c.wav		local
+sound		triggered=olv_presswitch_c.wav				local
+
+template    tempRef=indy_sh_actor			       		local
+template	fallrbletemplate=physrbl					local						
+template	standbouldertpl=bldrsmash					local
+template	smoketemplate=+bouldersmoke_spr				local
+
+int			once=0		local	
+int			deadIndy	local
+int			curCam		local
+int			indy		local
+int			fallen=0	local
+int			hit=0		local
+int			tempCam		local
+
+vector		posOffset	local
+vector		angOffset	local
+
+flex		posDelta=0.0	local
+flex		angDelta=180.0	local
+
+end
+
+# ========================================================================================
+code
+startup:
+	player = GetLocalPlayerThing();
+
+//	SetPulse(3.0);
+
+    return;
+# =========================================================================================
+entered:
+	if ((GetSenderRef() == entry) && (once == 0))
+	{
+		once = 1;
+		curCam = GetCurrentCamera();
+		ResetCameraFOV(0, 0.0);
+
+        StartCutscene(1);
+		
+		#Stop the player from moving and put him in a standing position
+		StopThing(player);
+		PlayMode(player, 1, 0);
+        
+		#create an actor
+		indy = CreateThing(TempRef, player);
+		CaptureThing(indy);
+		SetThingFlags(player, 0x80000);
+        SetActorFlags(player, 0x200000);
+        ClearThingFlags(indy, 0x80000);
+		AISetMoveSpeed(indy, 1.0);
+		
+		#set a camera looking at the actor
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, camera0);
+        SetCameraSecondaryFocus(2, columnTarget3);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+		#Walk the actor to the column
+		AISetMoveThing(indy, columnTarget2, 1);
+        
+        #Indy knocks the debris onto the trigger plate on the floor
+        SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 1.0);
+
+        Sleep(0.3);
+		MoveToFrame(debris, 1, 1);
+        
+		Sleep(0.2);
+		SetCameraFOV(40, 1, 1.0);
+        
+		SetCameraSecondaryFocus(2, columnTarget0);
+        
+        Sleep(1.0);
+		
+		SetCameraFOV(60, 1, 5.0);
+        WaitForStop(debris);
+		Sleep(0.2);
+        AISetLookThing(indy, debris);
+		MoveToFrame(debris, 2, 5);
+        MoveToFrame(columnTarget0, 1, 4.0);
+	}
+
+    if ((GetSourceRef() == player) && (GetSenderID() == 4))
+		{ 
+        PlaySoundThing(triggered, player, 1.0, -1.0, -1.0, 0x0);
+		Print("player entered skull");
+		
+		#Indy steps on the trigger plate, causing the boulder to fall on him
+		StartCutscene(1);
+		SetCameraFocus(2, camera1);
+		SetCameraSecondaryFocus(2, fallTarget0);
+		SetCurrentCamera(2);
+        SetCameraFOV(90, 1, 1.0);
+        MoveToFrame(boulder, 2, 20);
+        Sleep(2.0);
+		posOffSet = VectorSet(0.0, 0.0, 0.0);
+		angOffSet = VectorSet(7, RandBetween(-2, 2), RandBetween(-2, 2));
+		SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+		Sleep(1.5);
+        EndCutscene();					  
+		}
+	 
+	#when the rubble falls on the skull face, the boulder will fall
+	if (GetSourceRef() == fallingRubble)
+	{
+        PlaySoundThing(rubblefall, fallingRubble, 1.0, -1.0, -1.0, 0x0);
+		PlaySoundThing(triggered, fallingRubble, 1.0, -1.0, -1.0, 0x0);
+        Sleep(0.5);
+		
+		SetCameraLookInterp(2, 0);
+		SetCameraSecondaryFocus(2, boulder);
+		SetCameraFOV(100, 0, 0.0);
+		Sleep(1.0);
+		
+		MoveToFrame(boulder, 2, 20);
+        fallen = 1;
+		Sleep(2.0);
+		SetCurrentCamera(curCam);
+		ResetCameraFOV(0, 0.0);
+	}
+        
+	return;
+# =========================================================================================
+arrived:
+	if ((GetSenderRef() == debris) && (GetCurFrame(debris) == 1))
+	{
+		angOffSet = VectorSet(0.05, 0.05, 0.05);
+		SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+		Sleep(0.05);
+		SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+		PlaySoundThing(debrisfall, debris, 1.0, -1.0, -1.0, 0x0);
+
+		return;
+	}
+
+	if ((GetSenderRef() == debris) && (GetCurFrame(debris) == 2))
+	{
+        Sleep(0.75);
+		#SetCameraFOV(70, 1, 2.0);
+		
+		#Debris hits the floor, triggering the boulder
+		PlaySoundThing(debrisfall, debris, 1.0, -1.0, -1.0, 0x0);
+		Sleep(0.75);
+		PlaySoundThing(triggered, debris, 1.0, -1.0, -1.0, 0x0);
+        
+		#shake the camera as the trap is partially triggered
+		angOffSet = VectorSet(0.1, 0.1, 0.1);
+        SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+        Sleep(0.05);
+        SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+        Sleep(0.05);
+        SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+        Sleep(0.05);
+        SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+        Sleep(0.05);
+        SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+		Sleep(0.5);
+        
+		SetCameraLookInterp(2, 1);
+        SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 2.5);
+		Sleep(0.1);
+		SetCameraSecondaryFocus(2, columnTarget1);
+		Sleep(0.5);
+		
+		SetCameraFocus(2, camera3);
+		#SetCameraSecondaryFocus(2, columnTarget1);
+		SetCurrentCamera(2);
+		#MoveToFrame(columnTarget1, 1, 0.8);
+		
+		
+        MoveToFrame(boulder, 1, 0.2);
+        AISetLookThing(indy, boulder);
+		Sleep(2.0);
+        
+		PlaySoundThing(bldrshift, boulder, 1.0, -1.0, -1.0, 0x0);
+		posOffset = VectorSet(Rand()*0.1, Rand()*0.1, Rand()*0.1);
+		angOffset = VectorSet(Rand(), Rand(), Rand());
+		#SetPOVShake(posOffset, angOffset, .5, 80.0);
+        
+		Sleep(4.5);
+
+		CopyOrientandPos(indy, player);
+		tempCam = GetThingPos(camera4);
+		SetCameraPosition(curcam, tempCam);
+		SetCurrentCamera(curCam);
+		SetThingFlags(indy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+        
+		debugprint("leaving boulder arrived");
+		
+		EndCutscene();
+
+		return;
+    }
+
+	if (GetCurFrame(boulder) == 2)
+	{
+        PlaySoundThing(boulderfall, boulder, 1.0, -1.0, -1.0, 0x0);
+		posOffSet = VectorSet(0.0, 0.0, 0.0);
+		angOffSet = VectorSet(7, RandBetween(-2, 2), RandBetween(-2, 2));
+		SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+        ClearAdjoinFlags(boulderplatform0, 0x2);
+        DestroyThing(boulder);
+
+		#Pat!  Cloud of smoke needed!
+
+		smoke = CreateThing(smoketemplate, smokeGhost);
+		AnimateSpriteSize(smoke, '0.05 0.05 1.0', '0.35 0.35 0.0', 3.0);
+
+		standBoulder = CreateThing(standbouldertpl, smashedghost);
+		CaptureThing(standBoulder);
+
+		Sleep(3.0);
+
+		return;
+    }
+		return;
+# =========================================================================================
+touched:
+    If ((GetSenderRef() == boulder) && (GetSourceRef() == player) && (fallen == 0))
+		{
+		Print("boulder touched player");
+		DamageThing(player, 1000.0, 0x1, victim);
+        SetCollideType(boulder, 0);
+        PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+		SetThingFlags(player, 0x80000);
+        deadIndy = CreateThing(tempRef, player);
+        CaptureThing(deadIndy);
+		ClearThingFlags(deadindy, 0x80000);
+		PlayKey(deadindy, smashed, 4, 0x14, 0);
+		StartCutscene(1);
+        SetCameraFocus(2, camera2);
+		SetCameraSecondaryFocus(2, smashedGhost);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 1, 1.0);
+        Sleep(2.0);
+        posOffset = VectorSet(Rand()*0.01, Rand()*0.01, Rand()*0.01);
+		angOffset = VectorSet(Rand(), Rand(), Rand());
+		SetPOVShake(posOffset, angOffset, .5, 80.0);
+		Sleep(1.5);
+        EndCutscene();	
+		}
+    return;
+
+# ========================================================================================
+damaged:
+	
+	if (hit == 1) return;
+
+    if ((GetSenderRef() == rubble) && (GetParam(1) == 0x10))
+    {
+		curCam = GetCurrentCamera();
+        
+        fallingRubble = CreateThing(fallrbletemplate, rubble);
+		CaptureThing(fallingRubble);
+		
+		StartCutscene(1);
+        SetCameraFocus(2, whipCam);
+        SetCameraSecondaryFocus(2, fallingRubble);
+        SetCurrentCamera(2);
+		Sleep(0.5);
+		
+		DestroyThing(rubble);
+        
+		direction = VectorSet(-1.0, -1.0, 0.1);
+		DetachThing(fallingrubble);
+		ApplyForce(fallingrubble, VectorScale(direction, 0.005));
+		Sleep(1.0);
+		hit = 1;
+		fallen = 1;
+	}
+	return;
+
+pulse:
+	smoke = CreateThing(smoketemplate, smokeGhost);
+	AnimateSpriteSize(smoke, '0.01 0.01 1.0', '0.3 0.3 0.0', 2.0);
+	return;
+
+end
+
+# ======================================================================================== 

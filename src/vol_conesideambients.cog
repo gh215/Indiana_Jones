@@ -1,0 +1,124 @@
+# Jones 3D Cog Script
+#
+# VOL_ConeSideAmbients.cog
+#
+# Produces random ambient cave sounds when crossing adjoins
+# Based on code from TEO_Drops.cog by SXC.
+#
+# [TRM & SXC]  modified 12/3 by [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+
+	#................MESSAGES........................
+    message     startup
+    message     crossed
+    message     pulse
+    
+	#................ACTORS..........................
+    thing		player								local
+	
+	
+	#................TRIGGERS........................
+    surface       oncross               linkID=2
+    surface       oncross1              linkID=2
+    
+    surface       offcross              linkID=3
+    surface       offcross1             linkID=3
+    
+            
+	#................SOUNDS........................
+    sound       sndCave0=tem_wind04_c.wav	    	local
+    sound       sndCave1=olv_outside_a01.wav		local
+    sound       sndCave2=olv_outside_a04.wav		local
+    sound       sndCave3=tem_wind02_c.wav  			local
+    sound       sndCave4=olv_outside_a08.wav  		local
+    sound       sndCave5=shw_birds.wav    			local
+        
+	#................VARIABLES........................
+    
+	float       caveFreq        					local
+    
+    flex        pulseTime							local
+    flex        vol=1.0								local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+
+return;
+
+
+# ========================================================================================
+crossed:
+
+    If ((GetSenderID() == 2) && (GetSourceref() == player))
+            {
+            pulseTime=RandBetween(4, 12);
+			SetPulse(pulseTime);
+            }
+    
+    If ((GetSenderID() == 3) && (GetSourceref() == player))
+            {
+            SetPulse(0);
+            }
+
+return;
+# ========================================================================================
+pulse:
+
+		pulseTime=RandBetween(4, 8);
+		SetPulse(pulseTime);
+
+	
+		# check if indy is swimming, if so reset the pusle then drop out
+		if (GetMoveStatus(player) == 12) return;
+	
+
+    caveFreq = Rand();
+
+    if (caveFreq < 0.16)
+        {
+            PlaySoundLocal(sndCave0, vol, 1, 0, 0);
+        }
+        
+    if ((caveFreq > 0.16) && (caveFreq < 0.32))
+        {
+            PlaySoundLocal(sndCave1, vol, 1, 0, 0);
+        }
+        
+    if ((caveFreq > 0.32) && (caveFreq < 0.48))
+        {
+            PlaySoundLocal(sndCave2, 0.25, -1, 0, 0);
+        }
+    
+    if ((caveFreq > 0.48) && (caveFreq < 0.64))
+        {
+            PlaySoundLocal(sndCave3, vol, 1, 0, 0);
+        }
+    
+    if ((caveFreq > 0.64) && (caveFreq < 0.80))
+        {
+            PlaySoundLocal(sndCave4, 0.25, 0, 0, 0);
+        }
+    
+    if ((caveFreq > 0.80) && (caveFreq < 0.96))
+        {
+            PlaySoundLocal(sndCave5, 0.1, -1, 0, 0);
+        }
+		
+		return;
+    
+return;
+# ========================================================================================
+        
+end

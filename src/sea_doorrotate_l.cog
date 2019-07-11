@@ -1,0 +1,308 @@
+# Jones 3D Cog Script
+#
+# sea_DoorRotate_L.cog
+#
+# Rotating Door Script
+#
+# [DS & modified by HB]
+# [Further bulletproofing by PKM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		activate	
+	message		arrived		
+	message		touched		
+	message		timer
+	message		user5 # prevent door closing
+	message		user6 # allow door closing
+
+	sound		lockedtalk0=inxj076.wav					local # This Door is locked.
+	sound		lockedtalk1=inxj077.wav					local # it's locked.
+	sound		lockedtalk2=inxj078.wav					local # locked.
+	sound		lockedtalk3=inxj088.wav					local # Nope.
+
+	sound		opensnd=sea_doors_open_c.wav			local
+	sound		closesnd=sea_doors_close_c.wav			local
+
+  	thing		door0
+	thing		switch0
+	thing		switch1
+	thing		player							local
+	vector		v_dpos									local # door position
+	vector		v_ipos									local # indy position
+	vector		v_idvec									local # indy-to-door vec
+	vector		v_drvec									local # door right vec
+	vector		v_currentDoorPYR						local
+	vector		v_openedDoorPYR							local # door aim
+	vector		v_closedDoorPYR							local # door aim
+	vector		v_openedDoorPosition					local
+	vector		v_closedDoorPosition					local
+	sector		openedDoorSector						local
+	sector		closedDoorSector						local
+
+	flex		OpenDoors								local # label
+	flex		CloseDoors								local # label
+
+	flex		f_iposcheck								local # dot result indy relative to door
+	flex		touchangle								local
+	flex		closeangle								local
+	flex		reopenangle								local
+	flex		timeratio								local
+	flex		reopentime								local
+	flex		doortime=1.0
+	flex		opentime=4.0							local # adjustable
+
+	int			locked=0								# switch0 locked=1, unlocked=0
+	int			firstTime=1								local # 1 = first time door is opened
+	int			open=0									local
+	int			newline									local
+	int			notnow=0								local
+	int			alreadytouched=0						local
+	int			oldline=50								local
+	int			stopclose=0								local # default to allow closing!
+
+	vector		v_ButLook local   
+	vector		v_IndyLook local   
+	flex		f_dot	local
+
+	# NOTE:  door0 has 4 states...
+	# closed	--> open == 0 (init state)
+	# opening	--> open == 1
+	# open		--> open == 2
+	# closing	--> open == 3
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player = GetLocalPlayerThing();
+	v_closedDoorPYR = GetThingLVecPYR(door0);
+	v_closedDoorPosition = GetThingPos(door0);
+	closedDoorSector = GetThingSector(door0);
+	return;
+
+# ..............................................................................
+
+user5:
+
+	# NOTE: as of 7/29/99 only known sender is sea_leverpump.cog
+	# and only known recipients are cogs tied to the leverpump doors [HB]
+
+	# Don't allow door to close...
+	stopclose = 1;
+	return;
+
+# ..............................................................................
+
+user6:
+
+	# NOTE: as of 7/29/99 only known sender is sea_leverpump.cog
+	# and only known recipients are cogs tied to the leverpump doors [HB]
+	
+	# Okay to close door...
+	stopclose = 0;
+	return;
+
+# ..............................................................................
+
+activate:
+	if (GetSenderRef() == door0)
+	{
+		return;
+	}
+	// Make sure Indy facing button so that he can't activate from other side of thin wall
+//	DebugPrint("L Door Activated");
+	v_ButLook = GetThingLVec(GetSenderRef());
+	v_IndyLook = GetThingLVec(player);
+	f_dot = VectorDot(v_ButLook, v_IndyLook);
+//	DebugFlex(f_dot, "dot");
+	if (f_dot < 0.0)
+	{
+		return;
+	}
+
+	if (notnow == 1)
+	{
+		return;
+	}
+	notnow = 1;
+	SetActorFlags(player, 0x200000); # no control
+	StopThing(player);
+	DeselectWeaponWait(player);
+    PlayMode(player, 60, 0);
+
+	# ----------- Locked One Way Door -----------
+	if ((locked == 1) && (GetsenderRef() == switch0))
+	{		
+		while (newline == oldline)
+		{		
+			newline = RandBetween(0, 3);
+		}
+		oldline = newline;
+		PlayVoice(player, lockedtalk0[newline], 1.0, 1);
+
+		notnow = 0;
+		ClearActorFlags(player, 0x200000);
+
+		return;
+	}
+
+	# ----------- Locked One Way Door ------------
+	locked = 0;
+	Sleep(0.2);
+	MoveToFrame(switch0, 1, 1);
+	MoveToFrame(switch1, 1, 1);
+	Sleep(0.5);
+	ClearActorFlags(player, 0x200000);
+	Call OpenDoors;
+
+	return;
+
+# ..............................................................................
+
+arrived:
+	if (GetSenderRef() == door0 && open == 1)
+	{
+		if (firstTime == 1)
+		{
+			// First time opening door - remember doors position & orientation for later.
+			v_openedDoorPYR = GetThingLVecPYR(door0);
+			v_openedDoorPosition = GetThingPos(door0);
+			openedDoorSector = GetThingSector(door0);
+		}
+		else
+		{
+			// Slam it open.
+			SetThingLVecPYR(door0, v_openedDoorPYR);
+			SetThingPosEx(door0, v_openedDoorPosition, openedDoorSector);
+		}
+
+		open = 2; # door is now open
+		SetTimer(opentime); # per HB...was sleeptime
+	}
+
+	if (GetSenderRef() == door0 && open == 3)
+	{		
+		if (alreadytouched == 1)
+		{
+			return;
+		}
+
+		movetoframe(switch0, 0, 1);
+		movetoframe(switch1, 0, 1);
+
+		// Slam it closed.
+		SetThingLVecPYR(door0, v_closedDoorPYR);
+		SetThingPosEx(door0, v_closedDoorPosition, closedDoorSector);
+
+		open = 0; # door is now closed
+		notnow = 0;
+	}
+
+	return;
+
+# ..............................................................................
+
+touched:
+	if (GetSenderRef() == door0 && open == 3 && alreadytouched == 0)
+	{
+		alreadytouched = 1; # suppress multiple hits
+
+		# check if Indy is touching back side of door...
+		v_dpos = GetThingPos(door0); # door hinge
+		v_ipos = GetThingPos(player); # our hero
+ 		v_idvec = VectorNorm(VectorSub(v_dpos, v_ipos)); # direction between indy & door 
+		v_drvec = GetThingLVec(door0); # check 90 to door plane
+		f_iposcheck = VectorDot(v_idvec, v_drvec); # places indy in- or outside door
+
+		if (f_iposcheck > 0)
+		{
+			# Don't re-open if Indy is touching back side...
+			alreadytouched = 0;
+			return;
+		}
+			
+		open = -1;
+		StopThing(door0); # but first we stop it
+		Sleep(0.1); # let engine update
+		open = 1; # door is going to open again
+
+		# Get door angle at moment it's touched...
+		v_currentDoorPYR = GetThingLVecPYR(door0);
+		closeangle = VectorY(v_closedDoorPYR);
+		touchangle = VectorY(v_currentDoorPYR);
+
+		# Get rotation angle door needs to fully re-open...	
+		# PRO TIP:  the engine uses angles *backwards* from the Rotate() verb	
+		reopenangle = ((closeangle - 90) - touchangle); # for L-doors 
+		if (reopenangle < -360)
+		{
+			reopenangle = (reopenangle + 360);
+		}
+			
+		# How far open...?
+		timeratio = (Abs(reopenangle) / 90); # what percentage?
+		reopentime = (doortime * timeratio); # calculate time
+		Rotate(door0, -reopenangle, 1, reopentime); # re-open 
+	}
+
+	return;
+
+# ..............................................................................
+
+timer:
+
+	if (stopclose != 0)
+	{
+		# Don't close door, but start the timer again...
+		SetTimer(2.0); # this amounts to a pulse
+		return;
+	}
+
+	Call CloseDoors;
+
+	return;
+
+# ..............................................................................
+
+OpenDoors:
+
+	if (open == 0)
+	{
+		Rotate(door0, 90, 1, doortime);
+		PlaySoundThing(opensnd, door0, 1, 5, 10, 0);
+		open = 1;
+		alreadytouched = 0; # init every time door opens
+	}
+
+	return;
+
+# ..............................................................................
+
+CloseDoors:
+
+	If (open == 2)
+	{
+		Rotate(door0, -90, 1, doortime);
+		PlaySoundThing(closesnd, door0, 1, 5, 10, 0);
+		open = 3;
+		alreadytouched = 0; # Indy can stop it again
+	}
+
+	return;
+
+# ..............................................................................
+
+
+end
+

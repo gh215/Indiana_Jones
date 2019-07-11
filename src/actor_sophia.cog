@@ -1,0 +1,72 @@
+# Jones 3D Cog Script
+#
+# actor_Sophia.cog
+#
+# [RT]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		created
+	message		damaged
+
+	model		head0=head_so_asound.3do			local
+	model		head1=head_so_amsound.3do			local
+	model		head2=head_so_osound.3do			local
+	model		head3=head_so_helmet.3do			local
+	model		head4=head_so_helmet_asound.3do		local
+	model		head5=head_so_helmet_amsound.3do	local
+	model		head6=head_so_helmet_osound.3do		local
+
+	sound		snd0=inxs001.wav					local	# "Hey, point that thing the other way!"
+	sound		snd1=inxs002.wav					local	# "Cut it out...that's not funny."
+	sound		snd2=inxs003.wav					local	# "Stop it!"
+
+	thing		sophia								local
+
+	int			newLine								local
+	int			lastLine=-1							local
+
+	int			bTalking=0							local
+
+end
+
+# ===================================================================
+
+code
+
+created:
+
+	sophia = GetSenderRef();
+	SetThingVoiceHeads(sophia, "sohead", "", "head_so_asound.3do", "head_so_amsound.3do", "head_so_osound.3do");
+	return;
+
+# -------------------------------------------------------------------
+
+damaged:
+
+	if (GetThingParent(GetSourceRef()) != GetLocalPlayerThing()) return;
+
+	if (bTalking) return;
+
+	bTalking = 1;
+
+	sophia = GetSenderRef();
+
+	while (newLine == lastLine)
+	{
+		newLine = RandBetween(0, 2);
+	}
+
+	# Start the voice & wait...
+	PlayVoice(sophia, snd0[newLine], 1.0, 1);
+
+	bTalking = 0;
+	lastLine = newLine;
+
+	return;
+
+end

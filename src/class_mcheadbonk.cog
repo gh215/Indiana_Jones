@@ -1,0 +1,100 @@
+# Jones 3D Cog Script
+#
+# class_mcheadbonk.cog
+#
+# [SCHOLL]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message     touched
+message		pulse
+
+# ************************** TEMPLATE *******************
+
+sound		bonk=sol_minecar_head_bonk_c.wav local
+keyframe	hithead=im_hithead.key				local
+keyframe	hitheadbw=im_hithead_backwards.key	local 
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_Player	local
+int			semaphore=0	local
+vector		v_PlayerVel local
+vector		v_PlayerLook local
+vector		v_HeadPYR	local		
+flex		f_Dot		local
+flex		f_Pitch		local
+flex		f_VelMag	local 
+flex		f_Damage	local
+flex		f_Sleep		local
+
+end
+
+# ===================================================================
+
+code
+
+# ...................................................................
+touched:
+	t_Player = GetLocalPlayerThing();
+
+	if ( GetSourceRef() == t_Player 
+		 && BITTEST(GetPhysicsFlags(t_Player), 0x1000000) // must be mine car
+		 && !IsCrouching(t_Player)
+		 && !semaphore)
+	{
+		v_PlayerVel = GetThingVel(t_Player);
+		f_VelMag = VectorLen(v_PlayerVel);
+		f_Damage = 277.775 * f_VelMag;   # was 70
+
+		DamageThing(t_Player, f_Damage, 0x04000000, GetSenderRef());
+		PlaySoundThing(bonk, t_Player, 1.0, 10.0, 20.0, 0x880);
+		
+		v_PlayerLook = GetThingLVec(t_Player);
+		f_Dot = VectorDot(v_PlayerLook, v_PlayerVel);
+		if (f_Dot >= 0.0)
+		{
+			PlayKey(t_Player, hithead, 8, 0x2, 0 );
+		}
+		else
+		{
+			PlayKey(t_Player, hitheadbw, 8, 0x2, 0 );
+		}
+
+		// Sleep briefly with semphore set to avoid bonking
+		// head on same pipe several times.
+		// The slower Indy is going the longer the sleep
+		semaphore=1;
+		f_Sleep = 1.8 - f_VelMag;
+		if (f_VelMag <= 0.0 )
+		{
+			f_Sleep = 0.25;
+		}
+		Sleep(f_Sleep); 
+		semaphore=0;
+	}
+
+	return;
+
+# ...................................................................
+
+pulse:
+	t_Player = GetLocalPlayerThing();
+	v_HeadPYR = GetActorHeadPYR(t_Player);
+	f_Pitch = VectorX(v_HeadPYR);
+	f_Pitch = f_Pitch * 0.75;
+	if (ABS(f_Pitch) <= 1.0)
+	{
+		f_Pitch = 0.0;
+		SetPulse(0.0);
+	}
+	v_HeadPYR = VectorSet(f_Pitch, VectorY(v_HeadPYR), VectorZ(v_HeadPYR));
+	SetActorHeadPYR(t_Player, v_HeadPYR);
+
+	return;
+
+end
+

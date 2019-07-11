@@ -1,0 +1,71 @@
+# Jones 3D Cog Script
+#
+# cyn_fallCam.cog
+#
+# This cog will cause a groovy camera shot when going over the falls
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+#.......................... MESSAGES .....................
+    message		startup
+    message		entered
+    
+#.......................... ACTORS .....................
+	thing		player								local
+
+#.......................... CAMERAS .....................
+	thing		theCam
+	thing		endPos
+
+#.......................... TRIGGERS .....................
+	sector		triggerSECT
+
+end
+# ========================================================================================
+code
+
+
+startup:
+
+	player=GetLocalPlayerThing();
+
+return;
+
+# ========================================================================================
+entered:
+
+	if (GetSenderRef() != triggerSECT) return;
+	if (GetSourceRef() != player) return;
+    
+	# lock out player control
+	StartCutScene(1);
+	SetActorFlags(player, 0x200000);
+	
+	# cut the cam out
+	SetCameraFocus(2, theCam);
+	SetCameraSecondaryFocus(2, player);
+	SetCurrentCamera(2);
+    Sleep(2.0);
+    
+	# restore
+	ClearActorFlags(player, 0x200000);
+	SetCameraPosition(1, GetThingPos(endPos));
+	SetCurrentCamera(1);
+	RestoreExtCam();
+	EndCutscene();
+
+	return;
+
+# ========================================================================================
+end
+
+
+
+
+
+

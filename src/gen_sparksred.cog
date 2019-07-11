@@ -1,0 +1,45 @@
+# Jones 3D Cog Script
+#
+# gen_SparksRed.cog
+#
+# Generates animated red sparks from the master.tpl
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+    message	    startup
+	message	    pulse
+	
+	thing		origin
+	
+    template    tplRedSparks=redsparks    local
+        
+    material    mat1=gen_a4sprite_rbblast.mat  local
+	
+	flex		pulsetime=0.25
+    
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	setpulse(pulsetime);
+	MaterialAnim(mat1, 5, 1);
+    return;
+
+# ========================================================================================
+
+pulse:
+	
+    CreateThing(tplRedSparks, origin);
+    return;
+	
+# ========================================================================================
+
+end

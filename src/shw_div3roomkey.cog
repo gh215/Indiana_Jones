@@ -1,0 +1,73 @@
+# Jones 3D Cog Script
+#
+# shw_Divroom3key.cog
+#
+# Diversion Room 3 key cog
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+			
+	# MESSAGES
+	message	startup	
+	message	activated	
+    		
+	# ACTORS
+	thing	player	local
+	
+	# PROPS
+	thing		key		
+	thing		curCam	local
+
+	# CAM OBJECTS
+	thing		campos
+
+	# SAYLINES
+	sound	in_whatsthis=INXJ002.WAV	local
+	sound	in_akey=INXJ167.WAV	local
+	
+
+	# VARS
+	
+    
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+    return;
+
+# ........................................................................................
+activated:
+
+If (GetSenderRef() == key)
+{
+    curCam = GetCurrentCamera();
+	StartCutScene(1);
+    DeselectWeapon(player); # stow any weapon or lighter
+	Sleep(0.25);
+    SetExtCamOffsetToThing(campos);	# get camera to a known position
+	PlayVoice(player, in_whatsthis, 1, 0); # "...what's this?"
+    PlayMode(player, 60, 1);			   # player grabs the goods
+    PlayVoice(player, in_akey, 1, 1); # "...A KEY!"
+	Sleep(0.25);
+    
+	# get out of the cutscene
+	RestoreExtCam();
+	EndCutScene();
+
+}
+return;
+
+# ........................................................................................
+
+end
+

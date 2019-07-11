@@ -1,0 +1,316 @@
+# Jones 3D Cog Script
+#
+# weap_AILaserMophia.cog
+#
+# Weapon Class Cog for Mophia Laser eyes.
+#
+# ### Programming Note ###
+# This cog relies on the fact that there is only one Mophia at a time
+# because it stores THING refs.
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		touched
+message		removed
+message		user0
+
+# ************************** JUMP LABELS ************************
+flex	CreateImpactGlow								local
+flex	SetVFXParams									local
+flex	MakeEyesFlash									local
+
+# ************************* TEMPLATES ***************************
+template	tpl_laserGlow=purpleflash					local
+template	tpl_blastGlow=mophiaBlast					local
+material	mat_beam=gen_a4sfx_rbbeam_p.mat				local
+
+model		mdl_large=aet_sm.3do						local
+model		mdl_med=aet_sm_70.3do						local
+model		mdl_sml=aet_sm_45.3do						local
+model		mdl_xsml=aet_sm_25.3do						local
+
+# ************************* CUSTOM PARAMETERS *******************
+vector		vec_glowStartSize							local
+vector		vec_glowEndSize								local
+vector		vec_posEye									local
+flex		f_xyShift									local
+flex		f_zShift									local
+int			n_joint00									local
+
+# ************************* WEAPON VARS *************************
+thing		t_glowLeft									local
+thing		t_glowRight									local
+thing		t_beamLeft									local
+thing		t_beamRight									local
+
+thing		t_glowImpact								local
+int			b_hitThing									local
+
+# ************************* MISC LOCAL VARS *********************
+thing		t_mophia									local
+thing		t_victim									local
+thing		t_bullet									local
+int			n_MophiaSize								local
+flex		f_beamSize									local
+flex		f_beamTime									local
+vector		vec_dir										local
+vector		vec_pos										local
+vector		vec_posLeft									local
+vector		vec_posRight								local
+
+end
+
+
+# ===================================================================
+code
+
+# ...................................................................
+startup:
+
+	b_hitThing = 0;
+
+	return;
+
+
+# ...................................................................
+fire:
+
+	t_mophia	= GetSourceRef();
+	t_bullet	= GetSenderRef();
+
+	if ( t_bullet < 0 ) return;											# Bad bullet?  Bail...
+	SetThingUserData(t_bullet, 1);										# Mark bullet as "in flight"
+
+	f_beamTime	= GetLifeleft(t_bullet);								# Beam lifetime is lifetime of bullet
+	f_beamSize	= GetThingMoveSize(t_bullet);							# Beam size is size of bullet
+
+	t_glowLeft	= -1;
+	t_glowRight	= -1;
+	call MakeEyesFlash;
+
+	if ( t_glowLeft > -1 )
+	{
+		t_beamleft		= CreatePolylineThing(t_bullet, t_glowLeft, '0 0 0', mat_beam, f_beamSize, f_beamSize, f_beamTime);
+		if ( t_beamleft > -1 )
+		{
+			CaptureThing(t_beamleft);
+			AttachThingToThingEx(t_beamleft, t_bullet, 0x08);
+		}
+	}
+
+	if ( t_glowRight > -1 )
+	{
+		t_beamRight		= CreatePolylineThing(t_bullet, t_glowRight, '0 0 0', mat_beam, f_beamSize, f_beamSize, f_beamTime);
+		if ( t_beamRight > -1 )
+		{
+			CaptureThing(t_beamRight);
+			AttachThingToThingEx(t_beamRight, t_bullet, 0x08);
+		}
+	}
+
+	if ( (t_glowLeft > -1) || (t_glowRight > -1) )
+	{
+		PlaySoundClass(t_bullet, 106);									# Play a SITHSOUNDCLASS_FIRE1 sound on bullet
+
+		SetActorFlags(t_mophia, 0x40000);								# Set IMMOBILE flag
+		#AISetCutsceneMode(t_mophia);
+		#AIDisableHeadTracking(t_mophia);
+	}
+
+	return;
+
+
+# ...................................................................
+touched:
+
+	t_victim = GetSourceRef();
+	t_bullet = GetSenderRef();
+	if ( (t_bullet < 0) || (GetThingType(t_bullet) != 3) )				# Check for SITH_THING_WEAPON
+		return;
+
+#	DEBUGPRINT("Bullet touched");
+	SetThingUserData(t_bullet, 0);										# Mark bullet as "hit target"
+
+	vec_pos = VectorSet( 0, 0, VectorZ(GetThingEyeOffset(t_victim))/2 );
+	vec_pos = VectorAdd(GetThingPos(t_victim), vec_pos);
+
+	if ( t_beamleft > -1 )												# Attach beam to victim
+	{
+		SetThingPosEX(t_beamleft, vec_pos, GetThingSector(t_victim));
+		AttachThingToThingEx(t_beamleft, t_victim, 0x08);
+	}
+
+	if ( t_beamRight > -1 )												# Attach beam to victim
+	{
+		SetThingPosEX(t_beamRight, vec_pos, GetThingSector(t_victim));
+		AttachThingToThingEx(t_beamRight, t_victim, 0x08);
+	}
+
+	b_hitThing = 1;
+	call CreateImpactGlow;
+
+	return;
+
+
+# ...................................................................
+removed:
+
+	t_bullet = GetSenderRef();
+	if ( t_bullet < 0 )
+		return;
+
+#	DEBUGFLEX(GetThingType(t_bullet), "Removing bullet or beam, type =");
+	if ( GetThingType(t_bullet) == 3 )									# Check for SITH_THING_WEAPON
+	{
+		if ( GetThingUserData(t_bullet) == 0 )							# Bullet "hit target?"  Bail...
+			return;
+
+#		DEBUGPRINT("Moving beams to final bullet pos");
+		if ( t_beamleft > -1 )											# Extend beams to final bullet pos
+			SetThingPosEX(t_beamleft, GetThingPos(t_bullet), GetThingSector(t_bullet));
+
+		if ( t_beamRight > -1 )
+			SetThingPosEX(t_beamRight, GetThingPos(t_bullet), GetThingSector(t_bullet));
+
+		call CreateImpactGlow;
+
+		return;
+	}
+
+	if ( GetThingType(t_bullet) == 14 )									# Check for SITH_THING_POLYLINE
+	{
+		ReleaseThing(t_beamleft);
+		ReleaseThing(t_beamRight);
+
+		t_beamleft	= -1;
+		t_beamRight = -1;
+		t_glowLeft	= -1;
+		t_glowRight	= -1;
+
+		ClearActorFlags(t_mophia, 0x40000);							# Clear IMMOBILE flag
+		#AIEnableHeadTracking(t_mophia, GetLocalPlayerThing());
+		#AIClearCutsceneMode(t_mophia);
+	}
+
+	return;
+
+
+# ...................................................................
+# Flash eyes
+# ...................................................................
+user0:
+
+	t_mophia	= GetParam(0);
+	f_beamTime	= 0.4;
+
+	PlaySoundClass(t_mophia, 125);										# play 'charge up' sound
+
+# ...................................................................
+MakeEyesFlash:
+
+	call SetVFXParams;
+
+	t_glowLeft	= CreateThingAtPos(tpl_laserGlow, FindNewSectorFromThing(t_mophia, vec_posLeft), vec_posLeft, '0 0 0');
+	if ( t_glowLeft > -1 )
+	{
+		SetLifeLeft(t_glowLeft, f_beamTime);
+		AnimateSpriteSize(t_glowLeft, vec_glowStartSize, vec_glowEndSize, f_beamTime);
+	}
+
+	t_glowRight	= CreateThingAtPos(tpl_laserGlow, FindNewSectorFromThing(t_mophia, vec_posRight), vec_posRight, '0 0 0');
+	if ( t_glowRight > -1 )
+	{
+		SetLifeLeft(t_glowRight, f_beamTime);
+		AnimateSpriteSize(t_glowRight, vec_glowStartSize, vec_glowEndSize, f_beamTime);
+	}
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+# t_bullet and possibly t_victim and vec_pos must be initialized!
+# ...................................................................
+CreateImpactGlow:
+
+	if ( b_hitThing == 1 )
+	{
+		t_glowImpact = CreateThingAtPos(tpl_blastGlow, GetThingSector(t_victim), vec_pos, '0 0 0');
+	}
+	else
+	{
+		t_glowImpact = CreateThingAtPos(tpl_blastGlow, GetThingSector(t_bullet), GetThingPos(t_bullet), '0 0 0');
+	}
+
+	if ( t_glowImpact > -1 )
+	{
+		if ( b_hitThing == 1 )
+		{
+			AttachThingToThingEx(t_glowImpact, t_victim, 0x08);
+		}
+	}
+
+	b_hitThing = 0;
+
+	return;
+
+
+# ...................................................................
+# t_mophia must be initialized
+# ...................................................................
+SetVFXParams:
+
+	vec_pos		= GetThingJointPos(t_mophia, GetNodeByName(t_mophia, "smhead"));
+
+	n_MophiaSize = GetThingModel(t_mophia);
+	if ( n_MophiaSize == mdl_large )
+	{
+		vec_glowStartSize	= VectorSet(0.25, 0.25, 0.4);
+		vec_glowEndSize		= VectorSet(0.40, 0.40, 0.7);
+		vec_posLeft			= VectorAdd(vec_pos, VectorTransformToOrient(t_mophia, '-0.012 0.058 0.0'));
+		vec_posRight		= VectorAdd(vec_pos, VectorTransformToOrient(t_mophia, '0.014 0.058 0.0'));
+		if ( !IsModePlaying(t_mophia, 66) )
+		{
+			vec_posLeft	 = VectorSub(vec_posLeft, '0 0 0.068');
+			vec_posRight = VectorSub(vec_posRight, '0 0 0.068');
+		}
+	}
+	else if ( n_MophiaSize == mdl_med )
+	{
+		vec_glowStartSize	= VectorSet(0.20, 0.20, 0.4);
+		vec_glowEndSize		= VectorSet(0.35, 0.35, 0.7);
+		vec_posLeft			= VectorAdd(vec_pos, VectorTransformToOrient(t_mophia, '-0.010 0.042 0.0'));
+		vec_posRight		= VectorAdd(vec_pos, VectorTransformToOrient(t_mophia, '0.012 0.042 0.0'));
+	}
+	else if ( n_MophiaSize == mdl_sml )
+	{
+		vec_glowStartSize	= VectorSet(0.15, 0.15, 0.4);
+		vec_glowEndSize		= VectorSet(0.28, 0.28, 0.7);
+		vec_posLeft			= VectorAdd(vec_pos, VectorTransformToOrient(t_mophia, '-0.007 0.03 0.005'));
+		vec_posRight		= VectorAdd(vec_pos, VectorTransformToOrient(t_mophia, '0.008 0.03 0.005'));
+	}
+	else
+	{
+		vec_glowStartSize	= VectorSet(0.10, 0.10, 0.4);
+		vec_glowEndSize		= VectorSet(0.17, 0.17, 0.7);
+		vec_posLeft			= VectorAdd(vec_pos, VectorTransformToOrient(t_mophia, '-0.004 0.03 0.005'));
+		vec_posRight		= VectorAdd(vec_pos, VectorTransformToOrient(t_mophia, '0.005 0.03 0.005'));
+	}
+
+	return;
+
+
+
+# ===================================================================
+end

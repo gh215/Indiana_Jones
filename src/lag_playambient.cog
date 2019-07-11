@@ -1,0 +1,81 @@
+# Jones 3D Cog Script
+#
+# lag_playambient.cog
+#
+# Plays  random sounds at several locations
+#
+# [DS]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	pulse
+	message	startup
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+	thing		soundPos2		nolink
+	thing		soundPos3		nolink
+	thing		soundPos4		nolink
+	thing		soundPos5		nolink
+	thing		soundPos6		nolink
+	thing		soundPos7		nolink
+	thing		soundPos8		nolink
+	thing		soundPos9		nolink
+	thing		soundPos10		nolink
+	thing		soundPos11		nolink
+	thing		soundPos12		nolink
+	thing		soundPos13		nolink
+	thing		soundPos14		nolink
+	thing		soundPos15		nolink
+	thing		soundPos16		nolink
+	thing		soundPos17		nolink
+	thing		soundPos18		nolink
+	thing		soundPos19		nolink
+	thing		soundPos20		nolink
+	thing		soundPos21		nolink
+	thing		soundPos22		nolink
+
+	sound		wav0=lag_inside_a01.wav		local
+	sound		wav1=lag_inside_a02.wav		local
+	sound		wav2=lag_inside_a03.wav		local
+	sound		wav3=lag_inside_a04.wav		local
+	sound		wav4=lag_inside_a05.wav		local
+	sound		wav5=lag_inside_a06.wav		local
+	sound		wav6=lag_inside_a07.wav		local
+	sound		wav7=lag_inside_a08.wav		local
+	sound		wav8=lag_inside_a09.wav		local
+	sound		wav9=lag_inside_a10.wav		local
+
+	float		minDist=5				local
+	float		maxDist=25				local
+	float		volume=0.6				local
+	int		sndnum				local
+	int		numsounds=10			local
+	int		cnt					local
+
+end
+
+code
+
+# ........................................................................................
+
+startup:
+	sleep(0.01);
+	setpulse(2.5);
+	return;
+
+# ........................................................................................
+
+pulse:
+	sndnum = rand()*numsounds;
+#	printint(sndnum);
+	for (cnt = 0; cnt <= 22; cnt = cnt+1) 
+	{
+	if (soundPos0[cnt] >= 0) PlaySoundThing(wav0[sndnum], soundPos0[cnt], volume, minDist, maxDist, 0);
+	}
+	return;
+
+
+end

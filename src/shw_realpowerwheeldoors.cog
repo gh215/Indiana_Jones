@@ -1,0 +1,907 @@
+# Jones 3D Cog Script
+#
+# shw_PowerwheelDoors.cog
+#
+# Sluiceway Alternating Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+        message         startup
+        message         activated
+        message         arrived
+        message         user0
+
+        cog     camcog
+        cog     gearcog0
+        cog     gearcog1
+        cog     gearcog2
+        cog     gearcog3
+        #	props
+        thing       lever
+        thing       door0   linkID=1
+        thing       door1   linkID=1
+        thing       door2   linkID=1
+        thing       door3   linkID=1
+        thing       wheel
+        thing       wheelbracket
+        thing       lpulley
+        thing       rpulley
+        thing       rope
+        #	actors
+        thing       player                  local
+        thing	    indy			nolink
+        # prop targets
+		thing	    camerapos
+        thing       doorcampos
+        thing       doorcamtarget
+        thing       wheelcampos
+        thing       wheelcampos1
+        thing       wheelcampos2
+        thing       wheelcampos3
+		thing		wheelpos0
+		thing		wheelpos1
+		thing		wheelpos2
+		thing		wheelpos3
+		thing		wheelpos4
+		thing		wheelpos5
+		thing		wheelpos6
+		thing		wheelpos7
+		thing		lpulleypos0
+		thing		lpulleypos1
+		thing		rpulleypos0
+		thing		rpulleypos1
+		
+
+		thing		ropepos0
+		thing		ropepos1
+        #	sluiceway surfaces
+        surface     surf0
+        surface     surf1
+        surface     surf2
+        surface     surf3
+        #	prop keyframes            
+        keyframe    pulleysright=shw_wheel_ply_bck.key      
+        keyframe    pulleysleft=shw_wheel_ply_fwd.key      
+        keyframe    wheelspin=shw_whl.key      
+        #	actor keyframes
+        keyframe	in_pull=in_pull_lever_down.key		local
+		keyframe	lever_down=gen_lever.key			local                          
+        #	sounds
+        sound   leverpull=nub_lever_pull_c.wav          local
+        sound   leverset=nub_lever_reset_c.wav          local
+        sound   wheelstart=shw_pwheel_start.wav         local
+        sound   wheelmove=shw_pwheel_run.wav          	local
+        sound   wheelstop=shw_pwheel_end.wav          	local
+        sound   locowave=teo_gears_rot_c.wav          	local
+        sound   opensound=nub_trapdoor_fall_c.wav       local
+		sound	dangercue=mus_gen_danger1.wav			local
+
+		#	camera variables
+        int	curCam		local
+        int	curLook		local
+        #	mechanic variables
+		int ActivatePos		local
+        int	door0open=0     local
+        int	door1open=0     local
+        int	door2open=0     local
+        int	door3open=0     local
+        #	keyframe and soundloop control variables
+        int	wheelloop       local     #motion of the wheel in tracks
+        int	rotation=-1    local     #keyframe for wheel spin
+        int	locomotion=-1      local     #spinning of the wheel
+        int	lpulleyrun      local     #keyframe for pulleys
+        int	rpulleyrun      local     #keyframe for pulleys
+        int doorloops       local     #for door loop sounds
+		int	pulleyspin=0	local
+		int	animID=-1		local
+		int	scene=0			local
+
+		#	vectors
+		vector	tempVEC		local
+end
+# ========================================================================================
+
+code
+
+startup:
+        
+        #AttachThingToThing(wheelbracket, wheel);
+        
+		player = GetLocalPlayerThing();
+        
+return;
+
+#----------------------------------------------------------------------------------                
+
+activated:
+
+        
+        If (IsMoving(scene) != 0) return;
+        If (GetSenderRef() != lever) return;
+        
+        	#printint(rotation);
+                        # Remember the current camera
+            scene = 1;
+			curCam = GetCurrentCamera();
+
+                        # Disable and hide player
+            SetThingFlags(player, 0x80000);
+			SetActorFlags(player, 0x200000);
+			StartCutscene(1);
+        
+        
+#checks for 1st sluice
+        If ((GetSenderRef() == lever) && (ActivatePos == 0 ))
+        {
+            Call indywheelscript;	#get the camera, play indy's anims and the lever anim
+            
+			# Stop wheel's animations and sounds in preparation for movement
+            If (rotation!=-1)
+				{
+                rotation=-1;
+				StopThing(wheel);
+				# Stop the wall gear from rotating
+				SendMessage(gearcog0, user1);
+				
+				}
+            If (locomotion !=-1)
+				{
+                StopSound(locomotion, 0.5);
+				locomotion=-1;
+				}
+				# Move the wheel
+            PlaySoundLocal(wheelstart, 0.5, 0, 0x0, 0);
+            
+			AttachThingToThing(wheelbracket, wheel);
+			tempVEC= (GetThingPos(wheelpos1));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            # move the rope
+			tempVEC= (GetThingPos(ropepos1));
+			MoveThingToPos(rope, tempVEC, 2);
+            # move the pulleys
+			tempVEC= (GetThingPos(lpulleypos1));
+            MoveThingToPos(lpulley, tempVEC, 2);
+            tempVEC= (GetThingPos(rpulleypos1));
+            MoveThingToPos(rpulley, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+
+            WaitForAnimStop(animID);
+            PlaySoundLocal(wheelstop, 1.0, 0, 0x0, 0);
+			StopSound(wheelloop, 0.0);
+				# lateral wheel movement, pulley keyframes
+            
+            tempVEC= (GetThingPos(wheelpos2));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+            Rotate(lpulley, 360, 1, 0.5);
+            Rotate(rpulley, 360, 1, 0.5);
+			pulleyspin = 1;
+
+            WaitForAnimStop(animID);
+            PlaySoundLocal(wheelstop, 1.0, 0, 0x0, 0);
+            
+			pulleyspin = 0;
+            StopSound(wheelloop, 0.0);
+			StopThing(lpulley); 
+            StopThing(rpulley);
+
+				# wheel into destination slot, check for spinning
+			PlaySoundLocal(wheelstart, 0.5, 0, 0x0, 0);
+            tempVEC= (GetThingPos(wheelpos3));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            # move the rope
+			tempVEC= (GetThingPos(ropepos0));
+			MoveThingToPos(rope, tempVEC, 2);
+            # move the pulleys
+			tempVEC= (GetThingPos(lpulleypos0));
+            MoveThingToPos(lpulley, tempVEC, 2);
+            tempVEC= (GetThingPos(rpulleypos0));
+            MoveThingToPos(rpulley, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+
+			# wait for stop, detach bracket, stop sounds
+            WaitForAnimStop(animID);
+            DetachThing(wheelbracket);
+            PlaySoundLocal(wheelstop, 1.0, 0, 0x0, 0);
+			StopSound(wheelloop, 0.5);
+			ActivatePos = 3;
+            Sleep(0.5);
+            Call gatecheck;
+         
+         return;
+         }
+         
+
+#checks for 2nd sluice
+         If ((Getsenderref() == lever) && (ActivatePos == 3))
+         {
+            Call indywheelscript;
+                        
+            # Stop wheel's animations and sounds in preparation for movement       
+            If (rotation!=-1)
+				{
+                rotation=-1;
+				StopThing(wheel);
+				# Stop the wall gear from rotating
+				SendMessage(gearcog1, user1);
+				
+                }
+            If (locomotion!=-1)
+				{
+                StopSound(locomotion, 0.5);
+				locomotion=-1;
+				}
+
+				#movethewheel
+            PlaySoundLocal(wheelstart, 0.5, 0, 0x0, 0);
+			
+			AttachThingToThing(wheelbracket, wheel);
+            tempVEC= (GetThingPos(wheelpos2));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            # move the rope
+			tempVEC= (GetThingPos(ropepos1));
+			MoveThingToPos(rope, tempVEC, 2);
+            # move the pulleys
+			tempVEC= (GetThingPos(lpulleypos1));
+            MoveThingToPos(lpulley, tempVEC, 2);
+            tempVEC= (GetThingPos(rpulleypos1));
+            MoveThingToPos(rpulley, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+
+            WaitForAnimStop(animID);
+            PlaySoundLocal(wheelstop, 1.0, 0, 0x0, 0);
+			StopSound(wheelloop, 0.5);
+				#lateral wheel movement, pulley keyframes
+            tempVEC= (GetThingPos(wheelpos4));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+            Rotate(lpulley, 360, 1, 0.5);
+            Rotate(rpulley, 360, 1, 0.5);
+			pulleyspin = 1;
+
+            WaitForAnimStop(animID);
+            pulleyspin = 0;
+            PlaySoundLocal(wheelstop, 1.0, 0, 0x0, 0);
+            StopSound(wheelloop, 0.5);
+			StopThing(lpulley); 
+            StopThing(rpulley);
+            
+			# wheel into destination slot, check for spinning
+			PlaySoundLocal(wheelstart, 0.5, 0, 0x0, 0);
+            tempVEC= (GetThingPos(wheelpos5));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            # move the rope
+			tempVEC= (GetThingPos(ropepos0));
+			MoveThingToPos(rope, tempVEC, 2);
+            # move the pulleys
+			tempVEC= (GetThingPos(lpulleypos0));
+            MoveThingToPos(lpulley, tempVEC, 2);
+            tempVEC= (GetThingPos(rpulleypos0));
+            MoveThingToPos(rpulley, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+
+			# wait for stop, detach bracket, stop sounds
+            WaitForAnimStop(animID);
+
+			DetachThing(wheelbracket);
+			StopSound(wheelloop, 0.5);
+			ActivatePos = 5;
+            Sleep(0.5);
+            Call gatecheck;
+            return;
+         }
+
+#checks for 3rd sluice
+         If ((Getsenderref() == lever) && (ActivatePos == 5))
+         {
+       
+            Call indywheelscript;
+            
+			# Stop wheel's animations and sounds in preparation for movement
+			
+			If (rotation!=-1)
+				{
+				rotation=-1;
+				StopThing(wheel);
+				# Stop the wall gear from rotating
+				SendMessage(gearcog2, user1);
+				
+                }
+            If (locomotion!=-1)
+				{
+                StopSound(locomotion, 0.5);
+                locomotion = -1;
+				}
+            
+				# movethewheel
+            PlaySoundLocal(wheelstart, 0.5, 0, 0x0, 0);
+			
+			AttachThingToThing(wheelbracket, wheel);
+            tempVEC= (GetThingPos(wheelpos4));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            # move the rope
+			tempVEC= (GetThingPos(ropepos1));
+			MoveThingToPos(rope, tempVEC, 2);
+            # move the pulleys
+			tempVEC= (GetThingPos(lpulleypos1));
+            MoveThingToPos(lpulley, tempVEC, 2);
+            tempVEC= (GetThingPos(rpulleypos1));
+            MoveThingToPos(rpulley, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+
+            WaitForAnimStop(animID);
+
+            StopSound(wheelloop, 0.5);
+				# lateral wheel movement, pulley keyframes
+            tempVEC= (GetThingPos(wheelpos6));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+            Rotate(lpulley, 360, 1, .5);
+            Rotate(rpulley, 360, 1, .5);
+			pulleyspin = 1;
+
+            WaitForAnimStop(animID);
+
+			pulleyspin = 0;
+            StopSound(wheelloop, 0.5);
+			StopThing(lpulley); 
+            StopThing(rpulley);
+
+				# wheel into destination slot, check for spinning
+			PlaySoundLocal(wheelstart, 0.5, 0, 0x0, 0);
+            tempVEC= (GetThingPos(wheelpos7));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            # move the rope
+			tempVEC= (GetThingPos(ropepos0));
+			MoveThingToPos(rope, tempVEC, 2);
+            # move the pulleys
+			tempVEC= (GetThingPos(lpulleypos0));
+            MoveThingToPos(lpulley, tempVEC, 2);
+            tempVEC= (GetThingPos(rpulleypos0));
+            MoveThingToPos(rpulley, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+
+            WaitForAnimStop(animID);
+
+			DetachThing(wheelbracket);
+			StopSound(wheelloop, 0.5);
+			ActivatePos = 7;
+            Sleep(0.5);
+            Call gatecheck;
+            return;
+         }
+
+#checks for 4th sluice
+         If ((Getsenderref() == lever) && (ActivatePos == 7))
+         {
+       
+            Call indywheelscript;
+
+            # Stop wheel's animations and sounds in preparation for movement
+			
+			If (rotation!=-1)
+				{
+				rotation=-1;
+				StopThing(wheel);
+				# Stop the wall gear from rotating
+				SendMessage(gearcog3, user1);
+				
+                }
+            If (locomotion!=-1)
+				{
+                StopSound(locomotion, 0.5);
+                locomotion=-1;
+				}
+            
+				#movethewheel
+            PlaySoundLocal(wheelstart, 0.5, 0, 0x0, 0);
+			
+			AttachThingToThing(wheelbracket, wheel);
+            tempVEC= (GetThingPos(wheelpos6));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            # move the rope
+			tempVEC= (GetThingPos(ropepos1));
+			MoveThingToPos(rope, tempVEC, 2);
+            # move the pulleys
+			tempVEC= (GetThingPos(lpulleypos1));
+            MoveThingToPos(lpulley, tempVEC, 2);
+            tempVEC= (GetThingPos(rpulleypos1));
+            MoveThingToPos(rpulley, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+
+            WaitForAnimStop(animID);
+
+			StopSound(wheelloop, 0.5);
+				# lateral wheel movement, pulley keyframes
+            tempVEC= (GetThingPos(wheelpos1));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+            Rotate(lpulley, -360, 1, .5);
+            Rotate(rpulley, -360, 1, .5);
+			pulleyspin = 2;
+
+            WaitForAnimStop(wheel, animID);
+
+			pulleyspin = 0;
+            StopThing(lpulley); 
+            StopThing(rpulley);
+			StopSound(wheelloop, 0.5);
+				# wheel into destination slot, check for spinning
+            PlaySoundLocal(wheelstart, 0.5, 0, 0x0, 0);
+            tempVEC= (GetThingPos(wheelpos0));
+			animID = MoveThingToPos(wheel, tempVEC, 2);
+            # move the rope
+			tempVEC= (GetThingPos(ropepos0));
+			MoveThingToPos(rope, tempVEC, 2);
+            # move the pulleys
+			tempVEC= (GetThingPos(lpulleypos0));
+            MoveThingToPos(lpulley, tempVEC, 2);
+            tempVEC= (GetThingPos(rpulleypos0));
+            MoveThingToPos(rpulley, tempVEC, 2);
+            wheelloop = PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+
+            WaitForAnimStop(animID);
+
+			DetachThing(wheelbracket);
+			StopSound(wheelloop, 0.5);
+			ActivatePos = 0;
+            Sleep(0.5);
+            Call gatecheck;
+            return;       
+            
+         }
+
+
+
+return;
+#=================================================================
+arrived:
+
+        If ((GetSenderRef() == wheel) && (rotation != -1))
+		{
+
+                If (ActivatePos == 0)
+					{
+					TeleportThing(wheel, wheelpos0);
+					}
+                If (ActivatePos == 3)
+					{
+					TeleportThing(wheel, wheelpos3);
+					}
+                If (ActivatePos == 5)
+					{
+					TeleportThing(wheel, wheelpos5);
+					}
+                If (ActivatePos == 7)
+					{
+					TeleportThing(wheel, wheelpos7);
+					}
+                Rotate(wheel, 360, 2, 2);
+				rotation = 1;
+        }
+
+        If ((GetSenderRef() == lpulley) && (pulleyspin == 1))
+				{
+                Rotate(lpulley, 360, 1, .5);
+				Rotate(rpulley, 360, 1, .5);
+                }
+
+        If ((GetSenderRef() == lpulley) && (pulleyspin == 2))
+                {
+                Rotate(lpulley, -360, 1, .5);
+				Rotate(rpulley, -360, 1, .5);
+                }
+
+        If (GetSenderID() == 1)
+                {
+                StopSound(doorloops, 0.0);
+                PlaySoundThing(wheelstop, door0, 1, -1, -1, 0x0);
+                }
+        return;
+
+#----------------------------------------------------------------------------------                
+user0:
+gatecheck:
+#print("gatecheck called");
+        
+   		# pulley cleanup
+		TeleportThing(lpulley, lpulleypos0);
+		TeleportThing(rpulley, rpulleypos0);
+
+
+        If (GetCurFrame(doorcampos) != 0)
+                {
+                MoveToFrame(doorcampos, 0, 100);
+                }
+                
+		# return wheel cams
+		If (GetCurFrame(wheelcampos3) != 0)
+			{
+			MoveToFrame(wheelcampos3, 0, 100);
+			WaitForStop(wheelcampos3);
+			}
+		
+		If (GetCurFrame(wheelcampos2) != 0)
+			{
+			MoveToFrame(wheelcampos2, 0, 100);
+			WaitForStop(wheelcampos2);
+			}
+
+		If (GetCurFrame(wheelcampos1) != 0)
+			{
+			MoveToFrame(wheelcampos1, 0, 100);
+			WaitForStop(wheelcampos1);
+			}
+
+		If (GetCurFrame(wheelcampos) == 1)
+			{
+			MoveToFrame(wheelcampos, 0, 100);
+			WaitForStop(wheelcampos);
+			}
+        
+		
+		If (GetFaceGeomode(surf0) == 4) 
+            {
+                If ((door0open == 0) && (ActivatePos == 0))	# door is unopened, water in the sluice
+                {
+                   
+					#print("Apos0, water in the sluice, door unopened");
+                    Rotate(wheel, 360, 2, 2);
+					SendMessage(gearcog0, user0);
+					Call wheelcam0;
+					rotation = 1;
+					locomotion = PlaySoundThing(locowave, wheel, 1, -1, -1, 0x1);
+					WaitForStop(wheelcampos);
+					sleep(.5);
+					# goto doorcamposition
+					Call doorcamscript;     
+					door0open = 1;
+					sleep(1.0);
+					Call camreturn;
+                }
+			
+				else if ((door0open == 1) && (ActivatePos == 0))	# door already opened, water in the sluice
+                {
+                    #print("Apos0, water in the sluice, door already opened");
+					Rotate(wheel, 360, 2, 2); 
+					SendMessage(gearcog0, user0);
+                    Call wheelcam0;
+					rotation = 1;
+                    locomotion = PlaySoundThing(locowave, wheel, 1, -1, -1, 0x1);
+					WaitForStop(wheelcampos);
+					Call camreturn;
+                }
+				
+				else		#  no water in the sluice
+				{
+                    #print("Apos0, no water in the sluice");
+					rotation = -1;
+					SendMessage(gearcog0, user1);
+                    Call wheelcam0;
+					Sleep(.5);
+					WaitForStop(wheelcampos);
+					Call camreturn;
+                }
+                return;
+            }
+        
+        If (GetFaceGeomode(surf1) == 4) 
+            {
+                If ((door1open == 0) && (ActivatePos == 3))	#water in the sluice, door unopened
+					{
+					#print("Apos3, water in the sluice, door unopened");
+					Rotate(wheel, 360, 2, 2); 
+					SendMessage(gearcog1, user0);
+                    Call wheelcam1;
+					rotation = 1;
+                    locomotion = PlaySoundThing(locowave, wheel, 1, -1, -1, 0x1);
+					WaitForStop(wheelcampos1);
+					sleep(.5);
+					# goto doorcamposition
+					Call doorcamscript;
+					door1open = 1;
+					sleep(1.0);
+					Call camreturn;
+                    }
+			
+				else if ((door1open == 1) && (ActivatePos == 3))	#water in the sluice, door already open 
+                    {
+					#print("Apos3, water in the sluice, door already opened");
+					Rotate(wheel, 360, 2, 2); 
+					SendMessage(gearcog1, user0);
+					Call wheelcam1;
+					rotation = 1;
+                    locomotion = PlaySoundThing(locowave, wheel, 1, -1, -1, 0x1);
+					WaitForStop(wheelcampos1);
+					Call camreturn;
+                    }
+
+                else		#  no water in the sluice
+					{
+					#print("Apos3, no water in the sluice");
+					rotation = -1;
+					SendMessage(gearcog1, user1);
+					Call wheelcam1;
+					Sleep(.5);
+					WaitForStop(wheelcampos1);
+					Call camreturn;
+                    }
+                return;
+            
+		
+			}
+                
+        
+        If (GetFaceGeomode(surf2) == 4) 
+            {
+                If ((door2open == 0) && (ActivatePos == 5))	#water in the sluice, door unopened
+					{
+					#print("Apos5, water in the sluice, door unopened");
+					Rotate(wheel, 360, 2, 2); 
+					SendMessage(gearcog2, user0);
+                    Call wheelcam2;
+					rotation = 1;
+                    PlaySoundThing(locowave, wheel, 1, -1, -1, 0x1);
+					WaitForStop(wheelcampos2);
+					Sleep(.5);
+					# goto doorcamposition
+					Call doorcamscript;
+					door2open = 1;
+					Sleep(1.0);
+					Call camreturn;
+                    }
+				
+				else if ((door2open == 1) && (ActivatePos == 5))	#water in the sluice, door already opened
+					{
+					#print("Apos5, water in the sluice, door already opened");
+					Rotate(wheel, 360, 2, 2); 
+					SendMessage(gearcog2, user0);
+                    Call wheelcam2;
+					rotation = 1;
+                    PlaySoundThing(locowave, wheel, 1, -1, -1, 0x1);
+					WaitForStop(wheelcampos2);
+					Call camreturn;
+                    }
+
+				else	#  no water in the sluice
+					{
+					#print("Apos5, no water in the sluice");
+					rotation = -1;
+					SendMessage(gearcog2, user1);
+                    Call wheelcam2;
+					Sleep(.5);
+					WaitForStop(wheelcampos2);
+					Call camreturn;
+                    }
+                return;
+            }
+                
+        
+        If (GetFaceGeomode(surf3) == 4) 
+			{
+				If ((door3open == 0) && (ActivatePos == 7))	#door unopened, water in the sluice
+					{
+					#print("Apos7, water in the sluice, door unopened");
+					Rotate(wheel, 360, 2, 2); 
+					SendMessage(gearcog3, user0);
+					Call wheelcam3;
+					rotation = 1;
+                    PlaySoundThing(locowave, wheel, 1, -1, -1, 0x1);
+					WaitForStop(wheelcampos3);
+					sleep(.5);
+					# goto doorcamposition
+					Call doorcamscript;
+					door3open = 1;
+					sleep(1.0);
+					Call camreturn;
+                    }
+			
+				else if ((door3open == 1) && (ActivatePos == 7))	#door already opened, water in the sluice
+					{
+					#print("Apos7, water in the sluice, door already opened");
+					Rotate(wheel, 360, 2, 2); 
+					SendMessage(gearcog3, user0);
+					Call wheelcam3;
+					rotation = 1;
+                    PlaySoundThing(locowave, wheel, 1, -1, -1, 0x1);
+                    WaitForStop(wheelcampos3);
+					Call camreturn;
+					}
+
+                else	#  no water in the sluice
+					{
+					#print("Apos7, no water in the sluice");
+					rotation = -1;
+					SendMessage(gearcog3, user1);
+					Call wheelcam3;
+					Sleep(.5);
+                    WaitForStop(wheelcampos3);
+					Call camreturn;
+					}
+                return;
+             }
+return;
+
+#----------------------------------------------------------------------------------                
+wheelcam0:
+        
+        {
+        # set the camera to view sluice
+		SetCameraFocus(2, wheelcampos);
+        SetCamerasecondaryFocus(2, wheelpos0);
+        SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0);
+        MoveToFrame(wheelcampos, 1, 1.0);
+		Sleep(2.0);
+        }
+        
+return;
+#----------------------------------------------------------------------------------                
+wheelcam1:
+
+        {
+        # set the camera to view sluice
+        SetCameraFocus(2, wheelcampos1);
+        SetCamerasecondaryFocus(2, wheelpos3);
+        SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0);
+        MoveToFrame(wheelcampos1, 1, 1.0);
+		Sleep(2.0);
+        }
+        
+return;
+
+
+#----------------------------------------------------------------------------------                
+wheelcam2:
+
+        {
+        # set the camera to view sluice
+		SetCameraFocus(2, wheelcampos2);
+        SetCamerasecondaryFocus(2, wheelpos5);
+        SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0);
+        MoveToFrame(wheelcampos2, 1, 1.0);
+		Sleep(2.0);
+        }
+        
+return;
+
+#----------------------------------------------------------------------------------                
+wheelcam3:
+
+        {
+        # set the camera to view sluice
+		SetCameraFocus(2, wheelcampos3);
+        SetCamerasecondaryFocus(2, wheelpos7);
+        SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0);
+        MoveToFrame(wheelcampos3, 1, 1.0);
+		Sleep(2.0);
+        }
+        
+return;
+
+#----------------------------------------------------------------------------------                
+doorcamscript:
+        {     
+             
+        # goto door cam
+        SetCameraLookInterp(2, 0);
+		SetCameraFocus(2, doorcampos);
+        SetCameraSecondaryFocus(2, doorcamtarget);
+        # doorsounds
+        PlaySoundLocal(opensound, 1.0, 0, 0x0, 1);
+        #doorloops =  PlaySoundLocal(wheelmove, 1.0, 0, 0x1, 0);
+        movetoframe(doorcampos, 1, .5);
+        
+             # determine door to be moved and move it
+        If (ActivatePos == 0)
+                {
+				PlaySoundLocal(dangercue, 1.0, 0.0, 0x0, 0);
+                MoveToFrame(door0, 1, .5);
+                WaitforStop(door0);
+				Sleep(.5);
+                return;
+                }
+   else If (ActivatePos == 3)
+                {
+				PlaySoundLocal(dangercue, 1.0, 0.0, 0x0, 0);
+                MoveToFrame(door1, 1, .5);
+                WaitforStop(door1);
+				Sleep(.5);
+                return;
+                }
+   else If (ActivatePos == 5)
+                {
+				PlaySoundLocal(dangercue, 1.0, 0.0, 0x0, 0);
+                MoveToFrame(door2, 1, .5);
+                WaitforStop(door2);
+				Sleep(.5);
+                return;
+                }
+   else If (ActivatePos == 7)
+                {
+                PlaySoundLocal(dangercue, 1.0, 0.0, 0x0, 0);
+				MoveToFrame(door3, 1, .5);
+                WaitforStop(door3);
+				Sleep(.5);
+                return;
+                }
+        }        
+return;        
+
+
+
+#----------------------------------------------------------------------------------                
+camreturn:
+
+        {
+# Return control and camera to player
+        # return actor to start position facing lever
+        SetThingMaxRotVel(indy, 360);
+		AISetLookThingEyeLevel(indy, lever);
+		# hide actor, restore the player
+		SetThingFlags(indy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        ClearActorFlags(player, 0x200000);
+        Sendmessage(camcog, user1);
+		EndCutscene();
+        SetCameraFOV(90, 0, 0.0);
+		movetoframe(camerapos, 0, 200);
+        SetCameraLookInterp(2,0);
+		scene = 0;
+        }
+        
+return;
+
+#----------------------------------------------------------------------------------                
+indywheelscript:
+        {
+            # line up the actor	and show him
+			CopyPlayerHolsters(player, indy); # make sure actor has matching props
+			#CopyOrientAndPos(player, indy);
+			ClearThingFlags(indy, 0x80000);
+			
+			# Cut to cutscene camera
+            SetCameraFocus(2, camerapos);
+			SetCamerasecondaryFocus(2, indy);
+			SetCameraInterpSpeed(2,1.5);
+			SetCameraLookInterp(2,1);
+			Sendmessage(camcog, user0);
+			SetCameraFOV(70, 0, 0.0);
+
+            
+            # Play Indy's and the lever's Anims
+            PlayKey(lever, lever_down, 4, 0x12, 0);
+			PlayKey(indy, in_pull, 4, 0x12, 0);
+			
+			Sleep(1.0);
+            PlaySoundLocal(leverpull, 1.0, 0, 0x0, 0);
+			
+            MovetoFrame(camerapos, 1, .5);
+            Sleep(1.5);
+			 
+            PlaySoundLocal(leverset, 0.5, 0, 0x0, 0);
+			Sleep(0.5);
+
+            # indyactor turns to view the wheel's motion
+            SetThingMaxRotVel(indy, 80);
+			AISetLookThingEyeLevel(indy, wheel);
+			sleep(1.0);
+			SetCameraFOV(100, 1, 1.0);
+			SetCamerasecondaryFocus(2, wheel);
+        }
+return;        
+
+#----------------------------------------------------------------------------------                
+
+
+
+
+
+end

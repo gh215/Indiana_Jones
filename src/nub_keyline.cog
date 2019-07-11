@@ -1,0 +1,96 @@
+# Jones 3D Cog Script
+#
+# nub_KeyLine
+#
+# [SXC] [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# 
+# ========================================================================================
+symbols
+
+message	startup
+message	entered
+message	taken
+message	pulse
+message	exited
+
+sound	keyline
+
+thing	entersector
+thing	key
+
+vector	playervec	local
+
+thing	player0		local
+
+float	playery=0	local
+float	playerx=0	local
+int		check=0		local
+int		keytaken=0	local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player0 = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+entered:
+
+if (GetSenderRef() == entersector)
+	{
+	SetPulse(0.5);
+	}
+
+return;
+
+# ........................................................................................
+exited:
+
+if (GetSenderRef() == entersector)
+	{
+	SetPulse(0);
+	}
+
+return;
+
+# ........................................................................................
+pulse:
+
+if (GetCurFrame(key) == 1)
+	{
+    if ((check == 0) && (keytaken == 0))
+		{
+		playervec = GetThingLVec(player0);
+		playery = VectorY(playervec);
+		playerx = VectorX(playervec);
+	
+		if ((playerx > 0) && ((playery > -0.7) && (playery < 0.7)))
+			{
+			check = 1;
+			PlayVoice(player0, keyline, 1.0, 0);
+			SetPulse(0);
+			}
+		}
+	}
+return;
+
+# ........................................................................................
+taken:
+
+if (GetSenderRef() == key)
+	{
+	keytaken = 1;
+	}
+
+return;
+
+# ........................................................................................
+end
+

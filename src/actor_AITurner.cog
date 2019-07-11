@@ -1,0 +1,68 @@
+# ===================================================================
+# Jones 3D Cog Script
+#
+# actor_AITokarev.cog
+#
+# [MDR]
+#
+# Actor script for Combat Turner.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ===================================================================
+
+symbols
+
+message		created
+message		killed
+
+# ************************** TEMPLATES *************************
+template	tplGun=mauser				local
+template	tplHealthKit=hlthsml		local
+
+# ************************** MISC LOCAL VARS *******************
+int			weaponNum=21				local
+
+thing		t_turner					local
+thing		t_powerup					local
+vector		randVec						local
+vector		dirVec						local
+
+end
+
+# ===================================================================
+code
+
+# -------------------------------------------------------------------
+created:
+
+	t_turner = GetSenderRef();
+
+	AISetMode(t_turner, 0x20);						# Set MODE_TOUGHSKIN
+
+	SetWeaponModel(t_turner, weaponNum);
+	SelectWeapon(t_turner, weaponNum);
+
+	return;
+
+# -------------------------------------------------------------------
+killed:
+
+	t_turner = GetSenderRef();
+
+	ResetWeaponModel(t_turner);										# Swap the gun back out
+
+	randVec = VectorSet(0, RandBetween(0, 359), 0);
+	dirVec = VectorTransformToOrient(t_turner, '-0.17 0.0 0.0');
+
+	t_powerup = CreateThing(tplGun, t_turner);						# create a gun powerup
+	dirVec = VectorRotate(dirVec, randVec);
+	SetThingVel(t_powerup, dirVec);
+
+	t_powerup = CreateThing(tplHealthKit, t_turner);				# create a healthkit powerup
+	dirVec = VectorRotate(dirVec, '0 45 0');
+	SetThingVel(t_powerup, dirVec);
+
+	return;
+
+
+end

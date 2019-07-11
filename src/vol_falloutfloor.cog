@@ -1,0 +1,209 @@
+# Jones 3D Cog Script
+#
+# Vol_FalloutFloor.cog
+#
+# collapses upto 14 floor with a cool algorithm
+#
+# [MR]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+    message		entered
+    message		pulse
+
+    thing	player	local
+	
+	#cog		debriscog
+
+
+	thing	tTile0
+	thing	tTile1
+	thing	tTile2
+	thing	tTile3
+	thing	tTile4
+	thing	tTile5
+	thing	tTile6
+	thing	tTile7
+	thing	tTile8
+	thing	tTile9
+	thing	tTile10
+	thing	tTile11
+	thing	tTile12
+	thing	tTile13
+	
+	thing	fragment1	local
+	thing	fragment2	local
+	
+	thing	shakeTile	local
+	
+	surface	entrance
+	surface	exit
+
+	int	falling=0	local
+	int	numtiles=14	local
+	int	i			local
+	int	alldead=0	local
+	int	curTile		local
+	int	dir			local
+	
+	int	iTileLife0=100	local
+	int	iTileLife1=100	local
+	int	iTileLife2=100	local
+	int	iTileLife3=100	local
+	int	iTileLife4=100	local
+	int	iTileLife5=100	local
+	int	iTileLife6=100	local
+	int	iTileLife7=100	local
+	int	iTileLife8=100	local
+	int	iTileLife9=100	local
+	int	iTileLife10=100	local
+	int	iTileLife11=100	local
+	int	iTileLife12=100	local
+	int	iTileLife13=100	local
+	
+	int	iMin			local
+	int	iMax			local
+	#int	debstart=0		local
+
+	template	debris=stoneshrapa	local
+
+	flex		CheckTileStatus		local
+
+end
+# ================================================
+code
+
+entered:
+	
+	#DebugPrint("entered");
+	#if (debstart == 0)
+		#{
+		#debstart = 1;
+		#SendMessage(debriscog, user0);
+		#}
+
+	for (curTile=0; curTile<numtiles; curTile=curTile+1)
+	{
+		if ( GetSenderRef() == tTile0[curTile] )
+        {
+			
+			#DebugFlex(curTile,"tile injured");
+            
+			iTileLife0[curTile] = iTileLife0[curTile] - 30;
+			call CheckTileStatus;
+			return;
+		}
+	}
+
+    
+	If (GetSenderRef() == entrance)
+	{
+		
+		#DebugPrint("pulse set");
+		SetPulse(.10);
+	}
+
+   	
+return;
+
+
+# ================================================
+pulse:
+	If (falling == 1) return;
+
+	alldead = 1;
+	for (curTile=0; curTile<numtiles; curTile=curTile+1)
+	{
+		If ( iTileLife0[curTile] < 200 )
+		{
+            alldead = 0;
+		}
+		if ( iTileLife0[curTile] < 100 )
+		{
+            iTileLife0[curTile] = iTileLife0[curTile] - 10;
+			call CheckTileStatus;
+		}
+	}
+	If (alldead == 1) SetPulse(0); 
+	#SendMessage(debriscog, user1);
+	return;
+
+
+# ================================================
+CheckTileStatus:
+	if ( iTileLife0[curTile] <= 0 )
+	{
+		falling = 1;
+
+		// Mark as 'dead'
+		iTileLife0[curTile] = 200;
+
+		// Disturb neighbors
+		if ( curTile < numTiles/2 )
+		{
+			iMin = 0;
+			iMax = numTiles/2;
+			i    = 1;
+		}
+		else
+		{
+			iMin = numTiles/2;
+			iMax = numTiles;
+			i    = -1;
+		}
+
+		if ( CurTile - 1 > iMin )
+		{
+			if ( iTileLife0[CurTile-1] < 200 )
+			{
+				iTileLife0[CurTile-1] = iTileLife0[CurTile-1] - 80;
+			}
+		}
+		if ( CurTile + 1 < iMax )
+		{
+			if ( iTileLife0[CurTile+1] < 200 )
+			{
+				iTileLife0[CurTile+1] = iTileLife0[CurTile+1] - 80;
+			}
+		}
+		if ( iTileLife0[CurTile + (i * numTiles/2)] < 200 )
+		{
+			if ( iTileLife0[CurTile + (i * numTiles/2)] < 200 )
+			{
+				iTileLife0[CurTile + (i * numTiles/2)] = iTileLife0[CurTile + (i * numTiles/2)] - 80;
+			}
+		}
+
+
+		// Do falling effects here
+        
+		#DebugPrint("destroy code hit");
+		
+		shakeTile = curTile;
+		for (i=0; i <= 8; i = i + 1) 
+		{
+            dir=RandBetween(0, 1);
+			SetPOVShake('0.0 0.0 0.00', '0.0 0.0 0.003', 80.0, 0.80);
+			Rotate(tTile0[shakeTile], 6, dir, .025);
+			Sleep(0.025);
+            Rotate(tTile0[shakeTile], -6, dir, .025);
+			Sleep(0.025);
+		}
+		
+		fragment1 = CreateThing(debris, tTile0[shakeTile]);                                 
+		fragment2 = CreateThing(debris, tTile0[shakeTile]);
+		#SetThingMass(fragment1, 1);
+		#SetThingMass(fragment2, 1);
+		SetThingVel(fragment1, VectorSet(RandBetween(0, 4)/10, RandBetween(0, 2)/10, -.5));
+		SetThingVel(fragment2, VectorSet(RandBetween(0, 4)/10, RandBetween(0, 2)/10, -.5));
+		SetThingRotVel(fragment1, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 100.0));
+		SetThingRotVel(fragment2, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 100.0));
+	
+		DestroyThing(tTile0[shakeTile]);
+		falling =0;
+    }
+	return;
+
+	end

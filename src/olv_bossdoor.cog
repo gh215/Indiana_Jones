@@ -1,0 +1,236 @@
+# Jones 3D Cog Script
+#
+# olv_bossdoor.cog
+#
+# [SXC & DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message     activate
+message	arrived
+message     startup
+message     timer
+
+sound       fwoosh=gen_torchlitet_c.wav     local
+sound       burning=gen_torch_burnin_c.wav  local
+thing       player                          local
+thing       torchobj0
+thing		torchobj1
+thing       flamepos0
+thing		flamepos1
+template    flametemplate
+vector      minlite                       	local
+vector      maxlite                      		local
+vector      zerolite                      	local
+int         lit=0                         	local
+int		donelit0=0					local
+int		donelit1=0					local
+keyframe	in_light=in_light_stuff.key		local
+
+
+#  Door stuff
+thing       door0                            
+flex        movespeed=1
+int		numtorch=0				local
+sector      doorsector				local
+int         doorstatus				local
+int         movestatus				local
+int		speak0				local
+sound		doorop=inxj103.wav		local
+sound		plyerdoor=inxj101.wav		local
+
+#  steves junk
+thing		t_InMainTunnelPt
+cog		snakecog
+
+# Subroutines
+flex		checkstatus				local
+flex		open_doors				local
+
+# Boss Cutscene Stuff
+int		this_door						# set 1 if boss's door.
+int		curcam						local
+thing		campos0
+thing		camtarg0
+sound		music0=mus_sea_volodbridge.wav			local
+sound		boss_sayline=ov04j01.wav			local #Snakes! I hate snakes,..big ones!
+flex		boss_cutscene					local
+
+flex		playerAlpha						local
+
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	doorsector = GetThingSector(door0);
+	SetSectorAdjoins(doorsector, 0);
+	player = GetLocalPlayerThing();
+	minlite = VectorSet(0.77, 0.45, 0.06);
+	maxlite = VectorSet(0.89, 0.64, 0.3);
+	zerolite= VectorSet(0.0, 0.0, 0.0);
+	SetThingLight(torchobj0, zerolite, 0.3, 0.1);
+	SetThingLight(torchobj1, zerolite, 0.3, 0.1);
+	return;
+
+# ........................................................................................
+activate:
+    if ((GetSenderRef() == torchobj0) && (GetCurWeapon(player) == 13))
+	{
+		if(donelit0 == 1) return;
+		donelit0=1;
+		lit = 1;
+		SetActorFlags(player, 0x200000);
+		MakeMeStop();
+		StartCutscene(0);
+		PlayKey(player, in_light, 4, 0x12, 1);
+		CreateThing(flametemplate, flamepos0);                                 
+		SetThingLight(torchobj0, minlite, 0.3, 0.0);
+		PlaySoundThing(fwoosh, torchobj0, 0.4, 3, 10, 0);
+		numtorch = (numtorch)+1;
+		SetTimer(0.1);
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+		if (numtorch >= 2)
+		{
+			call checkstatus;
+      		if(movestatus) return;
+			if(doorstatus == 0)
+			{
+				call open_doors;
+			}
+		}
+		return;
+	}
+	if ((GetSenderRef() == torchobj1) && (GetCurWeapon(player) == 13))
+	{
+		if(donelit1 == 1) return;
+		donelit1=1;
+		lit = 2;
+		SetActorFlags(player, 0x200000);
+		MakeMeStop();
+		PlayKey(player, in_light, 4, 0x12, 1);
+		CreateThing(flametemplate, flamepos1);                                 
+		SetThingLight(torchobj1, minlite, 0.3, 0.0);  
+		PlaySoundThing(fwoosh, torchobj1, 0.4, 3, 10, 0);
+		numtorch = (numtorch)+1;
+		SetTimer(0.1);
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+		if (numtorch >= 2)
+		{
+			call checkstatus;
+	      	if(movestatus) return;
+			if(doorstatus == 0)
+			{
+				call open_doors;
+			}
+		}
+		return;
+	}
+	if(GetSenderRef() == door0)
+	{
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		PlayMode(player, 60, 0);
+		speak0=PlayVoice(player, plyerdoor, 1.0, 0);
+#		call randlocklines;
+		WaitForSound(speak0);
+		ClearActorFlags(player, 0x200000);
+		return;
+	}
+
+	return;
+
+# ........................................................................................
+timer:
+	if (lit == 1)
+	{
+	ThingLightAnim(torchobj0, minlite, 0.3, maxlite, 0.3, 1.0);
+	PlaySoundThing(burning, torchobj0, 1, 3, 10, 1);
+	return;
+	}
+	if (lit == 2)
+	{
+	ThingLightAnim(torchobj1, minlite, 0.3, maxlite, 0.3, 1.0);
+	PlaySoundThing(burning, torchobj1, 1, 3, 10, 1);
+	return;
+	}
+
+#...........................................................................................................
+
+Arrived:
+
+    if (GetSenderRef() == door0)
+    {
+	if(this_door == 1)
+	{
+	goto boss_cutscene;
+	return;
+	}
+	PlayVoice(player, doorop, 1.0, 0);
+    }          
+    return;
+
+#----------------------------------------------------------------------------------
+
+open_doors:
+	SetSectorAdjoins(doorsector, 1);
+	movetoframe(door0, 1, movespeed);
+	SendMessageEx(snakecog, 27, t_InMainTunnelPt, 0, 0, 0);		# (cogRef, User0, Location-Thing, 0, 0, 0)
+	return;
+
+CheckStatus:
+	moveStatus = 0;
+	doorStatus = 0;
+	if (door0 >= 0)
+	{
+			moveStatus = moveStatus + IsThingMoving(door0);
+			doorStatus = doorStatus + GetCurFrame(door0);
+	}
+	return;
+
+#----------------------------------------------------------------------------------
+boss_cutscene:
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+	sleep(0.3);			
+	curcam = GetCurrentCamera();
+	SetCameraLookInterp(2, 0);
+	SetActorFlags(player, 0x200000);
+
+playerAlpha = GetThingAlpha(player);
+
+	MakeMeStop();
+	StartCutscene(1);
+	SetCameraFocus(2, campos0);
+	SetCameraSecondaryFocus(2, camtarg0);
+	SetCurrentCamera(2);
+	SetCameraFOV(100, 0, 0.0);
+	SetCameraFOV(85, 1, 3.0);
+	sleep(1.5);
+	SendMessageEx(snakecog, user1, 2, 0, 0, 0);			
+	sleep(1.9);
+	ResetCameraFOV(0, 0.0);
+	SendMessageEx(snakecog, user1, 1, 0, 0, 0);			# Clear t_Boss cutscene mode.
+	SetCurrentCamera(curcam);
+	SetThingAlpha(player, 1.0);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+if(playerAlpha < GetThingAlpha(Player))
+{
+SetThingAlpha(player, playerAlpha);
+}
+
+	PlayVoice(player, boss_sayline, 1.0, 0);
+	return;
+
+
+end

@@ -1,0 +1,70 @@
+# ===================================================================
+# Jones 3D Cog Script
+#
+# item_PickupLines.cog
+#
+# This cog tracks and chooses preliminary voice lines for item pickups.
+#
+# [RT]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ===================================================================
+
+symbols
+
+	message startup
+	message user0
+
+	sound	talk=INXJ139.wav	local # Look what I found...
+	sound	talk1=INXJ142.wav	local # What have we here?
+	sound	talk2=INXJ002.wav	local # What's this?
+	sound	talk3=INXJ143.wav	local # Now what?
+	sound	talk4=INXJ008a.wav	local # Hey...
+	sound	talk5=INXJ146.wav	local # Hmm...
+	sound	talk6=INXJ147.wav	local # Aha...
+
+	thing	indy				local
+
+	int		newLine=-1			local
+
+	int		oldLine0=-1			local
+	int		oldLine1=-1			local
+	int		oldLine2=-1			local
+
+	int		bBusy=0				local
+	
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	indy = GetLocalPlayerThing();
+	return;
+
+# -------------------------------------------------------------------
+
+user0:
+
+	if (bBusy) return;
+
+    bBusy = 1;
+
+	while ((newLine == oldLine0) || (newLine == oldLine1) || (newLine == oldLine2))
+	{		
+		newLine = RandBetween(0, 6);
+	}
+	
+	oldLine2 = oldLine1;
+	oldLine1 = oldLine0;
+	oldLine0 = newLine;
+
+	PlayVoice(indy, talk[newLine], 1.0, 1);
+	bBusy = 0;
+
+	return;
+
+end
+

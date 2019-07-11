@@ -1,0 +1,82 @@
+# Jones 3D Cog Script
+#
+# sea_puzzlecrates.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message startup
+	message	entered
+	message	exited
+    
+	thing		up_crate
+	thing		lw_crate1
+	thing		lw_crate2
+	thing		lw_crate3
+	thing		player					local
+
+	flex		crateDistance			local
+
+	int			currentCrate			local
+end
+
+# ========================================================================================
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	ClearThingFlags(lw_crate1, 0x40000000);	# Not moveable.
+	return;
+
+entered:
+	if (GetSourceRef() == player)
+	{
+		if ((GetSenderRef() == lw_crate1) || (GetSenderRef() == lw_crate2) || (GetSenderRef() == lw_crate3) || (GetSenderRef() == up_crate))
+		{
+			crateDistance = VectorDist(GetThingPos(up_crate), GetThingPos(lw_crate1));
+			if (crateDistance <= 0.21)
+			{
+				// The top crate is under the top catwalk, so make it non-climbable.
+				ClearThingFlags(up_crate, 0x04000000);	# non-climable
+			}
+			else
+			{
+				SetThingFlags(up_crate, 0x04000000);
+			}
+
+			// The player is now on top of one of the crates, so mark all 3 bottom crates pushable.
+			SetThingFlags(lw_crate1, 0x40000000);	# Now moveable.
+			SetThingFlags(lw_crate2, 0x40000000);	# Now moveable.
+			SetThingFlags(lw_crate3, 0x40000000);	# Now moveable.
+			return;
+		}
+	}
+	return;
+
+exited:
+	if (GetSourceRef() == player)
+	{
+		if ((GetSenderRef() == lw_crate1) || (GetSenderRef() == lw_crate2) || (GetSenderRef() == lw_crate3) || (GetSenderRef() == up_crate))
+		{
+			// The player is no longer on top of any of the crates.  Find out which one is beneath the top crate,
+			// and mark it non-pushable.
+			for (currentCrate = 0; currentCrate < 3; currentCrate = currentCrate + 1)
+			{
+				crateDistance = VectorDist(GetThingPos(up_crate), GetThingPos(lw_crate1[currentCrate]));
+				if (crateDistance <= 0.21)
+				{
+					ClearThingFlags(lw_crate1[currentCrate], 0x40000000);	# Not moveable.
+					return;
+				}
+			}
+			return;
+		}
+	}
+	return;
+
+end
+

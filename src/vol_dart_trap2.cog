@@ -1,0 +1,251 @@
+# Jones 3D Cog Script
+#
+# VOL_Dart_Trap.cog
+#
+# This cog will run a 3 location dart firing sequence upon an entered message.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+
+#....................MESSAGES.....................#
+message	startup
+message	touched
+message	entered
+message	arrived
+
+
+#....................ACTORS.....................#
+thing	player												local
+thing	indyActor
+
+thing	looktarg
+
+
+#....................CAMERAS.....................#
+thing	warningCam
+
+
+
+#....................EVENT GHOSTS.....................#
+thing	smoke												local
+thing	dartgenpos0
+thing	dartgenpos1
+thing	dartgenpos2
+
+
+#....................PROPS.....................#
+thing	missile0											local
+thing	missile1											local
+thing	missile2											local
+thing	deadmissile											local
+
+#....................TRIGGERS.....................#
+sector	primesect
+sector	clearsect
+
+surface	triggersurf0
+surface	triggersurf1
+surface	triggersurf2
+
+#....................KEYFRAMES....................#
+keyframe	in_hat=0in_figithat_4_4.key						local
+keyframe	in_brush=0in_stand1_bd_4.key					local
+keyframe	in_stand4=0in_stand4.key						local
+keyframe    inReach=in_reach_medium.key        				local
+
+
+
+#....................TEMPLATES.....................#
+template	dtemp=dart                  					local 
+template	smoketemplate=+dartsmoke_spr					local
+
+#....................SOUNDS.....................#
+sound	blast=pru_dart_fired_c.wav							local
+sound	tink=shs_bell_dull.wav								local	#must be pitch-bent for proper effect
+sound	readytrap=teo_crush_prime_c.wav						local
+sound	stab=fol_sp_attack.wav								local
+sound	in_creepyfeel=INXJ047.WAV							local	# skulls mystic signs...
+
+sound	creepy_cue=mus_gen_danger2.wav						local
+
+#....................VARIABLES.....................#
+int		scene=0												local
+int		hitsound											local
+int		snd													local
+int		track												local
+int		playerpos=0											local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	# get the player
+    player = GetLocalPlayerThing();
+	return;
+
+# ========================================================================================
+entered:
+
+	If ((GetSenderRef() == primesect) && (GetSourceRef() == player))
+		{
+            If (scene == 1) return;
+			# stop the player's motion, and swap the actor in
+			MakeMeStop();
+			StartCutScene(1);
+			scene = 1;
+            PlaySoundLocal(readytrap, 0.5, 1.0, 0x0, 0);
+			
+			CopyOrientAndPos(player, indyActor);
+            CopyPlayerHolsters(player, indyActor);
+			SetThingFlags(player, 0x80000);
+			ClearThingFlags(indyActor, 0x80000);
+			
+			# line up the actor
+			AISetLookThing(indyActor, looktarg);
+            # move cam to known position
+			SetExtCamOffsetToThing(warningCam);
+			AIWaitForStop(indyActor);
+
+            PlaySoundLocal(creepy_cue, 0.5, 1.0, 0x0, 0);
+			
+            # play indy's anims and voice line
+			track = PlayKey(indyActor, in_Stand4, 2, 0x0, 0);
+			PlayKey(indyActor, in_brush, 4, 0x12, 1);
+			snd = PlayVoice(indyActor, in_creepyfeel, 0.75, 0);
+			PlayKey(indyActor, in_hat, 4, 0x12, 0);
+			WaitForSound(snd);
+			Sleep(0.25);
+
+            # restore the player
+			CopyOrientAndPos(indyActor, player);
+			ClearThingFlags(player, 0x80000);
+			SetThingFlags(indyActor, 0x80000);
+            Sleep(0.5);
+			# end the scene
+			ClearActorFlags(player, 0x200000);
+			RestoreExtCam();
+			EndCutscene();
+        }
+
+
+	If ((GetSenderRef() == clearsect) && (GetSourceRef() == player))
+		{
+		scene = 1;
+		}
+    
+	If (GetSenderRef() == triggersurf0)
+		{
+        smoke = CreateThing(smoketemplate, dartgenpos0);
+		missile0 = CreateThing(dtemp, dartgenpos0);
+		CaptureThing(missile0);
+		PlaySoundThing(blast, missile0, 2.0, 0, 20, 0);
+		MoveToFrame(missile0, 1, 10);
+		Sleep(.25);
+		}
+	
+
+	If (GetSenderRef() == triggersurf1)
+		{
+		smoke = CreateThing(smoketemplate, dartgenpos1);
+        missile1 = CreateThing(dtemp, dartgenpos1);
+		CaptureThing(missile1);
+		PlaySoundThing(blast, missile1, 2.0, 0, 20, 0);
+		MoveToFrame(missile1, 1, 10);
+		Sleep(.25);
+		}
+	
+
+	If (GetSenderRef() == triggersurf2)
+		{
+		smoke = CreateThing(smoketemplate, dartgenpos2);
+        missile2 = CreateThing(dtemp, dartgenpos2);
+		CaptureThing(missile2);
+		PlaySoundThing(blast, missile2, 2.0, 0, 20, 0);
+		MoveToFrame(missile2, 1, 10);
+		Sleep(.25);
+		}
+
+return;
+
+# ========================================================================================
+arrived:
+
+    If (GetSenderRef() == missile0)
+        {
+            DestroyThing(missile0);
+            hitsound = PlaySoundLocal(tink, 0.1, -1, 0x0, 0);
+			#ChangeSoundPitch(hitsound, 6, 0);
+        }
+
+	If (GetSenderRef() == missile1)
+        {
+            DestroyThing(missile1);
+            hitsound = PlaySoundLocal(tink, 0.1, -1, 0x0, 0);
+			#ChangeSoundPitch(hitsound, 6, 0);
+        }
+
+    If (GetSenderRef() == missile2)
+        {
+            DestroyThing(missile2);
+            hitsound = PlaySoundLocal(tink, 0.1, -1, 0x0, 0);
+			#ChangeSoundPitch(hitsound, 6, 0);
+        }
+return;
+
+
+# ========================================================================================
+
+# ========================================================================================
+touched:
+
+
+if ((GetSenderRef() == missile0) && (GetSourceRef() == GetLocalPlayerThing()))
+    {
+    #Print("ouch");
+	DamageThing(GetSourceRef(), 150.0, 0x1, missile0);
+	
+	PlaySoundLocal(stab, 1.0, 0.0, 0x0, 0);
+	DestroyThing(missile0);
+	}
+
+
+if ((GetSenderRef() == missile1) && (GetSourceRef() == GetLocalPlayerThing()))
+    {
+    #Print("ouch");
+	DamageThing(GetSourceRef(), 150.0, 0x1, missile1);
+	
+	PlaySoundLocal(stab, 1.0, 0.0, 0x0, 0);
+	DestroyThing(missile1);
+	}
+
+
+if ((GetSenderRef() == missile2) && (GetSourceRef() == GetLocalPlayerThing()))
+    {
+    #Print("ouch");
+	DamageThing(GetSourceRef(), 150.0, 0x1, missile2);
+	
+	PlaySoundLocal(stab, 1.0, 0.0, 0x0, 0);
+	DestroyThing(missile2);
+	}
+	
+	
+return;
+
+
+
+# ========================================================================================
+# ========================================================================================
+
+end
+
+
+
+

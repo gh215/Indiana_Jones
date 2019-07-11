@@ -1,0 +1,65 @@
+# Jones 3D Cog Script
+#
+# pyr_getchain.cog
+#	
+# Get chain from Horner's shack
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+symbols
+message		activated
+
+# actors
+thing	player		nolink	local
+
+# world things
+thing	chain
+
+# cameras and lookthings
+thing	chaincam
+
+# sounds and saylines
+sound	chainsnd=pyr_chain_pickup.wav	local
+sound	drivechain=inxj188.wav			local
+
+end
+
+
+code
+activated:
+# ---> Chain	
+	if (GetThingFlags(chain) & 0x10) return;
+	
+	player = GetLocalPlayerThing();
+
+	# bring camera around, freeze Indy
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutscene(0);
+	SetExtCamOffsetToThing(chaincam);
+	Sleep(.5);
+	
+	# grab chain
+	PlayVoice(player, drivechain, 1, 0);
+	sleep(.75);
+	PlayMode(player, 60, 0);
+	sleep(.5);
+	PlaySoundThing(chainsnd, chain, 1, -1, -1, 0);
+	SetThingFlags(chain, 0x10);
+
+	# add chain to inventory
+	SetInvAvailable(player, 101, 1);
+	ChangeInv(player, 101, 1.0);
+	JonesInvItemChanged(101);
+	Sleep(0.5);
+		
+	# back to normal
+	RestoreExtCam();
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+    return;
+	
+end
+

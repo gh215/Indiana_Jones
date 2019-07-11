@@ -1,0 +1,58 @@
+# Jones 3D Cog Script
+#
+# gen_Slashvine_talk.cog
+#
+# Damage the face with Machete to allow move through. 
+# Added Indy sayline for bumping into.[SXC & DS]
+#
+# [TRM & SXC & DS]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+#...............MESSAGES.................
+	message		startup
+	message		entered
+
+
+#...............ACTORS.................
+	thing		player				local
+	
+#...............PROPS.................
+    thing		ledge				
+
+#...............SURFACE.................
+	surface		hangledge
+
+
+
+
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    ClearSurfaceFlags(hangledge, 0x1000000);
+
+return;
+
+# ========================================================================================
+
+entered:
+
+	if (GetSenderRef() != ledge) return;
+
+	Sleep(1.0);
+    SetSurfaceFlags(hangledge, 0x1000000);
+
+return;
+	
+# ========================================================================================
+
+end

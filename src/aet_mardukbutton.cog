@@ -1,0 +1,216 @@
+# Jones 3D Cog Script
+#
+# aet_MardukButton.cog
+#
+# [TL & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+    
+message     startup
+message		activated
+message		arrived
+
+sound		placeGem=aet_gem_place.wav		local	# Gem placement sound	
+sound		used_thing=at02j03.wav			local	# "...used this thing to charge his..."
+sound		whip=INXJ020.wav				local	# "I might be able to whip that thing..."	
+sound		probestart=aet_probe_start.wav	local
+sound		probestop=aet_probe_stop.wav	local
+sound		probemove=aet_probe_move.wav	local
+
+sound		in_switch=Inxj050.wav			local	# could be switch
+sound		in_keyhole=Inxj082.wav			local	# need key
+
+thing		player							local
+thing		indy									# Actor Indy
+
+thing		cam0							nolink	# Camera 
+thing		probecam						nolink
+thing		probetarg						nolink
+thing		m_cam1spot						nolink
+thing		m_cam1look						nolink
+thing		m_in_mk_1						nolink # where player ends up
+							
+thing		buttonA									# Button with no gem
+thing		buttonB									# Button with gem
+thing		probe									# Probe for whip
+thing		long_probe	
+
+cog			doortalkcog											
+
+flex		viewangle						local
+
+int			cursound						local
+int			done0=0							local
+int			curcam							local
+int			curitem							local
+int			sayline							local
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	SetThingFlags(buttonB, 0x80000);
+
+	AttachThingToThingEx(long_probe, probe, 0x000C); 	   
+    
+	global10 = 0; # <---INIT GLOBAL VAR
+
+	return;
+
+# ..............................................................................
+
+activated:
+
+	# Using Marduk's Medallion to lower probe...
+
+	if ((GetSenderRef() == buttonA) && (GetSourceRef() == player))
+	{
+		if (done0 != 0) 
+		{
+			return;
+		}
+
+		curitem = GetCurItem(player);
+		
+		if (curitem == 0)
+		{
+			# no item...
+			MakeMeStop();
+			DeselectWeaponWait(player);
+			StartCutscene(0);
+			SetExtCamOffsetToThing(1, cam0);
+			sayline = RandBetween(0, 1);
+			if (sayline == 0)
+			{
+				PlayVoice(player, in_switch, 1.0, 1);
+			}
+			else
+			{
+				PlayVoice(player, in_keyhole, 1.0, 1);
+			}
+
+			RestoreExtCam();
+			EndCutscene();  
+			ClearActorFlags(player, 0x200000);
+		}
+
+		if ((curitem != 111) && (curitem != 0))
+		{
+			# Trying wrong items...
+
+			MakeMeStop();
+			DeselectWeaponWait(player);
+			StartCutscene(0);
+			PlayMode(player, 60, 0);
+
+			global15 = 0;
+			SendMessageEx(doortalkcog, user3, player, 0, 0, 0);
+			while (global15 == 0)
+			{
+				# Wait for line to finish...
+				Sleep(0.01);
+			}
+			EndCutscene();  
+			ClearActorFlags(player, 0x200000);
+		}
+
+		if (GetCurItem(player) == 111)
+		{
+			done0 = 1;
+
+			# Using Marduk medallion...
+
+			MakeMeStop();
+			DeselectWeaponWait(player);
+			StartCutScene(1);
+			Sleep(0.01);
+
+			# Show placing gem...
+			MakeCamera2LikeCamera1(m_cam1spot, m_cam1look);
+			SetCameraLookInterp(2, 0);
+			SetCameraPosInterp(2, 0);
+			SetCameraFocus(2, m_cam1spot);
+			SetCameraSecondaryFocus(2, m_cam1look);
+
+			viewangle = GetCameraFOV();
+			SetCurrentCamera(2);
+			ResetCameraFOV(0, 0.0); # added 10/21/99 HB
+			SetCameraLookInterp(2, 1);
+			SetCameraPosInterp(2, 1);
+			SetCameraInterpSpeed(2, 0.7);
+			Sleep(0.01);
+			SetCameraFocus(2, cam0);
+			SetCameraSecondaryFocus(2, buttonB);
+					
+			# Make button with gem visible...
+			SetThingFlags(buttonA, 0x80000);
+			ClearThingFlags(buttonB, 0x80000);
+			PlaySoundThing(placeGem, buttonB, 1.0, -1, -1, 0);
+			ChangeInv(player, 111, -1);
+			PlayMode(player, 60, 0);	
+			Sleep(0.3);
+			MoveToFrame(buttonB, 1, 1.0);
+			MoveToFrame(probe, 1, 4.0); # long trip, start early
+			Sleep(1.5);
+
+			# Pan & Tilt to probe...
+			SetCameraInterpSpeed(2, 1.5);
+			Sleep(0.01);
+			SetCameraFocus(2, probecam);
+			SetCameraSecondaryFocus(2, probetarg);
+
+			PlaySoundLocal(probestart, 1.0, 0, 0x0, 0);
+			cursound = PlaySoundLocal(probemove, 1.0, 0, 0x1, 0);
+
+			# Continued in arrived...
+		}
+	}
+
+	return;
+
+# ..............................................................................
+
+arrived:
+
+	if ((GetSenderRef() == probe) && (GetCurFrame(probe) == 1) && (done0 == 1))
+	{
+		StopSound(cursound, 0.0);
+		PlaySoundLocal(probestop, 1.0, 0, 0x0, 0);
+		Sleep(1.0);
+
+		if (global10 == 0)
+		{
+			# Indy hasn't noticed charging yet...
+			PlayVoice(player, used_thing, 1.0, 1);
+		}
+		else
+		{
+			# Indy has already noticed...
+			PlayVoice(player, whip, 1.0, 1);
+		}
+		global10 = 1;
+		
+		# Back to play...
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		TeleportThing(player, m_in_mk_1);
+		SetCameraPosition(1, GetThingPos(probecam));
+		SetCurrentCamera(1);
+		ResetCameraFOV(0, 0.0);	
+
+		EndCutScene();
+		ClearActorFlags(player, 0x200000);
+	}
+
+	return;
+
+end
+

@@ -1,0 +1,105 @@
+# Jones 3D Cog Script
+#
+# gen_ElevCall.cog
+#
+# This Cog controls one elevator that can be summoned to any number of floors
+# A cog must be placed at each floor to be attached to the call button, the up and down
+# buttons, and the elevator.
+# You have to manually assign to each cog what floor level it is on.
+# Remember that the elevator's first frame is 0 even though your first floor may be one.
+#
+# [SxC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+
+symbols
+
+    message     startup
+	message     activate
+
+    thing       player                              local
+	thing	    button0                                      
+	thing	    button1
+    thing       swingpos                            nolink                                       
+                                                                
+    sound       offbuttonsound=aet_gem_place.wav    local                           
+                                           
+	int		    switch			                    local       //check variable for cog internal use
+    int         wepnum=1                            local
+    int         lastrand=-1                         local
+    int         currand=0                           local
+    int         screenit=0                          local
+                                                    
+    sound       indylineb0=inxj058.wav              local
+    sound       indylineb1=inxj059.wav              local
+    sound       indylineb2=inxj060.wav              local
+    sound       indylineb3=inxj061.wav              local
+    sound       indylineb4=inxj090.wav              local
+    sound       indylineb5=inxj095.wav              local
+    
+end
+
+# ........................................................................................
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    
+return;
+
+# ........................................................................................
+
+activate:
+
+    switch = GetSenderRef();
+    if (screenit == 1) return;
+    
+    If (screenit == 0)
+    {
+        screenit = 1;
+        
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player);
+            DeselectWeaponWait(player);
+            DeselectWeapon(player);
+            //printint(wepnum);
+        }
+        
+        SetExtCamOffsetToThing(swingpos);
+        PlayMode(player, 60, 0);
+        Sleep(0.35);
+        PlaySoundThing(offbuttonsound, switch, 1, 10, 20, 0x0080);
+        Sleep(0.35);
+        
+        currand = RandBetween(0, 5);
+        While (lastrand == currand)
+        {
+            currand = RandBetween(0, 5);
+        }
+        PlayVoice(player, indylineb0[currand], 1, 1);
+        lastrand = currand;
+        
+        EndCutscene();
+        RestoreExtCam();
+        ClearActorFlags(player, 0x200000);
+        
+        screenit=0;
+        wepnum=1;
+    }
+    
+return;
+
+# ........................................................................................
+
+end
+
+

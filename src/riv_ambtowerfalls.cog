@@ -1,0 +1,64 @@
+# Jones 3D Cog Script
+#
+# RIV_AmbTowerFalls.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    
+    thing       ambientPos1
+    thing       ambientPos2
+    
+    sector      sec_On1         linkID=1
+    sector      sec_On2         linkID=1
+    sector      sec_On3         linkID=1
+    
+    sector      sec_Off1        linkID=0
+    sector      sec_Off2        linkID=0
+    sector      sec_Off3        linkID=0
+    
+    sound       snd_Water=riv_h20_rapid_a.wav     local
+    
+    int         amb_Channel1    local
+    int         amb_Channel2    local
+    
+    int         playing=0      local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    # play waterfall ambient at full volume
+    if((GetSenderID() == 1) && (playing == 0))
+    {
+        Print("waterfall: full vol");
+        playing = 1;
+        amb_Channel1 = PlaySoundThing(snd_Water, ambientPos1, 1.0, 5, 18, 0x0001);
+        Sleep(0.5);
+        amb_Channel2 = PlaySoundThing(snd_Water, ambientPos2, 1.0, 5, 18, 0x0001);
+    }
+    
+    # stop waterfall ambient
+    if((GetSenderID() == 0) && (playing == 1))
+    {
+        Print("stopping waterfall");
+        playing = 0;
+        StopSound(amb_Channel1, 0.5);
+        StopSound(amb_Channel2, 0.5);
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

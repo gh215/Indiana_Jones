@@ -1,0 +1,32 @@
+# Jones 3D Cog Script
+#
+# gen_PlasmaMat.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+    message		startup
+    	
+	material	mat0=gen_4aplasma_jewel.mat			local       # animating plasma texture
+	material	mat1=gen_4aplasma_jewel_fade.mat	local       # animating plasma texture
+	
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+    MaterialAnim(mat0, 12.0, 0x1);
+    MaterialAnim(mat1, 12.0, 0x1);
+	return;
+
+# ========================================================================================
+
+end
+

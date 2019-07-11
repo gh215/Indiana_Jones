@@ -1,0 +1,680 @@
+# Jones 3D Cog Script
+#
+# sea_crane.cog
+#
+# [DS & revised by HB]
+#
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		activated
+	message		entered
+	message		exited
+	message		blocked
+	message		pulse
+
+	sound		in_nope0=inxj098.wav					local # It won't budge.
+	sound		in_nope1=inxj060.wav					local # Dont think thats right answer.
+	sound		in_nope2=inxj061.wav					local # Not sure good idea.
+	sound		in_didit=Inxj112.wav					local # That ought to do it.
+
+	sound		jewel0=se03j01.wav					local
+	sound		jewel1=se03j02.wav					local
+	int		noticed=0							local
+
+	sound		bridge_snd=nub_elev_move_c.wav			local
+	sound		bridge_stop=nub_elev_stopecho_c.wav			local
+	sound		crane_start=sea_crane_start_c.wav			local
+	sound		crane_snd=sea_crane_move_c.wav			local
+	sound		crane_stop=sea_crane_stop_c.wav			local
+	sound		hook_start=sea_hook_start_c.wav			local
+	sound		hook_snd=sea_hook_move_c.wav				local
+	sound		hook_stop=sea_hook_stop_c.wav				local
+	thing		player							local
+	thing		crane
+	thing		bridge
+	thing		hook
+	thing		switch0
+	thing 	switch1
+	thing 	switch2
+	thing		jewelcrate
+	thing		landing_crate
+	thing		plasma
+	thing		campos0									nolink
+	thing		campos1									nolink
+	thing		inviso_truck							nolink
+	thing		crane_ct_1								nolink
+	cog			hintcog
+	surface		pad
+	surface		control
+	material    mat0=gen_4aplasma_jewel.mat	local       # animating plasma texture
+	vector		vecX								local
+	vector		vecXneg							local
+	vector		vecY								local
+	vector		vecYneg							local
+	vector		vecZ								local
+	vector		vecZneg							local
+	vector		hookvec							local
+	flex		sleeptime								local
+	flex		endcam1									local # label
+	flex		endcam2									local # label
+	flex		cratesize									local
+	int			active=0								local
+	int			boommove=0								local
+	int			bridemove=0								local
+	int			hookmove=0								local
+	int			brgdist=0								local
+	int			crndist=0								local
+	int			hookdown=0								local
+	int			stopsnd									local
+	int			jewelattach=0							local
+	int			lifted=0								local
+	int			curcam									local
+	int			mechasnd								local
+	int			startsnd								local
+	int			bridgeshot								local
+	int			pulseon									local
+	int			prevswitch=0							local # activate workaround [HB]
+	int			hookMoved=0								local
+			
+#---------lighting effect-----------------------
+
+	thing		lightpos
+	
+	vector		vecMinLight								local
+	vector		vecWhtLight								local
+	vector		vecMaxRedLt								local
+
+	float		period=1.5								local	
+	float		LightR=0.8								local	
+	float		LightG=0.8								local
+	float		LightB=0.9								local
+
+	float		maxRedLightR=1.0						local	
+	float		maxRedLightG=0.0						local
+	float		maxRedLightB=0.0						local
+
+	float		minLightR=0.0							local
+	float		minLightG=0.0							local
+	float		minLightB=0.0							local
+
+	float		minRadius=0.1							local
+	float		maxRadius=2.0							local
+
+	float		hookZ									local
+#-----polyline and endpoints---------------
+
+	thing		beam0									local
+	thing		beam1									local
+	thing		st_beam0								nolink
+	thing		st_beam1								nolink
+	thing		endbeam0								nolink
+	thing		endbeam1								nolink
+
+	material	cablemat=fhead_rope_sde.mat				local
+	int		lightnum							local
+
+end
+
+#-------------------------------------------------------------------------------
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player = GetLocalPlayerThing();
+	vecMinLight = VectorSet(minLightR, minLightG, minLightB);
+	vecWhtLight = VectorSet(LightR, LightG, LightB);
+	vecMaxRedLt = VectorSet(maxRedLightR, maxRedLightG, maxRedLightB);
+	vecX = VectorSet(1.0, 0.0, 0.0);
+	vecXneg = VectorSet(-1.0, 0.0, 0.0);
+	vecY = VectorSet(0.0, 1.0, 0.0);
+	vecYneg = VectorSet(0.0,-1.0, 0.0);
+	vecZ = VectorSet(0.0, 0.0, 1.0);
+	vecZneg = VectorSet(0.0, 0.0,-1.0);
+	SetThingLight(lightpos, vecWhtLight, maxRadius, 0.2);
+	beam0 = CreatePolylineThing(st_beam0, endbeam0, '0 0 0', cablemat, .002, .002, 0);
+	beam1 = CreatePolylineThing(st_beam1, endbeam1, '0 0 0', cablemat, .002, .002, 0);
+	CaptureThing(beam0);
+	CaptureThing(beam1);
+	AttachThingToThing(endbeam0, hook);
+	AttachThingToThing(endbeam1, hook);
+	AttachThingToThing(beam0, crane);
+	AttachThingToThing(beam1, crane);
+	MaterialAnim(mat0, 9.0, 1);
+	AttachThingToThing(crane_ct_1, bridge); # glue cam target to bridge
+	cratesize=GetThingCollideSize(jewelcrate);
+
+	hookVec = GetThingPos(hook);
+	hookZ = VectorZ(hookvec);
+
+	return;
+
+# ..............................................................................
+
+activated:
+	if(GetSenderRef() == pad) return;				# Player on jewel pad area.
+	if(GetSenderRef() == jewelcrate)
+	{
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(0);
+
+	# ----- Set Cam Offset ---------
+	if (Rand() < 0.5)
+	{
+        SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+        SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 0.0');
+
+		if(noticed == 1)
+		{
+		PlayVoice(player, jewel1, 1.0, 1);
+		}
+		if(noticed == 0)
+		{
+		PlayVoice(player, jewel0, 1.0, 1);
+		noticed=1;
+		}
+
+	# ----- Reset Camera ----------
+	RestoreExtCam();
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+		return;
+	}
+	if (active == 1)
+	{
+		return;
+	}
+	active = 1;
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutscene(1);
+	PlayMode(player, 60, 0);
+
+	# Don't check for Indy moving during activation...
+	SetPulse(0.0);
+	pulseon = 0;
+
+	Sleep(0.2); # so activate gesture works
+
+	#-------------------------------Move Bridge---------------------------------
+
+	if (GetSenderRef() == switch0 || prevswitch == 10)
+	{
+		# This stupid workaround forces switch re-activation when Indy hasn't moved... [HB]
+		prevswitch = 10;
+
+		if ((hookdown == 1) || (jewelattach == 1))
+		{
+			PlayVoice(player, in_nope0, 1.0, 1);
+			goto endcam1;
+			return;
+		}
+
+		MovetoFrame(switch0, 1, 1);
+		WaitForStop(switch0);
+
+		# Substitute cam 2 for cam 1...
+		if (bridgeshot == 0)
+		{
+			SetCameraLookInterp(2, 0);
+			SetCameraFocus(2, campos0);
+			SetCameraSecondaryFocus(2, crane_ct_1);
+			SetCurrentCamera(2);
+			SetCameraFOV(110, 1, 1.0);
+			bridgeshot = 1;
+		}
+		
+		SetThingLight(lightpos, vecMinLight, maxRadius, 0.2);
+		lightnum = ThingLightAnim(lightpos, vecMinLight, minRadius, vecMaxRedLt, maxRadius, period);
+		mechasnd = PlaySoundThing(bridge_snd, bridge, 1, 10, 30, 1);
+
+		if (brgdist >= 8)
+		{
+			brgdist = 0;
+		}
+
+		if (brgdist <= 3)
+		{
+			MoveThing(bridge, VecXneg, 0.2, 2.0);
+			MoveThing(crane, VecXneg, 0.2, 2.0);
+			MoveThing(hook, VecXneg, 0.2, 2.0);
+			brgdist = (brgdist + 1);
+			Sleep(2.0);
+			MovetoFrame(switch0, 0, 1.0);
+			stopsnd = 0;
+
+			sleeptime = 0.2;
+			goto endcam2;
+		}
+
+		if (brgdist >= 4)
+		{
+			MoveThing(bridge, VecX, 0.2, 2.0);
+			MoveThing(crane, VecX, 0.2, 2.0);
+			MoveThing(hook, VecX, 0.2, 2.0);
+			brgdist = (brgdist + 1);
+			Sleep(2.0);
+			MovetoFrame(switch0, 0, 1.0);
+			stopsnd = 0;
+			
+			sleeptime = 0.2;
+			goto endcam2;
+		}
+	}
+
+	#-------------------------------Move Crane----------------------------------
+	
+	if (GetSenderRef() == switch1 || prevswitch == 11)
+	{		
+		prevswitch = 11; # workaround forces switch to re-activate when Indy hasn't moved [HB]
+		
+		if ((hookdown == 1) || (jewelattach == 1))
+		{
+			PlayVoice(player, in_nope0, 1.0, 1);
+			goto endcam1;
+			return;
+		}
+
+		MovetoFrame(switch1, 1, 1);
+		waitforstop(switch1);
+		
+		# Substitute cam 2 for cam 1...
+		if (bridgeshot == 0)
+		{
+			SetCameraLookInterp(2, 0);
+			SetCameraFocus(2, campos0);
+			SetCameraSecondaryFocus(2, crane_ct_1);
+			SetCurrentCamera(2);
+			SetCameraFOV(110, 1, 1.0);
+			bridgeshot = 1;
+		}
+		
+		SetThingLight(lightpos, vecMinLight, maxRadius, 0.2);
+		lightnum = ThingLightAnim(lightpos, vecMinLight, minRadius, vecMaxRedLt, maxRadius, period);
+		mechasnd = PlaySoundThing(crane_snd, crane, 1.0, 10, 30, 1);
+		if (crndist >= 12)
+		{
+			crndist=0;
+		}
+		if (crndist >= 6)
+		{
+			MoveThing(crane, vecYneg, 0.15, 2.0);
+			MoveThing(hook, vecYneg, 0.15, 2.0);
+			crndist= (crndist)+1;
+			Sleep(2.0);
+			MovetoFrame(switch1, 0, 1);
+			stopsnd = 1;
+			sleeptime = 0.2;
+			goto endcam2;
+		}
+		if (crndist <= 5)
+		{
+			MoveThing(crane, vecY, 0.15, 2.0);
+			MoveThing(hook, vecY, 0.15, 2.0);
+			crndist= (crndist)+1;
+			Sleep(2.0);
+			MovetoFrame(switch1, 0, 1);
+			stopsnd = 1;
+			sleeptime = 0.2;
+			goto endcam2;
+		}
+	}
+
+	#-------------------------------Move Hook-----------------------------------
+	
+	if (GetSenderRef() == switch2 || prevswitch == 12)
+	{	
+		prevswitch = 12; # workaround forces switch to re-activate when Indy hasn't moved [HB]
+
+		if (lifted == 1)
+		{
+			PlayVoice(player, in_nope2, 1.0, 1);
+			goto endcam1;
+			return;
+		}
+
+		if ((brgdist == 2) || (brgdist == 6))
+		{
+			if ((crndist == 5) || (crndist == 7))
+			{
+				# Position set to attach jewel crate...
+				jewelattach=1;
+			}
+		}
+					
+		if (jewelattach == 0)
+		{		
+			if (bridgeshot == 0)
+			{
+				# Do standard wide angle...
+				SetCameraLookInterp(2, 0);
+				SetCameraFocus(2, campos0);
+				SetCameraSecondaryFocus(2, crane_ct_1);
+				SetCurrentCamera(2);
+				SetCameraFOV(110, 1, 1.0);
+				bridgeshot = 1;
+			}
+		}
+		else
+		{	
+			# Cut to shot of hook attaching to jewel crate...					
+			SetCameraLookInterp(2, 0);
+			SetCameraPosInterp(2, 0);
+			SetCameraFocus(2, campos1);
+			SetCameraSecondaryFocus(2, hook);
+			SetCurrentCamera(2);
+			SetCameraFOV(90, 0, 0.0);
+			Sleep(0.01);
+			SetCameraFOV(80, 1, 4.0);
+		}
+	
+		MovetoFrame(switch2, 1, 1);
+		waitforstop(switch2);
+
+		# Lower hook if it's in the up position...
+		if (hookdown == 0)
+		{
+			hookvec = GetThingPos(hook);
+			hookvec = VectorSet(VectorX(hookVec), VectorY(hookVec), hookZ);
+			SetThingLight(lightpos, vecMinLight, maxRadius, 0.2);
+			lightnum = ThingLightAnim(lightpos, vecMinLight, minRadius, vecMaxRedLt, maxRadius, period);
+			startsnd=PlaySoundThing(hook_start, hook, 1.0, 10, 30, 0);
+			waitforsound(startsnd);
+
+			hookMoved = 0;
+
+		#===================================================================
+		# To handle geometry collision problem.
+		#===================================================================
+ 			if((brgdist == 0) || (brgdist == 8) || (crndist <= 1) || (crndist == 6) || (crndist >= 11))
+			{
+				// Hook is above upper platform.
+				MoveThing(hook, vecZneg, 0.220, 2.0);
+				hookMoved = 1;
+			}
+			else
+			{
+
+		#===================================================================
+		# To handle 3do collision problem.
+		#===================================================================
+				if((brgdist == 1) || (brgdist == 7))
+				{
+					if((crndist == 5) || (crndist == 7))
+					{
+						// Hook is above crates.
+						MoveThing(hook, vecZneg, 0.415, 4.0);
+						hookMoved = 1;
+					}
+					if ((crndist == 2) || (crndist == 10))
+					{
+						// Hook is above the truck.
+						MoveThing(hook, vecZneg, 0.515, 4.0);
+						hookMoved = 1;
+					}
+				}
+
+		#===================================================================
+		# To handle Jewel Crate collision.
+		#===================================================================
+				if ((brgdist == 2) || (brgdist == 6))
+				{
+					if ((crndist == 5) || (crndist == 7))
+					{
+						MoveThing(hook, vecZneg, 0.615, 4.0);
+						hookMoved = 1;
+					}
+					if ((crndist == 2) || (crndist == 10))
+					{
+						MoveThing(hook, vecZneg, 0.625, 4.0);
+						hookMoved = 1;
+					}
+				}
+			}
+
+			if (!hookMoved)
+			{
+				// Hook isn't above anything.
+				MoveThing(hook, vecZneg, 0.815, 4.0);
+			}
+
+			PlaySoundThing(hook_snd, hook, 1.0, 10, 30, 0);
+			hookdown = 1;
+
+		#===================================================================
+		# Attaching To Jewel Crate.
+		#===================================================================
+
+			if (jewelattach == 1)
+			{
+				SendMessageEx(hintcog, user2, 1, 0, 0, 0); # param0=1; crate attach
+				
+				Sleep(4.0);
+				MovetoFrame(switch2, 0, 1);
+				PlaySoundThing(bridge_stop, jewelcrate, 1, 10, 30, 0);
+				Sleep(1.0);
+				AttachThingToThing(jewelcrate, hook);
+				
+				# Back to follow-cam...
+				SetCameraFOV(90, 0, 0.0); # camera 2
+				SetCurrentCamera(1);		
+				ResetCameraFOV(0, 0.0);
+				bridgeshot = 0;
+				SetPulse(0.0);
+				pulseon = 0;
+
+				goto endcam1;
+
+				return;
+			}
+		
+			goto endcam1;
+
+			return;
+		}
+
+		if (hookdown == 1)
+		{
+			# Cut to camera2 coverage...
+			if (jewelattach == 0)
+			{	
+				# No special camera coverage when crate is not attached to hook...
+				if (bridgeshot == 0)
+				{
+					SetCameraLookInterp(2, 0);
+					SetCameraPosInterp(2, 0);
+					SetCameraFocus(2, campos0);
+					SetCameraSecondaryFocus(2, crane_ct_1);
+					SetCurrentCamera(2);
+					SetCameraFOV(110, 1, 1.0);
+					bridgeshot = 1;
+				}
+			}
+			else
+			{
+				# Pay attention if jewel crate is attached...
+				SetCameraLookInterp(2, 0);
+				SetCameraPosInterp(2, 0);
+				SetCameraFocus(2, campos1);
+				SetCameraSecondaryFocus(2, hook);
+				SetCameraFOV(90, 0, 0.0);
+				Sleep(0.01);
+				SetCameraFOV(80, 1, 2.0);				
+			}
+
+			startsnd=PlaySoundThing(hook_start, hook, 1.0, 10, 30, 0);
+			WaitForSound(startsnd);
+			MoveThingToPos(hook, hookvec, 4.0);
+			PlaySoundThing(hook_snd, hook, 1.0, 10, 30, 0);
+			hookdown = 0;
+			Sleep(2.5);
+
+			if (jewelattach == 1)
+			{
+				SetCameraFOV(100, 1, 1.5);
+			}
+			Sleep(1.5);
+
+			MovetoFrame(switch2, 0, 1);
+
+			if (jewelattach == 1)
+			{
+				SendMessageEx(hintcog, user2, 2, 0, 0, 0); # param0=2; crate up
+				lifted = 1;
+				PlaySoundThing(bridge_stop, jewelcrate, 1, 10, 30, 0); 
+				StopAnim(lightnum);
+				SetThingLight(lightpos, vecWhtLight, maxRadius, 0.5);
+				Sleep(1.0);
+
+				# Back to follow-cam...
+				SetCameraFOV(90, 0, 0.0); # camera 2
+				SetCurrentCamera(1);		
+				ResetCameraFOV(0, 0.0);
+				bridgeshot = 0;
+				SetPulse(0.0);
+				pulseon = 0;
+				Sleep(0.5);
+				
+				PlayVoice(player, in_didit, 1.0, 1);
+				goto endcam1;
+			}
+			else
+			{
+				stopsnd = 2;
+				sleeptime = 0.1;
+				goto endcam2;
+			}
+
+			return;
+		}
+
+		return;
+	}
+
+	goto endcam1;
+
+	return;
+
+# ..............................................................................
+
+blocked:
+
+	if(getsenderref() == hook)
+	{
+		StopThing(hook);
+	}
+
+	return;
+
+# ..............................................................................
+
+entered:
+if ((GetSenderRef() == landing_crate) && (GetSourceRef() == player)) 
+	{
+		SetThingCollideSize(jewelcrate, cratesize);
+		SetCollideType(inviso_truck, 0);
+		return;
+	}
+if ((GetSenderRef() == pad) && (GetSourceRef() == player)) 
+	{
+		SetThingCollideSize(jewelcrate, 0.015);
+		JewelFlyingStatus(1, plasma); # Enable jewel flying
+	}
+
+	return;
+
+# ..............................................................................
+
+exited:
+
+if ((GetSenderRef() == pad) && (GetSourceRef() == player)) 
+	{
+		JewelFlyingStatus(0, plasma); # Disable jewel flying
+	}
+
+	return;
+
+# ..............................................................................
+
+pulse:
+
+	if ((IsMoving(player) != 0) && (pulseon == 1)) 
+	{
+		SetCameraFOV(90, 0, 0.0); # camera 2
+		SetCurrentCamera(1);
+		ResetCameraFOV(0, 0.0);
+		bridgeshot = 0;
+		SetPulse(0.0);
+		pulseon = 0; # no more checking on Indy moving
+		prevswitch = 0; # no more switch re-activating
+	}
+
+	return;
+
+#--------------Jewel Pad--------------------------------------------------------
+#--------------End cameras------------------------------------------------------
+
+endcam1:
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	active = 0;
+
+	if (pulseon == 0 && lifted == 0)
+	{
+		# Check on Indy moving...
+		SetPulse(0.2);
+		pulseon = 1;
+	}
+
+	return;
+
+# ..............................................................................
+
+endcam2:
+
+	Sleep(sleeptime); # was 2.2
+	StopAnim(lightnum);
+	SetThingLight(lightpos, vecWhtLight, maxRadius, 0.5);
+	StopSound(mechasnd, 0);
+	if (stopsnd == 0)
+	{
+		PlaySoundThing(bridge_stop, bridge, 1, 10, 30, 0);
+	}
+	if (stopsnd == 1)
+	{
+		PlaySoundThing(crane_stop, crane, 1, 10, 30, 0);
+	}
+	if (stopsnd == 2)
+	{
+		PlaySoundThing(hook_stop, hook, 1, 10, 30, 0);
+	}
+	Sleep(1.0);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	active = 0;
+
+	if (pulseon == 0 && lifted == 0)
+	{
+		# Check on Indy moving...
+		SetPulse(0.2);
+		pulseon = 1;
+	}
+
+	return;
+
+end
+

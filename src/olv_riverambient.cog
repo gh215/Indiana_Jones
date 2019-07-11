@@ -1,0 +1,115 @@
+# Jones 3D Cog Script
+#
+# olv_RiverAmbient.cog
+#
+# Plays a sound at a one or more locations
+#
+# [IS]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	timer
+	message	entered
+	message	startup
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+	thing		soundPos2		nolink
+	thing		soundPos3		nolink
+	thing		soundPos4		nolink
+	thing		soundPos5		nolink
+	thing		soundPos6		nolink
+	thing		soundPos7		nolink
+	thing		soundPos8		nolink
+	thing		soundPos9		nolink
+	thing		soundPos10		nolink
+	thing		soundPos11		nolink
+	thing		soundPos12		nolink
+	thing		soundPos13		nolink
+	thing		soundPos14		nolink
+	thing		soundPos15		nolink
+	thing		soundPos16		nolink
+	thing		soundPos17		nolink
+	thing		soundPos18		nolink
+	thing		soundPos19		nolink
+
+	sound		wav0=olv_stream_a.wav	local
+
+	float		minDist=5		local
+	float		maxDist=25		local
+	float		volume=.4		local
+	int		cnt			local
+	int		stream_snd0		local
+	int		stream_snd1		local
+	int		stream_snd2		local
+	int		stream_snd3		local
+	int		stream_snd4		local
+	int		stream_snd5		local
+	int		stream_snd6		local
+	int		stream_snd7		local
+	int		stream_snd8		local
+	int		stream_snd9		local
+	int		stream_snd10		local
+	int		stream_snd11		local
+	int		stream_snd12		local
+	int		stream_snd13		local
+	int		stream_snd14		local
+	int		stream_snd15		local
+	int		stream_snd16		local
+	int		stream_snd17		local
+	int		stream_snd18		local
+	int		stream_snd19		local
+	int		ready_on			local
+	sector	off_sec
+	sector	on_sec
+end
+
+code
+
+# ........................................................................................
+
+startup:
+
+	settimer(0.5);
+	return;
+
+# ........................................................................................
+
+timer:
+
+	for (cnt = 0; cnt <= 19; cnt = cnt+1) 
+        {
+		stream_snd0[cnt]=-1;
+		if (soundPos0[cnt] >= 0)
+		{
+			stream_snd0[cnt]=PlaySoundThing(wav0, soundPos0[cnt], volume, minDist, maxDist, 0x045);
+		}
+		ready_on=1;
+	    }
+        
+	return;
+
+entered:
+	If(GetSenderRef() == off_sec)
+	{
+		for (cnt = 0; cnt <= 19; cnt = cnt+1) 
+      	{
+			if(stream_snd0[cnt]!= -1)
+			{
+				StopSound(stream_snd0[cnt], 0.1);
+				stream_snd0[cnt]=-1;
+			}
+		ready_on=0;
+		}
+	}
+	If(GetSenderRef() == on_sec)
+	{
+	if(ready_on == 1) return;
+		SetTimer(0.1);
+	}
+	return;
+
+end
+

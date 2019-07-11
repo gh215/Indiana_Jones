@@ -1,0 +1,208 @@
+# Jones 3D Cog Script
+#
+# INF_MirrorBall.cog
+# Controls the mirrorball lightning trap
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+    message     entered
+    message     exited
+    message     timer
+    message     crossed
+    message     user0
+    
+    thing       player                                      local
+    
+    thing       mirrorball
+    
+    thing       pad0        linkid=3
+    thing       pad1        linkid=3
+    thing       pad2        linkid=3
+    thing       pad3        linkid=3
+    thing       pad4        linkid=3
+    thing       pad5        linkid=3
+    thing       pad6        linkid=3
+    thing       pad7        linkid=3
+    
+    thing       powerbutton0        linkid=4
+    thing       powerbutton1        linkid=4
+    
+    surface     offsurf0
+    surface     offsurf1
+    
+    surface     onsurf0
+    surface     onsurf1
+    
+    thing       generation_point
+    
+    thing       lightning_strike                            local
+    
+    template    sparks=bluesparks      						local
+    template    smoke0=+pistol_smoke1						local
+    template	lighthit=+lightninghit						local
+    
+    material	lightningmat0=inf_4sfx_lightning_a.mat	    local
+    material	lightningmat1=inf_4sfx_lightning_b.mat	    local
+    material	lightningmat2=inf_4sfx_lightning_c.mat	    local
+    material	lightningmat3=inf_4sfx_lightning_d.mat	    local
+        
+    sound		contact0=gen_lightning_contact_c.wav		local
+    sound       contact1=gen_lightning_contact_c.wav        local
+    sound       contact2=aet_lightning_04.wav               local
+    
+    int         count=0                                     local
+    int         cnt=0                                       local
+    int         target=0                                    local
+    int         offflag=0                                   local
+    
+    vector      player_pos                                  local
+    
+    keyframe    inShocked=in_activate_medium_shock.key		local
+     
+end
+
+
+code
+
+#........................................................................................
+
+startup:
+
+    player = GetLocalPlayerThing();
+    SetTimer(1);
+    
+return;
+
+#........................................................................................
+
+timer:
+
+    PlaySoundThing(contact0[RandBetween(0, 2)], mirrorball, 1, 5, 15, 0);
+    
+    //normal operation
+    if (target == 0)
+    {
+        for (cnt = 4; cnt <= RandBetween(5, 12); cnt = cnt + 1)
+        {
+            lightning_strike = CreatePolylineThing(pad0[RandBetween(0, 7)], generation_point, '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+            Sleep(0.05); 
+        }
+        SetTimer(1);
+    }
+    
+    //indy is on a pad and is visible
+    if ((target == 1) && (IsInvisible() == 0) && (offflag == 0))
+    {
+        //print("indy gets hit");
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        PlaySoundThing(contact0, mirrorball, 1, 5, 15, 0);
+        player_pos = VectorAdd(GetThingPos(player), '0 0 0.05');
+        CreateThingAtPos(sparks, GetThingSector(player), player_pos, '0 0 0');
+	    CreateThingAtPos(smoke0, GetThingSector(player), player_pos, '0 0 0');
+	    CreateThingAtPos(lighthit, GetThingSector(player), player_pos, '0 0 0');
+        DamageThing(player, 2000, 0x2, mirrorball);
+        //PlayKey(player, inShocked, 4, 0x12, 0);
+        for (cnt = 4; cnt <= RandBetween(5, 12); cnt = cnt + 1)
+        {
+            CreatePolylineThing(generation_point, player, '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+            Sleep(0.05); 
+        }
+        ClearActorFlags(player, 0x200000);
+        SetTimer(1);
+    }
+    
+    //indy is on a pad and is invisible
+    if ((target == 1) && (IsInvisible() == 1))
+    {
+        for (cnt = 4; cnt <= RandBetween(5, 12); cnt = cnt + 1)
+        {
+            lightning_strike = CreatePolylineThing(pad0[RandBetween(0, 7)], generation_point, '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+            Sleep(0.05); 
+        }
+        SetTimer(1);
+        
+    }
+    
+return;
+
+#........................................................................................
+
+entered:
+
+    //print("indy's current visibility is");
+    //printint(IsInvisible());
+    //print("setting target to 1");
+    target = 1;
+    
+return;
+
+#........................................................................................
+
+exited:
+
+    //print("indy's current visibility is");
+    //printint(IsInvisible());
+    //print("setting target to 0");
+    target = 0;
+    
+return;
+
+#........................................................................................
+
+crossed:
+    
+    if (((GetSenderRef() == offsurf0) || (GetSenderRef() == offsurf1)) && (offflag == 0))
+    {
+        SetTimer(0);
+    }
+    
+    if (((GetSenderRef() == onsurf0) || (GetSenderRef() == onsurf1)) && (offflag == 0))
+    {
+        SetTimer(1);
+    }
+    
+return;
+    
+#........................................................................................
+
+activate:
+
+    if ((GetSenderID() == 4) && (offflag == 0))
+    {
+        offflag = 1;
+        MoveToFrame(powerbutton0, 1, 1);
+        MoveToFrame(powerbutton1, 1, 1);
+        WaitForStop(powerbutton1);
+        SetTimer(0);
+        //print("shutting off the power to the eyeball");
+    }
+    
+return;
+
+#........................................................................................
+
+user0:
+
+    if (offflag == 0)
+    {
+        offflag = 1;
+        MoveToFrame(powerbutton0, 1, 1);
+        MoveToFrame(powerbutton1, 1, 1);
+        WaitForStop(powerbutton1);
+        SetTimer(0);
+        //print("shutting off the power to the eyeball");
+    }
+    
+return;    
+
+#........................................................................................
+
+end

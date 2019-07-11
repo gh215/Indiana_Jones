@@ -1,0 +1,58 @@
+
+# Jones 3D Cog Script
+#
+# gen_SlashWeb.cog
+#
+# [TRM] [TL] [GGJ]
+#
+#	Modified so that hang ledge isn't hangable until after slashed.
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+    
+message     startup
+thing		tapRod
+#message     damaged
+
+#surface     tap							mask=0x8
+#surface	    tapback						mask=0x8
+#surface		hangLedge
+
+#sound		rip=gen_tapestry_rip_c.wav	local
+
+#int         type						local
+#int         player						local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+SetCollideType(tapRod, 0);
+
+#ClearSurfaceFlags(hangLedge, 0x1000000);
+#player = GetLocalPlayerThing();
+    
+return;
+    
+# ........................................................................................
+#damaged:
+
+# See if damage is from machete -- RT
+#if (GetParam(1) == 0x20)
+#{
+#    PlaySoundLocal(rip, 1.0, 0, 0x0000, 0);
+#	SetWallCel(tap, 1);
+#	SetWallCel(tapback, 1);
+#    SetAdjoinFlags(tap, 2);
+#	setadjoinflags(tapback, 2);
+#    SetSurfaceFlags(hangLedge, 0x1000000);
+#}
+	
+#return;
+
+# ........................................................................................
+end
+

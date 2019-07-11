@@ -1,0 +1,144 @@
+# Jones 3D Cog Script
+#
+# com_Fists.cog
+#
+# This COG controls fists for bad guys.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		fire
+message		activated
+message		deactivated
+message		selected
+message		deselected
+
+template	projectile=+fists			local			
+
+thing		bandito						local
+
+flex		fireWait					local
+
+int			numFires=0					local
+int			nextFist=0					local
+int			pupMode						local
+
+end
+
+# ===================================================================
+code
+
+# -------------------------------------------------------------------
+fire:
+
+	bandito = GetSourceRef();
+
+	# If he's done firing, deactivate the weapon
+	numFires = GetThingUserData(bandito);
+	if (numFires == 0)
+	{
+		DeactivateCurWeapon(bandito);
+		return;
+	}
+
+	# If the message is from the weapons system, pick animation
+	if (GetParam(0) != -1)
+	{
+		# Select-o-punch
+		if (nextFist == 0)
+		{
+			if (Rand() < 0.5)
+			{
+				pupMode = 65;
+				fireWait = 0.57; 
+			
+			} else {
+				
+				pupMode = 66;
+				fireWait = 0.5; 
+			}
+
+		} else {
+
+			if (Rand() < 0.5)
+			{
+				pupMode = 67;
+				fireWait = 0.7; 
+			
+			} else {
+				
+				pupMode = 68;
+				fireWait = 0.7; 
+			}
+		}
+
+		nextFist = 1 - nextFist;
+
+		SetFireWait(bandito, fireWait);
+		PlayMode(bandito, pupMode, 0);
+
+		return;
+	}
+
+	# Actual firing takes place when we get the callback...
+	FireProjectile(bandito, projectile, -1, -1, GetThingPos(bandito), '0 0 0', 1.0, 0x0, 0.0, 0.0);
+
+	# Set the number of shots left
+	numFires = numFires - 1;
+	SetThingUserData(bandito, numFires);
+
+	return;
+
+
+# -------------------------------------------------------------------
+activated:
+
+	bandito = GetSourceRef();
+	
+	SetThingUserData(bandito, GetParam(0)); 
+	ActivateWeapon(bandito, 0.5);
+
+	return;
+
+
+# -------------------------------------------------------------------
+deactivated:
+
+	bandito = GetSourceRef();
+
+	SetThingUserData(bandito, 0); 
+	DeactivateWeapon(bandito);
+
+	return;
+
+
+# -------------------------------------------------------------------
+selected:
+
+	bandito = GetSourceRef();
+
+	SetThingFireOffset(bandito, '0.0 0.0 0.0');
+	SetArmedMode(bandito, 0);
+	PlayMode(bandito, 62, 0);
+
+	SetAimWait(bandito, 0.5);
+
+	return;
+
+
+# -------------------------------------------------------------------
+deselected:
+
+	bandito = GetSourceRef();
+
+	StopMode(bandito, 62, 0);
+	SetThingFireOffset(bandito, '0 0 0');
+
+	return;
+
+end

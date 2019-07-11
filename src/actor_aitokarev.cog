@@ -1,0 +1,316 @@
+# ===================================================================
+# Jones 3D Cog Script
+#
+# actor_AITokarev.cog
+#
+# [RandyT]
+#
+# Actor script for any AI with a Tokarev pistol.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ===================================================================
+
+symbols
+
+message		created
+message		damaged
+message		killed
+message		timer
+
+# ************************** TEMPLATES *************************
+template	tplGun=tokarev				local
+template	tplPoisonKit=poisonkit		local
+template	tplHealthKit=hlthsml		local
+template	tplFire=+bazooka_exp_fire	local
+template	tplSmoke=+bazooka_exp_smoke	local
+template	tplSparks=lavadeathsparks	local
+
+# ************************** WEAPON HANDLERS *******************
+int			weaponNum=20				local
+int			damageType					local
+
+# ************************** AI VARS ***************************
+ai			fists=com_fists.ai			local
+
+int			TIMER_ID_WAKEUP_NORMAL=0	local
+int			TIMER_ID_WAKEUP_AND_DIE=1	local
+
+# ************************** MISC LOCAL VARS *******************
+thing		bandito						local
+thing		indy						local
+thing		powerup						local
+
+int			timerID						local 
+int			index						local
+int			numSmallKits				local
+int			numBigKits					local
+int			kitTotal					local
+int			bItemCreated				local
+
+flex		indyHealth					local
+flex		kitChance					local
+
+vector		dir							local
+vector		randVec						local
+
+# ************************** SUBROUTINES ***********************
+flex		Disarm						local
+flex		WhipIt						local
+flex		PushIt						local
+flex		GetKitChance				local
+flex		CheckHealthBins				local
+
+end
+
+# ===================================================================
+code
+
+# -------------------------------------------------------------------
+created:
+
+	bandito = GetSenderRef();
+	indy = GetLocalPlayerThing();
+
+	SetWeaponModel(bandito, weaponNum);
+	SelectWeapon(bandito, weaponNum);
+
+	AIEnableInstinct(bandito, "circlestrafe", 0);
+	AIEnableInstinct(bandito, "roam", 0);
+
+	return;
+
+# -------------------------------------------------------------------
+damaged:
+
+	bandito = GetSenderRef();
+	damageType = GetParam(1);
+
+	# Been whipped?
+	if (damageType == 0x10)
+	{
+		call Disarm;
+	}
+
+	# Been punched?
+	else if (damageType == 0x08)
+	{
+		if ((GetParam(0) < GetThingHealth(bandito)) && (GetParam(0) * 2) > GetThingHealth(bandito))
+		{
+			# Make sure thing's not already disabled
+			if (BITTEST(GetActorFlags(bandito), 0x40008)) return;
+
+			call Disarm;
+
+			# Play dead
+			AIKnockOut(bandito, RandBetween(10, 30), TIMER_ID_WAKEUP_NORMAL);
+		}
+	}
+
+	# Jeep or MineCar hit us
+	else if (damageType == 0x02000000)
+	{
+		# If invulnerable or immobile, ignore -- avoids multiple collision problem
+		if (BITTEST(GetActorFlags(bandito), 0x40008))
+		{ 
+			ReturnEx(0);
+			return;
+		}
+		else if (GetParam(0) >= GetThingHealth(bandito))
+		{
+			call Disarm;
+
+			# Pause long enough to land
+			AIRunOver(bandito, RandBetween(5, 6), TIMER_ID_WAKEUP_AND_DIE);
+			ReturnEx(0);
+			return;
+		}
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+killed:
+
+	bandito = GetSenderRef();
+	damageType = GetParam(1);
+
+	# Killed by lava?
+	if (damageType == 0x200)
+	{
+		Sleep(0.1);
+		CreateThing(tplFire, bandito);
+		Sleep(0.3);
+		CreateThing(tplSmoke, bandito);
+		SetThingFlags(bandito, 0x80000);
+
+		for (index = 0; index < 10; index = index + 1)
+		{
+			CreateThing(tplSparks, bandito);
+			Sleep(0.03);
+		}
+	}
+	else
+	{
+		call Disarm;
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+timer:
+
+	bandito = GetParam(0);
+	timerID = GetSenderId();
+
+	if (timerID == TIMER_ID_WAKEUP_NORMAL)
+	{
+		# Knocked out but not killed
+		AIKnockOut(bandito, 0, TIMER_ID_WAKEUP_NORMAL);
+		SetHealth(bandito, 100.0);
+	}
+	else if (timerID == TIMER_ID_WAKEUP_AND_DIE)
+	{
+		# Make sure not invulnerable
+		ClearActorFlags(bandito, 0x8);
+		# Using scrape damage to avoid infinite loop
+		DamageThing(bandito, GetThingMaxHealth(bandito), 0x1000000, GetLocalPlayerThing());
+	}
+
+	return;
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+Disarm: # Note: damageType must already be set!
+
+    bItemCreated = 0;
+
+	if (AIGetArmedMode(bandito) != 0)
+	{
+		# Swap the gun back out
+		ResetWeaponModel(bandito);
+
+		# A whipped gun behaves a bit differently...
+		if (damageType == 0x10)
+		{
+			powerup = CreateThing(tplGun, bandito);
+			call WhipIt;
+			return;
+		}
+		# We're roadkill...
+		else if (damageType == 0x02000000)
+		{
+			powerup = CreateThing(tplGun, bandito);
+			call PushIt;
+			return;
+		}
+
+		# Check our chances of dropping a health kit
+		call GetKitChance;
+
+		# Create a new weapon, or maybe a health or snake bite kit
+		if (Rand() > kitChance)
+		{
+			powerup = CreateThing(tplGun, bandito);
+			call PushIt;
+		}
+		else
+		{
+			# Is Indy poisoned?
+			if (BitTest(GetActorFlags(indy), 0x2000))
+			{
+				# Have any poison kits?
+				if (GetInv(indy, 46) < 1)
+				{
+					if (Rand() < 0.25)
+					{
+						powerup = CreateThing(tplPoisonKit, bandito);
+						call PushIt;
+						return;
+					}
+				}
+			}
+			
+			# If we haven't created anything yet...
+			if (!bItemCreated)
+			{
+				# See what Indy's already holding
+				call CheckHealthBins;
+
+				if (kitTotal <= 30)
+					powerup = CreateThing(tplHealthKit, bandito);
+                else
+					powerup = CreateThing(tplGun, bandito);
+                
+				call PushIt;
+			}
+		}
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+WhipIt: # Note: powerup must already be initialized!
+
+	# Push powerup towards Indy...
+	dir = VectorAdd(GetThingPos(GetLocalPlayerThing()), '0.0 0.0 0.75');
+	dir = VectorScale(VectorSub(dir, GetThingPos(powerup)), 4.75);
+	ApplyForce(powerup, dir);
+
+	# Time for fists...
+	AISetClass(bandito, fists);
+	SelectWeapon(bandito, 19);
+
+	return;
+
+# -------------------------------------------------------------------
+
+PushIt: # Note: powerup must already be initialized!
+
+	# Push powerup away a little...
+	dir = VectorTransformToOrient(bandito, '-0.17 0.0 0.0');
+	randVec = VectorSet(0, Rand() * 360, 0);
+	dir = VectorRotate(dir, randVec);
+	SetThingVel(powerup, dir);
+
+	# Time for fists...
+	AISetClass(bandito, fists);
+	SelectWeapon(bandito, 19);
+	bItemCreated = 1;
+
+	return;
+
+# -------------------------------------------------------------------
+
+GetKitChance:
+
+	indyHealth = GetThingHealth(indy);
+	if (indyHealth >= 750.0) kitChance = 0.05; 
+	else if (indyHealth >= 500.0) kitChance = 0.1;
+	else if (indyHealth >= 250.0) kitChance = 0.15;
+	else kitChance = 0.25;
+
+	return;
+
+# -------------------------------------------------------------------
+
+CheckHealthBins:
+
+	kitTotal = 0;
+
+	numSmallKits = GetInv(indy, 39);				# Small herbs
+	numSmallKits = numSmallKits + GetInv(indy, 49);	# Small health
+
+	numBigKits = GetInv(indy, 38);					# Big herbs
+	numBigKits = numBigKits + GetInv(indy, 48);		# Big health
+
+	numSmallKits = numSmallKits * 5;
+	numBigKits = numBigKits * 10;
+
+	kitTotal = numSmallKits + numBigKits;
+
+	return;
+
+end

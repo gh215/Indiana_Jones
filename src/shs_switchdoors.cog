@@ -1,0 +1,243 @@
+# Jones 3D Cog Script
+#
+# shs_SwitchDoors.cog
+#
+# Bulletproofed Two-Way Door Script
+#
+# [RT & CMG]
+#
+# (C) 1999 LucasArts Entertainment Co. LLC All Rights Reserved
+# ===================================================================
+symbols
+
+message	startup
+message	activated
+message	arrived
+message	touched
+message	timer
+
+# ************************* SOUNDS *************************
+
+sound	click=sol_panel_switch_c.wav		local
+sound	open_squeak=sea_doors_open_c.wav	local
+sound	close_squeak=sea_doors_close_c.wav	local
+
+# ************************* THINGS *************************
+
+thing	door
+thing	button0
+thing	button1
+
+thing	player			local
+thing	sender			local
+
+# *********************** MISCELLANY ***********************
+
+sector	doorSector		local
+
+flex	doorTime=1.0	local
+flex	sleepTime=3.0	local
+
+flex	rotDegrees		local
+flex	doorYaw	   		local
+
+flex	tempFlex		local
+
+int		open=0			local # closed = 0; opening = 1; open = 2; closing = 3
+int		notnow=0		local
+int		bTouched=0		local
+
+vector	doorPos			local
+vector	closedPYR		local
+vector	openPYR			local
+
+vector	tempVec			local
+
+# ********************** SUBROUTINES ***********************
+
+flex	OpenDoors		local
+flex	CloseDoors		local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	doorSector = GetThingSector(door);
+	doorPos = GetThingPos(door);
+	closedPYR = GetThingLVecPYR(door);
+	SetSectorAdjoins(doorSector, 0);
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+	if (notnow) return;
+
+	notnow = 1;
+
+	sender = GetSenderRef();
+
+	if (sender == button0)
+	{
+		rotDegrees = 90;
+	}
+	else if (sender == button1)
+	{
+		rotDegrees = -90;
+	}
+	else
+	{
+		notnow = 0;
+		return;
+	}
+
+	# Disable player control
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+	StartCutscene(0);
+	Sleep(0.1);
+
+	# Turn on adjoins
+	SetSectorAdjoins(doorSector, 1);
+
+	# Animate the player & wait...
+	PlayMode(player, 60, 1);
+
+	# Player regains control
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+
+	# Play sounds, move the buttons and door
+	MoveToFrame(button0, 1, 1);
+	MoveToFrame(button1, 1, 1);
+	PlaySoundThing(click, button0, 1, 3, 10, 0x0);
+	Sleep(0.25);
+
+	call OpenDoors;
+
+	return;
+
+# -------------------------------------------------------------------
+
+arrived:
+
+	if (GetSenderRef() != door) return;
+
+	if (open == 1)
+	{
+		open = 2;
+
+		openPYR = GetThingLVecPYR(door);
+		SetTimer(sleepTime);
+	}
+	else if ((open == 3) && (!bTouched))
+	{
+		MoveToFrame(button0, 0, 1);
+		MoveToFrame(button1, 0, 1);
+
+		PlaySoundThing(click, door, 1, 3, 10, 0x0);
+
+		tempFlex = VectorY(GetThingLVecPYR(door));
+		if (Truncate(tempFlex) == 0);
+		{
+			# Slam door into closed position
+			SetThingPos(door, doorPos);
+			SetThingLVecPYR(door, closedPYR);
+		}
+
+		# Turn off adjoins
+		SetSectorAdjoins(doorSector, 0);
+
+		open = 0;
+		notnow = 0;
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+touched:
+
+	if (open != 3) return;
+
+	if (GetSenderRef() != door) return;
+
+	# See if Indy's behind the door...
+	tempVec = VectorSub(GetThingPos(door), GetThingPos(player));
+	tempVec = VectorNorm(tempVec);
+	tempFlex = VectorDot(tempVec, GetThingLVec(door));
+	if (tempFlex > 0)
+	{
+		if (rotDegrees > 0) return;
+	}
+	else
+	{
+		if (rotDegrees < 0) return;
+	}
+
+	bTouched = 1;
+	open = 1;
+
+	# Stop rotation and wait for engine to update
+	StopThing(door);
+	Sleep(0.1);
+
+	# Calculate door yaw
+	tempFlex = VectorY(GetThingLVecPYR(door));
+	tempFlex = Abs(tempFlex);
+
+	if (rotDegrees < 0)
+	{
+		doorYaw = 90 - tempFlex;
+	}
+	else
+	{
+		doorYaw = tempFlex - 90;
+	}
+
+	# Calculate time to reopen door
+	tempFlex = Abs(doorYaw) / 90;
+	tempFlex = doorTime * tempFlex;
+
+	# Open it back up...
+	Rotate(door, doorYaw, 1, tempFlex); 
+
+	return;
+
+# -------------------------------------------------------------------
+
+timer:
+
+	call CloseDoors;
+	return;
+
+# -------------------------------------------------------------------
+
+OpenDoors:
+
+	Rotate(door, rotDegrees, 1, doorTime);
+	PlaySoundThing(open_squeak, door, 1, 3, 10, 0x0);
+	bTouched = 0;
+	open = 1;
+	return;
+
+# -------------------------------------------------------------------
+
+CloseDoors:
+
+	Rotate(door, -rotDegrees, 1, doorTime);
+	PlaySoundThing(close_squeak, door, 1, 3, 10, 0x0);
+	bTouched = 0;
+	open = 3;
+	return;
+
+# -------------------------------------------------------------------
+
+end
+

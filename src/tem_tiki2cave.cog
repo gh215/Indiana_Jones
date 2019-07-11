@@ -1,0 +1,65 @@
+# Jones 3D Cog Script
+#
+# TEM_Tiki2Cave.cog
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols		
+	
+    message     startup
+    message     entered
+
+    thing       player      local
+    thing       caveCam
+    thing       caveTarg
+    thing       teleTarget
+
+    sector      slide
+    sector      ledge
+    
+    vector      look
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if(GetSenderRef() == slide)
+    {
+        Sleep(1.0);
+        
+        # switch to caveCam
+        SetCameraFocus(2, caveCam);
+        SetCameraSecondaryFocus(2, caveTarg);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        TeleportThing(player, teleTarget);
+        SetThingLook(player, look);
+    }
+    
+    if(GetSenderRef() == ledge)
+    {
+        Sleep(2.0);
+        SetCurrentCamera(1);
+    }
+
+    return;
+
+# ========================================================================================
+    
+end
+

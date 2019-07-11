@@ -1,0 +1,175 @@
+# Jones 3D Cog Script
+#
+# pyr_dunedoor.cog
+#	
+# Door from the undertunnel to the dune floor
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+symbols
+message	startup
+message	activated
+message	boarded
+message	unboarded
+
+# world things
+thing	button
+thing	door
+thing	player	local	nolink
+thing	jeep
+
+# camera things and extoffsetthings
+thing	doorcam			nolink
+thing	buttoncam		nolink
+
+# camera look things, extoffset things, et al
+thing	doorcamlook		nolink
+thing	buttoncamlook	nolink
+
+# dynamic lights
+thing	dynalight		nolink
+thing	dynalight2		nolink
+
+# surface
+surface	sandfloor		nolink
+
+# sounds
+sound	platsnd=nub_2mstep_move_c.wav	local
+sound	platmove=teo_gears_slide_c.wav	local
+sound	platstop=nub_weight_stop_c.wav	local
+
+# variables
+int		cursound=0		local
+
+# subroutines
+flex	fixcams=0.0		local
+flex	startscene=0.0	local
+flex	endscene=0.0	local
+flex	pushbutton=0.0	local
+flex	movedoor=0.0	local
+end
+
+code
+startup:
+	Sleep(.01);
+	
+	SetThingLight(door, '5 5 8', 0.001, 0.01);
+	SetThingLight(button, '25 25 40', 0.001, 0.01);
+
+	ClearAdjoinFlags(sandfloor, 0x1);
+	ClearAdjoinFlags(sandfloor, 0x2);
+	SetFaceGeoMode(sandfloor, 4);
+	ClearAdjoinFlags(GetSurfaceAdjoin(sandfloor), 0x1);
+	ClearAdjoinFlags(GetSurfaceAdjoin(sandfloor), 0x2);
+	SetFaceGeoMode(GetSurfaceAdjoin(sandfloor), 4);
+
+	return;
+
+boarded:
+# ---> jeep
+	
+	# keep jeep from falling into hole
+	ClearAdjoinFlags(sandfloor, 0x2);
+	return;
+
+unboarded:
+# ---> jeep
+
+	# if button is pushed in, allow entry into hole
+	if (GetCurFrame(button) == 1)
+	{
+		SetAdjoinFlags(sandfloor, 0x2);
+		return;
+	}
+
+	
+activated:
+# ---> button
+	
+	if (GetSenderRef() != button) return;
+	if (GetCurFrame(button) == 1) return;
+
+	player = GetLocalPlayerThing();
+	DeselectWeaponWait(player);
+	
+	call fixcams;
+	call startscene;
+	call pushbutton;
+	call movedoor;
+	call endscene;
+	
+	return;
+
+pushbutton:
+	SetExtCamOffsetToThing(buttoncam);
+	PlayMode(player, 60, 0);
+	Sleep(.25);
+	MoveToFrame(button, 1, 2);
+	Sleep(1);
+	return;
+
+movedoor:
+	SetAdjoinFlags(sandfloor, 0x1);
+	SetAdjoinFlags(sandfloor, 0x2);
+	SetFaceGeoMode(sandfloor, 0);
+	SetAdjoinFlags(GetSurfaceAdjoin(sandfloor), 0x1);
+	SetAdjoinFlags(GetSurfaceAdjoin(sandfloor), 0x2);
+	SetFaceGeoMode(GetSurfaceAdjoin(sandfloor), 0);
+	
+	SetCameraFocus(2, doorcam);
+	SetCameraSecondaryFocus(2, doorcamlook);
+	SetCurrentCamera(2);
+	sleep(.1);
+	
+	# move door
+	MoveToFrame(door, 1, .5);
+	PlaySoundThing(platsnd, door, 1, -1, -1, 0);
+	cursound = PlaySoundThing(platmove, door, 1, -1, -1, 1);
+
+	# move camera and lookthing
+	MoveToFrame(doorcam, 1, .75);
+	MoveToFrame(doorcamlook, 1, .75);
+	
+	# brighten up the place
+	SetThingLight(dynalight, '100 87 75', .2, 2);
+	SetThingLight(dynalight2, '100 87 75', .05, 2);
+	
+	WaitForStop(door);
+	StopSound(cursound, .5);
+	PlaySoundThing(platstop, door, 1, -1, -1, 0);
+	Sleep(1);
+	return;
+
+startscene:
+	call fixcams;
+	StartCutscene(1);
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	
+	return;
+	
+endscene:
+	call fixcams;
+
+	ClearActorFlags(player, 0x200000);
+	SetCurrentCamera(1);
+	sleep(.3);
+	RestoreExtCam();
+	
+	EndCutscene();
+	
+	return;
+	
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(1, 0);
+	SetCameraLookInterp(1, 0);
+	return;
+	
+end
+

@@ -1,0 +1,31 @@
+# Jedi Knight Cog Script
+#
+# 00_PARTICLESYSTEM.COG
+#
+# Particle System
+#
+# [KS]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+
+symbols
+	message	startup
+	message	pulse
+	
+	thing		ghost0
+	template	partSystem
+	int		dummy		local
+	flex		pulsetime=.25
+    
+end
+
+code
+startup:
+	setpulse(pulsetime);
+    return;
+
+pulse:
+	dummy=CreateThing(partSystem, ghost0);
+	return;
+	
+end

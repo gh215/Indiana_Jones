@@ -1,0 +1,84 @@
+# Jones 3D Cog Script
+#
+# SOL_EntNoSee.cog
+#
+# Sets no see adjoin for entrance room 
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    
+    thing       player      local
+
+    sector      doorSec1
+    sector      doorSec2
+    sector      doorSec3
+    
+    sector      off1
+    sector      off2
+    sector      on1
+    sector      on2
+        
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SectorAdjoins(doorSec1, 0);
+    SectorAdjoins(doorSec2, 0);
+    SectorAdjoins(doorSec3, 0);
+    return;
+
+# ========================================================================================
+
+entered:
+        
+    player = GetLocalPlayerThing();
+    
+    if(GetSourceRef() != player) return;
+    
+    # draw
+    if(GetSenderRef() == off1)
+    {
+        SectorAdjoins(doorSec1, 1);
+        SectorAdjoins(doorSec2, 1);
+        SectorAdjoins(doorSec3, 1);
+    }
+        
+    if(GetSenderRef() == off2)
+    {
+        SectorAdjoins(doorSec1, 1);
+        SectorAdjoins(doorSec2, 1);
+        SectorAdjoins(doorSec3, 1);
+    }
+        
+    # no draw    
+    if(GetSenderRef() == on1)
+    {
+        SectorAdjoins(doorSec1, 0);
+        SectorAdjoins(doorSec2, 0);
+        SectorAdjoins(doorSec3, 0);
+    }
+        
+    if(GetSenderRef() == on2)
+    {
+        SectorAdjoins(doorSec1, 0);
+        SectorAdjoins(doorSec2, 0);
+        SectorAdjoins(doorSec3, 0);
+    }
+
+    return;
+        
+# ========================================================================================
+
+end
+

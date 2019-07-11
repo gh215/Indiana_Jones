@@ -1,0 +1,95 @@
+# Jones 3D Cog Script
+#
+# vol_Light-All_sound.cog
+#
+# This runs the generator sound for the light-alls.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+#...................MESSAGES...................
+	message  	startup
+	message  	entered
+	message  	user0
+
+#...................COGS...................
+	cog			finalcog
+
+#...................THINGS...................
+	thing		player									local 		
+	thing		soundobj 		
+			
+#...................VARIABLES...................
+	int			soundfx									local
+	int			running=0								local
+	
+	flex		volume=0.3	
+	
+#...................TRIGGERS...................
+	sector		onSECT0									linkID=2
+	sector		onSECT1                                 linkID=2
+	sector		onSECT2                                 linkID=2
+	
+	sector		offSECT0                                linkID=3
+	sector		offSECT1                                linkID=3
+
+#...................SOUNDS...................
+	sound    	fallrun=riv_h20_rapid_a.wav				local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:                
+	
+	player=GetLocalPlayerThing();
+	sleep(9.0);
+	soundfx=PlaySoundThing(fallrun, soundobj, volume, 3, 60, 0x1);
+	running=1;
+		
+return;
+
+# ========================================================================================
+entered:
+
+	If (GetSenderID() == 2)
+	{
+        If (GetSourceRef() != player) return;
+		If (running == 1) return;
+		soundfx=PlaySoundThing(fallrun, soundobj, volume, 3, 60, 0x1);
+        running = 1;
+	}
+
+    
+	If (GetSenderID() == 3)
+    {
+		If (GetSourceRef() != player) return;
+		If (running == 0) return;
+		StopSound(soundfx, 1.0);
+		running = 0;
+	}
+
+return;
+
+# ========================================================================================
+user0:
+
+	If (GetSenderRef() != finalcog) return;
+
+    StopSound(soundfx, 1.0);
+
+
+return;
+	
+# ========================================================================================
+
+
+end
+
+

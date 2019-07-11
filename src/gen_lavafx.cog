@@ -1,0 +1,46 @@
+# Jones 3D Cog Script
+#
+# shw_lavaFX.cog
+#
+# LavaFX, heh
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+        message user0
+        
+        thing   bubblespot
+        thing   smokespot
+        
+		
+        thing   bubbleobj	local
+        thing   smokeobj	local
+        
+		int     pulsetime=3
+
+        
+		template	pop=+lavaflame	local
+		template	smoke=+lavasmoke	local
+        
+        
+end
+
+# ========================================================================================
+code
+
+# ========================================================================================
+user0:
+        CreateThing(pop, bubblespot);
+        Sleep(.25);
+        CreateThing(smoke, smokespot);
+        return;
+        
+
+# ========================================================================================
+end
+
+        

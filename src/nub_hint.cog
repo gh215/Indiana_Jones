@@ -1,0 +1,181 @@
+# Jones 3D Cog Script
+#
+# nub_hint.cog
+#
+# Hint Script
+#
+# [TL] et al...
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		activated
+message		touched
+message		entered
+message		crossed
+message		pulse
+
+thing		object1
+thing		object2
+thing		object3
+thing		object4
+thing		object5
+thing		object6
+thing		object7
+thing		object8
+thing		object9
+thing		object10
+thing		object11
+thing		player			local
+
+int			done1=0			local
+int			done2=0			local
+int			done3=0			local
+int			done4=0			local
+int			done5=0			local
+int			done6=0			local
+int			done7=0			local
+int			done8=0			local
+int			done9=0			local
+int			done10=0		local
+int			done11=0		local
+
+surface		face1
+sector		portal2
+surface		face3
+sector		portal4
+thing		lever5
+sector		portal6
+thing		button7
+sector		portal8
+thing		ledge9
+surface		face10
+thing		horus11
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+return;
+
+#........................................................................................
+entered:
+
+if ((GetSenderRef() == portal2) && (done1 == 1))
+	{
+	if (done2 == 1)	return;
+	SetHintSolved(object2);
+	//print("hint 2 solved");
+	done2 = 1;
+	}
+if ((GetSenderRef() == portal4) && (done3 == 1))
+	{
+	if (done4 == 1)	return;
+	SetHintSolved(object4);
+	//print("hint 4 solved");
+	done4 = 1;
+	}
+if ((GetSenderRef() == portal6) && (done5 == 1))
+	{
+	if (done6 == 1)	return;
+	SetHintSolved(object6);
+	//print("hint 6 solved");
+	done6 = 1;
+	}
+if ((GetSenderRef() == portal8) && (done7 == 1))
+	{
+	if (done8 == 1)	return;
+	SetHintSolved(object8);
+	//print("hint 8 solved");
+	done8 = 1;
+	}
+if ((GetSenderRef() == ledge9) && (done8 == 1))
+	{
+	if (done9 == 1)	return;
+	Setpulse(0.5);
+	done9 = 1;
+	}
+if (GetSenderRef() == face1)
+	{
+	if (done1 == 1)	return;
+	SetHintSolved(object1);
+	//print("hint 1 solved");
+	done1 = 1;
+	}
+if ((GetSenderRef() == face3) && (done2 == 1))
+	{
+	if (done3 == 1)	return;
+	SetHintSolved(object3);
+	//print("hint 3 solved");
+	done3 = 1;
+	}
+if ((GetSenderRef() == face10) && (done1 == 1))
+	{
+	if (done10 == 1) return;
+	SetHintSolved(object10);
+	//print("hint 10 solved");
+	done10 = 1;
+	}
+
+return;
+
+# ........................................................................................
+crossed:
+
+return;
+
+# ........................................................................................
+touched:
+
+return;
+
+# ........................................................................................
+activated:
+
+if ((GetSenderRef() == lever5) && (done4 == 1))
+	{
+	if (done5 == 1)	return;
+	SetHintSolved(object5);
+	//print("hint 5 solved");
+	done5 = 1;
+	}
+if ((GetSenderRef() == button7) && (done6 == 1))
+	{
+	if (done7 == 1)	return;
+	SetHintSolved(object7);
+	//print("hint 7 solved");
+	done7 = 1;
+	}
+if ((GetSenderRef() == horus11) && (done10 == 1))
+	{
+	if (done11 == 1) return;
+	SetHintSolved(object11);
+	//print("hint 11 solved");
+	done11 = 1;
+	}
+
+return;
+
+# ........................................................................................
+pulse:
+
+if (GetInv(player, 52))
+	{
+	SetHintSolved(object9);
+	//print("hint 9 solved");
+	SetPulse(0);
+	}
+
+return;
+
+# ........................................................................................
+end
+

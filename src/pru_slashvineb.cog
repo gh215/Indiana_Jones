@@ -1,0 +1,65 @@
+
+# Jones 3D Cog Script
+#
+# PRU_SlashVineB.cog
+#
+# Modified version of gen_SlashGrate.cog by [YB].
+# Damage the face with Machete to allow move through. 
+# "B" version uses different sprite in symbols table.
+#
+# [TRM]	 [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+	message     startup
+    message     damaged
+	
+	thing		vineGhost
+	thing		leaf		local
+    
+	surface     web			mask=0x8
+	surface	    webback		mask=0x8
+	
+	vector		leafVel		local
+	
+	template	leaf0=vinedebris	local
+    
+    int         type		local
+    int         player		local
+	int			leafNum=0	local
+	int			numLeaves=2	local
+    
+end
+# ========================================================================================
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+    
+# ========================================================================================
+damaged:
+	
+    if (GetParam(1) == 0x20)
+    {
+        SetWallCel(web, 1);
+	    SetWallCel(webback, 1);
+	    ClearAdjoinFlags(web, 0x10);
+	    SetAdjoinFlags(webback, 2);
+
+			for(leafNum=0; leafNum<numLeaves; leafNum=leafNum+1)                                                        	            
+			{                                                                                    	            
+				leaf=CreateThing(leaf0, vineGhost);
+				leafVel = VectorSet(0, 0, -0.1);
+				SetThingVel(leaf, VectorScale(leafVel, 0.7));
+			}
+   
+    }
+        
+	return;
+
+# ========================================================================================
+end
+

@@ -1,0 +1,260 @@
+# Jones 3D Cog Script
+#
+# TEO_STATLOCK.cog
+#
+# Controls gears and doors in statue lock room
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message		startup		
+	message		activated
+	message		arrived
+    message     blocked	
+	message		user0
+
+	thing		gear0					nolink
+	thing		gear1					nolink
+	thing		gear2					nolink
+	thing		gear3					nolink
+    
+    thing		gearnode0		        nolink
+	thing		gearnode1		        nolink
+	thing		gearnode2		        nolink
+	thing		gearnode3		        nolink
+	thing		gearnode4		        nolink
+	thing		gearnode5		        nolink
+	thing		gearnode6		        nolink
+	thing		gearnode7		        nolink
+	thing		gearnode8		        nolink
+	thing		gearnode9		        nolink
+	thing		gearnodet		        nolink
+	thing		gearnodee		        nolink
+                                        
+    vector		curnodepos		        local
+	vector		curgearpos		        local
+    vector      newgearvector           local
+
+	thing		aaxis                   linkid=3
+	thing		baxis					linkid=3
+	thing		stopaxis				nolink
+	thing		statue					nolink
+	thing		campos					nolink
+	thing		gearswitch
+
+	thing		indyTarget				nolink
+
+	thing		indy					nolink
+	thing		player					local
+
+	sound		gearbutsnd
+	sound		gearesetsnd
+	sound		gearRotSnd
+    sound       doorstop=olv_quetzdoor_stop_c.wav   local
+
+	sound		indylineb0=inxj058.wav	local
+	sound		indylineb1=inxj059.wav	local
+	sound		indylineb2=inxj060.wav	local
+	sound		indylineb3=inxj061.wav	local
+	sound		indylineb4=inxj090.wav	local
+	sound		indylineb5=inxj095.wav	local
+	
+	int			gearchan				local
+	int			locked=0				local
+	int			count=0					local
+	int			bSpoken=0				local
+    int         gearcount=0             local
+    int         nodecount=0             local
+
+	flex		rotspeed=4.0			local
+	flex		moveSpeed=1.0			local
+	flex		diffpos=0				local
+
+	vector		centerpos				local
+	vector		gearpos					local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	centerpos = GetThingPos(aaxis);
+	player = GetLocalPlayerThing();
+
+return;
+
+#........................................................................................
+activated:
+
+	if (GetSenderRef() != gearswitch) return;
+	if (GetCurItem(player) != 0) return;
+	if (GetCurFrame(statue) != 3) return;
+	if (locked != 0) return;
+	
+	locked = 1;
+
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	DeselectWeaponWait(player);
+	StartCutscene(1);
+
+	# Prep Actor
+	CopyPlayerHolsters(player, indy);
+	TeleportThing(indy, indyTarget);
+	CopyOrientAndPos(indy, player);
+	Sleep(0.01);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indy, 0x80000);
+
+	# Camera...
+	SetExtCamOffset('0.15 0.0 0.05');
+	//SetExtCamLookOffset('0.0 0.05 0.0');
+
+	MoveToFrame(gearswitch, 1, moveSpeed);
+	PlaySoundThing(gearbutsnd, gearswitch, 0.3, 3, 10, 0);
+	PlayMode(indy, 60, 1);
+
+	for (count = 0; count <= 3; count = count + 1)
+	{
+		gearpos = GetThingPos(gear0[count]);
+		diffpos = VectorDist(gearpos, centerpos);
+		if ((diffpos > 0.2) && (diffpos < 0.275))
+		{
+			AttachThingtoThing(gear0[count], aaxis);
+		}
+		else if ((diffpos > 0.4) && (diffpos < 0.5))
+		{
+			AttachThingtoThing(gear0[count], baxis);
+		}
+		else if (diffpos > 0.55)
+		{
+			AttachThingtoThing(gear0[count], stopaxis);
+		}
+	}
+
+	Sleep(0.5);
+	SetCameraFocus(0, campos);
+	SetCurrentCamera(0);
+
+	gearchan = PlaySoundLocal(gearRotSnd, 0.85, 0, 0x0001, 0);
+
+	SetCollideType(gear0, 0);
+	SetCollideType(gear1, 0);
+	SetCollideType(gear2, 0);
+	SetCollideType(gear3, 0);
+
+	Rotate(aaxis, 90, 1, rotspeed);
+	Rotate(baxis, -90, 1, rotspeed);
+
+return;
+
+# ........................................................................................
+
+arrived:
+
+
+	if (GetSenderRef() == aaxis)
+	{
+		if (locked != 1) return;
+
+		StopSound(gearchan, 0);
+        PlaySoundLocal(doorstop, 1, 0, 0, 0);
+	
+		Sleep(0.5);
+		SetCurrentCamera(1);
+		MoveToFrame(gearswitch, 0, moveSpeed);
+		PlaySoundThing(gearesetsnd, gearswitch, 0.3, 3, 10, 0);
+		WaitForStop(gearswitch);
+	
+		SetThingFlags(indy, 0x80000);
+		ClearThingFlags(player, 0x80000);
+	
+		RestoreExtCam();
+
+   		if (bSpoken)
+		{
+			EndCutscene();
+			ClearActorFlags(player, 0x200000);
+		}
+        
+        # check nodes for gears
+    	for (nodecount=0; nodecount<=3; nodecount=nodecount +1)
+    	{
+    		# innercircle
+    		curnodepos = GetThingPos(gearnode0[nodecount]);	
+    		for (gearcount=0; gearcount<=3; gearcount=gearcount+1)
+    		{
+    			curgearpos = GetThingPos(gear0[gearcount]);
+    			if (VectorLen(VectorSub(curnodepos, curgearpos)) < 0.075)
+    			{
+                    newgearvector = VectorSet(VectorX(curnodepos), VectorY(curnodepos), VectorZ(curgearpos));   
+                    MoveThingToPos(gear0[gearcount], newgearvector, 0);
+    			} 		
+    		}
+            
+    		# middlecircle
+    		curnodepos = GetThingPos(gearnode0[nodecount + 4]);
+    		for (gearcount=0; gearcount<=3; gearcount=gearcount+1)
+    		{
+    			curgearpos = GetThingPos(gear0[gearcount]);
+    			if (VectorLen(VectorSub(curnodepos, curgearpos)) < 0.075)
+    			{
+                    newgearvector = VectorSet(VectorX(curnodepos), VectorY(curnodepos), VectorZ(curgearpos));   
+                    MoveThingToPos(gear0[gearcount], newgearvector, 0);
+    			}
+    		}
+            
+    		# outercircle
+            curnodepos = GetThingPos(gearnode0[nodecount + 8]);
+            
+    		for (gearcount=0; gearcount<=3; gearcount=gearcount+1)
+    		{
+    			curgearpos = GetThingPos(gear0[gearcount]);
+    			if (VectorLen(VectorSub(curnodepos, curgearpos)) < 0.075)
+    			{
+                    newgearvector = VectorSet(VectorX(curnodepos), VectorY(curnodepos), VectorZ(curgearpos));   
+                    MoveThingToPos(gear0[gearcount], newgearvector, 0);
+    			}
+    		}
+    	}
+	
+		locked = 0;
+        SetCollideType(gear0, 3);
+	    SetCollideType(gear1, 3);
+	    SetCollideType(gear2, 3);
+	    SetCollideType(gear3, 3);
+	}
+
+return;
+
+# ........................................................................................
+blocked:
+
+    if ((GetSenderRef() == gear0) ||
+        (GetSenderRef() == gear1) ||
+        (GetSenderRef() == gear2) ||
+        (GetSenderRef() == gear3))
+        
+    {
+        print("I'm being statlock blocked");
+        
+    }
+    
+return;
+
+# ........................................................................................
+
+user0: # Indicates that Azerim line has been spoken
+
+	bSpoken = 1;
+	return;
+
+#........................................................................................
+
+end

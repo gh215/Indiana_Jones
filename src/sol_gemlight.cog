@@ -1,0 +1,40 @@
+# Jones 3D Cog Script
+#
+# SOL_GemLight.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+
+    thing       gem
+    
+    flex        rVal
+    flex        gVal
+    flex        bVal
+    
+    flex        dist=1.0
+
+    vector      color           local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    color = VectorSet(rVal, gVal, bVal);
+    SetThingLight(gem, color, dist, 0.5);
+    
+    return;
+           
+# ========================================================================================
+
+end

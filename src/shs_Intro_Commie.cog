@@ -1,0 +1,224 @@
+# Jones 3D Cog Script
+#
+# shs_Intro_Commies.cog     
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message		activated
+message		callback
+message     startup
+
+
+# Change these variables ONLY!
+# -------------------------------------------------------------------
+
+# Use in_pickup_low or in_pickup_med for the "get" keyframe
+keyframe	get=in_pickup_med.key	local
+
+# Item-specific voice line
+sound		foundSnd=Ss06J02.wav	local
+sound		aha=Inxj147.wav			local
+sound		in_commies=Ss03j01.wav	local
+sound		comchat=Inxh1007.wav	local
+sound		music0=mus_gen_russbold_shrt3.wav	local
+
+
+# Item bin number
+int			bin=87					local
+
+
+
+# Don't touch!
+# -------------------------------------------------------------------
+
+cog			talkCog					local
+cog			wolf
+
+int			x						local
+int			in_rotRate				local
+#sector		doorsector
+
+thing		indyactor				local
+thing		player					local
+thing		item
+thing		curCam 					local 
+thing		indycam
+thing		indycam_t1
+
+thing		commiecam
+thing		commiecam_t1
+thing		in_mk1
+thing		commiecam1
+
+thing       commie0
+thing       commie1
+thing       commie2
+thing       commie3
+thing       commie3_t1
+
+template	tpl_Indy=indy_actor		local
+
+end
+
+# ========================================================================================
+
+code
+
+
+startup:
+	for (x=0; x<=3; x=x+1)
+    {
+        SetThingFlags(commie0[x], 0x80000); #make invisible
+		#AISetCutsceneMode(commie0[x]);
+               
+    }
+	return;
+
+activated:
+
+	if (GetSenderRef() != item) return;
+	
+	player = GetLocalPlayerThing();
+    
+    SendMessageEx(wolf, 27, 0, 0, 0, 0);		# de-activates wolf cog
+	
+	# Disable player controls and stuff
+    SetActorFlags(player, 0x200000);
+	StartCutscene(1);
+	StopThing(player);
+	DeselectWeaponWait(player);
+    
+    # Cut to Indy
+	SetCameraLookInterp(2, 0);			# kill pan & tilt 
+	SetCameraPosInterp(2, 0);			# dolly mode 
+	SetCameraFocus(2, indycam);
+	SetCameraSecondaryFocus(2, indycam_t1);
+	Sleep(0.01);
+    SetCurrentCamera(2);
+    SetCameraFOV(70, 0, 0);
+
+	# Make sure this pickup is valid
+	if (GetInv(player, bin) < GetInvMax(player, bin))
+	{
+		# Capture player so we get callback message
+		indyactor = CreateThing(tpl_Indy, player);
+        CaptureThing(indyactor);
+		CopyPlayerHolsters(player, indyactor);
+		ClearThingFlags(indyactor, 0x80000);
+        SetThingFlags(player, 0x80000);
+		
+		AISetLookThing(indyactor, item);
+		# Start the animation
+		PlayKey(indyactor, get, 5, 0x12, 0); 
+	}
+
+	# "Aha..."
+    PlayVoice(indyactor, aha, 1.0, 0);
+	
+    
+	
+return;
+     
+# -------------------------------------------------------------------
+
+callback:
+
+	ReleaseThing(indyactor);
+
+	# Get rid of the item
+	DestroyThing(item);
+	
+	# Add to inventory
+	ChangeInv(player, bin, 1.0);
+	SetInvAvailable(player, bin, 1);
+	JonesInvItemChanged(bin);
+       
+	# Wait a bit, then start the voice line
+    Sleep(1.0);
+	PlayVoice(indyactor, foundSnd, 1.0, 1);
+    
+	# Reveal Commies
+	for (x=0; x<=3; x=x+1)
+    {
+        ClearThingFlags(commie0[x], 0x80000); # make visible
+    }
+	
+	# russian sound
+    PlaySoundLocal(comchat, .5, 0, 0x0, 0);
+    sleep(.5);
+	
+	# Indy look at window
+	in_rotRate = GetThingMaxRotVel(indyactor); 	# remember Indy rate
+	SetThingMaxRotVel(indyactor, 25.0);
+	AISetLookThing(indyactor, in_mk1);
+
+	# pan/dolly looking out window
+	SetCameraLookInterp(2, 1);			# pan & tilt 
+	SetCameraPosInterp(2, 1);			# dolly mode 
+	SetCameraInterpSpeed(2, 3.0);
+	Sleep(0.01);
+    SetCameraFocus(2, commiecam);
+    SetCameraSecondaryFocus(2, commiecam_t1);
+    SetCameraFOV(75, 1, 3.0);
+    
+	# music
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+    
+	# run some around
+	# send commie3 to commie3_t1
+    sleep(1.0);
+	AISetMoveSpeed(commie3, 3.0);
+	AISetLookThing(commie3, commie3_t1);
+    AISetMoveThing(commie3, commie3_t1, 0);
+	AISetLookThing(commie2, commie3);
+	
+	Sleep(2.5);
+
+    # "Commies again..."
+	PlayVoice(player, in_commies, 1.0, 0);
+	sleep(2.0); # allow camera to swing back before finishing line
+
+    # Prep camera
+	SetCameraPosition(1, GetThingPos(commiecam1)); # prep to swing back to follow-cam
+	
+    # Teleport indy to window
+	TeleportThing(player, in_mk1); 
+   	
+	# Change camera
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	Sleep(0.01);
+	ResetCameraFOV(0, 0.0);
+    SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	
+    # Wake up Commies
+    for (x=0; x<=3; x=x+1)
+    {
+        #AIClearCutsceneMode(commie0[x]);
+        AISetLookThing(commie0[x], commie3);
+    	AIEnableInstinct(commie0[x], "roam", 1);
+	}
+    
+    # Swap player
+	ClearThingFlags(player, 0x80000);
+	DestroyThing(indyactor);
+	
+	# Enable player control
+    EndCutscene();
+    ClearActorFlags(player, 0x200000);
+    
+	return;
+
+
+  
+
+end
+
+

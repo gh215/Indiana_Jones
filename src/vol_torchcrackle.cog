@@ -1,0 +1,104 @@
+# Jones 3D Cog Script
+#
+# CYN_StrutSight.cog
+#
+#	[cmg]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message     startup
+	message     crossed
+	message     pulse
+    
+	#	props
+	thing	sparkpos
+	
+	# triggers
+	surface		on_cross			linkId=2
+	surface		on_cross1			linkId=2
+	
+
+	surface		off_cross			linkId=3
+	surface		off_cross1			linkId=3
+
+	
+	# sounds
+    sound       fiery=gen_torch_burnin_c.wav		local	#crackling torch sound
+    
+	#	templates
+    template    sparks=flamesparks1					local      			
+	
+	#	variables
+	int			lit=0				
+    
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	Sleep(0.25);
+	If (lit == 1)
+	{
+		PlaySoundThing(fiery, sparkpos, 1, 4, 10, 0x81);
+		SetPulse(1.0);
+	}
+
+	return;
+
+
+# ========================================================================================
+pulse:
+
+	If (lit == 0) return;
+
+	If (lit == 1)
+	{
+		if ( Rand() < 0.50 )
+		{
+			CreateThing(sparks, sparkpos);
+		}
+    }
+
+	return;
+
+# ========================================================================================
+crossed:
+
+	If (GetSenderID() == 2)
+	{
+		If (lit != 1) 
+		{
+			StopAllSoundsThing(sparkpos);
+			lit = 1;
+			PlaySoundThing(fiery, sparkpos, 1, 4, 10, 0x81);
+			SetPulse(1.0);
+		}
+		else return;
+	}
+
+	If (GetSenderID() == 3)
+	{
+		If (lit != 0) 
+		{
+			lit = 0;
+			StopAllSoundsThing(sparkpos);
+			SetPulse(0);
+		}
+		else return;
+	}
+return;
+
+
+# ========================================================================================
+
+
+end
+

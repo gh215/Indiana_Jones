@@ -1,0 +1,219 @@
+
+# Jones 3D Cog Script
+#
+# TEO_Commie_Grid.cog
+# 
+# Basic waypoints and AI behavior for the commies in TEO
+# 
+#
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message         startup
+message         user0
+
+# ====================== SUBROUTINES ===============================
+flex            MakeGrid    local
+flex            EnableAI    local
+
+# ========================= MISC LOCAL VARIABLES ===================
+int         counter         local
+
+# ========================== CONSTANTS =============================
+int         NUMBER_OF_WAYPOINTS=51          local
+int         NUMBER_OF_ROAMERS=6             local
+int         NUMBER_OF_SLACKERS=4            local
+# ========================== COMMIES ===============================
+thing         Roamer00
+thing         Roamer01
+thing         Roamer02
+thing         Roamer03
+thing         Roamer04
+thing         Roamer05    #Last roamer is a part of the Volodnikov Cutscene... no need to clear flags on him
+
+thing         Slacker00
+thing         Slacker01
+thing         Slacker02
+thing         Slacker03
+
+# =========================== WAYPOINTS ============================
+thing       wpnt00
+thing       wpnt01
+thing       wpnt02
+thing       wpnt03
+thing       wpnt04
+thing       wpnt05
+thing       wpnt06
+thing       wpnt07
+thing       wpnt08
+thing       wpnt09
+thing       wpnt10
+thing       wpnt11
+thing       wpnt12
+thing       wpnt13
+thing       wpnt14
+thing       wpnt15
+thing       wpnt16
+thing       wpnt17
+thing       wpnt18
+thing       wpnt19
+thing       wpnt20
+thing       wpnt21
+thing       wpnt22
+thing       wpnt23
+thing       wpnt24
+thing       wpnt25
+thing       wpnt26
+thing       wpnt27
+thing       wpnt28
+thing       wpnt29
+thing       wpnt30
+thing       wpnt31
+thing       wpnt32
+thing       wpnt33
+thing       wpnt34
+thing       wpnt35
+thing       wpnt36
+thing       wpnt37
+thing       wpnt38
+thing       wpnt39
+thing       wpnt40
+thing       wpnt41
+thing       wpnt42
+thing       wpnt43
+thing       wpnt44
+thing       wpnt45
+thing       wpnt46
+thing       wpnt47
+thing       wpnt48
+thing       wpnt49
+thing       wpnt50
+
+# ========================================================================
+end
+
+# ========================================================================
+# =============================== CODE ===================================
+# ========================================================================
+code
+# ========================================================================
+startup:
+    
+    for(counter = 0; counter < (NUMBER_OF_ROAMERS - 1); counter = counter + 1)
+    {
+        SetThingFlags(Roamer00[counter], 0x80000);
+    }
+
+    return;
+    
+# ========================================================================
+user0:
+    
+    Call MakeGrid;
+    Call EnableAI;
+                                                                          
+    return;
+    
+# ========================================================================
+MakeGrid:
+    
+    for(counter = 0; counter < NUMBER_OF_WAYPOINTS; counter = counter + 1)
+    {
+        AISetWpnt(wpnt00[counter], counter);
+    }
+    
+    //Chamber1
+    AIConnectWpnts(0, 1);
+    AIConnectWpnts(1, 2);
+    AIConnectWpnts(2, 3);
+    AIConnectWpnts(2, 4);
+    AIConnectWpnts(2, 5);
+    AIConnectWpnts(3, 6);
+    AIConnectWpnts(4, 10);
+    AIConnectWpnts(5, 8);
+    AIConnectWpnts(5, 9);
+    AIConnectWpnts(6, 7);
+    AIConnectWpnts(6, 8);
+    AIConnectWpnts(6, 12);
+    AIConnectWpnts(8, 11);
+    AIConnectWpnts(9, 10);
+    AIConnectWpnts(9, 11);
+    AIConnectWpnts(10, 14);
+    AIConnectWpnts(11, 13);
+    AIConnectWpnts(12, 13);
+    AIConnectWpnts(13, 14);
+    
+    //Stairs
+    AIConnectWpnts(15, 16);
+    AIConnectWpnts(16, 17);
+    AIConnectWpnts(17, 18);
+    AIConnectWpnts(18, 19);
+    AIConnectWpnts(19, 20);
+    AIConnectWpnts(20, 21);
+    AIConnectWpnts(21, 22);
+    AIConnectWpnts(22, 23);
+    
+    //StatLock
+    AIConnectWpnts(24, 25);
+    AIConnectWpnts(24, 28);
+    AIConnectWpnts(25, 26);
+    AIConnectWpnts(26, 27);
+    AIConnectWpnts(27, 28);
+    
+    //MirrorLock Ledge1
+    AIConnectWpnts(29, 30);
+    
+    //MirrorLock Ledge2
+    AIConnectWpnts(31, 32);
+    
+    //MirrorLock
+    AIConnectWpnts(33, 34);
+    AIConnectWpnts(33, 46);
+    AIConnectWpnts(34, 35);
+    AIConnectWpnts(35, 36);
+    AIConnectWpnts(35, 50);
+    AIConnectWpnts(36, 37);
+    AIConnectWpnts(37, 38);
+    AIConnectWpnts(38, 39);
+    AIConnectWpnts(39, 40);
+    AIConnectWpnts(39, 49);
+    AIConnectWpnts(40, 41);
+    AIConnectWpnts(41, 42);
+    AIConnectWpnts(42, 43);
+    AIConnectWpnts(42, 48);
+    AIConnectWpnts(43, 44);
+    AIConnectWpnts(44, 45);
+    AIConnectWpnts(45, 46);
+    AIConnectWpnts(45, 47);
+    AIConnectWpnts(47, 48);
+    AIConnectWpnts(47, 50);
+    AIConnectWpnts(48, 49);
+    AIConnectWpnts(49, 50);
+
+    return;
+# =======================================================================
+EnableAI:
+    
+    for(counter = 0; counter < NUMBER_OF_ROAMERS; counter = counter + 1)
+    {
+        ClearThingFlags(Roamer00[counter], 0x80000);
+        AISetInstinctWpntMode(Roamer00[counter]);
+        AIEnableInstinct(Roamer00[counter], "roam", 1);
+    }
+    
+    for(counter = 0; counter < NUMBER_OF_SLACKERS; counter = counter + 1)
+    {
+        AISetInstinctWpntMode(Slacker00[counter]);  
+    }
+    
+    return;
+# =======================================================================
+        
+end
+
+

@@ -1,0 +1,366 @@
+# Jones 3D Cog Script
+#
+# pyr_KidVsIndy_1.cog
+#	
+# Kid meets Indy in the minecar tunnel
+#
+# [RKD] && [HB]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message startup
+message entered
+message	killed
+
+# sector
+sector	trigger
+
+# world things
+thing   player		local
+thing	indyactor
+thing   kid			nolink
+thing	hint12	
+
+# actor lookthings
+thing	indylookend
+
+# actor marks
+thing	indymarkend
+thing	actorstart
+
+# cameras
+thing	thirdcam
+thing	insidecam
+thing	cam1spot								local
+
+# camera lookthings
+thing	insidecamlook
+thing	insidecamlook2
+thing	thirdcamlook
+thing	cam1look								local
+
+# hyena creation ghosts
+thing	hyenaghost1
+thing	hyenaghost2
+
+# created hyena things
+thing	hyena1	local	mask=0x448 # Mask for player, weapons, and explosions
+thing	hyena2	local	mask=0x448 # Mask for player, weapons, and explosions
+
+# template
+template	hyenamodel=hyena					local
+template	tpl_ghost=ghost						local
+
+# animations
+keyframe	tocrossarms=0in_stand1_bd_2.key		local
+keyframe	crossarms=0in_stand2.key   			local
+keyframe	handsout=0in_armsup_1_1.key			local
+
+# Indy's lines
+sound   holeinhistory=pr05j01a.wav	local
+sound	anybodyhome=pr05j06.wav		local
+sound	dontworry=pr05j04.wav		local
+sound	hello=pr06j01.wav			local
+
+# Nubian Kid's lines
+sound   isitsafe=pr05b03.wav		local
+sound	botherme=pr05b05.wav		local
+sound	notcoming=pr05b07.wav		local
+
+# Victory music
+sound	victory=mus_gen_indy_b_motif1.wav	local
+
+# variables
+int		visitnum=1								local
+int		curvoice=0								local
+int		curtrack=0								local
+int		camsexist=0								local
+
+# cogs
+cog		c_hyena_maker	
+
+# subroutines
+flex	startscene=0.0	local
+flex	endscene=0.0	local
+flex	fixcams=0.0		local
+flex	firstvisit=0.0	local
+flex	secondvisit=0.0	local
+flex	thirdvisit=0.0	local
+end
+
+code
+startup:
+	sleep(.01);
+	
+	player = GetLocalPlayerThing();
+	
+	global8 = 0;
+	global3 = 0;
+	
+	# until created, make hyenas non-entities
+	hyena1 = -1;
+	hyena2 = -1;
+	return;
+
+killed:
+# ---> hyenas
+	if ((GetSenderRef() != hyena1) && (GetSenderRef() != hyena2)) return;
+
+	global8 = global8 + 1;
+	
+	if (GetSenderRef() == hyena1)
+	{
+		hyena1 = -1;
+	}
+	
+	if (GetSenderRef() == hyena2)
+	{
+		hyena2 = -1;
+	}
+
+	if (global8 >= 11)
+	{
+		Print("all hyenas killed");
+		SetHintSolved(hint12);
+		sleep(.75);
+		PlaySoundLocal(victory, 1, 0, 0, 0);
+		return;
+	}
+	
+	return;
+
+entered:
+# ---> Trigger sectors
+	
+	if (GetSenderRef() != trigger) return;
+	
+	# kid is destroyed after Indy first discovers he's not answering
+	if (kid == -1) return;
+
+	# send message: tell hyenas to run away
+	SendMessage(c_hyena_maker, user1);
+
+	# tell recently generated hyenas to run away too
+	if (hyena1 != -1)
+	{
+		AIFlee(hyena1, GetLocalPlayerThing());
+	}
+	
+	if (hyena2 != -1)
+	{
+		AIFlee(hyena2, GetLocalPlayerThing());
+	}
+
+	# if all hyenas have been killed, no one at home
+	if (global8 >= 11)
+	{
+		visitnum = 3;
+	}
+	
+	# first visit
+	if (visitnum == 1)
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		call firstvisit;
+		
+		visitnum = 2;
+
+		#generate a couple more hyenas
+		hyena1 = CreateThing(hyenamodel, hyenaghost1);
+		hyena2 = CreateThing(hyenamodel, hyenaghost2);
+		CaptureThing(hyena1);
+		CaptureThing(hyena2);
+		AISetFireTarget(hyena1, player);
+		AISetFireTarget(hyena2, player);
+		AISetInstinctWpntMode(hyena1);
+		AISetInstinctWpntMode(hyena2);
+	}
+	else if (visitnum == 2)
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		call secondvisit;
+	}
+	else if (visitnum == 3)
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		# indy finds an empty cave after meeting kid in the desert
+		call thirdvisit;
+		
+		# if kid not already gone, destroy him
+		if (kid > -1) DestroyThing(kid);
+		kid = -1;
+	}
+	
+	return;
+
+firstvisit:
+	global3 = 4;	# kid is in mid-cutscene - prevents runaway kid
+	call startscene;	
+	
+	# "miners blew a hole in history"
+	curvoice = PlayVoice(indyactor, holeinhistory, 1, 0);
+	curtrack = PlayKey(indyactor, tocrossarms, 4, 0x12, 1);
+	curtrack = PlayKey(indyactor, crossarms, 4, 0x14, 0);
+	WaitForSound(curvoice);
+
+	# FOR PLACEMENT OF INDYACTOR IN MARCUS
+	PRINTVECTOR(GETTHINGPOS(INDYACTOR));
+	
+	# "is it safe" -- indy reacts	
+	PlayVoice(kid, isitsafe, 1, 0);
+	sleep(.25);
+	
+	# camera moves outward, indy puts hands down
+	MoveToFrame(insidecam, 1, 2);
+	SetCameraInterpSpeed(2, 1.5);
+	SetCameraSecondaryFocus(2, insidecamlook2);
+	StopKey(indyactor, curtrack, 0.25);
+	sleep(1.5);
+	
+	# "don't worry" and indy gestures
+	curtrack = PlayKey(indyactor, handsout, 4, 0x12, 0);
+	PlayVoice(indyactor, dontworry, 1, 1);
+	sleep(.75);
+
+	# "hyenas bother me"
+	PlayVoice(kid, botherme, 1, 0);
+	Sleep(5);
+
+	call endscene;
+	global3 = 1; 	# kid has been met by Indy
+	return;
+
+secondvisit:
+	global3 = 4;	# kid is in mid-cutscene - prevents runaway kid
+	call startscene;
+
+	PlayVoice(player, anybodyhome, 1, 1);
+	sleep(.75);
+	PlayVoice(kid, notcoming, 1, 1);
+	sleep(.75);
+
+	call endscene;
+	global3 = 1; 	# kid has been met by Indy
+	return;
+
+thirdvisit:
+	# kid no longer there, Indy calls out in vain
+	StartCutscene(1);
+
+	# Make cutscene stuff...
+	if (camsexist != 0)
+	{
+		DestroyThing(cam1spot);
+		DestroyThing(cam1look);
+	}
+	camsexist = 1;
+	cam1spot = CreateThing(tpl_ghost, player);
+	CaptureThing(cam1spot);
+	cam1look = CreateThing(tpl_ghost, player);
+	CaptureThing(cam1look);
+
+	# Dolly cam...
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraInterpSpeed(2, 0.8);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.01);
+	SetCameraFocus(2, thirdcam);
+	SetCameraSecondaryFocus(2, thirdcamlook);
+	Sleep(0.25);
+
+	# Indy hails kid...
+	PlayVoice(player, anybodyhome, 1, 1);
+	sleep(1.0);
+
+	# Restore...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(thirdcam));
+	SetCurrentCamera(1);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+startscene:
+	call fixcams;
+
+	ResetThing(indyactor);
+
+	StartCutscene(1);
+	CopyOrient(player, indyactor);
+	CopyPlayerHolsters(player, indyactor);
+	ClearThingFlags(indyactor, 0x80000);
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x80000);
+		
+	#jump inside for a look out
+	SetCameraFocus(2, insidecam);
+	SetCameraSecondaryFocus(2, insidecamlook);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0);
+	
+	# make indy look generally inward
+	SetThingMaxRotVel(indyactor, 150.0);
+	AISetLookThingEyeLevel(indyactor, kid);
+	AIWaitForStop(indyactor);
+	
+	SetCameraLookInterp(2, 1);
+	return;
+			
+endscene:
+	# indy turns and walks off camera
+	AISetMoveSpeed(indyactor, 1.0);
+	SetThingMaxRotVel(indyactor, 150.0);
+	AISetLookThing(indyactor, indylookend);
+	AIWaitForStop(indyactor);
+	AISetMoveThing(indyactor, indymarkend, 1);
+	
+	# replace player, etc.
+	TeleportThing(player, indyactor);
+	SetThingFlags(indyactor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	SetCameraPosition(1, GetThingPos(insidecam));
+	SetCurrentCamera(1);
+
+	# put indy actor back in place
+	TeleportThing(indyactor, actorstart);
+
+	# put inside camera and lookthing back
+	MoveToFrame(insidecam, 0, 20);
+	
+	call fixcams;
+	EndCutscene();
+	
+	return;
+
+fixcams:
+	# reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	RestoreExtCam();
+	return;
+
+end
+	
+		

@@ -1,0 +1,63 @@
+# Jones 3D Cog Script
+#
+# lag_Spike.cog
+# 
+# Player is killed by spike if he enters face.
+#	Modified from TEM_Spike.cog
+#	
+# [TRM & DS]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message     startup
+	message     entered
+        
+	thing       player   						local
+	thing		campos
+	surface     hole0
+	thing		deadIndy						local
+	template    tempRef=indy_sh_actor     			local
+	keyframe    inDie=in_die_buckle.key   			local
+	sound       sndDie=tem_temspikes_up_kill_c.wav         local
+	int         dead=0						local
+	int         victim						local
+    
+end
+       
+# ========================================================================================
+
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	return;
+    
+entered:
+	if(GetSenderRef() != hole0) return;
+	if(GetSourceRef() == player)
+	{
+	ClearActorFlags(player, 0x8);
+	DamageThing(player, 1000.0, 0x1, victim);
+	StartCutscene(0);
+
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, player);
+	SetCurrentCamera(2);
+
+	PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+	SetThingFlags(player, 0x80000);
+	deadIndy = CreateThing(tempRef, player);
+	CaptureThing(deadIndy);
+	CopyPlayerHolsters(player, deadindy);
+	ClearThingFlags(deadIndy, 0x80000);
+	PlayKey(deadIndy, inDie, 4, 0x14, 0);
+	EndCutscene();
+	}
+	return;
+
+
+end
+

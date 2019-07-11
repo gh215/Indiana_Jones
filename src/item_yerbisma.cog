@@ -1,0 +1,112 @@
+# Jones 3D Cog Script
+#
+# item_Yerbita.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	activated
+message	touched
+message	taken
+message	user0
+
+cog		talkCog					local
+
+sound	foundSnd=INXJ156.wav	local
+
+thing	player					local
+
+int		bin=38					local
+int		health=1000				local
+
+end
+
+# ===================================================================
+
+code
+
+activated:
+
+	StartCutscene(0);
+
+	talkCog = GetCogByIndex(0);
+	SendMessage(talkCog, 27);
+
+	if (Rand() < 0.5)
+	{
+		SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+		SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 -0.01');
+
+	return;
+
+# -------------------------------------------------------------------
+
+touched:
+
+	player = GetSourceRef();
+
+	if (GetInv(player, bin) < GetInvMax(player, bin))
+	{
+		TakeItem(GetSenderRef(), player);
+	}
+    else
+	{
+		EndCutscene();
+	}
+	
+	return;
+
+# -------------------------------------------------------------------
+
+taken:
+
+	player = GetSourceRef();
+
+	ChangeInv(player, bin, 1.0);
+	SetInvAvailable(player, bin, 1);
+	JonesInvItemChanged(bin);
+
+	Sleep(1.0);
+	PlayVoice(player, foundSnd, 1.0, 0);
+
+	EndCutscene();
+
+	return;
+
+# -------------------------------------------------------------------
+
+user0:
+
+	player = GetLocalPlayerThing();
+
+	if (GetInv(player, bin) > 0)
+	{
+		if (GetHealth(player) < 1000)
+		{
+			# Clear the poisoned bit just in case
+			ClearActorFlags(player, 0x2000);
+
+			# Use the health kit
+			HealThing(player, health);
+			ChangeInv(player, bin, -1);
+			
+			if (GetInv(player, bin) == 0)
+			{
+				SetInvAvailable(player, bin, 0);
+			}
+		}
+	}
+	
+	return;
+
+end

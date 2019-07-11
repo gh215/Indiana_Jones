@@ -1,0 +1,600 @@
+# Jones 3D Cog Script
+#
+# sea_leverpump.cog
+#
+# [DS & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		activated
+	message		entered
+	message		timer
+	message		touched
+	message		taken
+	message		user0
+	message		pulse
+
+	keyframe	in_pull=in_pull_lever.key					local
+	keyframe	in_push=in_push_lever.key					local
+	keyframe	lever_pull=gen_lever_pull.key					local
+	keyframe	lever_push=gen_lever_push.key					local
+	keyframe	pumpactive=sea_pump_machine.key				local
+	keyframe	grdstart=01h_sailor_stucklever_a.key			local
+	keyframe	guardpump=01h_sailor_stucklever_b.key			local
+	keyframe	grdstop=01h_sailor_stucklever_c.key				local
+	sound		in_sayline=Inxj060.wav						local # not right answer
+	sound		in_notgoodidea=Inxj061.wav					local
+	sound		in_nope=Inxj088.wav						local
+	sound		in_take2=Inxj198.wav						local
+	thing		player								local
+	thing		indyactor
+	thing		campos
+	thing		pump
+	thing		leverpos
+	thing		lever0									local
+	thing		lever1									local
+
+	cog			hintcog									# sea_hints.cog
+	cog			sight_cog
+
+	template	pullever0=pullever						local
+	template	pushlever0=pushlever					local
+
+	int			curcam									local
+	int			running=0								local
+	int			stuckpump								local
+	int			grdstartit								local
+	int			grdstopit								local
+	int			touched=0								local
+	int			solved=0								local
+	int			newline=50								local # init out of range
+	int			oldline=50								local # init out of range
+
+	sound		pumpon=sea_pump_on_c.wav				local
+	sound		pumpstart=sea_pump_start_c.wav			local
+	sound		pumpstop=sea_pump_stop_c.wav				local
+	sound		leverpull=nub_lever_pull_c.wav			local
+	sound		bop_indy=sea_bop_indy.wav				local
+	
+#---------lighting effects-----------------------
+	thing		lightpos
+	sector	pumprum0
+	sector	pumprum1
+	sector	pumprum2
+	sector	pumprum3
+	sector	pumprum4
+	vector	vecMinLight							local
+	vector	vecWhtLight							local
+	vector	vecMaxRedLt							local
+	vector	vecrumdark							local
+	vector	vecrumlight							local
+	float		period=2.0							local	
+	float		maxRedLightR=1.0						local	
+	float		maxRedLightG=0.0						local
+	float		maxRedLightB=0.0						local
+	float		minLightR=0.0							local
+	float		minLightG=0.0							local
+	float		minLightB=0.0							local
+	float		minRadius=0.0							local
+	float		maxRadius=0.4							local
+	float		ltR=0.4									local	
+	float		ltG=0.4									local
+	float		ltB=0.4									local
+	float		drkR=0.15								local	
+	float		drkG=0.15								local
+	float		drkB=0.2								local
+
+	int			cnt										local
+	int			lightnum								local
+	int			pumpit									local
+	int			pumpgo									local
+	int			startsnd								local
+	int			lv_track								local
+
+#---------Guard alert ----------------------------
+
+	sound		guardsnd0=se01q07.wav					local		#What?
+	sound		guardsnd1=inxh1003.wav					local		#Give up Jones!
+	sound		mp_talk=Inxj198.wav					local
+
+	thing		guardpos
+	thing		movepos0
+	thing		movepos1
+	thing		mac2pos
+	thing		mp2										local
+	thing		guard0									local
+
+	surface		guardsurf
+
+	sector		hall0
+
+	template	sailor=sailor_tokarev					local
+	template	macpart2=imp2							local
+
+#---------Put indy back in cell-------------------
+
+	keyframe	acthit=01h_sailor_pistolwhip.key		local
+	keyframe	in_raiseHands=0in_stand1_bd_3.key		local
+	keyframe	in_fall=in_die_buckle.key				local
+
+	thing		caughtindy								local # create on the fly
+
+	cog			brigcog									# sea_BrigDoor.cog
+	cog			weaponcog								# sea_WeaponControl.cog
+	cog			doorcog_imp2							# sea_DoorRotate_L.cog
+	cog			doorcog_pump							# sea_DoorRotate_R.cog
+
+	sector		hold1
+	sector		targetsector							local # create on the fly
+
+	template	indy_tpl=indy_actor						local
+
+	vector		v_targetpos								local
+	
+	int			solved=0								local
+	int			inhall=0								local
+	int			bypump=0								local
+	int			alerted=0								local
+	int			indyturning=0							local
+	int			in_track1								local
+	int			in_colltype								local
+	int			curhealth								local
+	int			guard_at_pump=0							local			
+
+#--------- Kill Indy ----------------------------
+
+	sound		guardsnd3=se01q05.wav					local		# Enough!
+	sound		killsnd=gen_pistol_fire.wav				local
+
+	int			notagain=0								local
+	int			victim									local
+
+# ---------Camera Fade Stuff----------------------------------------------
+
+	thing		fadeghost
+	thing		fadething
+
+# -------------- subroutine ------------------------------
+	flex		indy_caught					local
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player = GetLocalPlayerThing();
+	lever0 = CreateThing(pullever0, leverpos);
+	capturething(lever0);
+	vecMinLight = VectorSet(minLightR, minLightG, minLightB);
+	vecRumDark = VectorSet(drkR, drkG, drkB);
+	vecMaxRedLt = VectorSet(maxRedLightR, maxRedLightG, maxRedLightB);
+	vecRumLight = VectorSet(ltR, ltG, ltB);
+	mp2=CreateThing(macpart2, mac2pos);
+	CaptureThing(mp2);
+	guard0 = CreateThing(sailor, guardpos);
+	CaptureThing(guard0);
+	SetActorFlags(guard0, 0x8); # Invul.
+	AISetCutsceneMode(guard0);
+	SetThingAlpha(guard0, 1.0);
+	return;
+
+# ..............................................................................
+
+activated:
+
+	if ((GetSenderRef() == lever0) || (GetSenderRef() == lever1))
+	{
+		if(solved != 0)
+		{	
+			MakeMeStop();
+			StartCutScene(1);
+			SetExtCamOffsetToThing(campos);
+			while(newline == oldline)
+			{
+				newline = RandBetween(0, 2);
+			}
+			oldline = newline;
+			PlayVoice(indyactor, in_sayline[newline], 1.0, 1);
+			RestoreExtCam();
+			EndCutscene();
+			ClearActorFlags(player, 0x200000);
+			return; # now bail out...
+		}
+		if(running != 0) return;
+
+		running = 1;
+		curcam = GetCurrentCamera();
+		SetThingFlags(player, 0x80000);
+		SetActorFlags(player, 0x200000); # no control
+		CopyPlayerHolsters(player, indyactor);
+		StartCutscene(1);
+		SetCameraPosInterp(2, 0); # snap to new pos
+		ClearThingFlags(indyactor, 0x80000);
+		SetCameraFocus(2, campos);
+		SetCameraSecondaryFocus(2, indyactor);
+		SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0.0); # already there
+
+		SendMessageEx(hintcog, user0, 1, 0, 0, 0); # param0=1; pump on
+		
+		lv_track = PlayKey(lever0, lever_pull, 4, 0x12, 0);
+		PlayKey(indyactor, in_pull, 4, 0x12, 0);
+		Sleep(1.2);
+		PlaySoundLocal(leverpull, 1.0, 0, 0x0, 0);
+		Sleep(1.3);	
+		StopKey(lever0, lv_track, 0.0);
+		DestroyThing(lever0);
+		lever1 = CreateThing(pushlever0, leverpos);
+		capturething(lever1);
+
+		for (cnt = 0; cnt <= 4; cnt = cnt+1) 
+		{
+			SetSectorLight(pumprum0[cnt], vecRumDark, 0.4);
+		}
+		lightnum =
+			ThingLightAnim(lightpos, vecMinLight, minRadius, vecMaxRedLt, maxRadius, period);
+		pumpit = PlayKey(pump, pumpactive, 4, 0x10, 0);
+		startsnd = PlaySoundThing(pumpstart, pump, 1.0, 2.5, 10, 0);
+		TeleportThing(player, indyactor);
+		SetCurrentCamera(curcam);
+		ResetCameraFOV(0, 0.0);
+		SetThingFlags(indyactor, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+		
+		# TO DO:  Shouldn't timer be related to difficulty?
+		# No.
+		SetTimer(4.5); # player has 5 sec to skedaddle
+
+		pumpgo = PlaySoundThing(pumpon, pump, 1.0, 2.5, 10, 1);
+	}
+
+	return;
+
+# ..............................................................................
+
+entered:
+
+	if (getSenderRef() == guardsurf)
+	{
+		SendMessage(doorcog_imp2, user5); # hold imp2 room door open
+		setpulse(0.0);
+
+		if ((solved == 1) || (inhall == 1))
+		{
+			return;
+		}
+
+	# Indy has foolishly stumbled into pump guard's presence...
+		alerted = 1; # for timer 
+		MakeMeStop();
+		goto indy_caught;
+		return;
+	}
+	if((GetSenderRef() == Pumprum0) && (guard_at_pump == 1))
+	{
+		inhall=0;				# player may have entered from hall, reset.
+
+		if (IsInvisible() == 1) 	# 1=indy invisible, 0=visible
+		{
+			setPulse(0.5);
+			return;
+		}
+
+		solved=0;				# player will loose imp part.
+
+	# Indy has foolishly stumbled into pump guard's presence...
+		alerted = 1; # for timer 
+		MakeMeStop();
+		Stopkey(guard0, stuckpump, 0.5);
+		Sleep(0.5);
+		goto indy_caught;
+		return;
+	}
+	if (GetSenderRef() == pumprum0)
+	{
+		inhall = 0;
+		SendMessage(doorcog_pump, user5); # keep door open
+		return;
+	}
+	if(getSenderRef() == hold1)
+	{
+		inhall = 0;
+		if(running != 1) return;
+		running = 0;
+		DestroyThing(guard0);
+		StopKey(pump, pumpit, 1.0);
+		Stopsound(pumpgo, 1.0);
+		DestroyThing(lever1);
+		lever0 = CreateThing(pullever0, leverpos);
+		capturething(lever0);
+		StopAnim(lightnum);
+		for (cnt = 0; cnt <= 4; cnt = cnt+1) 
+		{
+			SetSectorLight(pumprum0[cnt], vecRumLight, 0.4);
+		}
+		guard_at_pump=0;
+		guard0 = CreateThing(sailor, guardpos);
+		CaptureThing(guard0);
+		SetThingAlpha(guard0, 1.0);
+		if (solved == 1)
+		{
+			return;
+		}
+		SetActorFlags(guard0, 0x8); # Invul.
+		AISetCutsceneMode(guard0);
+		return;
+	}
+
+	if (GetSenderRef() == hall0)
+	{
+		setpulse(0.0);
+		SendMessage(doorcog_imp2, user6); # close imp2 room door
+		SendMessage(doorcog_pump, user6); # close pump room door
+		if (running == 1)
+		{
+			inhall = 1;
+			return;	
+		}
+		return;
+	}
+	return;
+
+# ..............................................................................
+
+timer:
+
+	if (running == 0)
+	{
+		return;
+	}
+	if ((alerted == 1) || (running == 0) || (touched ==1))
+	{
+		return;
+	}
+		PlayVoice(guard0, guardsnd0, 0.6, 1);
+		AISetLookThing(guard0, movepos0);
+		AISetMoveThing(guard0, movepos0, 1);
+	if ((alerted == 1) || (running == 0) || (touched ==1))
+	{
+		return;
+	}
+		AISetLookThing(guard0, movepos1);
+		AISetMoveThing(guard0, movepos1, 1);
+		if (inhall != 1)
+		{
+		MakeMeStop();
+		goto indy_caught;
+		return;
+		}
+	if ((alerted == 1) || (running == 0) || (touched ==1))
+	{
+		return;
+	}
+		AISetLookThing(guard0, indyactor);
+		AISetMoveThing(guard0, indyactor, 1);
+	if ((alerted == 1) || (running == 0) || (touched ==1))
+	{
+		return;
+	}
+		AISetLookThing(guard0, pump);
+		SetThingMass(guard0, 0);
+		grdstartit=PlayKey(guard0, grdstart, 4, 0x12, 1);
+		stuckpump=PlayKey(guard0, guardpump, 4, 0x10, 0);
+		guard_at_pump=1;
+
+	return;
+
+# ..............................................................................
+
+taken:
+
+	if (GetSenderRef() == mp2)
+	{
+		SendMessage(sight_cog, user0);
+		SendMessageEx(hintcog, user0, 1, 1, 0, 0); # param1=1; imp#2 picked up
+		solved = 1;
+
+		sleep(1.0);
+		PlayVoice(player, mp_talk, 1.0, 0);
+	}
+
+	return;
+
+# ..............................................................................
+
+user0:
+
+	notagain = 1;
+
+	if (solved == 1)
+	{
+		# --------- Retake MP2 --------------	
+		solved = 0;
+		ChangeInv(player, 15, -1);
+		mp2=CreateThing(macpart2, mac2pos);
+		CaptureThing(mp2);
+
+		# --------- Reset Sailor ------------	
+		DestroyThing(guard0);
+		guard0 = CreateThing(sailor, guardpos);
+		CaptureThing(guard0);
+		SetActorFlags(guard0, 0x8); # Invul.
+		AISetCutsceneMode(guard0);
+		SetThingAlpha(guard0, 1.0);
+	}
+
+	return;
+
+# ..............................................................................
+# Put Indy back in cell 
+# ..............................................................................
+
+touched:
+
+	if((getSenderRef() == guard0) && (getsourceref() == player))
+	{
+		if ((solved == 1) || (touched == 1))
+		{
+			return;
+		}
+
+		touched = 1;
+
+		# Indy surrenders...
+		StopThing(guard0);
+#		StartCutscene(1);
+		MakeMeStop();
+		AISetLookThing(guard0, player);	
+		PlayVoice(guard0, guardsnd1, 1.0, 1);
+
+		if((running == 1) && (guard_at_pump == 1))
+		{
+		print("stop guard");
+			Stopkey(guard0, stuckpump, 0.5);
+			Sleep(0.5);
+		}
+
+		If (indyturning == 0);
+		{
+			# Adjust Indy's facing...
+			AISetLookThing(caughtindy, guard0);
+			Sleep(0.5);
+			indyturning = 0; # reset
+		}
+		
+		in_track1 = PlayKey(caughtindy, in_raisehands, 4, 0x14, 0);		
+		Sleep(0.8);
+		PlayKey(guard0, acthit, 4, 0x12, 0);
+		Sleep(0.5);
+		Stopkey(caughtindy, in_track1, 0.0);
+		in_track1 = PlayKey(caughtindy, in_fall, 4, 0x14, 0);
+		PlaySoundLocal(bop_indy, 1.0, 0, 0x0, 0);
+
+		# Record some damage (yes, player can die this way)...
+		curhealth = GetThingHealth(player);
+		SetThingHealth(player, (curhealth - 40));
+		Sleep(1.0);
+
+		#-------- add fadeout here ------------------------
+		ClearThingFlags(fadething, 0x80000);
+		SetThingAlpha(fadething, 0.0); # transparent
+		SetCameraFadeThing(2, fadething, fadeGhost, 0);
+		SetCurrentCamera(2);
+		ThingFadeAnim(fadething, 0.0, 1.0, 1.0, 0);
+		ThingFadeAnim(guard0, 1.0, 0.0, 1.0, 0);
+		ThingFadeAnim(caughtindy, 1.0, 0.0, 1.0, 0);
+		Sleep(1.0);
+		StopKey(caughtindy, in_track1, 0.0);
+		SetThingAlpha(caughtindy, 1.0); # affects model
+		DestroyThing(caughtindy);
+		ClearThingFlags(player, 0x10); # visible when next we see him
+#		SendMessage(doorcog_imp2, user6); # close imp2 room door
+
+		if (notagain == 1) # caught before, now kill player
+		{
+			PlayVoice(guard0, guardsnd3, 1.0, 1);
+			PlaySoundLocal(killsnd, 1.0, 0.0, 0x0, 0);
+			EndCutscene();
+			ClearActorFlags(player, 0x8);
+			DamageThing(player, 1000.0, 0x1, victim);
+			return;
+		}
+		notagain = 1; # next time it's death
+		SendMessage(brigcog, user0); # put Indy back in his cell
+		SendMessage(weaponcog, user0); # inform sea_weapons cog Indy's been caught once
+		SendMessageEx(hintcog, user0, 2, 0, 0, 0);	#param0=2; pump off back in cell
+
+		if(GetInv(player, 15) >= 1)	
+			{
+		#	print("taking Machine Part");
+			ChangeInv(player, 15, -1);
+			mp2 = CreateThing(macpart2, mac2pos);
+			CaptureThing(mp2);
+			}
+
+
+		#----- Clean Up -------
+		guard_at_pump=0;
+		DestroyThing(guard0);
+		guard0 = CreateThing(sailor, guardpos);
+		CaptureThing(guard0);
+		SetActorFlags(guard0, 0x8); # Invul.
+		AISetCutsceneMode(guard0);
+		SetThingAlpha(guard0, 1.0);
+		touched = 0;
+		if (running == 1)
+		{
+			running = 0;
+			DestroyThing(lever1);
+			lever0 = CreateThing(pullever0, leverpos);
+			capturething(lever0);
+			StopAnim(lightnum);
+			for (cnt = 0; cnt <= 4; cnt = cnt+1) 
+			{
+				SetSectorLight(pumprum0[cnt], vecRumLight, 0.4);
+			}
+			StopKey(pump, pumpit, 1.0);
+			Stopsound(pumpgo, 1.0);
+		}
+		sleep(0.5);
+		SendMessage(doorcog_imp2, user6); # close imp2 room door
+		SendMessage(doorcog_pump, user6); # close pump room door
+		return;
+	}
+	return;
+
+pulse:
+	if (IsInvisible() == 1) # 1=indy invisible, 0=visible
+	{
+		return;
+	}
+	setpulse(0.0);
+
+	# Indy has foolishly stumbled into pump guard's presence...
+		alerted = 1; 							# for timer 
+		solved=0;								# player will loose imp part.
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		PlayVoice(guard0, guardsnd0, 1.0, 1);
+		Stopkey(guard0, stuckpump, 0.5);
+		Sleep(0.5);
+		goto indy_caught;
+
+	return;
+
+
+#-----------------------------------------------------------
+#		Subroutines
+#-----------------------------------------------------------
+indy_caught:
+		StartCutscene(1);
+		DeselectWeaponWait(player);
+		caughtindy = CreateThing(indy_tpl, player);
+		CaptureThing(caughtindy);
+		ClearThingFlags(caughtindy, 0x80000);
+		CopyPlayerHolsters(player, caughtindy);
+		in_colltype = GetCollideType(caughtindy);
+		SetCollideType(caughtindy, 0); # guard no touch actor
+		SetThingFlags(player, 0x10); # invisible but touchable!
+		AISetLookThing(guard0, caughtindy);
+		AISetLookThing(caughtindy, guard0);
+		indyturning = 1; # Indy is turning toward the guard
+		AISetMoveThing(guard0, player, 1);
+		alerted = 0;
+		# NOTE: Indy is caught and sent back to brig by touched code block...
+		return;
+
+end
+

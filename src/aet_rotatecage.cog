@@ -1,0 +1,978 @@
+# Jones 3D Cog Script
+#
+# aet_RotateCage.cog
+#
+# Rotate the Aethereal cage and control cutscenes for Mophia.
+#
+# [TL & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+message		startup		
+message		pulse		
+message		user0											# Mophia's intro cutscene		
+message		user1											# we're dilating
+message		killed											# Matt sez okay to zap her
+## message		user2											# (temp in place of killed)	
+message		user3											# okay to shrink
+
+# Spinning cage links ..........................................................
+
+thing		soph									nolink	# Added for attachment purposes		
+
+cog			sophiaspincog
+
+# Cutscene stuff:
+
+# Keyframes ....................................................................
+
+keyframe	so_stand=0so_stand_startled.key			local
+
+# Models .......................................................................
+
+model		mod_nomedal=torso_wm_nogem.3do			local
+
+# Sounds .......................................................................
+
+sound		cageloop=gen_cage_loop.wav				local		# Cage loop
+sound		cagedrop=gen_cage_ascend.wav			local		# Cage drop
+sound		leak=aet_reality_leak.wav				local		# Reality leak sound
+sound		jones=at04s03.wav						local		# "Jones!..."
+sound       majesty=at04j07.wav						local		# "Your aetherial majesty"
+sound       musicA=mus_inf_cutscene1e.wav			local		# Merge music
+sound       musicB=mus_gen_machinepart.wav			local		# Leakage music
+sound		mardukloop=aet_mr_fly.wav				local		# Marduk fly.
+sound		explode=aet_cage_explode.wav			local		# Cage explode.
+sound		create=aet_mophia_creation.wav			local		# Mophia creation.
+sound		defeat=aet_moph_screech.WAV				local		# Mophia defeat.
+sound		hurt=aet_moph_hurt.wav					local		# Mophia hurt.
+sound		mardukhurt=aet_mr_defeat.wav			local		# Marduk hurt.
+sound		cagestop=gen_cage_powerup.wav			local		# At end of cage travel.
+sound		mardukswoop=mus_aet_mardukswoops.wav	local		# Marduk's entrance.
+sound		mophiarise=aet_moph_rise.WAV			local		# Mophia's rise.
+sound		mophiasnarl=aet_moph_fireball.wav		local		# Focus sound for eyes.
+sound		shrink=aet_cage_explode.wav				local		# Shrink sound.
+sound		rumble=pru_boulder_rolling_c.wav		local
+sound		shrinkhurt=aet_mr_damaged.wav			local
+
+# Actors .......................................................................
+
+thing		player									local
+thing		cage											# Aet cage
+thing		marduk
+thing		soph2											# Sophia after cage has opened
+thing		dais_open								nolink	# Cage dais	open
+thing		dais_close								nolink	# Cage dais	close
+thing		indy0											# Indy actors for leakage scene
+thing		indy1
+thing		indy2
+
+thing		stage_1									nolink	# stage wedges
+thing		stage_2									nolink
+thing		stage_3									nolink
+
+# Cameras ......................................................................
+
+thing		cam0									nolink	# Camera for cage descent
+thing		cam1									nolink	# Cam A for M descent
+thing		cam2									nolink	# Cam B for M descent
+thing		cam3									nolink  # Cam for Sophia closeup and spin
+thing		cam4									nolink	# Cam for Merge
+thing		cam5									nolink	# Cam for Mophia closeup
+thing		cam6									nolink	# Cam for Mophia 1st attack mark
+thing		cam7									nolink	# Mophia death
+
+thing		shrinkCam								nolink
+thing		followcamspot							nolink
+thing		followcamtarg							nolink
+
+# Marks & Targets ..............................................................
+
+thing		cg_mk_1									nolink	# Target for cage
+thing		mar_mk_1								nolink	# target for Marduk
+thing		mar_mk_2								nolink	# target for Marduk
+thing		mar_mk_3								nolink	# target for Marduk
+thing		mar_mk_4								nolink	# target for Marduk
+thing		moph_mk_1								nolink	# Mo high mark
+thing		moph_mk_2								nolink  # Mo shrink mark
+thing		moph_mk_3								nolink	# Mo zap mark
+thing		soph_mk_1								nolink	# Where Sophia returns...
+
+thing		moph_look_target						nolink	# Look target for Mophia
+
+thing		boss_ghost										# create Mo boss @ Waypnt_0
+
+thing		offset_target0									# leak cam 0 spot
+thing		offset_target1									# leak cam 1 spot
+thing		offset_target2									# leak cam 2 spot
+
+thing		lookOff_target0									# leak cam 0 aim
+thing		lookOff_target1									# leak cam 1 aim
+thing		lookOff_target2									# leak cam 2 aim
+
+thing		movePOS0										# leak cam 0 moves here
+thing		movePOS1										# leak cam 1 moves here
+thing		movePOS2										# leak cam 2 moves here
+
+thing		targetPOS0										# leak aim 0 moves here
+thing		targetPOS1										# leak aim 1 moves here
+thing		targetPOS2										# leak aim 2 moves here
+
+thing		marduk_trgt_0							nolink	# glued to Marduk
+thing		marduk_trgt_1							nolink	# follow Mar to here
+thing		mohead_trgt								nolink	# Mo close up
+
+thing		spriteDummy								nolink	# cage vanishes
+thing		spriteDummy1							nolink	# big M appears
+thing		spriteDummy2							nolink	# 1st shrink
+thing		spriteDummy3							nolink	# 2nd shrink
+thing		spriteDummy4							nolink	# 3rd shrink
+thing		spriteDummy5							nolink	# Sophia reappears
+
+thing		ghost_loop										# POS ghost for cage loop sound.
+
+# Variables ....................................................................
+
+thing		head									local
+thing		offtarg									local
+thing		mophia									local
+thing		spriteThing								local
+thing		spriteThing1							local
+thing		spriteThing2							local
+thing		indyvar									local
+thing		offcamvar								local	
+thing		looktargvar								local
+thing		camposvar								local
+thing		targposvar								local
+thing		spritevar								local
+thing		stagevar								local
+
+sector		camsector								local
+
+vector		headvec									local
+vector		v_camspot								local
+
+flex		viewangle								local
+flex		mophiazap								local	# label
+flex		cageloop								local
+
+int			curcam									local	
+int			gomovie=0								local
+int			so_keytrack1							local
+int			mr_colltype								local
+int			mo_rotrate								local
+int			doleak=0								local
+int			shrinknow=0								local
+int			shrinkcount=0							local
+int			mophintrodone=0							local
+int			channel0								local
+int			mardukchannel							local
+int			rumblechannel							local
+
+# Others .......................................................................
+
+thing		rotate_ghost0							nolink	# Marduk spinner
+thing		rotate_ghost1							nolink	# camera spinner
+thing		floater0
+thing		floater1
+thing		bug0
+thing		bug1
+
+template	mophSprite=aet_flash					local	# VFX for Mo's transformation	
+template	mophSprite1=aet_flash					local	# VFX for Mo's transformation	
+template	mophSprite2=aet_flash					local	# VFX for Mo's transformation	
+template	tpl_ghost=ghost							local	# use to create objects	
+
+sector		mophsec									local
+
+cog			cog_boss										# Matt's boss cog aet_AIMophia.cog
+cog			forgiveCog										# Hal's cutscene 15_AET_Forgive.cog
+cog         hint_cog
+
+# Camera shake symbols .........................................................
+
+vector      posOffset           					local		
+vector      angOffset           					local
+
+int         vibe                					local	# Int for random shake
+int			shake									local	# Int for amount of shake
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	
+	Sleep(0.01);
+	call cageloop;
+
+	SendMessage(sophiaspincog, user1); 				# Tell Sophia to start spinning.
+
+	# Cutscene prep....
+	AISetCutsceneMode(marduk);
+	SetThingFlags(marduk, 0x80000);
+	AISetCutsceneMode(soph2);
+	SetThingFlags(soph2, 0x80000);
+	SetThingFlags(dais_close, 0x80000);
+
+	# Hide stage wedges...	
+	SetThingFlags(stage_1, 0x80000);
+	SetThingFlags(stage_2, 0x80000);
+	SetThingFlags(stage_3, 0x80000);
+	
+	SetThingFlags(floater0, 0x80000);
+	SetThingFlags(floater1, 0x80000);
+	SetThingFlags(bug0, 0x80000);
+	SetThingFlags(bug1, 0x80000);
+   	
+	Sleep(20.0);
+
+	ClearThingFlags(floater0, 0x80000);
+	ClearThingFlags(floater1, 0x80000);
+	ClearThingFlags(bug0, 0x80000);
+	ClearThingFlags(bug1, 0x80000);
+
+	return;
+
+# ..............................................................................
+
+user0:
+
+	# NOTE: received from aet_ArmMove.cog to start Mophia intro,
+	# and cutscene is ALREADY UNDERWAY...
+
+	if (mophintrodone != 0)
+	{
+		return;
+	}
+	mophintrodone = 1;
+
+	if (floater0 > -1)
+		{
+		//SetThingFlags(floater0, 0x10000);
+		//DamageThing(floater0, 1000, 0x80, player);
+		DestroyThing(floater0);
+		}
+	if (floater1 > -1)
+		{
+		//SetThingFlags(floater1, 0x10000);
+		//DamageThing(floater1, 1000, 0x80, player);
+		DestroyThing(floater1);
+		}
+	if (bug0 > -1)
+		{
+		//SetThingFlags(bug0, 0x10000);
+		//DamageThing(bug0, 1000, 0x1, player);
+		DestroyThing(bug0);
+		}
+	if (bug1 > -1)
+		{
+		//SetThingFlags(bug1, 0x10000);
+		//DamageThing(bug1, 1000, 0x1, player);
+		DestroyThing(bug1);
+		}
+
+	# TO DO:  need a big sound here as cage starts...
+	PlaySoundLocal(cagedrop, 1, 0, 0x0, 0);	
+
+	# Sophia: "Jones..."
+	PlayVoice(soph, jones, 1.0, 0);
+
+	# Cut to cage dropping to floor & track it...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam0);
+	SetCameraSecondaryFocus(2, cage);
+	SetCurrentCamera(2);
+	SetCameraFOV(60, 0, 0.0);
+	
+	Sleep(1.0);
+	SetCameraFOV(75, 1, 2.0);
+
+	# Wait for cage to stop...
+	AIWaitForStop(cage);
+    PlaySoundLocal(cagestop, 1, 0, 0x0, 0);	
+	Sleep(0.3);
+
+	# VFX play here...
+	spriteThing = CreateThing(mophSprite, spriteDummy);
+	CaptureThing(spriteThing);
+	AnimateSpriteSize(spriteThing, '0 0 1', '4 4 1', 0.5);
+
+	# Hide open dais and show closed one...
+	ThingFadeAnim(dais_open, 1.0, 0.0, 0.5, 0);
+	SetThingAlpha(dais_close, 0.0);
+	ClearThingFlags(dais_close, 0x80000);
+	ThingFadeAnim(dais_close, 0.0, 1.0, 0.5, 0);
+	StopSound(channel0, 0.0);
+
+	# TO DO: add a sound for this...
+	PlaySoundLocal(explode, 1, 0, 0x0, 0);	
+
+	# Hide cage and Soph & reveal Soph2...
+	ThingFadeAnim(cage, 1.0, 0.0, 1.0, 0);
+	ThingFadeAnim(soph, 1.0, 0.0, 1.0, 0);
+	SetThingAlpha(soph2, 0.0);
+	ClearThingFlags(soph2, 0x80000);
+	so_keytrack1 = PlayKey(soph2, so_stand, 2, 0x00, 0);
+	ThingFadeAnim(soph2, 0.0, 1.0, 1.0, 0);
+	Sleep(0.5);
+	AnimateSpriteSize(spriteThing, '4 4 1', '5 5 0', 0.5);
+
+	# Sophia anticipates M...
+	SetThingMaxRotVel(soph2, 120.0);
+	AISetLookThing(soph2, cam1);
+	Sleep(0.5);
+	AIWaitForStop(soph2);
+	DestroyThing(spriteThing);
+	SetThingFlags(cage, 0x80000);
+	SetThingFlags(soph, 0x80000);
+	SetThingFlags(dais_open, 0x80000);
+
+	# Prep Marduk...
+	ClearThingFlags(marduk, 0x80000);
+	SetThingMesh(marduk, 0, mod_nomedal, 0);
+	mr_colltype = GetCollideType(marduk);
+	SetCollideType(marduk, 0);
+	SetThingAlpha(marduk, 0.0);
+
+	# Cut to shot of Marduk...
+    mardukchannel = PlaySoundLocal(mardukloop, 1, 0, 0x0, 0);
+	AttachThingToThing(marduk_trgt_0, marduk);
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, marduk_trgt_0);
+	SetCameraFOV(20, 0, 0.0);
+
+	# Marduk flies out to 1st mark...
+    PlaySoundLocal(mardukswoop, 1, 0, 0x0, 0);	
+	
+	ThingFadeAnim(marduk, 0.0, 1.0, 0.5, 0);
+	AISetMoveSpeed(marduk, 1.0);
+	AISetLookThing(marduk, mar_mk_1);
+	AISetMoveThing(marduk, mar_mk_1, 0);
+	Sleep(0.01);
+	SetCameraFOV(25, 1, 0.8);
+	Sleep(0.9);
+
+    PlaySoundLocal(shrinkhurt, 1, 0, 0x0, 0);	
+
+	# Marduk flies down to 2nd mark...
+	AISetMoveSpeed(marduk, 1.3);
+	AISetLookThing(marduk, mar_mk_2);
+	AISetMoveThing(marduk, mar_mk_2, 0);
+	Sleep(0.15); # was 0.2
+	
+	# Camera drops to track M...
+	DetachThing(marduk_trgt_0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 2.3);
+	Sleep(0.01);
+
+	SetCameraFocus(2, cam2);
+	SetCameraSecondaryFocus(2, marduk_trgt_1);
+	SetCameraFOV(90, 1, 2.3);
+	Sleep(2.3);
+	 
+	# Zoom in...
+	SetCameraFOV(50, 1, 5.0);
+
+	# Marduk starts to circle Sophia...
+	AIWaitForStop(marduk);
+	AttachThingToThingEx(marduk, rotate_ghost0, 0x0C);
+	AIEnableHeadTracking(soph2, marduk); 	 
+	Rotate(rotate_ghost0, -400, 1, 5.0);
+
+	# Play merge music...
+	PlaySoundLocal(musicA, 1.0, 0, 0x0, 0);
+	Sleep(5.0);
+
+	# Cut to shot of Sophia with M in bg...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam3);
+	SetCameraFOV(100, 0, 0.0);
+
+	# Make a target near sophia...
+	v_camspot = VectorAdd(VectorTransformToOrient(soph2, '0.0 0.0 0.035'), GetThingPos(soph2));	
+	camsector = FindNewSectorFromThing(soph2, v_camspot);
+	offtarg = CreateThingAtPos(tpl_ghost, camsector, v_camspot, '0 0 0');
+	CaptureThing(offtarg);
+	SetCameraSecondaryFocus(2, offtarg);
+
+	# Attach cam to ghost & spin everything...
+	TeleportThing(marduk, mar_mk_3);
+	SetCameraFOV(30, 1, 5.0);
+	AttachThingToThingEx(marduk, rotate_ghost0, 0x0C); 	 		
+	AttachThingToThingEx(cam3, rotate_ghost1, 0x0C); 	 
+	AIEnableBodyTracking(soph2, marduk); 
+	AIEnableBodyTracking(marduk, soph2); 
+	Rotate(rotate_ghost0, -490, 1, 5.0);
+	Rotate(rotate_ghost1, -400, 1, 5.0);
+	Sleep(5.0);
+
+	# Cut to closeup of Sophia...
+	SetCameraFocus(2, cam4);
+	SetCameraFOV(40, 0, 0.0);
+	SetCameraSecondaryFocus(2, soph2);
+	Sleep(0.01);
+	SetCameraFOV(75, 1, 0.4);
+
+	# Housekeeping...
+	DetachThing(marduk);
+	DetachThing(cam3);
+	AIDisableBodyTracking(soph2, marduk);
+	DestroyThing(offtarg); 
+
+	# Marduk merges with Sophia...
+	TeleportThing(marduk, mar_mk_4);
+	SetCollideType(marduk, 0);
+	SetCollideType(soph2, 0);
+	AISetMoveSpeed(marduk, 1.5);
+	AISetLookThing(marduk, soph2);
+	AISetMoveThing(marduk, soph2, 1);
+
+	# Fade both out...
+	ThingFadeAnim(marduk, 1.0, 0.0, 0.5, 0);
+	ThingFadeAnim(soph2, 1.0, 0.0, 0.5, 0);
+
+	PlaySoundLocal(create, 1, 0, 0x0, 0);	
+
+    StopSound(mardukchannel, 0.0);
+	
+	# VFX play here...
+	spriteThing1 = CreateThing(mophSprite1, spriteDummy1);
+	CaptureThing(spriteThing1);
+	AnimateSpriteSize(spriteThing1, '0 0 1', '4 4 1', 0.5);
+
+	# Create Mophia!
+	mophia = SendMessageEx(cog_boss, 27, boss_ghost, 0, 0, 0);
+
+	SetThingAlpha(mophia, 0.0);
+	ThingFadeAnim(mophia, 0.0, 1.0, 0.5, 0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.5);
+	Sleep(0.5);
+	AnimateSpriteSize(spriteThing1, '4 4 1', '5 5 0', 0.5);
+
+	# Hide stuff...
+	SetThingFlags(soph2, 0x10);
+	SetThingFlags(marduk, 0x80000);
+
+	# Focus on ultraboss Mophia...
+	SetCameraSecondaryFocus(2, mophia);
+
+	# Zoom out...
+	SetCameraFOV(110, 1, 0.5);
+	AISetLookThing(mophia, cam4);
+	AIEnableHeadTracking(mophia, cam4);
+	Sleep(2.0);
+
+	# Housekeeping...
+	SetThingFlags(soph2, 0x80000);
+	DestroyThing(spriteThing1);
+
+	# Cut to Mophia closeup...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	AISetLookThing(mophia, cam5);
+	AIEnableHeadTracking(mophia, cam5);
+	SetCameraFocus(2, cam5);
+	SetCameraSecondaryFocus(2, mohead_trgt);
+	SetCameraFOV(30, 0, 0.5); # zoom in
+	SendMessageEX(GetThingClassCog(mophia), user6, 0, 0, 0, 0);
+
+	# TO DO: flashing eyes & snarl for M...
+    PlaySoundLocal(mophiasnarl, 1, 0, 0x0, 0);	
+
+	Sleep(2.0);	
+
+	SendMessageEX(GetThingClassCog(mophia), user6, 0, 0, 0, 0);
+
+	# TO DO: flashing eyes & snarl for M...
+    PlaySoundLocal(mophiasnarl, 1, 0, 0x0, 0);	
+	
+	# Widen out...
+	SetCameraFOV(90, 1, 1.0);
+	Sleep(0.5);
+
+    PlaySoundLocal(mophiarise, 1, 0, 0x0, 0);	
+
+	# Move Mophia to her upper mark...
+	AttachThingToThing(mohead_trgt, mophia);
+	AISetMoveSpeed(mophia, 1.2); # was 1.5
+	AISetMoveThing(mophia, moph_mk_1, 0);
+	mo_rotrate = GetThingMaxRotVel(mophia);
+	SetThingMaxRotVel(mophia, 60.0);
+	AIEnableHeadTracking(mophia, player);
+	AISetLookThing(mophia, player);
+	Sleep(1.5);
+
+	# Cut to shot of M rising...
+	SetCameraFocus(2, cam6);
+	SetCameraFOV(35, 0, 0.0);
+	Sleep(0.01);
+	SetCameraFOV(90, 1, 3.5);
+	AIWaitForStop(mophia);
+
+	# Indy: "Your Aetheral Majesty!"
+	PlayVoice(player, majesty, 1.0, 1);
+
+	# Back to play...
+	SetThingMaxRotVel(mophia, mo_rotrate);
+	AISetMoveSpeed(mophia, 1.0);	
+	SetCameraPosition(1, GetThingPos(cam6));
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+
+	# Alert Matt's boss cog so Mophia will begin attacking...
+	SendMessage(cog_boss, 28);
+
+	return;
+
+# ..............................................................................
+
+user1:
+
+	# NOTE: received from aet_EndDilator.cog...
+
+	# Reality leakage & Mophia shrinkage...
+	
+	if (GetParam(0) == 1)
+	{
+		indyvar = indy0;
+		offcamvar = offset_target0;
+		looktargvar = lookoff_target0;
+		camposvar = movePOS0;
+		targposvar = targetPOS0;
+		spritevar = spriteDummy2;
+		stagevar = stage_2;
+		doleak = 1;
+	}
+
+	if (GetParam(1) == 1)
+	{
+		indyvar = indy1;
+		offcamvar = offset_target1;
+		looktargvar = lookoff_target1;
+		camposvar = movePOS1;
+		targposvar = targetPOS1;
+		spritevar = spriteDummy3;
+		stagevar = stage_1;
+		doleak = 1;
+	}
+
+	if (GetParam(2) == 1)
+	{
+		indyvar = indy2;
+		offcamvar = offset_target2;
+		looktargvar = lookoff_target2;
+		camposvar = movePOS2;
+		targposvar = targetPOS2;
+		spritevar = spriteDummy4;
+		stagevar = stage_3;
+		doleak = 1;
+	}
+
+	if (doleak != 0)
+	{
+		shrinknow = 0; # prep
+
+		# Watch reality fade in...
+		StartCutscene(1);
+		curcam = GetCurrentCamera();
+		viewangle = GetCameraFOV();
+		SetActorFlags(player, 0x200000);
+
+		# Prep indy...
+		TeleportThing(indyvar, player);
+		CopyPlayerHolsters(player, indyvar);
+		SetThingFlags(player, 0x80000); 
+		ClearThingFlags(indyvar, 0x80000);
+
+		# Offset to look at Indy...
+		MakeCamera2LikeCamera1(followcamspot, followcamtarg);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, followcamspot);
+		SetCameraSecondaryFocus(2, followcamtarg);
+		SetCurrentCamera(2);
+		SetCameraFOV(viewangle, 0, 0.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 2.0); # slow to match dilation
+		Sleep(0.01);
+
+		# Slide cam out...
+		SetCameraFocus(2, offcamvar);
+		SetCameraSecondaryFocus(2, looktargvar);
+		SetCameraFOV(110, 1, 2.0);
+		
+		# Send message to boss cog to reset Mophia...
+		SendMessage(cog_boss, 30);
+
+		# Move Mophia to her mark...
+		AISetCutsceneMode(mophia);
+		
+		TeleportThing(mophia, moph_mk_1);		
+		AISetLookThing(mophia, offcamvar);
+		
+		Sleep(2.0);
+
+		shake = 1;
+		SetPulse(0.1);
+
+		# Turn Indy to watch the leakage...
+		rumblechannel = PlaySoundLocal(rumble, 1.0, 0, 0x1, 0);
+		
+		SetThingMaxRotVel(indyvar, 180.0);
+		AIEnableBodyTracking(indyvar, looktargvar);
+
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		Sleep(2.0);
+
+		# Camera watches leakage too...
+		MoveThingToPos(looktargvar, GetThingPos(targposvar), 6.5);
+		Sleep(2.5);
+		MoveThingToPos(offcamvar, GetThingPos(camposvar), 4.0);
+		SetCameraFOV(90, 1, 4.0);
+		Sleep(2.0);
+
+		StopSound(rumblechannel, 1.0);
+		PlaySoundLocal(leak, 1.0, 0, 0, 0);
+		
+		# M descends...
+		AISetMoveThing(mophia, moph_mk_2, 0);
+		Sleep(2.0);
+		
+		# Stage wedge appears...
+		ClearThingFlags(stagevar, 0x80000);
+		SetThingAlpha(stagevar, 0.0);
+		ThingFadeAnim(stagevar, 0.0, 1.0, 1.0, 0);
+        SetThingLight(stagevar, '0.5 0.5 0.5', 0.001, 0.1);
+
+		# TO DO:  add sound for stage appearing...
+		Sleep(0.8);
+
+		doleak = 0;
+		SetPulse(0.0);
+
+		while (shrinknow == 0)
+		{
+			# Wait until signal for shrink to happen...
+			Sleep(0.01);
+		}
+		
+		# Watch Mophia shrink...
+		SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 1.0);
+		Sleep(1.0);
+		SetCameraSecondaryFocus(2, moph_mk_2);
+		SetCameraFOV(40, 1, 1.0);
+
+		# Boss agony...
+        SendMessageEX(GetThingClassCog(mophia), user6, 2, 0, 0, 0);		# Request fan explosion VFX
+		PlayMode(mophia, 76, 0);
+        PlaySoundLocal(shrinkhurt, 1, 0, 0x0, 0);	
+		PlaySoundLocal(hurt, 1, 0, 0x0, 0);	
+		Sleep(0.2);
+
+        PlaySoundLocal(shrink, 1, 0, 0x0, 0);	
+
+		# VFX play here...
+		spriteThing2 = CreateThing(mophSprite2, spritevar);
+		CaptureThing(spriteThing2);
+		AnimateSpriteSize(spriteThing2, '0 0 1', '4 4 1', 0.7);
+
+		Sleep(0.7);
+
+		AnimateSpriteSize(spriteThing2, '4 4 1', '5 5 0', 0.3);
+		Sleep(1.3);
+
+		# Send message to Matt's cog to shrink her...
+        mophia = SendMessageEx(cog_boss, 29, 0, 0, 0, 0);
+
+        # Play music...
+		PlaySoundLocal(musicB, 1.0, 0, 0x0, 0);
+		
+		# Back to play...
+		DestroyThing(spriteThing2);
+		TeleportThing(player, indyvar);
+		SetThingFlags(indyvar, 0x80000);
+		ClearThingFlags(player, 0x80000);
+
+		v_camspot = VectorAdd(VectorTransformToOrient(player, '0.15 -0.02 0.02'), GetThingPos(player));	
+		SetCameraPosition(1, v_camspot);
+		SetCurrentCamera(1);
+		ResetCameraFOV(0, 0.0);
+
+		//if (gomovie == 1)
+	    //{
+		//SetThingFlags(dais_close, 0x80000);
+
+			#### TEMP FOR TESTING ####
+			//goto mophiazap;
+			####
+			
+		//}
+
+		EndCutScene();
+		ClearActorFlags(player, 0x200000);
+		
+		# Tell Matt's boss cog that Mophia should resume attacking...
+		AIClearCutsceneMode(mophia);
+		SendMessage(cog_boss, 28);
+		
+		doleak = 0;
+		shrinknow = 0; # reset
+	}
+
+	return;
+
+# ..............................................................................
+
+killed:
+
+//user2: # (temp)
+	if (GetSenderRef() == cog_boss)
+	{
+		//gomovie = 1;
+		SetThingFlags(dais_close, 0x80000);
+		
+		goto mophiazap;
+    }
+	if (GetSenderRef() == floater0)
+	{
+		floater0 = -1;
+	}
+	if (GetSenderRef() == floater1)
+	{
+		floater1 = -1;
+	}
+	if (GetSenderRef() == bug0)
+	{
+		bug0 = -1;
+	}
+	if (GetSenderRef() == bug1)
+	{
+		bug1 = -1;
+	}
+
+	return;
+
+# ..............................................................................
+
+user3:
+
+	# NOTE: received from aet_EndDilator.cog when it's okay to shrink Mophia...
+
+	shrinknow = 1;
+
+	return;
+
+# ..............................................................................
+
+mophiazap:
+
+	#### TEMP FOR TEST #### if (GetSenderRef() == cog_boss) 
+	#### {
+
+	# Once Mophia is killed, destroy her and begin "Forgive" scene...
+	
+	# Prep...
+    SetActorFlags(player, 0x200000);
+	DeselectWeapon(player);
+	StartCutscene(2);
+
+	# Mophia...
+	SendMessage(cog_boss, 30);										# reset big M
+	SendMessageEX(GetThingClassCog(mophia), user6, 3, 0, 0, 0);		# Request start death VFX
+
+	AISetCutsceneMode(mophia);
+	SetCollideType(mophia, 0);
+	AISetMoveSpeed(mophia, 2.0);
+	AISetLookThing(mophia, moph_mk_2);
+	AISetMoveThing(mophia, moph_mk_2, 0);
+
+	# Cut to show her...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	curcam = GetCurrentCamera();
+	ResetCameraFOV(0, 0.0);
+	SetCameraFocus(2, cam7);
+	SetCameraSecondaryFocus(2, mophia);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0);
+	Sleep(0.01);
+	SetCameraFOV(70, 1, 1.0);
+	AIWaitForStop(mophia);
+
+	# M rises...
+    PlaySoundLocal(mardukhurt, 1, 0, 0x0, 0);	
+	AISetLookThing(mophia, moph_mk_1);
+	AISetMoveThing(mophia, moph_mk_1, 0);
+	AIWaitForStop(mophia);
+
+	# M spins...
+	v_camspot = VectorAdd(VectorTransformToOrient(mophia, '0.2 0.2 0.0'), GetThingPos(mophia));	
+	camsector = FindNewSectorFromThing(moph_mk_1, v_camspot);
+	offtarg = CreateThingAtPos(tpl_ghost, camsector, v_camspot, '0 0 0');
+	CaptureThing(offtarg);
+	AttachThingToThing(offtarg, moph_mk_1);
+	AIEnableBodyTracking(mophia, offtarg);	
+	Rotate(moph_mk_1, 980, 1, 5.0);
+	Sleep(0.5);
+	
+    PlaySoundLocal(defeat, 1, 0, 0x0, 0);	
+
+	# Mophia drops...
+	AISetMoveSpeed(mophia, 1.5);
+	AISetMoveThing(mophia, soph_mk_1, 0);
+	SetCameraFOV(110, 1, 2.0);
+	AIWaitForStop(mophia);
+
+	SendMessageEX(GetThingClassCog(mophia), user6, 4, 0, 0, 0);		# Request end death VFX
+
+    PlaySoundLocal(explode, 1, 0, 0x0, 0);	
+	# VFX here...
+	spriteThing2 = CreateThing(mophSprite2, spriteDummy5);
+	CaptureThing(spriteThing2);
+	AnimateSpriteSize(spriteThing2, '0 0 1', '5 5 1', 0.7);
+	Sleep(0.7);
+	DestroyThing(offtarg);
+	DestroyThing(mophia);
+	AnimateSpriteSize(spriteThing2, '5 5 1', '6 6 0', 0.3);
+
+	//v_camspot = VectorAdd(VectorTransformToOrient(player, '0.2 -0.05 0.0'), GetThingPos(player));
+	//SetCameraPosition(1, v_camspot); 
+	//SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+    //EndCutScene();
+	//ClearActorFlags(player, 0x200000);
+
+	SendMessage(forgiveCog, user0);
+	SendMessage(hint_cog, user2);
+	
+	#### }
+
+	return;
+
+# ..............................................................................
+
+pulse:
+
+	vibe = RandBetween(1, 4);
+	if (vibe == 1)
+		{
+		if (shake == 1)
+			{
+			posOffset = '-0.008 0.00 -0.002'; #1 was .005x
+			angOffset = '0.00 -0.002 0.002';
+			}
+		if (shake == 2)
+			{
+			posOffset = '0.01 -0.01 0.005'; #2
+			angOffset = '0.005 0.00 -0.005';
+			}
+		if (shake == 3)
+			{
+			posOffset = '0.01 0.02 -0.02'; #3
+			angOffset = '-0.01 0.01 -0.01';
+			}
+		}
+	if (vibe == 2)
+		{
+		if (shake == 1)
+			{
+			posOffset = '0.008 -0.005 0.002'; #2 was .005x
+			angOffset = '0.002 0.00 -0.002';
+			}
+		if (shake == 2)
+			{
+			posOffset = '0.005 0.01 -0.01'; #3
+			angOffset = '-0.005 0.005 -0.00';
+			}
+		if (shake == 3)
+			{
+			posOffset = '-0.02 0.00 0.02'; #4 was .01x
+			angOffset = '0.00 0.00 0.01';
+			}
+		}
+	if (vibe == 3)
+		{
+		if (shake == 1)
+			{
+			posOffset = '0.005 0.005 -0.005'; #3 was .002x
+			angOffset = '-0.002 0.005 -0.005';
+			}
+		if (shake == 2)
+			{
+			posOffset = '-0.015 0.00 0.01'; #4 was .01x
+			angOffset = '0.00 0.00 0.01';
+			}
+		if (shake == 3)
+			{
+			posOffset = '-0.025 0.00 -0.01'; #1 was .02x
+			angOffset = '0.00 -0.01 0.01';
+			}
+		}
+	if (vibe == 4)
+		{
+		if (shake == 1)
+			{
+			posOffset = '-0.002 0.00 0.005'; #4
+			angOffset = '0.00 0.00 0.002';
+			}
+		if (shake == 2)
+			{
+			posOffset = '-0.01 0.00 -0.005'; #1
+			angOffset = '0.00 -0.005 0.005';
+			}
+		if (shake == 3)
+			{
+			posOffset = '0.02 -0.02 0.01'; #2
+			angOffset = '0.01 0.00 -0.01';
+			}
+		}
+	vibe = RandBetween(1, 3);
+	if (vibe == 1)
+		{
+		SetPulse(0.05);
+		}
+	if (vibe == 2)
+		{
+		SetPulse(0.1);
+		}
+	if (vibe == 3)
+		{
+		SetPulse(0.15);
+		}
+	SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+
+	return;
+
+# ..............................................................................
+cageloop:
+
+	channel0=PlaySoundThing(cageloop, cage, 1, 10, 20, 0x0081);
+	//channel0=PlaySoundLocal(cageloop, 1.0, 0, 0x1, 0);
+    
+	return;
+
+# ..............................................................................
+end

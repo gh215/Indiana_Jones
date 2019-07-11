@@ -1,0 +1,48 @@
+# Jones 3D Cog Script
+#
+# TEM_SurfAnim2.cog
+#
+# Animates up to 4 surfaces at the same frame rate
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		startup		
+
+	surface		surf0
+	surface		surf1
+	surface		surf2
+	surface		surf3
+    surface		surf4
+    surface		surf5
+    surface		surf6
+    surface		surf7
+    
+	float		fps=15.0		
+    
+	int			i			    local
+    int         numSurfs=8      local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	for (i = 0; i <= numSurfs; i = i + 1)
+	    {
+		    if(surf0[i] >= 0) SurfaceAnim(surf0[i], fps, 0x1);
+	    }
+        
+	return;
+
+# ========================================================================================
+
+end
+

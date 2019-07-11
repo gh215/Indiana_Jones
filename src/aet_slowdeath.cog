@@ -1,0 +1,132 @@
+# Jones 3D Cog Script
+#
+# aet_SlowDeath.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+    
+message     startup
+message		crossed
+
+thing		player								local
+# Crossable adjoins for entering PORs.		
+surface		PORsurf0							linkid=1	# LAG adjoins						
+surface		PORsurf1    						linkid=1	# PYR adjoins.
+surface		PORsurf2    						linkid=1	# RIV adjoins.
+surface		PORsurf3    						linkid=1    # RIV adjoins.
+surface		PORsurf4    						linkid=1	# TEO adjoins.
+surface		PORsurf5    						linkid=1	# SOL adjoins.
+surface		PORsurf6    						linkid=1    # SOL adjoins.
+surface		PORsurf7    						linkid=1    # SOL adjoins.
+surface		PORsurf8    						linkid=1	# BAB adjoins.
+surface		PORsurf9    						linkid=1    # BAB adjoins.
+surface		PORsurf10   						linkid=1	# BAB adjoins.
+# Crossable adjoins for entering AET again.
+surface		AETsurf0							linkid=2						
+surface		AETsurf1							linkid=2			
+surface		AETsurf2    						linkid=2
+surface		AETsurf3    						linkid=2
+surface		AETsurf4    						linkid=2
+surface		AETsurf5    						linkid=2
+surface		AETsurf6    						linkid=2
+surface		AETsurf7    						linkid=2
+surface		AETsurf8    						linkid=2
+surface		AETsurf9    						linkid=2
+surface		AETsurf10   						linkid=2
+
+int			LAGdone=0							local
+int			PYRdone=0							local
+int			RIV1done=0							local
+int			RIV2done=0							local
+int			TEOdone=0							local
+int			SOL1done=0							local
+int			SOL2done=0							local
+int			SOL3done=0							local
+
+sound		musicA=mus_aet_pocket_lag.wav		local		# LAG music.
+sound		musicB=mus_aet_pocket_pyr.wav		local		# PYR music.
+sound		musicC=mus_aet_pocket_riv.wav		local		# RIV music.
+sound		musicD=mus_aet_pocket_teo.wav		local		# TEO music.
+sound		musicE=mus_aet_pocket_sol.wav		local		# SOL music.
+sound		enterPOR=gen_cage_sophia_enter.wav	local		# Entering the POR sectors.
+
+cog			ambient											# Cog that controls ambients.
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+PlayerInPOR(0);
+
+return;
+
+# ........................................................................................
+crossed:
+
+# Player has entered a POR and is now safe.
+if ((GetSenderId() == 1) && (GetSourceRef() == player))
+	{
+    PlayerInPOR(1);
+    PlaySoundLocal(enterPOR, 0.8, 0, 0x0, 0);
+    SendMessage(ambient, user0);
+	
+	if ((GetSenderRef() == PORsurf0) && (LAGdone == 0))
+		{
+		LAGdone = 1;
+		PlaySoundLocal(musicA, 1, 0, 0x0, 0);
+		}
+	if ((GetSenderRef() == PORsurf1) && (PYRdone == 0))
+		{
+        PYRdone = 1;
+        PlaySoundLocal(musicB, 1, 0, 0x0, 0);
+		}
+	if ((GetSenderRef() == PORsurf2) && (RIV1done == 0))
+		{
+        RIV1done = 1;
+		PlaySoundLocal(musicC, 1, 0, 0x0, 0);
+		}
+	if ((GetSenderRef() == PORsurf3) && (RIV2done == 0))
+		{
+        RIV2done = 1;
+        PlaySoundLocal(musicC, 1, 0, 0x0, 0);
+		}
+	if ((GetSenderRef() == PORsurf4) && (TEOdone == 0))
+		{
+        TEOdone = 1;
+        PlaySoundLocal(musicD, 1, 0, 0x0, 0);
+		}
+	if ((GetSenderRef() == PORsurf5) && (SOL1done == 0))
+		{
+        SOL1done = 1;
+        PlaySoundLocal(musicE, 1, 0, 0x0, 0);
+		}
+	if ((GetSenderRef() == PORsurf6) && (SOL2done == 0))
+		{
+        SOL2done = 1;
+        PlaySoundLocal(musicE, 1, 0, 0x0, 0);
+		}
+	if ((GetSenderRef() == PORsurf7) && (SOL3done == 0))
+		{
+        SOL3done = 1;
+        PlaySoundLocal(musicE, 1, 0, 0x0, 0);
+		}
+    }
+# Player has left a POR and is NO LONGER safe.
+if ((GetSenderId() == 2) && (GetSourceRef() == player))
+	{
+    PlayerInPOR(0);
+    SendMessage(ambient, user1);
+	}
+
+return;
+
+# ........................................................................................
+end

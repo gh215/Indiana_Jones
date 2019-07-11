@@ -1,0 +1,251 @@
+# Jones 3D Cog Script
+#
+# VOL_Rocksmash.cog
+#
+# This cog will roll a boulder into a wall and smash a hole through it.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message	startup
+message	entered
+message	pulse
+message	timer
+message	touched
+
+thing	rock
+
+thing	wallblastpos	
+thing	shotpos	
+	
+
+thing	cam1
+thing	curCam	local
+thing	player	local
+thing	killCam		local
+thing	deadindy	nolink	local
+
+
+thing	rockpos0	
+thing	rockpos1	
+thing	rockpos2	
+thing	rockpos3	
+thing	rockpos4	
+thing	rockpos5	
+thing	rockpos6	
+thing	rockpos7	
+
+thing	chunk1	local
+thing	chunk2	local
+
+surface	triggersurf
+surface	wallface
+surface	walladj
+
+sector	wallsect
+
+int		blasted=0  								local
+int		soundrun   							 	local
+int		squished=0 							 	local
+int		shudder=0  							 	local
+int		rolling=0								local
+
+
+int		position=0									local
+
+template	dust=explosiondust						local	
+template	debris=stoneshrapc_nc					local	
+template    tempRef=indy_sh_actor					local       
+template	tempRefKill=ghost						local
+template	invis_shot=+dummy_bazooka				local
+
+
+keyframe	smashed=in_die_buckle.key				local
+keyframe	rockrun=gen_boulder.key					local
+
+sound		rockroll=pru_boulder_rolling_c.wav		local
+sound		rocksmash=pru_boulder_crash_c.wav		local
+sound		music=mus_gen_danger3.wav				local
+sound		sndDie=INXJ015.WAV						local
+
+vector		debvec1
+vector		debvec2
+
+int			TIMERID_ROCKMOVE=1						local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    # initialize the player
+	player = GetLocalPlayerThing();
+	
+	# prep the wall face
+	SetSectorAdjoins(wallsect, 0);
+	SetFaceGeoMode(wallface, 4);
+	SetAdjoinFlags(walladj, 0x10);
+	return;
+
+# ========================================================================================
+
+entered:
+
+	If ((GetSenderRef() == triggersurf) && (blasted == 0))	# indy enters the trigger face the first time
+		{
+			position= 0;
+            rolling = 1;
+			blasted = 1;
+            curCam = GetCurrentCamera();
+            
+			# take player control
+			StartCutScene(1);
+			SetActorFlags(player, 0x200000);
+			SetCameraLookInterp(2,0);
+			# jump to a camera to show the rock rolling
+			
+			SetCameraFocus(2, cam1);
+			SetCameraSecondaryFocus(2, rock);
+            SetCurrentCamera(2);
+
+			# music cue
+			PlaySoundLocal(music, 1.0, 0.0, 0x0, 0);
+            
+			# start the screenshake and rock sounds
+			SetPulse(.05);
+			soundrun = PlaySoundLocal(rockroll, 2, 0, 0x1, 0);
+			rockrun = PlayKey(rock, rockrun, 1, 0x0, 0);
+            
+			# move the rock through it's positions
+			SetTimerEx(0.5, TIMERID_ROCKMOVE, 0, 0);
+			MoveThingtoPos(rock, GetThingPos(rockpos0[position]), 0.5);
+			Sleep(.5);
+			# return the camera
+			SetCurrentCamera(curCam);
+
+			# restore player control
+			EndCutScene();
+			ClearActorFlags(player, 0x200000);
+			
+        }
+
+return;
+		
+		
+# ========================================================================================
+
+timer:
+
+	if ( GetSenderID() != TIMERID_ROCKMOVE )
+		return;
+
+	# Slam the rock to the desired current position
+	SetThingPosEx(rock, GetThingPos(rockpos0[position]), GetThingSector(rockpos0[position]));
+
+	if (position == 5)
+    {
+        #MovetoFrame(rock, 8, 6.0);
+		shudder = 1;
+        CreateThing(invis_shot, shotpos);
+		Sleep(0.05);
+		SetSectorAdjoins(wallsect, 1);
+		ClearAdjoinFlags(walladj, 0x10);
+		SetFaceGeoMode(wallface, 0);
+		PlaySoundLocal(rocksmash, 6, 1, 0x0, 0);
+		
+    }
+	
+	if (position == 6)	
+	{
+		SetPulse(0);
+	}
+  
+	if (position == 7)
+    {
+		StopSound(soundrun, 2.0);
+		StopKey(rock, rockrun, 0.0);
+        SetThingMass(rock, 0);
+		rolling = 0;
+		return;
+	}
+
+	# Increment postion counter and begin next move to pos anim
+    position = position + 1;
+	SetTimerEx(0.50, TIMERID_ROCKMOVE, 0, 0);
+	MoveThingtoPos(rock, GetThingPos(rockpos0[position]), 0.50);
+
+	return;
+
+
+# ========================================================================================
+
+pulse:
+
+	If (shudder == 0)
+		{
+		SetPOVShake('0.0 0.0 0.001', '0.0 0.0 0.001', 80.0, 0.80);
+        }
+
+	If (shudder == 1)
+		{
+		SetPOVShake('0.0 0.0 0.003', '0.0 0.0 0.003', 80.0, 0.80);
+		CreateThing(dust, wallblastpos); 
+        }
+	
+    
+	return;
+
+# ========================================================================================
+
+touched:
+    
+	If (rolling != 1) return;
+	if ((GetSenderRef() == rock) && (GetSourceRef() == player) && (squished == 0))
+	{			
+        squished=1;	
+		#PrintVector(GetThingPos(rock));
+		
+        #killCam = CreateThingAtPos
+		#	(tempRefKill, GetThingSector(rock), VectorAdd(GetThingPos(rock), '0 0 0.1'), '0 0 0');
+        
+		#CaptureThing(killCam);
+		#PrintVector(GetThingPos(killCam));
+		#SetCollideType(killCam, 0);
+		
+        
+	#	PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+		DamageThing(player, 1000.0, 0x1, player);
+	}
+	#	return;
+	#	SetThingFlags(player, 0x80000);
+    #    deadIndy = CreateThing(tempRef, player);
+    #    
+    #    CaptureThing(deadIndy);
+    #    ClearThingFlags(deadindy, 0x80000);
+		
+    #    SetCameraFocus(2, killCam);
+    #    SetCameraSecondaryFocus(2, deadindy);
+    #    SetCurrentCamera(2);
+        
+	#	PlayKey(deadindy, smashed, 4, 0x14, 0);
+	#	Sleep(0.75);
+	#	SetCollideType(rock, 0);
+    #}
+	
+                
+return;
+
+# ========================================================================================
+
+end
+
+
+
+

@@ -1,0 +1,96 @@
+# Jones 3D Cog Script
+#
+# gen_CamLineB.cog
+#
+# Swings Camera around to indy's side during a short sayline
+#
+# [SXC]
+#
+# 11/23/98 SXC
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+
+    thing       player                      local
+    thing       mirror
+
+    thing       swingpos        
+    thing       mirrorpos       
+
+    int         croscheck=0                 local
+    int         cursound                    local
+    
+    sound       indyline0=to05j03.wav       local
+    
+    sound       indylineb0=inxj058.wav      local
+    sound       indylineb1=inxj059.wav      local
+    sound       indylineb2=inxj060.wav      local
+    sound       indylineb3=inxj061.wav      local
+    sound       indylineb4=inxj090.wav      local
+    sound       indylineb5=inxj095.wav      local
+    
+    int         wepnum=1                    local
+    int         soundchan                   local
+             
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    player = GetLocalPlayerThing();
+    return;
+           
+# ========================================================================================
+activate:
+    If ((GetSenderRef() == mirror) && (croscheck == 0) && (GetCurItem(player) == 0))
+    {
+        croscheck = 1;
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player);
+            DeselectWeaponWait(player);
+            DeselectWeapon(player);
+        }
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        DeselectWeapon(player);
+        DeselectWeaponWait(player);
+        StopThing(player);
+        PlayMode(player, 61, 0);
+        SetExtCamOffsetToThing(swingpos);
+        SetExtCamLookOffsetToThing(mirrorpos);
+        cursound = PlayVoice(player, indyline0, 1, 0);
+        sleep(0.35);
+        DestroyThing(mirror);
+        ChangeInv(player, 63, 1.0);
+        SetInvAvailable(player, 63, 1);
+        JonesInvItemChanged(63);
+        WaitForSound(cursound);
+        Sleep(1);
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        RestoreExtCam();
+        wepnum = 1;
+    }
+        
+    if ((GetCurItem(player) != 0) && (GetSenderRef() == mirror))
+    {
+        StopThing(player);
+        StartCutscene(0);
+        SetActorFlags(player, 0x200000);
+        PlayVoice(player, indylineb0[(RandBetween(0, 5))], 1, 1);
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }
+    
+return;
+        
+end

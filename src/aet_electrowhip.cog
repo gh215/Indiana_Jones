@@ -1,0 +1,41 @@
+# Jones 3D Cog Script
+#
+# aet_ElectroWhip.cog
+#
+# This COG contains resources needed for electric whip.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+
+sound		bam=aet_whip_crack.wav			local
+
+template	projectile=+whip_electric		local
+template	spr_flash=+whip_spr_flash		local
+template	spr_rays=+whip_spr_rays			local
+template	spr_ring=+whip_spr_ring			local
+template	whip_flash=+whip_flash			local
+template	whip_rays=+whip_rays			local
+template	whip_ring=+whip_ring			local
+
+int			dummy
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	return;
+
+# -------------------------------------------------------------------
+
+end

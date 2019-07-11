@@ -1,0 +1,368 @@
+# Jones 3D Cog Script
+#
+# pyr_fixminecar.cog
+#	
+# Fix the mine car to exit the level
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+symbols
+message	startup
+message	activated
+message	entered
+message	exited
+message	callback
+
+# actors
+thing	player			nolink	local
+thing	indyactor0		nolink	# fixes wheel
+thing	indyactor1				# fills tank
+thing	indyactor2				# floater discusses the minecar situation
+
+# world things
+thing	goodwheel		nolink
+thing	badwheel		nolink
+thing	brokencar
+thing	goodcar			nolink
+thing	hint59
+thing	railblock1		nolink
+thing	railblock2		nolink
+
+# camera things
+thing	wheelcam		nolink
+thing	gascam			nolink
+
+# swappable Indy hand
+model	sourceModel=hand_in_gascan.3do	    local
+
+# surfaces
+surface	gasface
+
+# voicelines
+sound	goodshape=pr15j03.wav		local
+sound	allitneeds=pr15j04.wav		local
+sound	mightstillrun=pr15j07.wav	local
+sound	ifit=pr15j08.wav			local
+sound	hadsomegas=pr15j09.wav		local
+sound	hadawheel=pr15j10.wav		local
+sound	allaboard=pr15j11.wav		local
+
+# non-voice sounds
+sound	attachwheel=sea_launch_wheel_attach.wav	local
+sound	cartilt=sea_crane_stop_c.wav			local
+sound	filltank=jep_gascan_pour.wav			local
+
+# animations
+keyframe	putwheel=in_useitem.key			local
+keyframe	pourgas=0in_pourgasoline.key	local
+keyframe	conductor=0in_nod_4_4.key		local
+
+# variables
+int		carstatus=-1	local
+int		actornum=0		local
+int		oktogas=0		local
+int		swapRef=0			local
+int		callNum				local
+
+# subroutines
+flex	startscene=0.0		local
+flex	endscene=0.0		local
+flex	fixcams=0.0			local
+flex	hintlines=0.0		local
+flex	installwheel=0.0	local
+flex	fillerup=0.0		local
+flex	changecam1=0.0		local
+flex	changecam2=0.0		local
+end
+
+code
+startup:
+	sleep(.01);
+	player = GetLocalPlayerThing();
+		
+	AttachThingToThing(goodwheel, brokencar);
+	AttachThingToThing(badwheel, brokencar);
+
+	SetThingFlags(goodcar, 0x80000);
+	ClearThingFlags(brokencar, 0x80);
+	ClearThingFlags(brokencar, 0x40);
+	SetThingFlags(badwheel, 0x10);
+
+	# make railblocks non-mountable
+	ClearThingFlags(railblock1, 0x80);
+	ClearThingFlags(railblock2, 0x80);
+
+	return;
+
+# carstatus key:
+#	-1 = never activated
+#	0 = activated, never fixed
+#	1 = wheel fixed
+#	2 = fuel added
+#	3 = entirely fixed
+	
+activated:
+# ---> MineCar
+	
+	if (GetSenderRef() != brokencar) return;
+
+	# if player holding wheel and is close to wheel actor, install it
+	if ((GetCurItem(player) == 64) && (VectorDist(GetThingPos(player), GetThingPos(indyactor0)) < .1))
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		call installwheel;
+	}
+	# if player is holding gas can and is on the right face, gas it up
+	else if ((GetCurItem(player) == 66) && (oktogas))
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		call fillerup;
+	}
+	# otherwise, indy says something
+	else
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		call hintlines;
+
+		# back to reality
+		SetThingFlags(indyactor2, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		RestoreExtCam();
+		EndCutscene();
+	
+		sleep(.75);
+			
+		return;
+	}
+
+	# if minecar is fully fixed
+	if (1)
+	if (carstatus == 3)
+	{
+		sleep(1);
+		PlayKey(indyactor0[actornum], conductor, 4, 0x12, 0);
+		PlayVoice(player, allaboard, 1, 1);
+		SetHintSolved(hint59);
+		DestroyThing(hint59);
+		
+		DestroyThing(brokencar);
+		DestroyThing(goodwheel);
+		DestroyThing(badwheel);
+		DestroyThing(indyactor2);
+
+		ClearThingFlags(goodcar, 0x80000);
+	}
+	
+	call endscene;
+	return;
+
+entered:
+# ---> gasface	
+	if (GetSenderRef() != gasface) return;
+	oktogas = 1;
+	return;
+
+exited:
+# ---> gasface	
+	if (GetSenderRef() != gasface) return;
+	oktogas = 0;
+	return;
+
+hintlines:
+	StartCutscene(1);
+	
+	# switcheroo to floating actor
+	TeleportThing(indyactor2, player);
+	CopyPlayerHolsters(player, indyactor2);
+	ClearThingFlags(indyactor2, 0x80000);
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x80000);
+	
+	# start the action
+	SetExtCamOffset('0.15 -.1 0.09');
+	SetThingMaxRotVel(indyactor2, 175);
+	SetThingMaxHeadVel(indyactor2, 175);
+	AISetLookThing(indyactor2, brokencar);
+	AIWaitForStop(indyactor2);
+	
+	Sleep(1.0);
+
+	#say firsttime sayline or portion of later saylines
+	if (carstatus == -1)
+	{
+		#Indy: You know, this mine car is in pretty good shape
+		PlayVoice(player, goodshape, 1, 1);
+		sleep(1);
+		
+		#Indy: All it needs are a wheel and some fuel
+		PlayVoice(player, allitneeds, 1, 1);
+		
+		carstatus = 0;
+		return;
+	}
+	else
+	{
+		#Indy: This thing might still run...
+		PlayVoice(player, mightstillrun, 1, 1);
+	}
+	
+	if (carstatus == 0)
+	{
+		#Indy: ...if it had a wheel and some gas
+		PlayVoice(player, ifit, 1, 1);
+	}
+	
+	if (carstatus == 1)
+	{
+		#Indy: ...if it had some gas
+		PlayVoice(player, hadsomegas, 1, 1);
+	}
+	
+	if (carstatus == 2)
+	{
+		#Indy: ...if it had a wheel
+		PlayVoice(player, hadawheel, 1, 1);
+	}
+
+	return;
+
+installwheel:
+	#in case player hasn't gotten initial hint yet
+	if (carstatus == -1) carstatus = 0;
+
+	#install the wheel on the mine car
+	actornum = 0;
+	call startscene;
+	call changecam1;
+		
+	#play crouch anim, rotate car back into position
+	PlayKey(indyactor0, putwheel, 4, 0x12, 0);
+	sleep(1);
+	PlaySoundThing(attachwheel, badwheel, 1, -1, -1, 0);
+	sleep(.5);
+	MoveToFrame(brokencar, 1, 1);
+	sleep(.2);
+	PlaySoundThing(cartilt, brokencar, 1, -1, -1, 0);
+
+	# make wheel visible and wait
+	ClearThingFlags(badwheel, 0x10);
+	Sleep(2);
+
+	#remove wheel from inventory
+	ChangeInv(player, 64, -1);
+	
+	#update carstatus
+	carstatus = carstatus + 1;
+	return;
+	
+fillerup:
+    # capture player for callback
+    CaptureThing(indyactor1);
+	
+	#in case player hasn't gotten initial hint yet
+	if (carstatus == -1) carstatus = 0;
+
+	#fill up the gas tank
+	actornum = 1;
+	call startscene;
+	call changecam2;
+	
+	#play pour animation
+	AISetLookThing(indyactor1, brokencar);
+	Sleep(.5);
+	PlayKey(indyactor1, pourgas, 4, 0x12, 0);
+	Sleep(1);
+	PlaySoundThing(filltank, indyactor1, 1, -1, -1, 0);
+	Sleep(6);
+
+	#remove gas from inventory
+	ChangeInv(player, 66, -1);
+	
+	#update carstatus
+	carstatus = carstatus + 2;
+	
+	return;
+
+changecam1:
+	#change to wheelcam
+	SetCameraFocus(2, wheelcam);
+	SetCameraSecondaryFocus(2, indyactor0);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0);
+	return;
+
+changecam2:
+	#change to gascam
+	SetCameraFocus(2, gascam);
+	SetCameraSecondaryFocus(2, indyactor1);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0);
+	return;
+	
+startscene:
+	call fixcams;
+
+	StartCutscene(1);
+	CopyPlayerHolsters(player, indyactor0[actornum]);
+	ClearThingFlags(indyactor0[actornum], 0x80000);
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x80000);
+		
+	return;
+			
+endscene:
+	call fixcams;
+
+	TeleportThing(player, indyactor0[actornum]);
+	SetThingFlags(indyactor0[actornum], 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	SetCameraSecondaryFocus(2, player);
+
+	SetCurrentCamera(1);
+	EndCutscene();
+	return;
+
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(1, 0);
+	SetCameraLookInterp(1, 0);
+	RestoreExtCam();
+	return;
+
+callback:
+	if (GetSenderRef() != indyactor1) return;
+	callNum = GetParam(1);
+
+	if (callNum == 21)
+	{
+		# Put can in hand
+		swapRef = SetThingMesh(indyactor1, 15, sourceModel, 0);
+	}
+	else if (callNum == 22)
+	{
+		# Get rid of can
+		RestoreThingMesh(indyactor1, swapRef);
+		ReleaseThing(indyactor1);
+	}
+		
+	return;
+	
+
+end
+

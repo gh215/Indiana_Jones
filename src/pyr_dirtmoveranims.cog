@@ -1,0 +1,54 @@
+# Jones 3D Cog Script
+#
+# pyr_dirtmoveranims.cog
+#	
+# Ongoing elements of dirtmover (cylinder rotation, sounds
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	arrived
+message	user1
+
+thing	cylinder1
+thing	cylinder2	nolink
+thing	cylinder3	nolink
+
+thing	engine		nolink
+
+sound	cvystart=pyr_conveyor_start.wav	local
+sound	rattle=pyr_conveyor_move.wav	local
+
+keyframe	enganim=pyr_ngin_desl.key	local
+
+material	animmat=elvatr_rock_chain.mat	local
+
+end
+
+code
+user1:
+	materialanim(animmat, 30, 1);
+	PlayKey(engine, enganim, 4, 0x0, 0);
+
+	PlaySoundThing(cvystart, engine, 1, -1, -1, 0);
+	sleep(.1);
+	PlaySoundThing(rattle, cylinder1, 1, -1, -1, 1);
+
+	call arrived;
+	return;
+
+arrived:
+# ---> cylinder 1 only
+	
+	Rotate(cylinder1, 3600, 0, 30);
+	Rotate(cylinder2, 3600, 0, 30);
+	Rotate(cylinder3, 3600, 0, 30);
+
+	return;
+
+end
+
+

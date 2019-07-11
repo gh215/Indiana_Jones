@@ -1,0 +1,106 @@
+# Jones 3D Cog Script
+#
+# shs_Dlog_cistern.cog   Say the line, Indy.  
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message 	startup
+message 	entered
+
+sound		in_cistern=Ss07j05.wav		local
+sound		in_spot=Ss07j07.wav			local
+ 	
+sector   	trigger0	# standing in right spot
+
+#thing		indy   
+thing		player			local
+#thing   	cam1
+thing		statue
+
+thing 		interpcam
+
+#int		curCam			local
+int			plantbulb=104 	local
+int			spoken=0		local # becomes 1 after 1st line, 2 after second 
+int			triggered=0		local  
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+      	
+	player = GetLocalPlayerThing();
+    return;
+
+
+entered:
+	
+	if ((GetSenderRef() == trigger0) && (spoken == 0)) 
+	{
+        if(IsThingVisible(statue) != 1) return;	# makes sure Indy is looking in right direction
+
+		MakeMeStop();
+		StartCutscene(1);
+		
+		# Camera stuff
+		SetExtCamOffsetToThing(interpCam);
+		sleep(.5);
+        
+		# "Some kind of cistern here..."
+		PlayVoice(player, in_cistern, 1.0, 1);
+		sleep(.3);
+		spoken=1;
+			
+		# check if have bulb
+		if(GetInv(player, plantbulb) == 1)
+		{
+			
+			# "...just the spot to water that bulb."
+			PlayVoice(player, in_spot, 1.0, 1);
+			spoken=2;
+		}
+        
+		RestoreExtCam();
+		ClearActorFlags(player, 0x200000); # player in control
+        EndCutscene();
+    	return;
+	}
+	
+	# Handles subsequent visit
+	if ((GetSenderRef() == trigger0) && (spoken == 1))
+	{
+		if(IsThingVisible(statue) != 1) return;
+		
+		if(GetInv(player, plantbulb) != 1) return;	# bail if no bulb
+	    
+		MakeMeStop();
+		StartCutscene(1);
+		
+		# Camera stuff
+		SetExtCamOffsetToThing(interpCam);
+        sleep(.5);
+        
+		# "...just the spot to water that bulb."
+		PlayVoice(player, in_spot, 1.0, 1);
+		spoken=2;
+        
+		RestoreExtCam();
+		ClearActorFlags(player, 0x200000); # player in control
+        EndCutscene();
+	}
+
+return;
+     
+  
+
+end
+

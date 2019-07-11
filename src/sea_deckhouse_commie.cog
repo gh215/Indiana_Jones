@@ -1,0 +1,71 @@
+# Jones 3D Cog Script
+#
+# SEA_Deckhouse_Commie.cog
+# 
+# Small Cog to keep track on the one bruiser in the stern deckhouse of the pudovkin 
+#
+#
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message     startup
+message     crossed
+message     killed
+
+
+
+thing       Bruiser00
+
+thing       BruiserTele00
+
+surface     Activate0       LinkID=1
+surface     Activate1       LinkID=1
+
+surface     Deactivate0     LinkID=2
+surface     Deactivate1     LinkID=2
+
+
+end
+# ========================================================================================
+code
+# ========================================================================================
+startup:
+
+    AISetInstinctWpntMode(Bruiser00);
+    AISetCutsceneMode(Bruiser00);
+
+    return;
+    
+# ========================================================================================
+crossed:
+
+    if(Bruiser00 == -1) return;
+    
+    If(GetSenderID() == 1)
+    {
+        AIClearCutsceneMode(Bruiser00);
+    }
+    
+    else if(GetSenderID() == 2)
+    {
+        AISetCutsceneMode(Bruiser00);
+        TeleportThing(Bruiser00, BruiserTele00);
+    }                                         
+
+    return;
+    
+# ========================================================================================
+killed:
+
+    if(GetSenderRef() == Bruiser00) Bruiser00 = -1;
+
+    return;
+    
+# ========================================================================================
+
+end

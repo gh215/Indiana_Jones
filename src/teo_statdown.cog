@@ -1,0 +1,82 @@
+#	Jones 3D Cog Script
+#	
+# 	TEO_StatDown.cog
+#
+#	Sends the statue back down
+#
+# 	[SXC]
+#
+# 	(C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message	    startup
+	message	    activated
+
+	thing		statue
+	thing		biggear
+	thing		column0
+	thing		column1
+	thing		column2
+	
+	surface	    downswitch
+
+	thing		door0					linkid=2
+	thing		door1					linkid=2
+	thing		door2					linkid=2
+	thing		door3					linkid=2
+	thing		door4					linkid=2
+	thing		door5					linkid=2
+
+	float		moveSpeed=1.0		
+	int		    locked				    local
+	int		    check					local
+	int		    doorcount			    local
+
+end
+
+# ........................................................................................
+code
+
+startup:
+
+	locked = 0;											//switch is unlocked
+	check = 0;
+	return;
+
+# ........................................................................................
+
+activated:
+
+	if ((GetSenderRef() == downswitch) &&
+		 (locked = 0))
+	{
+		for (doorcount=0; doorcount<=5; doorcount=doorcount+1)
+		{
+			if (GetCurFrame(door0[doorcount]) == 1)
+			{
+				check = check + 1;
+				//print("check is");
+				//printint(check);
+			}			
+		}
+
+		if (check == 6)
+		{
+			locked = 1; 								//lock switch
+			MoveToFrame(statue, 0, moveSpeed);
+			MoveToFrame(biggear, 0, moveSpeed);
+		}
+		else if (check < 6)
+		{
+			locked = 0;
+			check=0;
+			//print("Incomplete Sequence");
+		}
+	}
+	return;
+
+	end
+
+

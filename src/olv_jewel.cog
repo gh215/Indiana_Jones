@@ -1,0 +1,67 @@
+# Jones 3D Cog Script
+#
+# olv_Jewel.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		entered
+message		exited
+
+	surface	pad					mask=0x484
+	surface	pad2					mask=0x484
+	surface	pad3					mask=0x484
+	thing       plasma
+
+	thing		snake0				local
+	thing		player				local
+	material    mat0=gen_4aplasma_jewel.mat	local       # animating plasma texture
+
+end
+
+# ========================================================================================
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	MaterialAnim(mat0, 9.0, 1);
+	return;
+
+# ........................................................................................
+entered:
+if((GetSenderRef() == pad) || (GetSenderRef() == pad2) || (GetSenderRef() == pad3))
+{
+	if(GetSourceRef() == player) 
+	{
+		JewelFlyingStatus(1, plasma); 				# Enable jewel flying
+	}
+	else
+	{
+		snake0=GetSourceRef();
+		if(IsThingModelName(snake0, "gen_sn_a.3do"))
+		{
+			AIFlee(snake0, player);
+		}
+	}
+}
+return;
+
+# ........................................................................................
+exited:
+if((GetSenderRef() == pad) || (GetSenderRef() == pad2) || (GetSenderRef() == pad3))
+{
+if(GetSourceRef() == player) 
+	{
+	JewelFlyingStatus(0, plasma);					# Disable jewel flying
+	}
+}
+return;
+
+# ........................................................................................
+end
+

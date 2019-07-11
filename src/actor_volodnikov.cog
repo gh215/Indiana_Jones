@@ -1,0 +1,89 @@
+# Jones 3D Cog Script
+#
+# actor_Volodnikov.cog
+#
+# [RT]
+#
+# Volodnikov's script.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		created
+	message		damaged
+                         
+	model		head0=head_vo_asound.3do			local
+	model		head1=head_vo_amsound.3do			local
+	model		head2=head_vo_osound.3do			local
+	model		head3=head_vo_noglasses.3do			local
+	model		head4=head_vo_nospecs_asound.3do	local
+	model		head5=head_vo_nospecs_amsound.3do	local
+	model		head6=head_vo_nospecs_osound.3do	local
+
+	sound		snd0=inxv001.wav					local
+	sound		snd1=inxv002.wav					local
+	sound		snd2=inxv003.wav					local
+	sound		snd3=inxv004.wav					local
+
+	thing		volodya								local
+
+	int			newLine								local
+	int			lastLine=-1							local
+
+	int			bTalking=0							local
+
+end
+
+# ===================================================================
+
+code
+
+created:
+
+	volodya = GetSenderRef();
+
+	SetThingVoiceHeads(volodya, "vohead", "", "head_vo_asound.3do", "head_vo_amsound.3do", "head_vo_osound.3do");
+
+	return;
+
+# -------------------------------------------------------------------
+
+damaged:
+
+	if (GetThingParent(GetSourceRef()) != GetLocalPlayerThing()) return;
+
+	if (bTalking) return;
+
+	bTalking = 1;
+
+	volodya = GetSenderRef();
+
+	# Impact damage
+	if (BitTest(GetParam(1), 0x1))
+	{
+		while (newLine == lastLine)
+		{
+			newLine = RandBetween(0, 3);
+		}
+	}
+	# Anything else
+	else
+	{
+		while (newLine == lastLine)
+		{
+			newLine = RandBetween(2, 3);
+		}
+	}
+
+	# Start the voice & wait...
+	PlayVoice(volodya, snd0[newLine], 1.0, 1);
+
+	bTalking = 0;
+	lastLine = newLine;
+
+	return;
+
+end

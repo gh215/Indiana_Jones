@@ -1,0 +1,67 @@
+
+# Jones 3D Cog Script
+#
+# shs_DeathByBell.cog    Kills Indy if he falls too far.
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message crossed
+message	touched
+message user0
+message user1
+
+
+		
+surface	thirdfloor		linkid=1
+
+thing	bell
+
+int 	bellStatus=0	local
+int		deadly=0  		local
+int		filter=0		local
+
+end
+
+code
+
+crossed:
+	
+	if ((GetSenderId() == 1) && (bellStatus == 0))
+	{
+		print("exited 3rd floor");
+		deadly = 1;
+	}
+    return;
+
+touched:
+	
+	if (bellStatus == 1) return;	# bell is no longer deadly   	
+	
+	if ((GetSenderRef() == bell) && (deadly == 1) && (filter == 0))
+	{
+		filter = 1;		# prevent multiple messages
+		Sleep (.5);		# give time to bounce off bell
+		DamageThing(GetLocalPlayerThing(), GetHealth(GetLocalPlayerThing()) + 1, 1, GetSenderRef());
+		Print("you die");
+	}
+	return;
+
+
+user0:
+
+	bellStatus=0;  	# bell is on ground floor. Message from bellmovecog.
+	return;
+
+user1:
+	
+	bellStatus=1;	# bell has been moved up.
+    return;
+
+end
+
+

@@ -1,0 +1,88 @@
+# Jones 3D Cog Script
+#
+# xxx_Test.cog
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		entered
+message		arrivedwpnt
+
+# ************************** MISC LINKED GEOM ******************
+thing		t_Ghost0
+thing		t_Ghost1
+thing		t_Ghost2
+thing		t_Ghost3
+
+thing		t_Commie
+
+sector		sec_Trigger
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_player					local
+int			n_pos=0						local
+int			n_crntWpnt					local
+int			n_nextWpnt					local
+
+end
+
+# ========================================================================================
+code
+
+
+# .................................................................................	
+startup:
+
+	t_player=GetLocalPlayerThing();
+
+	return;
+
+
+# .................................................................................	
+arrivedwpnt:
+
+	n_crntWpnt = GetParam(0);
+	n_nextWpnt = GetParam(1);
+
+	//if ( (n_crntWpnt==0 && n_nextWpnt==1) || (n_crntWpnt==3 && n_nextWpnt==2) )
+	//{
+	//	SetActorFlags(t_Commie, 0x800);			# 0x800 = BLIND
+	//}
+
+	//if ( (n_crntWpnt==1 && n_nextWpnt==0) || (n_crntWpnt==2 && n_nextWpnt==3) )
+	//{
+	//	ClearActorFlags(t_Commie, 0x800);
+	//}
+    
+return;
+
+# .................................................................................	
+entered:
+
+	if (GetSenderRef() == sec_Trigger)
+	{
+		for ( n_pos = 0; n_pos < 4; n_pos = n_pos + 1 )
+		{
+			AISetWpnt(t_Ghost0[n_pos], n_pos);
+		}
+
+		AIConnectWpnts(0, 1);
+		AIConnectWpnts(1, 2);
+		AIConnectWpnts(2, 3);
+		AIConnectWpnts(3, 0);
+
+		//SetActorFlags(t_Commie, 0x400);		# 0x400 = DEAF
+
+		AITraverseWpnts(t_Commie, 0, 1.0, 20.0, 1);
+	}
+
+	return;
+
+# .................................................................................	
+
+end

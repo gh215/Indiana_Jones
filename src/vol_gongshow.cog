@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# VOL_GongShow.cog
+#
+# [CM]
+#
+# Random screenshakes for unstable areas.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+#...........................MESSAGES...........................
+    message		startup
+    message		damaged
+    
+#...........................ACTORS...........................
+    
+	thing		player									local
+	
+#...........................PROPS...........................
+	thing		gong									mask=0x408			            	
+	
+#...........................SOUNDS...........................
+	sound		bellhit=shs_bell_dull.wav				local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	return;
+
+# ========================================================================================
+damaged:
+
+    
+	if (GetSenderRef() == gong)
+	{
+        PlaySoundThing(bellhit, gong, 1.0, 6, 20, 0);
+    }
+return;
+
+# ========================================================================================
+end
+

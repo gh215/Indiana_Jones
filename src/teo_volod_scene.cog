@@ -1,0 +1,351 @@
+# Jones 3D Cog Script
+#
+# TEO_Volod_Scene.cog
+#
+# Introduce Volodnikov as Indy overhears his Babylon plans 
+#
+# [SXC & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# ................................. MESSAGES ...................................
+
+	message		startup
+	message		crossed
+    message		callback
+	message		timer
+	
+# ................................. KEYFRAMES ..................................
+
+	keyframe	in_kneel=0in_stand6.key					local
+	keyframe	in_kneeldown=0in_stand1_bd_6.key		local # 32x
+	keyframe	in_kneelstand=0in_stand6_bd_1.key		local
+	
+	keyframe	vo_armsFold=vo_stand1_arms_front.key	local
+	keyframe	vo_armsBack=vo_stand2_arms_back.key		local
+	keyframe	vo_armsSide=vo_stand3_arms_side.key		local
+	keyframe	vo_thumpHands=vo_pie.key				local
+	keyframe	vo_walkFwd=vo_walk_fwd.key				local
+	keyframe	vo_walkLeft=vo_walk_left.key			local
+	keyframe	vo_walkRight=vo_walk_right.key			local
+    keyframe    in_kneel=in_crawl_idle.key              local
+
+	keyframe	vo_waveLeft=0vo_waveleft_pace.key		local
+	keyframe	vo_waveRight=0vo_waveright_pace.key		local
+	keyframe	vo_waveBoth=0vo_waveboth_pace.key		local
+	keyframe	vo_walkBothUp=0vo_bothup_pace.key		local
+	keyframe	vo_glasses=0vo_glasses_2_2.key			local
+	keyframe	vo_leftup=0vo_leftup_2_1.key			local
+	keyframe	vo_rightup=0vo_rightup_3_3.key			local
+	keyframe	vo_bothup=0vo_bothup_3_3.key			local
+
+# .................................. MODELS ....................................
+		
+    model  		mod_in=gen_in_shirt.3do					local
+	model  		mod_in_HandHat=hand_in_hat.3do 			local
+			
+	model  		mod_vo=gen_vo.3do						local 
+
+# .................................. SOUNDS ....................................
+    
+	sound       vo_stayalert=To02v01a.wav				local # 7.4 sec
+	sound       vo_failnot=To02v01b.wav					local # 9.6 sec
+
+	sound       russtheme=mus_teo_volodscene.wav        local
+
+# .................................. THINGS ....................................
+
+	thing		player									local
+    thing       newindypos
+							
+	thing		indyactor    							linkid=0
+    thing		volod	    							linkid=1
+
+	thing		spetz0									linkid=2
+    thing       spetz1                                  linkid=2
+    thing       spetz2                                  linkid=2
+    thing       spetz3                                  linkid=2
+
+    thing       spetzreal0                              linkid=2
+    thing       spetzreal1                              linkid=2
+    thing       spetzreal2                              linkid=2
+    thing       spetzreal3                              linkid=2
+    thing       spetzreal4                              linkid=2
+    thing       spetzreal5                              linkid=2
+    thing       spetzreal6                              linkid=2
+    thing       spetzreal7                              linkid=2
+    thing       spetzreal8                              linkid=2
+    thing       spetzreal9                              linkid=2
+												
+	thing		vol_cam_1			   					nolink
+	thing		vol_cam_2								nolink
+	thing		vol_cam_3								nolink
+
+	thing		vol_ct_1								nolink
+	thing		vol_ct_2								nolink
+
+	thing		vol_mk_1								nolink
+	thing		vol_mk_2								nolink
+	thing		vol_mk_3								nolink
+	thing		vol_mk_4								nolink
+	
+# ............................. WORLD REFERENCES ...............................
+			
+	surface		crosurf         						linkid=3
+    
+# ................................. VARIABLES ..................................
+		
+	int         isdone=0                                local
+						
+	int			in_keyTrack1							local
+	int			in_keyTrack2							local
+
+	int			pl_colltype								local
+
+	int			vo_keyTrack1							local
+	int			vo_keyTrack2							local
+							
+	int			sender									local
+	int			curSound								local
+	int			matAnimNum								local
+	int			didThisBefore=0							local
+
+	int			curCam									local
+    int         x                                       local
+    
+    cog         TEO_Commie_Grid     #Added by JM     
+    
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	# Pointer to Player
+	player = GetLocalPlayerThing();
+    SetThingFlags(spetz0, 0x80000);
+    SetThingFlags(spetz1, 0x80000);
+    SetThingFlags(spetz2, 0x80000);
+    SetThingFlags(spetz3, 0x80000);
+
+    For (x=0; x<=9; x=x+1)
+    {
+        SetThingFlags(spetzreal0[x], 0x80000);
+    } 
+	      
+    return;
+
+# ..............................................................................
+
+crossed:
+
+    if ((GetSenderRef() == crosurf) && (GetSourceRef() == player) && (isdone == 0))
+    {   
+    	isdone = 1;
+    
+    	# Disable player
+        SetActorFlags(player, 0x200000);
+    	StartCutscene(1);
+    
+    	# Mood music!
+        PlaySoundLocal(russtheme, 0.65, 0, 0, 0);
+    
+        # Stop player & prep Indy...
+        MakeMeStop(player);
+    	DeselectWeaponWait(player);
+        DeselectWeapon(player);
+        CopyPlayerHolsters(player, indyactor);
+        SetThingFlags(player, 0x80000);
+    	ClearThingFlags(indyactor, 0x80000); # our actor
+    	
+        # Prep Volodnikov...
+        ClearThingFlags(volod, 0x80000);
+    	AISetCutSceneMode(volod);
+        AISetLookFrame(volod, 1);
+    	AISetMoveSpeed(volod, 1.2);
+        
+        # Prep the Spetznaz...
+        ClearThingFlags(spetz0, 0x80000);
+        ClearThingFlags(spetz1, 0x80000);
+        ClearThingFlags(spetz2, 0x80000);
+        ClearThingFlags(spetz3, 0x80000);
+    	AISetCutSceneMode(spetz0);
+    	AISetCutSceneMode(spetz1);
+    	AISetCutSceneMode(spetz2);
+    	AISetCutSceneMode(spetz3);
+    	SetWeaponModel(spetz0, 4);	    
+    	SetWeaponModel(spetz1, 4);	
+    	SetWeaponModel(spetz2, 4);	    
+    	SetWeaponModel(spetz3, 4);	    
+    
+    	# Prep camera...
+    	SetCameraLookInterp(2, 0); # kill pan & tilt
+    	SetCameraPosInterp(2, 0); # kill dolly
+    	 
+        # Track Indy coming through door...
+    	SetCameraFocus(2, vol_cam_1);
+    	SetCameraSecondaryFocus(2, indyactor);
+    	SetCurrentCamera(2);
+    	SetCameraFOV(80, 0, 0.0);
+    
+    	# Indy comes up to the idol...
+    	AISetMoveSpeed(indyactor, 1.0);
+    	AISetLookThingEyeLevel(indyactor, vol_mk_1);
+        AISetMoveThing(indyactor, vol_mk_1, 0);
+    	AIWaitForStop(indyactor);
+    
+    	# Volodnikov: "Comrades!  Stay alert!  The American...is a smart one..."
+        cursound = PlayVoice(volod, vo_stayalert, 1.0, 0); # 7.4 sec	
+        Sleep(0.5);
+    		
+    	# Get ready to dolly camera...
+    	SetCameraInterpSpeed(2, 0.6);
+    	SetCameraLookInterp(2, 1);
+    	SetCAmeraPosInterp(2, 1);
+    	
+    	# Indy kneels to sneak a peek...
+    	AIEnableHeadTracking(indyactor, vol_mk_3);
+    	AISetLookThingEyeLevel(indyactor, vol_mk_2);
+    	AISetMoveThing(indyactor, vol_mk_2, 0);
+    	Sleep(1.3);
+    	AISetLookThingEyeLevel(indyactor, vol_mk_3);
+     	AIWaitForStop(indyactor);
+    	   
+    	# Drop camera with Indy...
+    	# in_keyTrack1 = PlayKey(indyactor, in_kneel, 2, 0x10, 0);
+    	in_keyTrack1 = PlayKey(indyactor, in_kneeldown, 4, 0x14, 0); # 1.1 sec
+    	Sleep(0.3); 
+    	SetCameraFocus(2, vol_cam_2);
+    	Sleep(0.7); # a little less time than it takes to kneel & more than to drop camera
+        
+    	# Pan over to Volodnikov...
+    	SetCameraInterpSpeed(2, 3.0);
+    	Sleep(0.01);
+        SetCameraSecondaryFocus(2, vol_ct_2);
+        
+        # Tighten frame as we pan...
+        SetCameraFOV(40, 1, 3.0);
+        
+        # Move V to frame 1...
+    	AISetMoveSpeed(volod, 1.0);
+        AISetLookFrame(volod, 1);
+    	AIWaitForStop(volod);
+        AISetMoveFrame(volod, 1);  
+        AIWaitForStop(volod);
+    
+    	# Move to frame 2...
+        AISetLookFrame(volod, 2);
+        AIWaitForStop(volod);
+        AISetMoveFrame(volod, 2);
+      	WaitForSound(cursound);
+    
+      	# Volodnikov: "That's why we summon Spetznaz...failed us...make sure you don't!"
+        cursound = PlayVoice(volod, vo_failnot, 1.0, 0); # 9.6 sec
+    
+    	# Continue to frame 2...
+        AIWaitForStop(volod);
+          
+        # Move to frame 5...
+        AISetLookFrame(volod, 5);
+        AIWaitForStop(volod);
+        AISetMoveFrame(volod, 5);
+        AIWaitForStop(volod);
+        
+        # Volodnikov stops and faces his men...
+        AISetLookThing(volod, vol_mk_4);
+        AIWaitForStop(volod);
+    	Sleep(0.5);
+    	PlayKey(volod, vo_bothup, 4, 0x12, 1);
+    	Sleep(1.0);
+    	PlayKey(volod, vo_rightup, 4, 0x12, 1);
+    
+        AISetMoveSpeed(volod, 1.0);
+        AISetMoveFrame(volod, 6);
+        
+        # Move spetznaz to correct positions...
+    	AISetMoveSpeed(spetz0, 1.0);
+        AISetMoveSpeed(spetz1, 1.0);
+    	AISetMoveSpeed(spetz2, 1.0);
+    	AISetMoveSpeed(spetz3, 1.0);
+    	AISetLookFrame(spetz0, 1);
+        AISetLookFrame(spetz1, 1);
+        AISetLookFrame(spetz2, 1);
+        AISetLookFrame(spetz3, 1);
+        AISetMoveFrame(spetz2, 1);
+        AISetMoveFrame(spetz3, 1);
+        Sleep(1.0);
+        AISetMoveFrame(spetz0, 1);
+        AISetMoveFrame(spetz1, 1);
+        Sleep(2.0);
+        AISetLookFrame(spetz0, 2);
+        AISetLookFrame(spetz1, 2);
+        AISetLookFrame(spetz2, 2);
+        AISetLookFrame(spetz3, 2);
+    	WaitForSound(cursound);
+        Sleep(3.5);
+           
+    	# Re-position Indy...
+    	AIDisableHeadTracking(indyactor); 
+    	TeleportThing(indyactor, newindypos);
+    	ClearThingFlags(player, 0x80000);
+    	SetThingFlags(player, 0x10);
+    	pl_colltype = GetCollideType(player);
+    	TeleportThing(player, newindypos);	
+    	SetCameraPosition(1, GetThingPos(vol_cam_3));
+    	SetCollideType(player, 0);
+    	Sleep(0.1);
+    
+    	# Cut to side shot of Indy near the idol...
+    	SetCameraLookInterp(2, 0);
+    	SetCameraPosInterp(2, 0);
+    	SetCameraFocus(2, vol_cam_3);
+    	SetCameraSecondaryFocus(2, vol_ct_1);
+    	SetCameraFOV(90, 0, 0.0);
+    	StopKey(indyactor, in_keyTrack1, 0.0);
+    	PlayKey(indyactor, in_kneelstand, 4, 0x12, 1);
+    	
+    	# Clean up & restore control...
+    	ResetThing(player);
+    	PlayMode(player, 1, 0);
+    	ClearThingFlags(player, 0x10);
+    
+    	DestroyThing(indyactor);
+    	DestroyThing(volod);
+    
+    	# Get rid of cutscene things...
+        DestroyThing(spetz0);
+        DestroyThing(spetz1);
+        DestroyThing(spetz2);
+        DestroyThing(spetz3);
+    
+        # Reveal the real Spetznaz with real AI's...
+    	For (x=0; x<=9; x=x+1)
+        {
+    		ClearThingFlags(spetzreal0[x], 0x80000);
+        } 
+    
+    	SetCurrentCamera(1);
+        ResetCameraFOV(0, 0.0);
+    
+        EndCutscene();
+    	SetCollideType(player, pl_colltype);
+        ClearActorFlags(player, 0x200000);
+        
+        SendMessageEx(TEO_Commie_Grid, 27, 0, 0, 0, 0);     //Added by JM
+    }
+    
+return;
+
+# ..............................................................................
+
+end
+

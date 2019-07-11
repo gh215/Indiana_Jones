@@ -1,0 +1,45 @@
+# Jones 3D Cog Script
+#
+# gen_SurfAnim.cog
+#
+# Animates up to 4 surfaces at the same frame rate
+#
+# [YB]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		startup		
+
+	surface		surf0
+	surface		surf1
+	surface		surf2
+	surface		surf3
+    surface		surf4
+    surface		surf5
+
+	float		fps=15.0		desc=playback_speed
+    
+	int			i			    local
+    int         numSurfs=6      local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	for (i = 0; i <= numSurfs; i = i + 1)
+	    {
+		    if (surf0[i] >= 0) SurfaceAnim(surf0[i], fps, 0x1);
+	    }
+	return;
+
+# ========================================================================================
+
+end
+

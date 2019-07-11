@@ -1,0 +1,152 @@
+# Jones 3D Cog Script
+#
+# com_Simonov.cog
+#
+# This COG controls the Simonov SKS Automatic Rifle for bad guys.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		fire
+message		aim
+message		activated
+message		deactivated
+message		selected
+message		deselected
+
+sound		bang=gen_simonov_fire.wav	local	# Autoloaded
+
+template	projectile=+simonov			local	# Autoloaded
+template	smoke1=+pistol_smoke1		local	# Autoloaded
+template	smoke2=+pistol_smoke2		local	# Autoloaded
+
+thing		bandito						local
+thing		bullet						local
+
+flex		aimFOV=25.0					local
+flex		aimMax=5.0					local
+flex		aimWait=0.3					local
+flex		fireWait=0.47				local
+
+int			numFires=0					local
+
+vector		firePos						local
+
+end
+
+# ===================================================================
+code
+
+# -------------------------------------------------------------------
+fire:
+
+	bandito = GetSourceRef();
+
+	# If he's done firing, deactivate the weapon
+	numFires = GetThingUserData(bandito);
+	if (numFires == 0)
+	{
+		DeactivateCurWeapon(bandito);
+		return;
+	}
+
+	firePos = GetThingJointPos(bandito, GetNodeByName(bandito, "inrhand"));
+	bullet = FireProjectile(bandito, projectile, bang, 65, firePos, '0 0 0', 1.0, 0x220, aimFOV, aimMax);
+
+	if (bullet == -1) return;
+
+	if (Rand() < 0.5) CreateThing(smoke1, bullet);
+	else CreateThing(smoke2, bullet);
+	
+	SetFireWait(bandito, fireWait);
+
+	# Set the number of shots left
+	numFires = numFires - 1;
+	SetThingUserData(bandito, numFires);
+
+	return;
+
+
+# -------------------------------------------------------------------
+aim:
+
+	bandito	= GetSourceRef();
+
+	if ( IsModePlaying(bandito, 62) == 0 )						# Weapon drawn?
+		return;
+
+	if ( GetParam(0) )											# Got target?
+	{
+		if ( IsModePlaying(bandito, 63) == 0 )					# Not aiming yet?
+		{
+			PlayMode(bandito, 63, 0);							# Play "aiming" anim
+			SetAimWait(bandito, aimWait);
+		}
+	}
+	else
+	{
+		if ( IsModePlaying(bandito, 63) > 0 )					# Currently aiming?
+		{
+			StopMode(bandito, 63, aimWait);						# Stop aiming
+			PlayMode(bandito, 68, 0);							# Play "stop aiming" anim
+			SetAimWait(bandito, aimWait);
+		}
+	}
+
+	return;
+
+
+# -------------------------------------------------------------------
+activated:
+
+	bandito = GetSourceRef();
+
+	SetThingUserData(bandito, GetParam(0)); 
+	ActivateWeapon(bandito, aimWait);
+
+	return;
+
+
+# -------------------------------------------------------------------
+deactivated:
+
+	bandito = GetSourceRef();
+
+	SetThingUserData(bandito, 0); 
+	DeactivateWeapon(bandito);
+
+return;
+
+
+# -------------------------------------------------------------------
+selected:
+
+	bandito = GetSourceRef();
+
+	SetThingFireOffset(bandito, '0.0 0.05 0.005');
+	SetArmedMode(bandito, 3);
+	PlayMode(bandito, 62, 0);									# Play "draw weapon" anim
+
+    return;
+
+
+# -------------------------------------------------------------------
+deselected:
+
+	bandito = GetSourceRef();
+
+    StopMode(bandito, 62, 0);									# Stop "draw weapon" anim
+	StopMode(bandito, 63, 0);									# Stop "aiming" anim
+
+	SetArmedMode(bandito, 0);
+	SetThingFireOffset(bandito, '0 0 0');
+
+	return;
+
+end
+

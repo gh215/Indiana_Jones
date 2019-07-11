@@ -1,0 +1,234 @@
+# Jones 3D Cog Script
+#
+# RIV_LockerPatches.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activated
+
+    thing       player      local
+    thing       door
+    thing       offsetCam
+    thing       cam1
+    thing       camTarg
+    thing       ghostPos        # move player to this pos
+    
+    surface     surf_Patches    mask=0x400
+    
+    sound       snd_Open=fol_lockr_opn.wav          local
+    sound       snd_Close=fol_lockr_cls.wav         local
+    
+    # ** voice lines **
+    sound       say_DontNeed=inxj234.wav            local
+    sound       say_RaftKit=inxj241.wav             local
+    
+    cog         talkCog     local
+    
+    # ** subroutines **
+    flex        openDoor    local
+    flex        closeDoor   local
+    flex        getAPatch   local
+    
+    int         open=0      local
+    int         playing=0   local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetThingLight(door, '0.25 0.25 0.25', 0.1, 0.5);
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    player = GetLocalPlayerThing();
+
+    if((GetSenderRef() == door) && (open == 0) && (playing == 0))
+    {
+        # player activated with lighter
+        if(GetCurWeapon(player) == 13)
+        {
+            playing = 1;
+            DeselectWeaponWait(player);
+            Call openDoor;
+        }
+        
+        # normal activation
+        else
+        {
+            playing = 1;
+            DeselectWeaponWait(player);
+            Call openDoor;
+        }
+    }
+    
+    else if((GetSenderRef() == surf_Patches) && (open == 1) && (playing == 0))
+    {
+        playing = 1;
+        DeselectWeaponWait(player);
+        Call GetAPatch;
+    }
+    
+    #else if((GetSenderRef() == door) && (open == 1) && (playing == 0))
+    #{
+    #    # player activated with lighter
+    #    if(GetCurWeapon(player) == 13)
+    #    {
+    #        playing = 1;
+    #        open = 0;
+    #        
+    #        # put away the lighter
+    #        DeselectWeapon(player);
+    #        DeselectWeaponWait(player);
+    #        
+    #        Call closeDoor;
+    #    }
+    #    
+    #    # normal activation
+    #    else
+    #    {
+    #        playing = 1;
+    #        open = 0;
+    #        
+    #        # wait for weapon to be put away
+    #        DeselectWeaponWait(player);
+    #        
+    #        Call closeDoor;
+    #    }
+    #}
+    
+    return;
+    
+# ========================================================================================
+
+openDoor:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # offset camera and nudge door
+    #SetExtCamOffsetToThing(offsetCam);
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    Sleep(0.5);
+    
+    # switch to camera inside locker
+    SetCameraFocus(2, cam1);
+    SetCameraSecondaryFocus(2, camTarg);
+    SetCurrentCamera(2);
+    
+    # move player away from door
+    CopyOrientAndPos(ghostPos, player);
+    
+    Sleep(0.5);
+    
+    # open the door
+    PlaySoundLocal(snd_Open, 1.0, 0.0, 0x0, 0);
+    Rotate(door, -90, 1, 1.0);
+    WaitForStop(door);
+    
+    Sleep(0.5);
+    
+    # restore curCam
+    SetCameraPosition(1, GetThingPos(offsetCam));
+    SetCurrentCamera(1);
+    
+    RestoreExtCam();
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    open = 1;
+    
+    return;
+    
+# ========================================================================================
+
+closeDoor:
+
+    playing = 1;
+    PlaySoundLocal(snd_Close, 1.0, 0.0, 0x0, 0);
+    Rotate(door, 90, 1, 1.0);
+    WaitForStop(door);
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+getAPatch:
+
+    if(GetInv(player, 56) < 3)
+    {
+        # do cutscene stuff
+        MakeMeStop();
+        StartCutscene(0);
+        
+        # reach for it
+        PlayMode(player, 60, 0);
+        Sleep(0.3);
+        
+        # Call the Pickup Lines cog
+        talkCog = GetCogByIndex(0);
+        SendMessage(talkCog, 27);
+        
+        # add a patch kit inventory
+        ChangeInv(player, 56, 1.0);
+        SetInvAvailable(player, 56, 1);
+		SetInvDisabled(player, 56, 1);
+        JonesInvItemChanged(56);
+        
+        # sleep for a bit to wait for talkCog
+        Sleep(1.0);
+        
+        # play voice line
+        PlayVoice(player, say_RaftKit, 1.0, 1);
+        
+        # return control to player
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+    }
+    
+    else
+    {
+        # do cutscene stuff
+        MakeMeStop();
+        StartCutscene(0);
+        
+        # reach for it
+        PlayMode(player, 60, 0);
+        Sleep(0.3);
+        
+        # say voice line
+        PlayVoice(player, say_DontNeed, 1.0, 1);
+        
+        # return control to player
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+    }
+
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+end
+

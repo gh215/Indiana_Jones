@@ -1,0 +1,111 @@
+# Jones 3D Cog Script
+#
+# lag_totemswitch.cog
+#
+# Totem Exit Level Door.
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+	message	startup
+      message	activated
+
+	thing		Door0
+	thing		Door1
+	thing		switch0
+
+	thing		campos1
+	thing		player					local
+	int		curcam					local
+	int		done=0					local
+	int		tryit						local
+	int		sndplay					local
+	keyframe	in_activate=in_activate_medium.key	local
+	sound		switchsnd=olv_presswitch_c.wav	local
+	sound		doorno=inxj101.wav			local
+	sound		doorsnd=olv_quetzdoor_move_c.wav	local
+	sound		doorstop=olv_quetzdoor_stop_c.wav	local
+	cog		hints			#send message when complete. 
+	sound		music0=mus_gen_awesome3.wav		local
+
+end
+
+# -------------------------------------------------------------------
+
+code
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+activated:
+	if (done !=0) return;
+	if(getsenderref() == switch0)
+	{
+	curCam = GetCurrentCamera();
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(1);
+
+	# ----- Set Cam Offset ---------
+    if (Rand() < 0.5)
+	{
+        SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+        SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 0.0');
+
+	Sleep(1.0);
+
+	PlayKey(player, in_activate, 4, 0x12, 0);
+	PlaySoundLocal(switchsnd, 1.0, 0.0, 0x0, 0);
+	Movetoframe(switch0, 1, 0.5);
+	SendMessage(hints, user7);
+	WaitForStop(switch0);
+	SetCameraFocus(2, campos1);
+	SetCameraPosInterp(2, 0);
+	SetCameraSecondaryFocus(2, door0);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0);	
+	SetCameraFOV(45, 1, 6);	
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+	Movetoframe(Door0, 1, 0.25);
+	Movetoframe(Door1, 1, 0.25);
+	sndplay = PlaySoundThing(doorsnd, door0, 0.8, 10, 55, 1);
+	WaitForStop(Door1);
+	StopSound(sndplay, 0);
+	PlaySoundThing(doorstop, door0, 0.8, 10, 55, 0);
+	Sleep(1.0);
+	done=1;
+	SetCameraFOV(90, 0, 0);				#reset default
+	EndCutscene();
+	SetCurrentCamera(curcam);
+
+	# ----- Reset Camera ----------
+	RestoreExtCam();
+
+	ClearActorFlags(player, 0x200000);
+	return;
+	}
+	else
+	{
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutscene(0);
+	tryit = PlayVoice(player, doorno, 1.0, 0);
+	PlayKey(player, in_activate, 4, 0x12, 1);
+	WaitForSound(tryit);
+	EndCutscene();
+	ClearActorFlags(GetLocalPlayerThing(), 0x200000);
+	return;
+	}
+	return;
+
+end
+

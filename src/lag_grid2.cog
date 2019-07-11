@@ -1,0 +1,320 @@
+# Jones 3D Cog Script
+#
+# BAB_Courtyard_Grid_1.cog
+# 
+# A waypoint grid for the sharks in LAG, designed to keep sharks 'patrolling' in desired areas
+# As well as monitoring the shark population and adding a new shark if necessary.
+#
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols                                     
+
+message     startup
+message     killed
+message     entered
+message     arrived
+
+# ============================== SUBROUTINES ==============================
+
+flex        LinkWpnts           local
+
+
+# ========================================================================================
+#  GHOST OBJECTS - THE GRID
+
+thing       wpnt00
+thing       wpnt01
+thing       wpnt02
+thing       wpnt03
+thing       wpnt04
+thing       wpnt05
+thing       wpnt06
+thing       wpnt07
+thing       wpnt08
+thing       wpnt09
+thing       wpnt10
+thing       wpnt11
+thing       wpnt12
+thing       wpnt13
+thing       wpnt14
+thing       wpnt15
+thing       wpnt16
+thing       wpnt17
+thing       wpnt18
+thing       wpnt19
+thing       wpnt20
+thing       wpnt21
+thing       wpnt22
+thing       wpnt23
+thing       wpnt24
+thing       wpnt25
+thing       wpnt26
+thing       wpnt27
+thing       wpnt28
+thing       wpnt29
+thing       wpnt30
+thing       wpnt31
+thing       wpnt32
+thing       wpnt33
+thing       wpnt34
+thing       wpnt35
+thing       wpnt36
+
+#  SHARKS - and anything else that might need to use the grid
+
+thing       Shark00                     LinkID=1
+thing       Shark01                     LinkID=1
+thing       Shark02                     LinkID=1
+thing       Shark03                     LinkID=2
+thing       Shark04                     LinkID=2    
+thing       Shark05                     #LinkID=0    The Shark inside the Bronze Door room
+
+
+#  TRIGGERS - To put one extra shark in if others have been killed...
+sector     SectorTrigger00              LinkID=3
+sector     SectorTrigger01              LinkID=3
+sector     SectorTrigger02              LinkId=3
+sector     SectorTrigger03              LinkID=3
+sector     SectorTrigger04              LinkID=3
+sector     SectorTrigger05              LinkID=3
+sector     SectorTrigger06              LinkID=3
+sector     SectorTrigger07              LinkID=3
+
+#thing       BronzeDoor1
+#thing       BronzeDoor2
+
+thing       GhostSharkOuter             #For the placement of new sharks
+thing       GhostSharkInner                          
+
+#thing       BronzeDoorOne
+#thing       BronzeDoortwo
+
+
+#  LOCAL VARIABLES
+
+template    SharkTPL=shark              local
+
+thing       NewSharkOuter0=-1           local
+thing       NewSharkOuter1=-1           local
+thing       NewSharkInner0=-1           local
+thing       NewSharkInner1=-1           local
+
+int         InnerPopulation=3           local       # Many variables (probably too many) for managing the inner and outer shark populations...
+int         OuterPopulation=2           local
+int         MinPopulation=2             local
+
+int         NumberOfWpnts=37            local
+int         NumberOfSharks=6            local       # Initial number of sharks in the world
+
+int         Check0=0                    local
+int         Check1=0                    local
+
+int         GenCounter                  local
+
+end
+# ========================================================================================
+# ========================================================================================
+
+code
+# ========================================================================================
+
+startup:
+    
+    #  ASSIGNMENT OF GHOST OBJECTS TO WAYPOINT SLOTS        
+    
+    for(GenCounter = 0; GenCounter < NumberOfWpnts; GenCounter = GenCounter + 1)
+    {
+        AISetWpnt(wpnt00[GenCounter], GenCounter);
+    }
+    
+    #  LINK WAYPOINTS
+    
+    AIConnectWpnts(0, 1);
+    AIConnectWpnts(0, 3);
+    AIConnectWpnts(0, 2);
+    AIConnectWpnts(1, 6);
+    AIConnectWpnts(1, 2);
+    AIConnectWpnts(2, 6);
+    AIConnectWpnts(2, 4);
+    AIConnectWpnts(2, 5);
+    AIConnectWpnts(3, 4);
+    AIConnectWpnts(4, 5);
+    
+    AIConnectWpnts(4, 12);
+    
+    AIConnectWpnts(5, 6);
+    
+    AIConnectWpnts(7, 8);
+    AIConnectWpnts(8, 9);
+    AIConnectWpnts(8, 10);
+    AIConnectWpnts(9, 10);
+    AIConnectWpnts(9, 11);
+    AIConnectWpnts(10, 11);
+    
+    AIConnectWpnts(13, 14);
+    AIConnectWpnts(13, 15);
+    AIConnectWpnts(14, 16);
+    AIConnectWpnts(14, 17);
+    AIConnectWpnts(15, 16);
+    AIConnectWpnts(15, 17);
+    
+    AIConnectWpnts(18, 19);
+    AIConnectWpnts(18, 21);
+    AIConnectWpnts(19, 20);
+    AIConnectWpnts(19, 23);
+    AIConnectWpnts(20, 21);
+    AIConnectWpnts(21, 22);
+    AIConnectWpnts(22, 23);
+    
+    AIConnectWpnts(24, 25);
+    AIConnectWpnts(24, 26);
+    AIConnectWpnts(24, 27);
+    AIConnectWpnts(25, 29);
+    AIConnectWpnts(26, 27);
+    AIConnectWpnts(26, 28);
+    AIConnectWpnts(27, 29);
+    AIConnectWpnts(27, 28);
+    AIConnectWpnts(28, 29);
+   
+    AIConnectWpnts(31, 32);
+    AIConnectWpnts(31, 33);
+    AIConnectWpnts(31, 34);
+    AIConnectWpnts(32, 33);
+    AIConnectWpnts(33, 35);
+    AIConnectWpnts(34, 35);
+    
+    for(GenCounter = 0; GenCounter < NumberOfSharks; GenCounter = GenCounter + 1)
+    {
+        #  Set instincts for the sharks and let them roam
+        AISetInstinctWpntMode(Shark00[GenCounter]);
+        AIEnableInstinct(Shark00[GenCounter], "roam", 1);
+    }
+  
+    return;
+    
+# ========================================================================================
+killed:
+    
+    #  Keep track of dead sharks
+    if(GetSenderID() == 1)
+    { 
+        
+        InnerPopulation = InnerPopulation - 1;
+        
+        if(Check0 == 0);
+        {
+            Check0 = 1;
+            
+            AIConnectWpnts(17, 18);            
+            AIConnectWpnts(23, 24);
+            
+        }
+        return;
+    }
+    
+    if(GetSenderID() == 2)
+    {
+        OuterPopulation = OuterPopulation - 1;
+       
+        if(Check1 == 0)
+        {
+            Check1 = 1;
+            
+            AIConnectWpnts(5, 7);
+            AIConnectWpnts(5, 8);
+            AIConnectWpnts(5, 9);
+            AICOnnectWpnts(6, 7);
+        }
+        return;
+    }
+
+    for(GenCounter = 0; GenCounter < 1; GenCounter = GenCounter + 1)
+    {
+        if(GetSenderRef() == NewSharkInner0[GenCounter])
+        {
+            NewSharkInner0[GenCounter] = -1;
+            InnerPopulation = InnerPopulation - 1;
+        }
+        else if(GetSenderRef() == NewSharkOuter0[GenCounter])
+        {  
+                NewSharkOuter0[GenCounter] = -1;
+                OuterPopulation = OuterPopulation - 1;
+        }
+        
+    }
+   
+    return;
+
+# ========================================================================================
+entered:
+    #  Check for low shark population where Indy can't see any sharks being generated
+    #  This is the sloppy maddness for making sure that there are always 2 sharks in the inner lagoon area, as well as the outer area
+    if(GetSenderID() == 3)
+    {
+        if(OuterPopulation < MinPopulation)
+        {
+            for(GenCounter = 0; GenCounter < 2; GenCounter = GenCounter + 1)
+            {
+            
+                if(NewSharkOuter0[GenCounter] == -1)    #Create a shark in the outer lagoon
+                {   
+                    NewSharkOuter0[GenCounter] = CreateThing(SharkTPL, GhostSharkOuter);
+                    CaptureThing(NewSharkOuter0[GenCounter]);
+             
+                    AISetInstinctWpntMode(NewSharkOuter0[GenCounter]);
+                    AIEnableInstinct(NewSharkOuter0[GenCounter], "roam", 1);
+                  
+                    OuterPopulation = OuterPopulation + 1;
+                    
+                    return;
+                 }
+            }
+        }
+        
+        if(InnerPopulation < MinPopulation)
+        {
+            for(GenCounter = 0; GenCounter < 2; GenCounter = GenCounter + 1) 
+            {
+                if(NewSharkInner0[GenCounter] == -1)        #Create a shark in the inner lagoon
+                {
+                    NewSharkInner0[GenCounter] = CreateThing(SharkTPL, GhostSharkInner);
+                    CaptureThing(NewSharkInner0[GenCounter]);
+                
+                    AISetInstinctWpntMode(NewSharkInner0[GenCounter]);
+                    AIEnableInstinct(NewSharkInner0[GenCounter], "roam", 1);
+                    
+                    InnerPopulation = InnerPopulation + 1;
+                    
+                    return;
+                }
+            }
+        }
+    }
+    
+    return;
+    
+# ========================================================================================
+// arrived:
+
+//    if(GetSenderRef() == BronzeDoorOne)
+//    {   
+//        AIConnectWpnts(29, 30);     #These three connections are not accessible until certain 'doors' have been opened, the sharks should just turn around
+//        AIConnectWpnts(30, 31);
+//    }
+    
+//    else if(GetSenderRef() == BronzeDoorTwo)
+//    {
+//        AIConnectWpnts(35, 36);
+//    }        
+        
+                
+
+//    return;
+
+# ========================================================================================
+
+end   

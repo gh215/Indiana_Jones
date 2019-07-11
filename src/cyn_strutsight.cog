@@ -1,0 +1,136 @@
+# Jones 3D Cog Script
+#
+# CYN_StrutSight.cog
+#
+# [CMG]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message     entered
+
+	# Actors
+	thing		player							local
+	thing		indyActor						nolink				
+
+	# Actor look targets
+	thing		in_lktarg1						nolink
+
+	# Camera objects
+	thing		sightCam1						nolink
+
+	# Camera targets
+	thing		strt1MoveTarg					local
+
+	# Trigger
+	sector		sightsect
+
+	# Things
+	thing		strut							nolink
+
+	# Saylines
+	sound		in_whipthat=inxj019.wav			local	# Hmm...that thing looks whipable
+	
+	# Keyframes
+	keyframe	in_hat=0in_figithat_4_4.key		local
+	keyframe	in_brush=0in_stand1_bd_4.key	local
+	keyframe	in_stand4=0in_stand4.key		local
+
+	# Templates
+	template    ghostTpl=ghost					local
+
+	# Local variables
+	int			rotref							local
+	int			track							local
+	int			curCam							local
+	int			seen							local
+
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+if (seen == 1) return;
+
+if (GetSenderRef() == sightsect)
+{
+	seen = 1;
+	player = GetLocalPlayerThing();
+
+    # Prep for scene...
+	curCam = GetCurrentCamera();
+	
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	
+	StartCutScene(1);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+
+    # Set up actor
+	CopyPlayerHolsters(player, indyActor);
+	CopyOrientAndPos(player, indyActor);
+	AISetCutSceneMode(indyActor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyActor, 0x80000);
+
+	rotref=(GetThingMaxRotVel(indyActor));
+	SetThingMaxRotVel(indyActor, 150);
+	AISetLookThing(indyActor, in_lktarg1);
+
+	# move cam to known position
+	SetExtCamOffsetToThing(sightCam1);
+
+	# create target for secondary focus at player position.
+	strt1MoveTarg = CreateThingAtPos(ghostTpl, GetThingSector(player), GetThingPos(player), '0 0 0');
+
+	# offset camera to thing.
+	SetExtCamLookOffsetToThing(strt1MoveTarg);
+
+	# skip a beat
+	Sleep(1.25);
+
+	# play indy's anims and voice line
+	track = PlayKey(indyActor, in_Stand4, 2, 0x0, 0);
+	PlayKey(indyActor, in_brush, 4, 0x12, 1);
+	PlayVoice(indyActor, in_whipthat, 1.0, 0);
+	PlayKey(indyActor, in_hat, 4, 0x12, 0);
+
+	# switch to camera 2 with focus on ghost at indy's position
+	SetCameraFocus(2, sightCam1);
+	SetCameraSecondaryFocus(2, strt1MoveTarg);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0);
+    Sleep(0.75);
+
+	# move camera focus object up to strut
+	MoveThingToPos(strt1MoveTarg, GetThingPos(strut), 2.0);
+    Sleep(2.75);
+
+	# put the player at actors' position, clear actor, show player
+	CopyOrientAndPos(indyActor, player);
+	AIClearCutSceneMode(indyActor);
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	StopKey(indyActor, track, 0);
+	SetThingFlags(indyActor, 0x80000);
+
+	# Restore the cam, end the scene
+	SetCameraPosition(curCam, GetThingPos(sightCam1));
+	SetCurrentCamera(curCam);
+	RestoreExtCam();
+	SetCameraFOV(90, 0, 0.0);
+	EndCutScene();
+}
+
+return;
+
+# ========================================================================================
+end
+

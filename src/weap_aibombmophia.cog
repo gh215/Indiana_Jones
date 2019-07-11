@@ -1,0 +1,63 @@
+# Jones 3D Cog Script
+#
+# actor_AIBombMophia.cog
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		created
+message		pulse
+message		removed
+
+# ************************** TEMPLATES *************************
+template	tpl_glow=mophiaBombFX					local
+template	tpl_sparks=mophiaSparksLg				local
+template	tpl_MardukHitTrail=mardukHitTrail			local
+template	tpl_sparksremove=mardukHitSparks			 local 
+
+material	mat_bomb1=gen_a4sfx_inzap.mat			local
+material	mat_bomb2=gen_a4sfx_lightning.mat		local
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_bomb									local
+thing		t_Trail									local
+int			n_animID1								local
+int			n_animID2								local
+
+end
+
+
+# ===================================================================
+code
+
+# ...................................................................
+created:
+
+	t_bomb = GetSenderRef();
+
+	CreateThingAtPos(tpl_glow, GetThingSector(t_bomb), GetThingPos(t_bomb), '0 0 0');
+	CreateThingAtPos(tpl_sparks, GetThingSector(t_bomb), GetThingPos(t_bomb), '0 0 0');
+
+	SetThingPulse(t_bomb, 0.025);
+#	MaterialAnim(mat_bomb1, 30, 1);
+#	MaterialAnim(mat_bomb2, 30, 1);
+
+	return;
+
+pulse:
+	t_bomb = GetSenderRef();
+	t_Trail = CreateThing(tpl_MardukHitTrail, t_bomb);
+
+	return;
+
+removed:
+	CreateThingAtPos(tpl_sparksremove, GetThingSector(t_bomb), GetThingPos(t_bomb), '0 0 0');
+	return;
+
+# ===================================================================
+end

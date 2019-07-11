@@ -1,0 +1,257 @@
+# Jones 3D Cog Script
+#
+# olv_bosspad.cog
+#
+# Cog to move snake bridges using pads.
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message	startup
+	message     entered
+	message     exited
+	message	arrived
+	message	activated
+	message	timer
+
+
+	thing		block0
+	thing		imp3
+	thing		imp_stand
+	surface     pad0   				mask=0x480
+	
+sound		plyersnd=inxj054.wav			local	# "Must be a presure switch"
+sound		switchsnd=olv_presswitch_c.wav	local
+sound		blocksnd=olv_quetzdoor_move_c.wav	local
+sound		blockstop=olv_quetzdoor_stop_c.wav	local
+int		sndplay					local
+int		steptalk					local
+int		redystep=0					local	
+int		gotten=0					local	
+int		talkin					local	
+int		aha						local
+int		block_up=0					local
+int		waittime=30					local
+thing		player					local
+
+#   Gestures.
+keyframe    in_scratch=0in_scrtch_1_1.key		local
+keyframe	in_ltarmup=0in_leftarm_1_1.key	local
+keyframe	in_1to4=0in_stand1_bd_4.key		local
+keyframe	in_stand4=0in_stand4.key		local
+keyframe	in_botharmsup=0in_armsup_1_1.key	local
+keyframe	in_rtarmup=0in_armsout_1_1.key	local
+
+int		track						local
+int		direction=0					local
+int		difficultylevel				local
+int		diff_time					local
+
+vector	playervec					local
+vector	playerxvec					local
+
+# ------------ Voice Lines ---------------------------
+sound		ahaSnd=INXJ147.wav			local # Aha...
+sound		read0=ov05j01.wav				local	#Heres what I'm looking for.
+sound		read0b=ov05j02.wav				local	#Harken Mortal!...(version1)
+sound		read1=ov05j03.wav				local	#Harken Mortal!...(version2)
+sound		read2=ov05j04.wav				local	#Hmm...Sounds like..could fly...
+
+# sound		readend=ov05j02a.wav			local	#[sigh]Why are these inscriptions...
+
+int		sndnum=1					local
+
+end
+
+#----------------------------------------------------------------------
+code
+startup:
+	player=GetLocalPlayerThing();
+	ClearThingFlags(block0, 0x40000000);	# block not pushable. 
+ 	return;
+
+entered:
+	if(getsenderref() != pad0) return;
+	PlaySoundLocal(switchsnd, 1.0, 0.0, 0x0, 0);
+		if(redystep == 0)
+		{		
+		steptalk = PlayVoice(player, plyersnd, 1.0, 0);
+		redystep=1;
+		}
+	if(block_up == 1) return;
+      MoveToFrame(block0, 1, 1.0);
+	sndplay = PlaySoundThing(blocksnd, block0, 1, 10, 50, 1);
+	return;
+
+	
+exited:
+	if(getsenderref() != pad0) return;
+	if(block_up == 1) return;
+	block_up=1;
+	PlaySoundLocal(switchsnd, 1.0, 0.0, 0x0, 0);
+
+
+		# TO DO:  Shouldn't timer be related to difficulty?
+		difficultylevel=GetDifficulty();
+		diff_time=waittime+((5 - difficultylevel)* 6.0);
+		SetTimer(diff_time);
+
+	return;
+
+
+timer:
+	block_up=0;
+      MoveToFrame(block0, 0, 1.0);
+	sndplay = PlaySoundThing(blocksnd, block0, 1, 10, 50, 1);
+	return;
+
+arrived:
+	if(GetSenderRef() == block0)
+	{ 
+	StopSound(sndplay, 0);
+	PlaySoundThing(blockstop, block0, 1, 20, 50, 0);
+	}
+	return;
+
+activated:
+	playervec=GetThingLVec(player);
+	playerxvec=VectorX(playervec);
+#	printflex(playerxvec);
+
+	if((getsenderref() == imp_stand) && (gotten == 0))	
+	{
+		gotten=1;
+		StartCutscene(1);
+		SetActorFlags(player, 0x200000);
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		aha = PlayVoice(player, ahasnd, 1.0, 0);
+
+		# ----- Set Cam Offset ---------
+		if(playerxvec >= -0.3)
+		{
+	        SetExtCamOffset('-0.15 -0.07 0.04');
+		direction=1;
+#		print("facing from right");
+		}
+		else
+		{
+	        SetExtCamOffset('0.15 -0.07 0.04');
+		direction=0;	
+#		print("facing from left");
+		}
+	      PlayMode(player, 60, 0);
+		Sleep(0.5);
+		DestroyThing(imp3);
+
+		UpdateDifficulty(difficultylevel);
+
+		# ----- Add Imp3 ---------
+		ChangeInv(player, 16, 1.0);
+		SetInvAvailable(player, 16, 1);
+		JonesInvItemChanged(16);
+		Sleep(4.0);
+
+		talkin = PlayVoice(player, read0, 1.0, 0);
+		PlayKey(player, in_botharmsup, 4, 0x12, 0);
+		WaitForSound(talkin);
+		sleep(0.5);
+		talkin = PlayVoice(player, read0b, 1.0, 0);
+			if(direction == 1)
+			{
+			PlayKey(player, in_ltarmup, 4, 0x12, 0);
+			}
+			else
+			{
+			PlayKey(player, in_rtarmup, 4, 0x12, 0);
+			}
+		sleep(8.0);
+		PlayKey(player, in_scratch, 4, 0x12, 0);
+		WaitForSound(talkin);
+
+		# ----- Reset Camera ----------
+#		print("end 1");
+		RestoreExtCam();
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+		gotten=2;
+		return;
+	}
+	if((getsenderref() == imp_stand) && (gotten == 2))	
+	{
+		gotten=3;
+		StartCutscene(1);
+		SetActorFlags(player, 0x200000);
+		MakeMeStop();
+		DeselectWeaponWait(player);
+
+		# ----- Set Cam Offset ---------
+		if(playerxvec >= -0.3)
+		{
+	        SetExtCamOffset('-0.15 -0.07 0.04');
+		direction=1;
+#		print("facing from right");
+		}
+		else
+		{
+	        SetExtCamOffset('0.15 -0.07 0.04');
+		direction=0;
+#		print("facing from left");
+		}
+
+		if(sndnum == 1)
+		{
+			talkin = PlayVoice(player, read1, 1.0, 0);
+			PlayKey(player, in_botharmsup, 4, 0x12, 0);
+			sleep(4.0);
+			if(direction == 1)
+			{
+			PlayKey(player, in_ltarmup, 4, 0x12, 0);
+			}
+			else
+			{
+			PlayKey(player, in_rtarmup, 4, 0x12, 0);
+			}
+			WaitForSound(talkin);
+		}
+		if(sndnum >= 2)
+		{
+			talkin = PlayVoice(player, read2, 1.0, 0);
+			track = PlayKey(player, in_Stand4, 2, 0x0, 0);
+			PlayKey(player, in_1to4, 4, 0x12, 1);
+			sleep(2.0);
+			StopKey(player, track, 0.5);
+			sleep(1.0);
+			if(direction == 1)
+			{
+			PlayKey(player, in_ltarmup, 4, 0x12, 0);
+			}
+			else
+			{
+			PlayKey(player, in_rtarmup, 4, 0x12, 0);
+			}
+			WaitForSound(talkin);
+		}
+
+		sndnum = (sndnum + 1);
+		if(sndnum >= 2)
+		{
+		sndnum = 2;
+		}
+
+		# ----- Reset Camera ----------
+#		print("end 2");
+		RestoreExtCam();
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+		gotten=2;
+	}
+	return;
+
+end
+

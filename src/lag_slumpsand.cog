@@ -1,0 +1,68 @@
+# Jones 3D Cog Script
+#
+# lag_slumpsand.cog
+#
+# Cog to slump sand from bronze door one.
+#
+# [DS]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+
+symbols
+      message	entered
+	
+	surface	switch0
+	surface	sandsurf0
+	int		slumped=0 					local
+	thing		campos1
+	thing		player					local
+	thing		sandy						local
+	int		curcam					local
+	int		stepsnd					local
+	thing		ghostsand
+	template	sand0
+	sound		switchsnd=olv_presswitch_c.wav	local
+	cog			hints #send message when complete. 
+	sound		music0=mus_lag_uwaterdoor.wav		local
+
+end
+
+# -------------------------------------------------------------------
+code
+entered:
+	if(getsenderref() != switch0) return;
+	if (slumped == 1) return;
+	slumped=1;
+	curCam = GetCurrentCamera();
+	SetActorFlags(GetLocalPlayerThing(), 0x200000);
+	StopThing(player);
+	StartCutscene(1);
+	stepsnd=PlaySoundLocal(switchsnd, 1.0, 0.0, 0x0, 0);
+	waitForSound(stepsnd);
+	SetFaceGeoMode(sandsurf0, 0);
+	SetAdjoinFlags(sandsurf0,2);
+	sandy = Creatething(sand0, ghostsand);
+	capturething(sandy);
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+	SetCameraFocus(2, campos1);
+	SetCameraPosInterp(2, 0);
+	SetCameraSecondaryFocus(2, ghostsand);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0);	
+	SetCameraFOV(45, 1, 7);	
+	Movetoframe(sandy, 1, 0.5);
+	WaitForStop(sandy);
+	DestroyThing(sandy);
+	SetCurrentCamera(curcam);
+	ClearActorFlags(GetLocalPlayerThing(), 0x200000);
+	EndCutscene();
+
+        # Send message to hint cog
+		SendMessage(hints, user5);
+
+	return;
+end
+

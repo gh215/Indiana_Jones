@@ -1,0 +1,580 @@
+# Jones 3D Cog Script
+#
+# nub_MazeSteps.cog
+#
+# [TL] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		activated
+message		startup
+message		arrived
+message		killed
+
+thing		step0
+thing		step1
+thing		step2
+thing		step3
+thing		step4
+thing		step5
+thing		step6
+thing		step7
+thing		step8
+thing		step9
+thing		step10
+thing		step11
+thing		step12
+thing		step13
+thing		step14
+thing		step15
+
+thing		button0										#top button
+thing		button1										#bottom button
+thing		player							local
+thing		camera0										#watch player push top button
+thing		camera1										#watch steps
+thing		camera2										#watch player push bottom button
+thing		lowButtonTarg
+thing		enemy0
+thing		enemy1
+thing		enemy2
+thing		enemy3
+thing		enemy4										#Volod
+thing		stairVolpos									#position of Vol on stairs
+thing		stairVol						local		#Vol on stairs
+thing		stairVolTarg								#StairVol's destination
+thing		actor0										#Indy at top button
+thing		actor1										#Indy at bottom button
+thing		stairTarg									#Camera target for Indy pushing button
+thing		commieTarg0									#Camera target for steps
+thing		commieTarg1									#Camera target for Commies marcing in
+thing		commieTarg2									#Camera target for Dr.V adjusting glasses
+thing		commieTarg3									#Camera target for Dr.V going down steps
+thing		buttonGhost									#target for Indy to watch commies come in
+thing		spinner										#if alive, destroyed when commies enter
+
+
+template	stairVolTpl=vol_actor		   		local
+
+keyframe	unlock=in_activate_medium.key  		local
+keyframe	drop=0vo_land.key			   		local
+keyframe	glassesKey=0vo_glassesR_3_3.key		local
+
+surface		noAi0										#keeps ai away from stairs
+surface		noAi1
+surface		noAi2
+surface		noAi3
+surface		noAi4
+surface		noAi5
+surface		noAi6
+surface		noAi7
+
+sector		stepsector0									#turned on and off for framerate purposes
+sector		stepsector1
+
+sound		stepmove=teo_spike_block_c.wav			local
+sound		stepstop=nub_croc_stop_c.wav			local
+sound		commieMus=mus_gen_russbold_shrt2.wav	local
+
+vector		v_targetpos						local
+
+int			open=0							local
+int			buttdone=0						local
+int			once=0							local
+int			curframe0=1						local
+int			curframe1=1						local
+int			curframe2=1						local
+int			curframe3=1						local
+int			curframe4=1						local
+int			drvdone=0						local
+int			stepchannel						local
+int			atButton						local
+int			spinnerPop=1					local		#population
+
+flex		raiseSteps						local
+flex		lowerSteps						local
+
+cog         NUB_Commie_Grid     #added by JM
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+Sleep(0.01);
+player = GetLocalPlayerThing();
+
+MoveToFrame(step12, 1, 0.5);
+MoveToFrame(step13, 1, 0.5);
+MoveToFrame(step14, 1, 0.5);
+MoveToFrame(step15, 1, 0.5);
+
+SetThingFlags(enemy0, 0x80000);
+AISetCutsceneMode(enemy0);
+
+SetThingFlags(enemy1, 0x80000);
+AISetCutsceneMode(enemy1);
+
+SetThingFlags(enemy2, 0x80000);
+AISetCutsceneMode(enemy2);
+
+SetThingFlags(enemy3, 0x80000);
+AISetCutsceneMode(enemy3);
+
+SetThingFlags(enemy4, 0x80000);
+AISetCutsceneMode(enemy4);
+
+SetSectorAdjoins(stepsector0, 0);
+return;
+
+# ........................................................................................
+activated:
+
+if (buttdone == 1) return;
+
+if ((GetSenderRef() == button0) || (GetSenderRef() == button1))
+{
+    buttdone = 1;
+	if (GetSenderRef() == button0)
+	{
+		StartCutscene(1);   
+		atButton = 0;
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		PlayMode(player, 1, 0);
+		CopyPlayerHolsters(player, actor0);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(actor0, 0x80000);
+        
+		#Watch Indy push the button
+        SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, camera0);
+		SetCameraSecondaryFocus(2, stairTarg);
+		SetCurrentCamera(2);
+		SetCameraFOV(65, 0, 0.0);
+        Sleep(0.5);
+        PlayKey(actor0, unlock, 4, 0x12, 0);
+        Sleep(0.5);
+		#Move the buttons into the wall
+		MoveToFrame(button0, 1, 0.5);
+		#### MoveToFrame(button1, 1, 0.5); # don't do that!
+	}
+	if (GetSenderRef() == button1)
+	{
+		StartCutscene(1);
+		atButton = 1;
+        MakeMeStop();
+		DeselectWeaponWait(player);
+		PlayMode(player, 1, 0);
+		CopyPlayerHolsters(player, actor1);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(actor1, 0x80000);
+        
+		#Watch Indy push the button
+        SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, camera2);
+		SetCameraSecondaryFocus(2, lowButtonTarg);
+		SetCurrentCamera(2);
+		SetCameraFOV(65, 0, 0.0);
+        Sleep(0.5);
+        PlayKey(actor1, unlock, 4, 0x12, 0);
+        Sleep(0.5);
+		#Move the buttons into the wall
+		#### MoveToFrame(button0, 1, 0.5); # don't do that!
+		MoveToFrame(button1, 1, 0.5);
+	}
+	if (once == 0)
+	{
+        buttdone = 1;
+		
+		#Destroy any spinners left in world
+		if (spinnerPop > 0)
+		{
+			DestroyThing(spinner);
+			spinner = -1;
+		}
+        Sleep(1.0);
+
+        #Turn Indy around to watch the commies
+		SetThingMaxRotVel(actor0, 190.0);
+		AISetCutsceneMode(actor0);
+		AISetLookThing(actor0, buttonGhost);
+        Sleep(0.5);
+
+		#Cut to camera watching stairs
+		SetCameraFocus(2, camera1);
+		SetCameraSecondaryFocus(2, commieTarg0);
+		SetCameraFOV(45, 1, 3.0);
+
+		#Place player at ledge and return actor (offscreen)
+		TeleportThing(player, buttonGhost);
+#		CopyOrientandPos(buttonGhost, player);
+		AISetLookThing(actor0, button0);
+        
+		Call LowerSteps;
+
+		#Turn on the commies
+		ClearThingFlags(enemy0, 0x80000);
+		ClearThingFlags(enemy1, 0x80000);
+		ClearThingFlags(enemy2, 0x80000);
+		ClearThingFlags(enemy3, 0x80000);
+		ClearThingFlags(enemy4, 0x80000);
+		
+		SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 1.75);				#was 2.0
+
+		Sleep(5.0);
+
+        #Look up at the commies marching in
+		SetCameraSecondaryFocus(2, commieTarg1);
+        PlaySoundLocal(commieMus, 1.0, 0.0, 0x0, 0);
+        
+		AISetMoveSpeed(enemy0, 1.1);
+		AISetLookFrame(enemy0, curframe0);
+		AISetMoveFrame(enemy0, curframe0);
+		AISetMoveSpeed(enemy1, 1.1);
+		AISetLookFrame(enemy1, curframe1);
+		AISetMoveFrame(enemy1, curframe1);
+		AISetMoveSpeed(enemy2, 1.1);
+		AISetLookFrame(enemy2, curframe2);
+		AISetMoveFrame(enemy2, curframe2);
+		AISetMoveSpeed(enemy3, 1.1);
+		AISetLookFrame(enemy3, curframe3);
+		AISetMoveFrame(enemy3, curframe3);
+		AISetMoveSpeed(enemy4, 1.1);				#was 2.0
+		AISetLookFrame(enemy4, curframe4);
+		AISetMoveFrame(enemy4, curframe4);
+        SetCameraFOV(30, 1, 2.0);
+		Sleep(4.0);
+		
+		SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 5.75);				#was 6.75
+		SetCameraSecondaryFocus(2, commieTarg2);
+        
+							  
+		SetCameraFOV(25, 1, 5.75);					#was 6.75
+		return;
+		#from here, the action moves to the arrived section...
+	}
+
+	#if the button is pushed again, stairs move but no cutscene.  
+	#If stairs are closed, open them.
+	if ((once == 1) && (open == 0))
+	{
+		buttdone = 1;
+        
+		SetCameraFocus(2, camera1);
+		SetCameraSecondaryFocus(2, commieTarg0);
+		SetCurrentCamera(2);
+		SetCameraFOV(45, 1, 4.0);
+
+        Call lowerSteps;
+		
+		return;
+	}
+    #If stairs are open, close them.
+	if ((once == 1) && (open == 1))
+	{
+		Print("closing stairs because they're open- no cutscene");
+		StartCutscene(1);
+		buttdone = 1;
+        
+		SetCameraFocus(2, camera1);
+		SetCameraSecondaryFocus(2, commieTarg0);
+		SetCurrentCamera(2);
+		SetCameraFOV(45, 1, 4.0);
+
+		Call RaiseSteps;
+        
+		return;
+	}
+}
+
+return;
+
+# ........................................................................................
+arrived:
+
+#When the steps are finished, if they are Closed
+if ((GetSenderRef() == step11) && (GetCurFrame(step11) == 0))
+{
+    Print("Arrived:  Steps are closed");
+	MoveToFrame(button0, 0, 0.5);
+	MoveToFrame(button1, 0, 0.5);
+
+    open = 0;
+	SetSectorAdjoins(stepsector0, 0);
+	StopSound(stepchannel, 0);
+	PlaySoundThing(stepstop, step5, 1.0, -1, -1, 0);
+
+	#If Indy is at the top button
+	if (atButton == 0)
+	{
+        PrintInt(once);
+		Print("Arrived:  Steps open, Indy is at top button.  Returning Camera");
+		if (once != 0)
+		{
+            CopyOrientAndPos(actor0, player);
+		}
+        once = 1;
+		SetThingFlags(actor0, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		
+		# revert cam
+		v_targetpos = VectorAdd(VectorTransformToOrient(player, '-0.2 -0.05 0.0'), GetThingPos(player));	
+		SetCameraPosition(1, v_targetpos);
+		
+		
+		SetCurrentCamera(1);
+		SetCameraFOV(90, 0, 0.0);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		Print("end cutscene after step 11 arrived Frame0, Indy at top");
+		EndCutscene();
+        buttdone = 0;
+	}
+	
+	#If Indy is at the bottom button
+	if (atButton == 1)
+	{
+        Print("Arrived:  Steps open, Indy is at bottom button.  Returning Camera");
+		CopyOrientandPos(actor1, player);
+		SetThingFlags(actor1, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		# revert cam
+		v_targetpos = VectorAdd(VectorTransformToOrient(player, '-0.2 -0.05 0.0'), GetThingPos(player));	
+		SetCameraPosition(1, v_targetpos);
+		
+		SetCurrentCamera(1);
+		SetCameraFOV(90, 0, 0.0);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+        Print("end cutscene after step 11 arrived Frame0, Indy at bottom");
+		EndCutscene();
+        buttdone = 0;
+	}
+		
+}
+
+#When the steps are finished, if they are open
+if ((GetSenderRef() == step11) && (GetCurFrame(step11) == 1))
+{
+    Print("Arrived:  Steps finished and open.");
+	MoveToFrame(button0, 0, 0.5);
+	MoveToFrame(button1, 0, 0.5);
+	
+    open = 1;
+	SetSectorAdjoins(stepsector1, 0);
+	StopSound(stepchannel, 0);
+	PlaySoundThing(stepstop, step5, 1.0, -1, -1, 0);
+
+	if (drvdone == 0)
+	{
+        Print("Arrived:  DRV isn't done.  returning");
+		return;
+	}
+    
+    #If Indy is at the top button
+	if (atButton == 0)
+	{
+        Print("Arrived:  Steps closed, Indy is at top button.  Returning Camera");
+		CopyOrientandPos(actor0, player);
+		SetThingFlags(actor0, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		
+		# revert cam
+		v_targetpos = VectorAdd(VectorTransformToOrient(player, '0.05 -0.2 0.0'), GetThingPos(player));	
+		SetCameraPosition(1, v_targetpos);
+				
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCurrentCamera(1);
+		SetCameraFOV(90, 0, 0.0);
+        Print("end cutscene after step 11 arrived Frame1, Indy at top");
+		EndCutscene();
+        buttdone = 0;
+	}
+	#If Indy is at the bottom button
+	if (atButton == 1)
+	{
+        Print("Arrived:  Steps closed, Indy is at bottom button.  Returning Camera");
+		CopyOrientandPos(actor1, player);
+		SetThingFlags(actor1, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		# revert cam
+		v_targetpos = VectorAdd(VectorTransformToOrient(player, '0.05 -0.2 0.0'), GetThingPos(player));	
+		SetCameraPosition(1, v_targetpos);
+		
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);		
+		SetCurrentCamera(1);
+		SetCameraFOV(90, 0, 0.0);
+		
+		Print("end cutscene after step 11 arrived Frame1, Indy at bottom");
+		EndCutscene();
+        buttdone = 0;
+	}
+   
+}
+
+#Move commies onward until they reach their final frame
+if ((GetSenderRef() == enemy0) && (curframe0 < 2))
+{
+    curframe0 = curframe0 + 1;
+	AISetMoveSpeed(enemy0, 1.1);
+	AISetLookFrame(enemy0, curframe0);
+	AISetMoveFrame(enemy0, curframe0);
+}
+
+if ((GetSenderRef() == enemy1) && (curframe1 < 2))
+{
+	curframe1 = curframe1 + 1;
+	AISetMoveSpeed(enemy1, 1.1);
+	AISetLookFrame(enemy1, curframe1);
+	AISetMoveFrame(enemy1, curframe1);
+}
+if ((GetSenderRef() == enemy2) && (curframe2 < 2))
+{
+	curframe2 = curframe2 + 1;
+	AISetMoveSpeed(enemy2, 1.1);
+	AISetLookFrame(enemy2, curframe2);
+	AISetMoveFrame(enemy2, curframe2);
+}
+if ((GetSenderRef() == enemy3) && (curframe3 < 2))
+{
+	curframe3 = curframe3 + 1;
+	AISetMoveSpeed(enemy3, 1.1);
+	AISetLookFrame(enemy3, curframe3);
+	AISetMoveFrame(enemy3, curframe3);
+}
+
+#Jump Dr. V. into pit
+if (GetSenderRef() == enemy4)
+{
+	if (curframe4 == 2)
+	{
+        Print("Arrived:  DRV at final frame");
+		SendMessageEx(NUB_Commie_Grid, User2, enemy0, enemy1, enemy2, enemy3);      //added by JM
+		
+		PlayKey(enemy4, glasseskey, 4, 0x12, 1);
+        SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 1.0);
+		SetCameraSecondaryFocus(2, commieTarg3);
+        
+		AISetLookThing(enemy4, stairVolTarg);
+		PlayKey(enemy4, drop, 4, 0x12, 1);
+		DestroyThing(enemy4);
+        stairvol = CreateThing(stairVolTpl, stairVolPos);
+        CaptureThing(stairVol);
+		ClearThingFlags(stairVol, 0x80000);
+        AISetCutsceneMode(stairVol);
+        
+		AISetMoveSpeed(stairVol, 1.1);
+		AISetLookThing(stairVol, stairVolTarg);
+		AISetMoveThing(stairVol, stairVolTarg, 1);
+        
+		SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 5.0);
+		SetCameraSecondaryFocus(2, commieTarg0);
+		SetCameraFOV(60, 1, 5.0);
+        
+        Call raiseSteps;
+        
+		Sleep(5.0);
+        DestroyThing(StairVol);
+		
+		drvdone = 1;
+        
+		SetSurfaceFlags(noAi0, 0x8);
+		SetSurfaceFlags(noAi1, 0x8);
+		SetSurfaceFlags(noAi2, 0x8);
+		SetSurfaceFlags(noAi3, 0x8);
+		SetSurfaceFlags(noAi4, 0x8);
+		SetSurfaceFlags(noAi5, 0x8);
+		SetSurfaceFlags(noAi6, 0x8);
+		SetSurfaceFlags(noAi7, 0x8);
+		AIClearCutsceneMode(enemy0);
+        AIClearCutsceneMode(enemy1);
+        AIClearCutsceneMode(enemy2);
+        AIClearCutsceneMode(enemy3);
+		EndCutscene();
+		PRINT("end cutscene after DR V goes down");
+		return;
+	}
+	curframe4 = curframe4 + 1;
+	AISetMoveSpeed(enemy4, 1.1);		#was 2.0
+	AISetLookFrame(enemy4, curframe4);
+	AISetMoveFrame(enemy4, curframe4);
+        
+    #SendMessageEx(NUB_Commie_Grid, User2, enemy0, enemy1, enemy2, enemy3);      //added by JM
+}
+
+return;
+# ........................................................................................
+killed:
+if (GetSenderRef() == spinner)
+{
+	spinnerPop = 0;
+}
+return;
+# ........................................................................................
+
+RaiseSteps:
+SetSectorAdjoins(stepsector1, 1);
+stepchannel = PlaySoundThing(stepmove, step5, 1.0, -1, -1, 1);
+MoveToFrame(step0, 0, 0.5);
+MoveToFrame(step1, 0, 0.5);
+MoveToFrame(step2, 0, 0.5);
+MoveToFrame(step3, 0, 0.5);
+MoveToFrame(step4, 0, 0.5);
+MoveToFrame(step5, 0, 0.5);
+MoveToFrame(step6, 0, 0.5);
+MoveToFrame(step7, 0, 0.5);
+MoveToFrame(step8, 0, 0.5);
+MoveToFrame(step9, 0, 0.5);
+MoveToFrame(step10, 0, 0.5);
+MoveToFrame(step11, 0, 0.5);
+MoveToFrame(step12, 1, 0.5);
+MoveToFrame(step13, 1, 0.5);
+MoveToFrame(step14, 1, 0.5);
+MoveToFrame(step15, 1, 0.5);
+
+return;
+# ........................................................................................
+LowerSteps:
+
+#Turn on the sector and move the stairs
+SetSectorAdjoins(stepsector0, 1);
+stepchannel = PlaySoundThing(stepmove, step5, 1.0, -1, -1, 1);
+MoveToFrame(step0, 1, 0.5);
+MoveToFrame(step1, 1, 0.5);
+MoveToFrame(step2, 1, 0.5);
+MoveToFrame(step3, 1, 0.5);
+MoveToFrame(step4, 1, 0.5);
+MoveToFrame(step5, 1, 0.5);
+MoveToFrame(step6, 1, 0.5);
+MoveToFrame(step7, 1, 0.5);
+MoveToFrame(step8, 1, 0.5);
+MoveToFrame(step9, 1, 0.5);
+MoveToFrame(step10, 1, 0.5);
+MoveToFrame(step11, 1, 0.5);
+MoveToFrame(step12, 0, 0.5);
+MoveToFrame(step13, 0, 0.5);
+MoveToFrame(step14, 0, 0.5);
+MoveToFrame(step15, 0, 0.5);
+
+return;
+# ........................................................................................
+end
+

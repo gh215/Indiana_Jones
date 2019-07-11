@@ -1,0 +1,101 @@
+# Jones 3D Cog Script
+#
+# SOL_CamReflec.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     user0
+    message     user1
+    message     entered
+    
+    thing       player      local
+    thing       car         local
+    
+    thing       cam1
+    thing       cam2
+    thing       cam3
+    
+    surface     trig1
+    surface     trig2
+    surface     trig3
+    surface     trig4
+    surface     switch3
+    
+    int         ready=1     local
+    
+end
+
+# ========================================================================================
+
+code
+
+user0:
+
+    #Print("CamReflec: shut down");
+    ready = 0;
+    return;
+
+# ========================================================================================
+
+user1:
+
+    #Print("CamReflec: turn on");
+    ready = 1;
+    return;
+
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    car = GetSourceRef();
+
+    if((BitTest(GetPhysicsFlags(car), 0x01000000)) && (GetWallCel(switch3) == 1) && (ready == 1))
+    {
+        if(GetSenderRef() == trig1)
+        {
+            # disable player
+            StartCutscene(0);
+            SetActorFlags(player, 0x200000);
+            
+            # Cut to cam1
+            SetCameraFocus(2, cam1);
+            SetCameraSecondaryFocus(2, player);
+            SetCurrentCamera(2);
+        }
+            
+        if(GetSenderRef() == trig2)
+        {
+            # Cut to cam2
+            SetCameraFocus(2, cam2);
+            SetCameraSecondaryFocus(2, player);
+            SetCurrentCamera(2);
+        }
+        
+        if(GetSenderRef() == trig3)
+        {
+            # Cut to cam3
+            SetCameraFocus(2, cam3);
+            SetCameraSecondaryFocus(2, player);
+            SetCurrentCamera(2);
+        }
+        
+        if(GetSenderRef() == trig4)
+        {
+            SetCurrentCamera(1);
+            ClearActorFlags(player, 0x200000);
+            EndCutscene();
+        }
+    }
+        
+    return;
+       
+# ========================================================================================
+
+end
+

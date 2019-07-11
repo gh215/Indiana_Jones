@@ -1,0 +1,39 @@
+# Jones 3D Cog Script
+#
+# TEM_MazeMusic.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     entered
+
+    sector      sec_Maze
+    
+    sound       mus_Vastness=mus_gen_eerie2.wav         local
+    
+    int         once=0      local
+
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    if((GetSenderRef() == sec_Maze) && (once == 0))
+    {
+        once = 1;
+        PlaySoundLocal(mus_Vastness, 1.0, 0.0, 0x0, 0);
+    }
+    
+    return;
+           
+# ========================================================================================
+
+end

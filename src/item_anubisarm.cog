@@ -1,0 +1,103 @@
+# Jones 3D Cog Script
+#
+# item_AnubisArm.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		activated
+message		callback
+
+cog			talkCog					local
+
+keyframe	get=in_pickup_low.key	local
+
+sound		foundSnd=INXJ253.wav	local
+
+thing		player					local
+thing		item=-1					local
+
+int			bin=52					local
+
+end
+
+# ===================================================================
+
+code
+
+activated:
+
+	player = GetSourceRef();
+	item = GetSenderRef();
+
+    # See if player is holding something. 
+	if (GetCurItem(player) != 0)
+	{
+		return;
+	}
+
+	# Disable player controls and stuff
+	if (MakeMeStop() == -1)
+		return;
+	DeselectWeaponWait(player);
+
+	if (GetInv(player, bin) < GetInvMax(player, bin))
+	{
+		StartCutscene(0);
+		CaptureThing(player);
+		PlayKey(player, get, 5, 0x12, 0); 
+	}
+    else
+	{
+		ClearActorFlags(player, 0x200000);
+		return;
+	}
+
+	talkCog = GetCogByIndex(0);
+	SendMessage(talkCog, 27);
+
+	if (Rand() < 0.5)
+	{
+		SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+		SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+
+	SetExtCamLookOffset('0.0 0.02 0.0');
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	ReleaseThing(player);
+
+	if (item != -1)
+	{
+		DestroyThing(item);
+		item = -1;
+	}
+
+	ChangeInv(player, bin, 1.0);
+	SetInvAvailable(player, bin, 1);
+	JonesInvItemChanged(bin);
+
+	RestoreExtCam();
+
+	Sleep(1.0);
+	PlayVoice(player, foundSnd, 1.0, 0);
+
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+
+	return;
+
+end

@@ -1,0 +1,182 @@
+# Jones 3D Cog Script
+#
+# pyr_hornerswatch.cog
+#	
+# Get Horner's watch
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message 	startup
+message		entered
+message		activated
+
+# world things
+thing	player		local
+thing	indyactor	nolink
+thing	skeleton	nolink
+thing	watch
+
+# cams and lookthings
+thing	watchcam		nolink
+thing	watchcamlook	nolink
+
+# sectors
+sector	watchsector1
+sector	watchsector2
+
+# animations
+keyframe	grabwatch=in_activate_low.key	local
+keyframe	lookwatch=0in_turngear.key		local
+
+# models
+model  		mod_in_watchhand=hand_in_watch.3do		local
+
+# indy saylines
+sound	pocketwatch=pr10j01.wav	local
+sound	inscribed=pr10j02.wav	local
+sound	luckyday=pr10j03.wav	local
+sound	whatsthis=inxj002.wav	local
+
+# music
+sound	hornermus=mus_gen_eerie2.wav	local
+
+# variables
+int		spoken=0	local
+int		curkey=0	local
+int		cursound=0	local
+int		curmodel=0	local
+
+# subroutines
+flex	startscene=0.0	local
+flex	endscene=0.0	local
+flex	fixcams=0.0		local
+end
+
+code
+startup:
+	sleep(.01);
+	player = GetLocalPlayerThing();
+
+	#light and decollisionize horner's skeleton
+	SetCollideType(skeleton, 0);
+	SetThingLight(skeleton, '0.5 0.43 0.37', .001, .01);
+	SetThingLight(watch, '0.5 0.43 0.37', .001, .01);
+	return;
+
+entered:
+# ---> watchsectors
+	
+	# if not entering watchsectors, or if sector is a falling death sector, exit
+	if ((GetSenderRef() != watchsector1) && (GetSenderRef() != watchsector2)) return;
+	if (GetSectorFlags(GetSenderRef()) & 0x40) return;
+
+	if (spoken) return;
+	spoken = 1;
+	
+	# Indy: What's this?
+	cursound = PlaySoundLocal(hornermus, 1.0, 0, 0x0, 0);
+	cursound = PlayVoice(player, whatsthis, .5, 0);
+	return;
+
+activated:
+# ---) watch
+	DeselectWeaponWait(player);
+
+	call startscene;
+	
+	SetExtCamOffsetToThing(watchcam);
+
+	#make indy turn toward the skeleton
+	SetThingMaxRotVel(indyactor, 175);
+	AIEnableBodyTracking(indyactor, skeleton);
+	sleep(.1);
+	AIEnableHeadTracking(indyactor, skeleton);
+
+	cursound = PlayVoice(indyactor, pocketwatch, 1, 0);
+	sleep(1);
+	
+	# indy grabs watch, destroy the watch
+	curkey = PlayKey(indyactor, grabwatch, 4, 0x12, 0);
+	sleep(1);
+	DestroyThing(watch);
+
+	sleep(1.5);
+	curkey = PlayKey(indyactor, lookwatch, 4, 0x14, 0);
+
+	# put watch in indy's hands
+	curmodel = SetThingMesh(indyactor, 12, mod_in_watchhand, 0);
+	
+	sleep(.5);
+	cursound = PlayVoice(player, inscribed, 1, 1);
+
+	AIDisableHeadTracking(indyactor);
+	AIDisableBodyTracking(indyactor);
+
+	if (global3 == 2)
+	{
+		sleep(1);
+		cursound = PlayVoice(player, luckyday, 1, 0);
+	}
+
+	StopKey(indyactor, curkey, 1.0);
+
+	# add watch to inventory
+	SetInvAvailable(player, 100, 1);
+	ChangeInv(player, 100, 1.0);
+	JonesInvItemChanged(100);
+	Sleep(1);
+
+	# get the watch out of his hands
+	RestoreThingMesh(indyactor, curmodel);
+	
+	Sleep(1);
+
+	call endscene;
+	return;
+
+startscene:
+	call fixcams;
+
+	StartCutscene(1);
+	TeleportThing(indyactor, player);
+	CopyPlayerHolsters(player, indyactor);
+	ClearThingFlags(indyactor, 0x80000);
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x80000);
+		
+	return;
+			
+endscene:
+	call fixcams;
+
+	TeleportThing(player, indyactor);
+	SetThingFlags(indyactor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+
+	RestoreExtCam();
+	EndCutscene();
+	
+	# cleanup
+	DestroyThing(indyactor);
+	DestroyThing(watchcam);
+	DestroyThing(watchcamlook);
+	
+	return;
+
+fixcams:
+	# reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	RestoreExtCam();
+	return;
+
+end
+
+

@@ -1,0 +1,198 @@
+# Jones 3D Cog Script
+#
+# weap_IMP4.cog
+#
+# [RT]
+#
+# Controls Infernal Machine Part #4, the Power Part.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		activated
+message		deactivated
+message		selected
+message		deselected
+message		callback
+message		timer
+message		changed
+
+model		impOn=imp4_energ_on.3do		local	# Autoloaded
+model		impOff=imp4_energ.3do		local	# Autoloaded
+
+sound		pull=gen_grenade_pull.wav	local	# Autoloaded
+sound		put=gen_grenade_put.wav		local	# Autoloaded
+sound		pow=imp4_activate.wav		local	# Autoloaded
+sound		on=imp4_powerup.wav			local	# Autoloaded
+sound		off=imp4_powerdown.wav		local	# Autoloaded
+sound		loop=imp4_on_loop.wav		local	# Autoloaded
+
+template	projectile=+imp4			local	# Autoloaded
+template	redSparks=+imp4_sparks1		local	# Autoloaded
+template	blueSparks=+imp4_sparks2	local	# Autoloaded
+template	tplGlow=+imp4_glow			local	# Autoloaded
+
+thing		player						local
+thing		bullet						local
+thing		glow						local
+
+int			weaponNum=17				local
+int			handMesh					local
+int			handNode					local
+int			callNum						local
+int			curSound					local
+int			index						local
+
+int			bDisabled=0					local
+
+vector		firePos						local
+vector		dustPos						local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	handMesh = GetMeshByName(player, "inrhand");
+	handNode = GetNodeByName(player, "inrhand");
+
+	return;
+
+# -------------------------------------------------------------------
+
+fire:
+
+	if (bDisabled)
+	{
+		bDisabled = 0;
+		return;
+	}
+
+	SetThingMesh(player, handMesh, impOn, 0);
+
+	firePos = GetThingJointPos(player, handNode);
+	
+	bullet = FireProjectile(player, projectile, pow, -1, firePos, '0 0 0', 1.0, 0x0, 0.0, 0.0);
+	if (bullet != -1)
+	{
+		CreateThing(redSparks, bullet);
+		CreateThing(blueSparks, bullet);
+	}
+
+	dustPos = GetThingJointPos(player, handNode);
+	dustPos = VectorAdd(dustPos, '0 0 0.03'); 
+	for(index = 0; index < 5; index = index + 1)
+	{
+		MakeFairyDust(player, dustPos);
+	}
+
+	IMPStartFiring(17);
+
+	SetFireWait(player, 1.5);
+	SetTimer(0.2);
+
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+	ActivateWeapon(player, 0.01);
+	return;
+
+# -------------------------------------------------------------------
+
+deactivated:
+
+	DeactivateWeapon(player);
+	return;
+
+# -------------------------------------------------------------------
+
+selected:
+
+	SetAimWait(player, 0.0);
+	SetMountWait(player, 0.7);
+
+	SetArmedMode(player, 5);
+	SetCurWeapon(player, weaponNum);
+	SetThingFireOffset(player, '0.0 0.0 0.03'); 
+
+	CaptureThing(player);
+	PlayMode(player, 66, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deselected:
+
+	SetMountWait(player, 1.0);
+	StopMode(player, 66, 0);
+
+	CaptureThing(player);
+	PlayMode(player, 67, 0);
+
+	SetArmedMode(player, 0);
+
+    StopSound(curSound, 0.0);
+	PlaySoundThing(off, player, 1, -1, -1, 0x880);
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	callNum = GetParam(1);
+	ReleaseThing(player);
+
+	if (callNum == 28)
+	{
+		# Model swaps & FX
+		SetWeaponModel(player, weaponNum);
+		glow = AttachThingToThingMesh(player, tplGlow, handMesh);
+		
+		# Sounds
+		PlaySoundThing(pull, player, 1, -1, -1, 0x880);
+		PlaySoundThing(on, player, 1, -1, -1, 0x880);
+		Sleep(0.25);
+		curSound = PlaySoundThing(loop, player, 1, -1, -1, 0x881);
+	}
+	else if (callNum == 29)
+	{
+		# Cleanup...
+        ResetWeaponModel(player);
+		DetachThingMesh(glow);
+
+        PlaySoundThing(put, player, 1, -1, -1, 0x880);
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+timer:
+
+	SetThingMesh(player, handMesh, impOff, 0);
+	IMPEndFiring(17);
+	return;
+
+# -------------------------------------------------------------------
+
+changed:
+
+	# This message is called when an IMP is activated on an IMP stand
+	bDisabled = 1;
+	return;
+
+end

@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# PRU_test4.cog    
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		arrived
+message		blocked
+
+
+thing		block
+thing		player			local
+
+		 
+end
+
+# ========================================================================================
+code
+
+startup:
+Sleep(3.0);
+player = GetLocalPlayerThing();
+MoveToFrame(block, (1 - GetCurFrame(block)), 0.5);
+
+return;
+
+arrived:
+Sleep(2.0);
+MoveToFrame(block, (1 - GetCurFrame(block)), 0.5);
+
+SetActorFlags(player, 0x200000);
+DetachThing(player);
+Sleep(0.05);
+ClearActorFlags(player, 0x200000);
+
+return;
+
+
+blocked:
+Print("blocked");
+return;
+
+end
+
+

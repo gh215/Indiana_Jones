@@ -1,0 +1,77 @@
+# Jones 3D Cog Script
+#
+# Gen_Lavabubble.cog
+#
+# Sophia helps Indy through a critical gate
+#
+# [CMG]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+# ................... MESSAGES ...................
+
+    message	startup		
+	message	pulse
+	message	arrived
+	
+# .................. OBJECTS .....................	
+
+	thing		bubble
+	thing		particlespot
+
+# ................. MATERIAL ....................
+
+	material	bubbleskin=bubble_a4lava_top.mat	local
+	material	lavaskin=gen_a4sfx_lava_particle.mat	local
+
+
+# ................. TEMPLATES ....................
+	template	particlesystem	
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	SetThingFlags(bubble, 0x10);
+    Sleep(2.0);
+	SetPulse(6.0);
+    return;
+
+# ..............................................................................
+
+pulse:
+
+	ClearThingFlags(bubble, 0x10);
+	SetMaterialCel(bubbleskin, 0);
+	MoveToFrame(bubble, 1, 0.65);
+	MaterialAnim(bubbleskin, 16, 0);
+    return;
+
+# ..............................................................................
+arrived:
+
+If ((GetSenderRef() == bubble) && (GetCurFrame(bubble) == 1))
+{
+    SetMaterialCel(lavaskin, 0);
+	CreateThing(particlesystem, particlespot);
+	MaterialAnim(lavaskin, 16, 0);
+	SetThingFlags(bubble, 0x10);
+	MoveToFrame(bubble, 0, 50);
+}
+
+return;
+
+
+
+# ..............................................................................
+end
+
+
+

@@ -1,0 +1,1025 @@
+# Jones 3D Cog Script
+#
+# 13_NUB_Cinematic_End.cog
+#
+# Indy loses the machine parts to Turner
+#
+# [HB] [GGJ]  All changes by GGJ include initials.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		entered
+	message		callback
+	message		pulse
+	
+# .................................. KEYFRAMES .................................
+	
+	keyframe	in_armsCrossed=0in_stand2.key			local
+	keyframe	in_handsONhips=0in_stand4.key			local
+	keyframe	in_crossArms=0in_stand1_bd_2.key	   	local
+	keyframe	in_handsTOhips=0in_stand1_bd_4.key	   	local
+	keyframe	in_botharmsup=0in_armsup_1_1.key		local
+	keyframe	in_think=0in_thinking_4_4.key			local
+
+	keyframe	in_stand7=0in_stand7.key				local
+	keyframe	in_stand8=0in_stand8.key				local
+	keyframe	in_stand9=0in_stand9.key			   	local
+	keyframe	in_7_bd_8=0in_stand7_bd_8.key			local
+	keyframe	in_8_bd_7=0in_stand8_bd_7.key			local
+	keyframe	in_8_bd_9=0in_stand8_bd_9.key			local
+	keyframe	in_turnRT=0in_turnright_9_1.key			local
+	keyframe	in_pushhat9=0in_figithat_9_9.key		local
+	keyframe	in_handoverparts=0in_givepart_8_8.key	local
+	keyframe	in_climbladder=0in_climblad.key			local
+	keyframe	in_pullimps=0in_key_pull_1_hold.key		local
+
+	keyframe	so_crouch=0so_stand7.key				local
+	keyframe	so_crawl=0so_crawl_bd_7.key				local
+	keyframe	so_creach=0so_reach_7.key				local
+	keyframe	so_dropladder=0so_droplad_7_2.key		local
+
+	keyframe	tu_crouch=0tu_stand4.key				local
+	keyframe	tu_crouchdown=0tu_stand3_bd_4.key		local
+	keyframe	tu_creach=0tu_righthnd_4_4.key			local
+	keyframe	tu_takeparts=0tu_stand4_bd_5.key		local
+	keyframe	tu_standup=0tu_stand4_bd_3.key			local
+	
+	keyframe	vo_armsATback=vo_stand2_arms_back.key	local
+	keyframe	vo_armsATfold=vo_stand1_arms_front.key	local
+
+	keyframe	vo_cleanglasses=0vo_glasses_2_2.key		local # mks@61&180/cb16
+	keyframe	vo_leftup2=0vo_leftup_2_1.key			local
+	keyframe	vo_leftup3=0vo_leftup_3_3.key			local
+	keyframe	vo_bothup=0vo_bothup_3_3.key			local
+
+	keyframe	vo_GunPull=0vo_gun_pull.key				local 
+	keyframe	vo_stand4=0vo_stand4.key				local
+	keyframe	vo_damarduk=0vo_damardukhimself_3_2.key	local
+	keyframe	vo_Gangster=0vo_friendgangster_4_4.key	local
+	keyframe	vo_GunPut=0vo_gun_put.key				local # mk@19x/cb16
+	keyframe	vo_iKnow=0vo_andiknow_3.key				local
+
+	keyframe	vo_SSSR=0vo_socialistrepublic_3_4.key	local
+    
+	keyframe	ldr_folded=0lad_sitedge.key				local
+	keyframe	ldr_fall=0lad_drop1.key					local
+	
+# .................................. MODELS ....................................
+		
+	model  		mod_in_imps=hand_in_impbundle.3do		local
+	model  		mod_tu_imps=hand_tu_impbundle.3do		local
+	model  		mod_vo_gun=weap_tokarev.3do				local
+	model  		mod_vo_holster=holster_vo_notok.3do		local
+	model  		mod_vo_head=head_vo_noglasses.3do		local
+	model  		mod_vo_glasses=hand_vo_glasses.3do		local
+			
+# .................................. SOUNDS ....................................
+
+	sound		in_ow=Inxj017a.wav						local
+#	sound		in_oww=Inxj017g.wav						local
+#	sound		in_unnh=Inxj018a.wav					local
+
+	sound		so_indyisyou=Nb09s01.wav				local
+	sound		in_moreless=Nb09j02.wav					local
+	sound		so_allright=Nb09s03.wav					local
+	sound		in_hurtlive=Nb09j04.wav					local
+	sound		so_ogood=Nb09s05.wav					local
+	sound		so_handparts=Nb09s06.wav				local
+	sound		so_indy=Nb09s07.wav						local
+	sound		in_whoswe=Nb09j08.wav					local
+	sound		tu_comejones=Nb09t09.wav				local
+	sound		in_idunno=Nb09j10.wav					local
+	sound		tu_lovecountry=Nb09t11.wav				local
+	sound		vo_notrustam=Nb09v12.wav				local
+	sound		vo_incccpname=Nb09v13.wav				local
+	sound		tu_giveparts=Nb09t14.wav				local
+	sound		vo_partsafeme=Nb09v15.wav				local
+	sound		in_whatchoice=Nb09j16.wav				local
+	sound		so_sorryindy=Nb09s17a.wav				local	#GGJ  added "a"
+	sound		so_andthanx=Nb09s17b.wav				local
+	sound		vo_drooglives=Nb09v18.wav				local
+	sound		in_cheersmeup=Nb09j19.wav				local
+	sound		vo_babelturmoil=Nb09v20.wav				local
+	sound		in_yammer=Nb09j21.wav					local
+	sound		vo_mardukrevenge=Nb09v22.wav			local
+	sound		vo_luckyprofs=Nb09v23.wav				local
+	sound		vo_tootimid=Nb09v24.wav					local
+	sound		vo_backtobooks=Nb09v25.wav				local
+	
+	sound		slabRumbleSnd=pru_boulder_rolling_c.wav	local	#GGJ
+	sound		slabStartSnd=nub_stonedoor_start_c.wav	local	#GGJ
+	sound		slabStopSnd=pru_trapblock_stuck_c.wav	local	#GGJ
+	sound		ladderDropSnd=vol_ropeladder_throw.wav	local	#GGJ
+	sound		partMus=mus_nub_turnerparts.wav			local	#GGJ
+	sound		windSnd=gen_wind07.wav					local	#GGJ
+	sound		bagSnd=gen_bazooka_pull.wav				local	#GGJ
+
+# ............................... ACTOR THINGS .................................
+
+	thing		player									local
+	thing		indy	    							linkid=0
+	thing		sophia
+	thing		turner
+	thing		volod
+
+# .............................. OBJECT THINGS .................................
+
+	thing		trapdoor_1										#GGJ-removed nolink
+	thing		trapdoor_2										#GGJ-removed nolink
+	thing		lightshaft								nolink
+	thing		ladder									nolink
+	thing		dynaLight										#GGJ
+	thing		dynaLight1										#GGJ
+	thing		dynaLight2										#GGJ
+
+# .............................. CAMERA THINGS .................................
+
+	thing		cam_1									nolink
+	thing		cam_2									nolink
+	thing		cam_3									nolink
+	thing		cam_4									nolink
+	thing		cam_5									nolink
+	thing		cam_6									nolink
+	thing		cam_7									nolink
+	thing		cam_8									nolink
+	thing		cam_9									nolink
+	thing		cam_10a									nolink
+	thing		cam_10b									nolink
+	thing		cam_10c									nolink
+	thing		cam_11									nolink
+	thing		cam_12									nolink
+
+	thing		ct_1									nolink
+	thing		ct_2									nolink
+	thing		ct_3 									nolink
+	thing		ct_4									nolink
+	thing		ct_5a									nolink
+	thing		ct_5b									nolink
+	thing		ct_5c									nolink
+	thing		ct_5d									nolink
+	thing		ct_6									nolink
+	thing		ct_7									nolink
+	thing		ct_8									nolink
+	thing		ct_9									nolink
+	thing		ct_10									nolink
+	thing		ct_11									nolink
+	thing		ct_12									nolink
+	thing		ct_13a									nolink
+	thing		ct_13b									nolink
+	thing		ct_14									nolink
+	thing		ct_15									nolink
+	thing		ct_16									nolink
+	thing		ct_17									nolink
+	thing		ct_18									nolink
+
+# .............................. TARGET THINGS .................................
+
+	thing		in_mk_1									nolink
+	thing		in_mk_2									nolink
+	thing		in_mk_3									nolink
+	thing		in_mk_4									nolink
+#	thing		in_mk_5									nolink
+#	thing		in_mk_6									nolink
+	thing		in_mk_7									nolink
+
+#	thing		so_mk_1									nolink
+
+	thing		tu_mk_1									nolink
+
+	thing		vo_mk_1									nolink
+	thing		vo_mk_2									nolink
+
+# ............................... VAR THINGS ...................................
+
+#	thing		indyCamTarget							local # created on fly
+#	thing		kidCamTarget							local # created on fly
+#	thing		whichcam								local # var
+#	thing		entercam								local # var
+#	thing		looker									local # var
+#	thing		lookee									local # var
+	thing		fadeplate									  #GGJ
+
+# ........................ OTHER ENGINE REFERENCES .............................
+			
+	#cog			endcog									  # Removed GGJ
+    
+	surface		startface
+
+# ............................... VARIABLES ....................................
+	
+	vector		posOffset								local
+	vector		angOffset								local
+
+
+	vector		v_tpos									local
+	vector		v_ipos									local
+	vector		v_aim									local
+
+	flex		f_X										local
+	flex		f_Y										local
+
+	
+	flex		in_rotRate								local
+
+	flex		rumbleVol=0.35							local #GGJ		increased from .2 to .35 per DaveL
+	int			rumbleTrack								local #GGJ
+	int			windTrack								local #GGJ
+
+	int			cutSceneState=0							local # overall state var
+
+	int			in_collType								local
+	
+	int			in_keyTrack1							local
+	int			in_keyTrack2							local
+	int			so_keyTrack1							local
+	int			tu_keyTrack1							local
+	int			tu_keyTrack2							local
+	int			vo_keyTrack1							local
+	int			vo_keyTrack2							local
+	int			vo_gunTrack								local
+	int			ldr_keyTrack1							local
+
+	int			in_swapItem1							local
+	int			tu_swapItem1							local
+	int			vo_swapItem1							local
+	int			vo_swapItem2							local
+	int			swapevent=0								local
+			
+	int			curSound								local
+	int			curCam									local
+	int			vibe									local
+
+	int			imp_1=14								local # inventory define
+	int			imp_2=15								local # inventory define
+	int			imp_3=16								local # inventory define
+	int			imp_4=17								local # inventory define
+
+    
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+
+	# Prep actors...
+	curCam = GetCurrentCamera();
+	SetThingFlags(indy, 0x80000);
+	SetThingFlags(sophia, 0x80000);
+	SetThingFlags(turner, 0x80000);
+	SetThingFlags(volod, 0x80000);
+	SetThingFlags(ladder, 0x80000);
+	AISetCutSceneMode(indy);
+	AISetCutSceneMode(sophia);
+	AISetCutSceneMode(turner);
+	AISetCutSceneMode(volod);
+	in_rotRate = GetThingMaxRotVel(indy);
+	in_collType = GetCollideType(indy);
+
+	# Prep set...
+	ClearThingFlags(lightshaft, 0x80000);
+	SetThingAlpha(lightshaft, 0.0);
+	SetCollideType(lightshaft, 0);
+	SetThingFlags(lightshaft, 0x80000);
+	SetCollideType(trapdoor_1, 0);
+	SetCollideType(trapdoor_2, 0);
+	SetThingAlpha(fadeplate, 0.0);
+	SetCollideType(fadePlate, 0);					#GGJ
+
+	return;
+
+# ..............................................................................
+
+entered:
+
+	if (cutSceneState != 0)
+	{
+		return;
+	}
+
+	# Prep...
+	ResetCameraFOV(0, 0.0);
+	cutSceneState = 1;
+	curCam = GetCurrentCamera();
+	in_collType = GetCollideType(indy);
+			
+	StartCutScene(1); # health meter should fade
+
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+	CopyPlayerHolsters(player, indy);
+	# Sleep(1.5); # wait for indy to stand up
+	SetThingflags(player, 0x80000);
+	ClearThingFlags(indy, 0x80000);
+	TeleportThing(indy, in_mk_1);
+
+	# Cut to Indy standing up into exit room...
+	SetCameraLookInterp(2, 0); # no p & t
+	SetCameraPosInterp(2, 0); # no dolly
+	SetCameraFocus(2, cam_1);
+	SetCameraSecondaryFocus(2, ct_1);
+	SetCurrentCamera(2);
+	SetCameraFOV(85, 0, 0.0);
+
+    # Prep Sophia...
+	ClearThingFlags(sophia, 0x80000);
+	SetThingFlags(sophia, 0x10);
+    so_keyTrack1 = PlayKey(sophia, so_crouch, 2, 0x10, 0);
+
+	# Track Indy walking to dais...
+	SetCameraInterpSpeed(2, 4.02);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_2);
+	SetCameraSecondaryFocus(2, ct_2);
+	SetCameraFOV(45, 1, 5.81);
+	AISetMoveSpeed(indy, 1.0);
+	AISetLookThing(indy, in_mk_2);
+	AISetMoveThing(indy, in_mk_2, 0);
+	Sleep(2.5);
+	
+	# TO DO: rumble rumble...
+    rumbleTrack = PlaySoundThing(slabRumbleSnd, trapdoor_2, rumbleVol, -1.0, -1.0, 0x1);	#GGJ
+	
+	SetPulse(0.01);
+
+	Sleep(1.0);
+	SetPulse(0.0);
+	Sleep(0.5);
+	SetPulse(0.01);
+	SetCameraInterpSpeed(2, 1.3);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, ct_3);
+	in_keyTrack1 = PlayKey(indy, in_stand8, 2, 0x10, 0);
+	Sleep(1.0);
+
+	# Prep the ladder...
+	ClearThingFlags(ladder, 0x80000);
+	ldr_keyTrack1 = PlayKey(ladder, ldr_folded, 2, 0x10, 0);
+
+	# Trapdoors fall open...
+    Rotate(trapdoor_1, 20, 0, 0.4);
+	Rotate(trapdoor_2, -20, 0, 0.4);
+	
+	# Light floods into the chamber...
+	ClearThingFlags(lightshaft, 0x80000);
+	ThingFadeAnim(lightshaft, 0.0, 1.0, 1.0, 0);
+	Sleep(0.4);
+	
+    PlaySoundThing(slabStartSnd, trapdoor_2, 1.0, -1.0, -1.0, 0x0);		#GGJ
+	Rotate(trapdoor_1, 30, 0, 0.3);
+	Rotate(trapdoor_2, -30, 0, 0.3);
+	Sleep(0.3);
+	
+	PlaySoundThing(SlabStopSnd, trapdoor_2, 1.0, -1.0, -1.0, 0x0);		#GGJ
+	Rotate(trapdoor_1, 42, 0, 0.1);
+	Rotate(trapdoor_2, -42, 0, 0.1);
+    
+    Sleep(0.5);
+    
+	SetPulse(0.0);
+	
+    StopSound(rumbleTrack, 0.0);										#GGJ
+	windTrack = PlaySoundThing(windSnd, lightshaft, 1.0, -1.0, -1.0, 0x1);				#GGJ
+    
+	Sleep(0.3); # take a beat
+    
+	# Cut to Indy wincing...
+	SetCameraLookInterp(2, 0); # no p & t
+	SetCameraPosInterp(2, 0); # no dolly
+	SetCameraFocus(2, cam_3);
+	SetCameraSecondaryFocus(2, ct_4);
+	SetCameraFOV(40, 0, 0.0);
+    SetThingLight(dynaLight, VectorSet(1.0, 1.0, 1.0), 0.2, 0.01);		#GGJ
+    SetThingLight(dynaLight1, VectorSet(1.0, 1.0, 1.0), 0.2, 0.01);		#GGJ
+    SetThingLight(dynaLight2, VectorSet(1.0, 1.0, 1.0), 0.2, 0.01);		#GGJ
+    
+	# Indy groans...
+	curSound = PlayVoice(indy, in_ow, 1.0, 0);
+	StopKey(indy, in_keyTrack1, 0.0);
+	in_keyTrack1 = PlayKey(indy, in_stand7, 2, 0x10, 0);
+	PlayKey(indy, in_8_bd_7, 4, 0x12, 0);
+	Sleep(0.01);
+
+	# Zoom in quick...
+	SetCameraFOV(20, 1, 1.0);
+	Sleep(1.0);
+	WaitForSound(curSound);
+    
+	# Cut to Sophia over Indy's shoulder...
+	SetCameraFocus(2, cam_4);
+	SetCameraSecondaryFocus(2, ct_5a);
+	SetCameraFOV(50, 0, 0.0);
+
+	# Sophia moves into view looking over rim of trapdoor...
+    PlayKey(sophia, so_crawl, 4, 0x12, 0);
+    ClearThingFlags(sophia, 0x10);
+	Sleep(1.4);
+    
+	# Sophia: "Indy, is that you?"
+	curSound = PlayVoice(sophia, so_indyisyou, 1.0, 0);
+	WaitForSound(curSound);
+
+	# Indy: "More or less."
+	curSound = PlayVoice(indy, in_moreless, 1.0, 0);
+	StopKey(indy, in_keyTrack1, 0.0);
+	in_keyTrack1 = PlayKey(indy, in_stand8, 2, 0x10, 0);
+	PlayKey(indy, in_7_bd_8, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Sophia: "Are you all right?"
+	curSound = PlayVoice(sophia, so_allright, 1.0, 0);
+	WaitForSound(curSound);
+
+	# Indy: "I am one hurting archaeologist, but I'll live."
+	curSound = PlayVoice(indy, in_hurtlive, 1.0, 0);
+	in_keyTrack2 = PlayKey(indy, in_botharmsup, 4, 0x12, 0);
+	Sleep(1.5);
+	StopKey(indy, in_keyTrack2, 0.5); # fade head tilting up back in
+	SetCameraInterpSpeed(2, 3.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	WaitForSound(curSound);
+
+	# Sophia: "Oh good.  I was worried."
+	curSound = PlayVoice(sophia, so_ogood, 1.0, 0);
+	Sleep(0.4);
+	WaitForSound(curSound);
+
+	# Push in on Sophia...
+	SetCameraFocus(2, cam_5);
+	SetCameraSecondaryFocus(2, ct_5b);
+	SetCameraFOV(30, 1, 3.0);
+	ThingFadeAnim(lightshaft, 1.0, 0.0, 2.0, 0); # penetrate light well softly
+
+	# Sophia: "Hand up those parts...get you out of there."
+	curSound = PlayVoice(sophia, so_handparts, 1.0, 0);
+	PlayKey(sophia, so_creach, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Cut to Indy...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_6);
+	SetCameraSecondaryFocus(2, ct_6);
+	SetCameraFOV(55, 0, 0.0);
+	Sleep(1.0); # a long beat
+
+	# Sophia Voice: "Indy?"
+	curSound = PlayVoice(sophia, so_indy, 1.0, 0);
+	StopKey(indy, in_keyTrack1, 0.0);
+	in_keyTrack1 = PlayKey(indy, in_stand9, 2, 0x10, 0);
+	PlayKey(indy, in_8_bd_9, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Indy: "Who's we?"
+	curSound = PlayVoice(indy, in_whoswe, 1.0, 0);
+	WaitForSound(curSound);
+
+	# Cut to Turner and Sophia over Indy's shoulder...
+	SetCameraFocus(2, cam_7);
+	SetCameraSecondaryFocus(2, ct_7);
+	SetCameraFOV(45, 0, 0.0);
+	
+	# TO DO: Turner moves into view at rim of trapdoor...
+	ClearThingFlags(turner, 0x80000);
+	tu_keyTrack1 = PlayKey(turner, tu_crouch, 2, 0x10, 0);
+	PlayKey(turner, tu_crouchdown, 4, 0x12, 0);
+	
+	# Turner: "Come on, Jones.  We need those parts."
+	curSound = PlayVoice(turner, tu_comejones, 1.0, 0);
+	WaitForSound(curSound);
+
+	# Cut to closer shot of Turner...
+	SetCameraFocus(2, cam_8);
+	SetCameraSecondaryFocus(2, ct_8);
+	SetCameraFOV(35, 0, 0.0);
+
+	# Turner: "Don't you love your country?  In the name of USA..."
+	curSound = PlayVoice(turner, tu_lovecountry, 1.0, 0);
+	Sleep(1.0);
+	PlayKey(turner, tu_creach, 4, 0x12, 0);
+
+	# Cheat Indy to new mark offscreen...
+	TeleportThing(indy, in_mk_3);
+	WaitForSound(curSound);
+
+	# Cut to uncertain Indy...
+	SetCameraFocus(2, cam_9);
+	SetCameraSecondaryFocus(2, ct_9);
+	SetCameraFOV(55, 0, 0.0);
+
+	# Indy: "I dunno..."
+	curSound = PlayVoice(indy, in_idunno, 1.0, 0);
+	in_keyTrack2 = PlayKey(indy, in_pushhat9, 4, 0x12, 0);		#GGJ added track 
+	WaitForSound(curSound);
+	
+	# Volodnikov Voice: "Don't trust your fellow Americans..."
+	curSound = PlayVoice(volod, vo_notrustam, 1.0, 0);
+		
+	# Volodnikov enters...
+	ClearThingFlags(volod, 0x80000);
+	ClearActorFlags(volod, 0x1000000); # don't issue damage to indy
+	TeleportThing(volod, vo_mk_1);
+
+	# RT: Remove gun from holster & put it in Volodnikov's hand 
+    vo_swapItem1 = SetThingMesh(volod, 8, mod_vo_gun, 0);
+    vo_swapItem2 = SetThingMesh(volod, 19, mod_vo_holster, 0);
+	
+	# RT: Start the gun pull animation
+	vo_gunTrack = PlayKeyEx(volod, vo_GunPull, 0, 8, 0x14, 0);
+
+    Sleep(0.01);
+
+	# Indy turns...
+	StopKey(indy, in_keyTrack1, 0.0);
+	StopKey(indy, in_keyTrack2, 0.0);							#GGJ added
+	in_keyTrack1 = PlayKey(indy, in_turnRT, 6, 0x14, 0);
+	Sleep(0.5);
+	
+	# Pan over to Dr. V...
+	MoveToFrame(ct_9, 1, 4.3); # m/sec
+	SetCameraFOV(45, 1, 0.5);
+	Sleep(0.3);
+
+	# Walk Volodnikov to Indy...
+	AISetMoveSpeed(volod, 1.1);
+	AISetLookThing(volod, indy);
+	AISetMoveThing(volod, vo_mk_2, 0);
+	Sleep(0.3);
+	StopKey(indy, in_keyTrack1, 0.0); # end anim turn
+	
+	# Aim Indy...
+	v_tpos = GetThingPos(volod);
+	v_ipos = GetThingPos(indy);
+	v_aim = VectorNorm(VectorSub(v_tpos, v_ipos));
+	f_X = VectorX(v_aim);
+	f_Y = VectorY(v_aim);
+	v_aim = VectorSet(f_X, f_Y, 0.0); # remove Z		
+	SetThingLook(indy, v_aim);
+	
+	Sleep(0.6);
+	AttachThingToThing(ct_9, volod);
+	SetCameraFOV(55, 1, 2.0);
+	AIWaitForStop(volod);
+	WaitForSound(curSound);
+
+	# Cut to single on Volodnikov...
+	DetachThing(ct_9);
+	SetCameraFocus(2, cam_10a);
+	SetCameraSecondaryFocus(2, ct_10);
+	SetCameraFOV(50, 0, 0.0);
+	vo_keyTrack1 = PlayKey(volod, vo_stand4, 2, 0x10, 0);
+
+	# Volodnikov: "In the name of...CCCP..."
+    curSound = PlayVoice(volod, vo_incccpname, 1.0, 0);
+	PlayKey(volod, vo_SSSR, 4, 0x12, 0);						#GGJ added
+    WaitForSound(curSound);
+	
+	# Cut to single on Turner...
+	SetCameraFocus(2, cam_8);
+	SetCameraSecondaryFocus(2, ct_8);
+	SetCameraFOV(33, 0, 0.0);
+
+	# Turner: "Give me the parts, Jones!  He's a Commie!"
+	curSound = PlayVoice(turner, tu_giveparts, 1.0, 0);
+	Sleep(0.5);
+	PlayKey(turner, tu_creach, 4, 0x12, 0);
+	WaitForSound(curSound);
+		
+	# Cut back to Volodnikov:	
+	SetCameraFocus(2, cam_10a);
+	SetCameraSecondaryFocus(2, ct_10);
+	SetCameraFOV(45, 0, 0.0);
+
+	# Volodnikov: "The parts...safer with me.  Your friend is a gangster."
+	curSound = PlayVoice(volod, vo_partsafeme, 1.0, 0);
+	Sleep(0.5);																#GGJ added
+    PlayKey(volod, vo_Gangster, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Pan to Indy...
+	SetCameraInterpSpeed(2, 2.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_10b);
+	SetCameraSecondaryFocus(2, ct_12);
+	SetCameraFOV(37, 1, 2.0);
+	Sleep(0.5);
+	SetThingMaxRotVel(indy, 200.0);
+	AISetLookThing(indy, in_mk_4);
+	Sleep(0.5);
+
+	# Indy: "What a choice!"
+	curSound = PlayVoice(indy, in_whatchoice, 1.0, 0); # 1.2s
+	AIWaitForStop(indy);
+
+	# Indy displays parts bundle...
+	swapevent = 1; # see callback
+	in_keyTrack1 = PlayKey(indy, in_pullimps, 4, 0x14, 0);
+	PlaySoundThing(bagSnd, indy, 1.0, -1.0, -1.0, 0x0);		#GGJ
+	WaitForSound(curSound);
+	PlaySoundLocal(partMus, 1.0, 0.0, 0x0, 0);		#GGJ
+	Sleep(0.3); # short beat
+    StopKey(volod, vo_keyTrack1, 0.5);			#moved here from above GGJ
+
+	# Pan to take in Turner...
+	SetCameraInterpSpeed(2, 1.5);
+	SetCameraSecondaryFocus(2, ct_13a);
+	SetCameraFOV(20, 1, 2.0);
+	AISetLookThing(indy, turner);
+	in_keyTrack2 = PlayKey(indy, in_stand8, 2, 0x10, 0);
+	Sleep(1.5);
+
+	# Indy hands his hard-won treasures over to the US agent...
+	StopKey(indy, in_keyTrack1, 0.0);
+	StopKey(indy, in_keyTrack2, 0.0);
+	PlayKey(indy, in_handoverparts, 4, 0x12, 0);
+	swapevent = 2; # see callback
+	PlayKey(turner, tu_takeparts, 4, 0x12, 1);
+
+	# Scour IMP's from inventory...
+	ChangeInv(player, imp_1, -1.0);
+	ChangeInv(player, imp_2, -1.0);
+	ChangeInv(player, imp_3, -1.0);
+	ChangeInv(player, imp_4, -1.0);
+
+	# Turner stands...
+	SetThingFlags(sophia, 0x10); # don't see her in this shot
+	SetCollideType(ladder, 0);
+	StopKey(turner, tu_keyTrack1, 0.0);
+	tu_keyTrack2 = PlayKey(turner, tu_standup, 4, 0x12, 0); # 74x
+	
+	# Tilt to hold Turner in frame...
+	SetCameraInterpSpeed(2, 2.2);
+	SetCameraFOV(28, 1, 2.2);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, ct_13b);	
+	Sleep(2.2);
+	StopKey(turner, tu_keyTrack2, 0.0); # cut off end of stand
+	SetThingMaxRotVel(turner, 400.0);
+	
+	# Turner exits...
+	AISetLookThing(turner, tu_mk_1);
+	AIWaitForStop(turner);
+	AISetMoveThing(turner, tu_mk_1, 0);
+	AIWaitForStop(turner);
+	DestroyThing(turner);
+
+	# Cut to Sophia...
+	ClearThingFlags(sophia, 0x10); # now see her
+	SetThingFlags(indy, 0x10); # temporarily invisible
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_5);
+	SetCameraSecondaryFocus(2, ct_5b);
+	SetCameraFOV(35, 0, 0.0);
+
+	# Sophia: "Sorry, Indy..."
+	PlayVoice(sophia, so_sorryindy, 1.0, 1);
+	
+	# She sweeps down a rope ladder...
+	SetCameraInterpSpeed(2, 1.5);
+	SetCameraLookInterp(2, 1);
+	StopKey(sophia, so_keyTrack1, 0.0);
+	so_keyTrack1 = PlayKey(sophia, so_dropladder, 4, 0x12, 0); # 77x
+	Sleep(0.6);
+	SetCameraSecondaryFocus(2, ct_5c);
+	StopKey(ladder, ldr_keyTrack1, 0.0);
+	PlaySoundThing(ladderDropSnd, ladder, 1, -1.0, -1.0, 0x0);			#GGJ
+	PlayKey(ladder, ldr_fall, 4, 0x12, 0);
+
+	# Camera tracks ladder fall...
+	SetCameraInterpSpeed(2, 1.0);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, ct_5d);
+	SetCameraFOV(55, 1, 1.0);
+	Sleep(0.7);
+	
+	# Align Indy offscreen...
+	AIEnableHeadTracking(indy, tu_mk_1);
+	AIEnableBodyTracking(indy, tu_mk_1);
+
+	# Sophia stands up...
+	StopKey(sophia, so_keyTrack1, 0.0);
+	PlayKey(sophia, so_dropladder, 4, 0x12, 0); # delayed stand, so start now
+	Sleep(0.8);
+
+	# Cut back to Sophia to catch actual stand action...
+	SetCameraLookInterp(2, 0);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, ct_5b);
+	SetCameraFOV(35, 0, 0.0);
+	
+	# Sophia: "And... thanks!"
+	PlayVoice(sophia, so_andthanx, 1.0, 0);
+	Sleep(1.5);
+
+	# Prep V...
+	StopKey(volod, vo_gunTrack, 0.0);
+	vo_gunTrack = PlayKey(volod, vo_GunPull, 2, 0x14, 0);
+
+	# Sophia exits...
+	AISetLookThing(sophia, tu_mk_1);
+	Sleep(0.2);
+	AISetMoveThing(sophia, tu_mk_1, 0); 
+    SetThingLight(dynaLight, VectorSet(0.0, 0.0, 0.0), 0.2, 0.01);		#GGJ Turn dynalight off
+    SetThingLight(dynaLight1, VectorSet(0.0, 0.0, 0.0), 0.2, 0.01);		#GGJ Turn dynalight off
+    SetThingLight(dynaLight2, VectorSet(0.0, 0.0, 0.0), 0.2, 0.01);		#GGJ Turn dynalight off
+	Sleep(1.5);
+	DestroyThing(sophia);
+	ClearThingFlags(indy, 0x10); # he's back
+    SetThingAlpha(lightshaft, 1.0);					#was 1.0, changed to 0.8, then 0.9, then 1.0 again per Hal
+
+	# Cut to long shot of Indy and Dr. V...
+	SetCameraFocus(2, cam_11);
+	SetCameraSecondaryFocus(2, ct_14);
+	SetCameraFOV(70, 0, 0.0);
+
+	# Volodnikov: "Perhaps it's best...your droogs...betrayal...cost them...lives."
+	curSound = PlayVoice(volod, vo_drooglives, 1.0, 0);
+
+	# Dolly in slowly...
+	SetCameraInterpSpeed(2, 26.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.1);
+	SetCameraFocus(2, cam_12);
+	SetCameraSecondaryFocus(2, ct_15);
+	Sleep(0.5);
+	
+	# Indy turns back toward Dr. V...
+	AIEnableHeadTracking(indy, volod);
+	AIEnableBodyTracking(indy, volod);	
+	WaitForSound(curSound);
+	AIDisableHeadTracking(indy);
+	AIDisableBodyTracking(indy);
+	
+	# RT: Put Volodya's gun away...
+    swapevent = 3; # see callback
+	StopKey(volod, vo_gunTrack, 0.0);
+	PlayKey(volod, vo_GunPut, 4, 0x12, 0);
+		
+	# Indy: "Yeah, that cheers me up."
+	curSound = PlayVoice(indy, in_cheersmeup, 1.0, 0);
+	Sleep(1.5);
+	ThingFadeAnim(lightshaft, 1.0, 0.0, 2.0, 0); # soft light
+    SetThingLight(dynaLight, VectorSet(1.0, 1.0, 1.0), 0.2, 2.0);		#GGJ
+    SetThingLight(dynaLight1, VectorSet(1.0, 1.0, 1.0), 0.2, 2.0);		#GGJ
+    SetThingLight(dynaLight2, VectorSet(1.0, 1.0, 1.0), 0.2, 2.0);		#GGJ
+	WaitForSound(curSound);
+
+	# Volodnikov: "Those ignorant fools...cause of all the...turmoil...waits..."
+	curSound = PlayVoice(volod, vo_babelturmoil, 1.0, 0);
+	PlayKey(volod, vo_bothup, 4, 0x12, 1); # 52x
+	Sleep(1.0);
+	PlayKey(volod, vo_leftup3, 4, 0x12, 1);
+
+	PlayKey(volod, vo_iKnow, 4, 0x12, 0);
+
+    Sleep(3.75);
+	SetCameraFOV(22, 1, 6.0);
+	Sleep(5.0);
+	in_keyTrack1 = PlayKey(indy, in_armsCrossed, 2, 0x10, 0);
+	PlayKey(indy, in_crossArms, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Indy: "Who?  What are you yammering about?"
+	curSound = PlayVoice(indy, in_yammer, 1.0, 0);
+	WaitForSound(curSound);
+
+	# Cut to Volodnikov...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_10a);
+	SetCameraSecondaryFocus(2, ct_11);
+	SetCameraFOV(60, 0, 0.0);
+
+	# Volodnikov: "Da!  The Lord Marduk...will have his revenge..."
+	curSound = PlayVoice(volod, vo_mardukrevenge, 1.0, 0);
+    vo_keyTrack1 = PlayKey(volod, vo_armsATback, 2, 0x10, 0);
+	PlayKey(volod, vo_damarduk, 4, 0x12, 0);
+	Sleep(2.0);
+	StopKey(indy, in_keyTrack1, 0.5);
+	Sleep(12.2);
+    
+	# Dr. V cleans his glasses...
+	swapevent = 4; # see callback
+	vo_keyTrack2 = PlayKey(volod, vo_cleanglasses, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Volodnikov: "Luckily, you and I...too wise to become...ensnared."
+	curSound = PlayVoice(volod, vo_luckyprofs, 1.0, 0); # 6 secs
+	Sleep(2.5);
+
+	# Cut to Indy getting disturbed...		
+	SetCameraFocus(2, cam_12);
+	SetCameraSecondaryFocus(2, ct_15);
+	SetCameraFOV(25, 1, 3.4);
+	in_keyTrack1 = PlayKey(indy, in_handsONhips, 2, 0x10, 0);
+	PlayKey(indy, in_handsTOhips, 4, 0x12, 1); # 26x (.87 seconds)
+	PlayKey(indy, in_think, 4, 0x12, 0);
+	Sleep(0.3);
+	PauseKey(volod, vo_keyTrack2); # hang on to his gesture!
+	WaitForSound(curSound);
+
+	# Randy... must we force V no-glass head...?
+	RestoreThingMesh(volod, vo_swapItem1);
+	vo_swapItem1 = SetThingMesh(volod, 2, mod_vo_head, 0);	
+ 
+	# Another cut of Dr. V...
+	SetCameraFocus(2, cam_10c);
+	SetCameraSecondaryFocus(2, ct_16);
+	SetCameraFOV(45, 0, 0.0);
+	
+	# Prep Indy for exit while offscreen...
+	SetThingFlags(indy, 0x10); # invisible again
+	TeleportThing(indy, in_mk_7); # prep for exit
+	
+	# Dr. V puts his glasses back on...
+	swapevent = 5; # see callback	
+	ResumeKey(volod, vo_keyTrack2);
+
+	# Volodnikov: "And too timid."
+	curSound = PlayVoice(volod, vo_tootimid, 1.0, 0);
+	WaitForSound(curSound);
+	Sleep(0.2);
+
+	# Volodnikov: "Back home to our tea and books now, eh?"
+	curSound = PlayVoice(volod, vo_backtobooks, 1.0, 0);
+	StopKey(volod, vo_keyTrack1, 0.0);
+	vo_keyTrack1 = PlayKey(volod, vo_armsATfold, 2, 0x10, 0);
+	PlayKey(volod, vo_leftup2, 4, 0x12, 0);
+	
+	# Ready Indy on ladder...
+	SetCollideType(indy, 0);
+	ClearThingFlags(indy, 0x4000); # shadow off
+	ClearThingFlags(indy, 0x10); # visibility back on
+	StopKey(indy, in_keyTrack1, 0.0);
+	in_keyTrack1 = PlayKey(indy, in_climbladder, 4, 0x12, 0);
+	Sleep(0.01);
+	PauseKey(indy, in_keyTrack1); # hold him in place
+	Sleep(2.0);
+	SetCollideType(volod, 0);
+	SetThingMaxHeadVel(volod, 100.0);
+	AIEnableHeadTracking(volod, indy);
+	SetCameraInterpSpeed(2, 1.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.8);
+
+	# Pan to Indy...
+	SetCameraFocus(2, cam_10b);
+	SetCameraSecondaryFocus(2, ct_17);
+	SetCameraFOV(65, 1, 3.0);
+	Sleep(1.1);
+
+	# Indy exits...
+	ResumeKey(indy, in_keyTrack1); # now climb out
+    SetCameraInterpSpeed(2, 2.0);
+	SetCameraPosInterp(2, 0);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, ct_18);
+	Sleep(2.47);
+	AISetMoveSpeed(indy, 3.2);
+	AISetLookThing(indy, tu_mk_1);
+	AISetMoveThing(indy, tu_mk_1, 0);
+	WaitForSound(curSound);
+	AIWaitForStop(indy);
+	SetThingFlags(indy, 0x10);
+	Sleep(1.0);								#2 second sleep reduced to 1 second.  GGJ
+    
+	ThingFadeAnim(fadePlate, 0, 1, 1.0, 0);	#GGJ
+    StopSound(windTrack, 1.0);				#GGJ
+	
+	Sleep(2.0);								#GGJ
+
+	# Clean-up...
+	StopKey(indy, in_keyTrack1, 0.0);
+	StopKey(volod, vo_keyTrack1, 0.0);
+	DestroyThing(indy);
+	DestroyThing(volod);
+
+	# TO DO: call endlevel cog...
+
+	EndCutScene();										# Added GGJ
+	JonesEndLevel();									# Added GGJ
+	
+	# Restore control (TEMP!!!)...
+#	ClearThingFlags(player, 0x80000);					# Removed GGJ
+#	SetCameraLookInterp(2, 0);							# Removed GGJ
+#	SetCameraPosInterp(2, 0);							# Removed GGJ
+#	SetCurrentCamera(curCam);							# Removed GGJ
+#	ResetCameraFOV(0, 0.0);								# Removed GGJ
+#	ClearActorFlags(player, 0x200000);					# Removed GGJ
+
+#	EndCutScene();										# Removed GGJ
+
+	return;
+
+# ..............................................................................
+
+callback:
+
+	if (swapevent == 1)
+	{
+		# Indy displays IMP's...
+		in_swapItem1 = SetThingMesh(indy, 15, mod_in_imps, 0);
+		swapevent = 0; # reset
+	}
+	
+	else if (swapevent == 2)
+	{
+		# Empty Indy's hand...
+		RestoreThingMesh(indy, in_swapItem1);
+
+		# Turner takes IMPs...
+		tu_swapItem1 = SetThingMesh(turner, 5, mod_tu_imps, 0);
+		swapevent = 0; # reset
+	}
+
+    else if (swapevent == 3)
+	{
+		# RT: Return gun to holster...
+		RestoreThingMesh(volod, vo_swapItem1);
+		RestoreThingMesh(volod, vo_swapItem2);
+		swapevent = 0; # reset
+	}
+
+	else if (swapevent == 4)
+	{
+		# Volodnikov removes his glasses...
+		vo_swapItem1 = SetThingMesh(volod, 2, mod_vo_head, 0); # no glasses head
+		vo_swapItem2 = SetThingMesh(volod, 8, mod_vo_glasses, 0); # hand with glasses
+
+		# RT: Set up alternate heads
+		SetThingVoiceHeads(volod, "vohead", "head_vo_noglasses.3do", "head_vo_nospecs_asound.3do", "head_vo_nospecs_amsound.3do", "head_vo_nospecs_osound.3do");
+
+		swapevent = 0; # reset
+	}
+	
+	else if (swapevent == 5)
+	{
+		# Volodnikov replaces his glasses...
+		RestoreThingMesh(volod, vo_swapItem1);
+		RestoreThingMesh(volod, vo_swapItem2);
+
+		# RT: Restore default heads
+		SetThingVoiceHeads(volod, "vohead", "head_vo_msound.3do", "head_vo_asound.3do", "head_vo_amsound.3do", "head_vo_osound.3do");
+		
+		swapevent = 0; # reset
+	}
+	
+	return;
+
+# ..............................................................................
+
+pulse:
+
+	rumbleVol = rumbleVol * 1.001;
+	#PrintFlex(rumblevol);
+	ChangeSoundVol(rumbleTrack, rumbleVol, 0.1);
+	#PrintInt(rumbletrack);
+   
+	vibe = RandBetween(1, 4);
+	if (vibe == 1)
+	{
+		posOffset = '-0.005 0.00 -0.002';
+		angOffset = '0.00 -0.002 0.002';
+	}
+	if (vibe == 2)
+	{
+		posOffset = '0.005 -0.005 0.002';
+		angOffset = '0.002 0.00 -0.002';
+	}
+	if (vibe == 3)
+	{
+		posOffset = '0.002 0.005 -0.005';
+		angOffset = '-0.002 0.002 -0.002';
+	}
+	if (vibe == 4)
+	{
+		posOffset = '-0.002 0.00 0.005';
+		angOffset = '0.00 0.00 0.002';
+	}
+
+	SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+
+	return;
+
+end

@@ -1,0 +1,202 @@
+# Jones 3D Cog Script
+#
+# weap_Satchel.cog
+#
+# [RandyT]
+#
+# This COG controls Satchel Charges.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		activated
+message		deactivated
+message		selected
+message		deselected
+message		callback
+message		timer
+
+sound		pull=gen_grenade_pull.wav	local	# Autoloaded
+sound		put=gen_grenade_put.wav		local	# Autoloaded
+sound		drop=gen_satchel_fire.wav	local	# Autoloaded
+
+template	projectile=+satchel			local	# Autoloaded
+
+thing		player						local
+thing		satchel						local
+
+int			handNode					local
+int			weaponNum=12				local
+int			callNum						local
+
+int			bFiring=0					local
+int			bUsed=0						local
+
+vector		firePos						local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	handNode = GetNodeByName(player, "inrhand");
+
+	return;
+
+# -------------------------------------------------------------------
+
+fire:
+
+	# If the message is from the weapons system, play the animation
+	if (GetParam(0) != -1)
+	{
+		# Make sure we're not already firing
+		if (bFiring) return;
+
+		bFiring = 1;
+		SetFireWait(player, 1.77);
+
+		CaptureThing(player);
+        SetActorFlags(player, 0x200000);
+		StopThing(player);
+
+		PlayMode(player, 68, 0);
+		return;
+	}
+
+	# Actual firing takes place when we get the callback...
+	firePos = GetThingJointPos(player, handNode);
+
+	satchel = FireProjectile(player, projectile, drop, -1, firePos, '0 0 0', 1.0, 0x0, 0.0, 0.0);
+	bFiring = 0;
+
+	# Start the proximity timer
+	CaptureThing(satchel);
+	SetThingTimer(satchel, 2.0);
+
+	# Lose a satchel charge...
+	ChangeInv(player, weaponNum, -1.0);
+	bUsed = 1;
+
+	# Weapon is no longer active
+	StopMode(player, 66, 0);
+	SetAimWait(player, 0.0);
+	DeactivateWeapon(player);
+	ResetWeaponModel(player);
+
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+	SetAimWait(player, 0.05);
+	ActivateWeapon(player, 0.01);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deactivated:
+
+	if (bUsed)
+	{
+		DeselectWeapon(player);
+	}
+
+	DeactivateWeapon(player);
+
+	return;
+
+# -------------------------------------------------------------------
+
+selected:
+
+	SetAimWait(player, 0.0);
+	SetMountWait(player, 0.67);
+
+	SetArmedMode(player, 6);
+	SetCurWeapon(player, weaponNum);
+	SetThingFireOffset(player, '0.0 0.0 -0.003'); 
+
+	CaptureThing(player);
+	PlayMode(player, 66, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deselected:
+
+	SetMountWait(player, 1.0);
+
+	# No "put" anim if Indy used the charge...
+	if (bUsed)
+	{
+		bUsed = 0;
+		SetArmedMode(player, 0);
+
+		# Make sure Indy's not out of ammo
+		if (GetInv(player, weaponNum) < 1)
+		{
+			PlayVoiceMode(player, 123);
+			SelectWeaponWait(player, 3);
+		}
+
+		return;
+	}
+
+	CaptureThing(player);
+	StopMode(player, 66, 0);
+	PlayMode(player, 67, 0);
+
+	SetArmedMode(player, 0);
+	bFiring = 0;
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	callNum = GetParam(1);
+	ReleaseThing(player);
+
+	if (callNum == 28)
+	{
+		PlaySoundThing(pull, player, 1, -1, -1, 0x880);
+		SetWeaponModel(player, weaponNum);
+	}
+	else if (callNum == 29)
+	{
+		PlaySoundThing(put, player, 1, -1, -1, 0x880);
+		ResetWeaponModel(player);	
+	}
+	else if (callNum == 30)
+	{
+		ClearActorFlags(player, 0x200000);
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+timer:
+
+	if (GetSenderRef() == satchel)
+	{
+		SetThingCollideSize(satchel, 0.05);
+	}
+
+	return;
+
+end

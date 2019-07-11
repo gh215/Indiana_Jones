@@ -1,0 +1,26 @@
+# Jones 3D Cog Script
+#
+# gen_SlideCeiling.cog
+#
+# script to scroll a ceiling sky
+#
+# [YB]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup
+	float		u=10.0
+	float		v=10.0
+end
+
+# ........................................................................................
+code
+
+startup:
+	SlideCeilingSky(u, v);
+	return;
+
+end
+

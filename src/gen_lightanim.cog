@@ -1,0 +1,45 @@
+# Jones 3D Cog Script
+#
+# gen_LightAnim.cog
+#
+# [SXC]
+#
+# 10/21/98 RT: Added radius
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup		
+
+	thing		lightThing	
+
+	float		period=2.0	
+
+	float		maxLightR=1.0	
+	float		maxLightG=1.0	
+	float		maxLightB=1.0	
+
+	float		minLightR=0.0	
+	float		minLightG=0.0	
+	float		minLightB=0.0
+
+	float		minRadius=1.0	
+	float		maxRadius=2.0	
+
+	vector		vecMinLight		local
+	vector		vecMaxLight		local
+end
+
+code
+
+# ........................................................................................
+
+startup:
+	vecMinLight = VectorSet(minLightR, minLightG, minLightB);
+	vecMaxLight = VectorSet(maxLightR, maxLightG, maxLightB);
+	
+	ThingLightAnim(lightThing, vecMinLight, minRadius, vecMaxLight, maxRadius, period);
+	return;
+end
+

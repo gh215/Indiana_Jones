@@ -1,0 +1,75 @@
+# Jones 3D Cog Script
+#
+# VOL_ConeSideAmbients.cog
+#
+# Produces random ambient cave sounds when crossing adjoins
+# Based on code from TEO_Drops.cog by SXC.
+#
+# [TRM & SXC]  modified 12/3 by [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+
+	#................MESSAGES........................
+    message     startup
+    message     crossed
+    
+    
+	#................ACTORS..........................
+    thing		player									local
+	
+	
+	#................PROPS..........................
+	thing		sndPos0
+	thing		sndPos1
+	thing		sndPos2
+
+	#................TRIGGERS........................
+    surface       oncross               
+    
+    surface       offcross              
+    
+            
+	#................SOUNDS........................
+    sound       lavarun=gen_lava_flow_a.wav	    		local
+    
+        
+	#................VARIABLES........................
+    int			snd0									local	# channel			
+    int			snd1									local	# channel		
+    int			snd2									local	# channel		
+
+end
+
+# ========================================================================================
+code
+
+startup:
+    
+	player = GetLocalPlayerThing();
+	return;
+
+# ========================================================================================
+crossed:
+
+    If ((GetSenderRef() == oncross) && (GetSourceref() == player))
+		{
+		snd0=PlaySoundThing(lavarun, sndPos0, 0.5, 4, 20, 0x1);
+		snd1=PlaySoundThing(lavarun, sndPos1, 0.5, 4, 20, 0x1);
+		snd2=PlaySoundThing(lavarun, sndPos2, 0.5, 4, 20, 0x1);
+		}
+    
+    If ((GetSenderRef() == offcross) && (GetSourceref() == player))
+		{
+		StopSound(snd0, 0.5);
+		StopSound(snd1, 0.5);
+		StopSound(snd2, 0.5);
+		}
+
+return;
+
+# ========================================================================================
+end

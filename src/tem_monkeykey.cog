@@ -1,0 +1,231 @@
+# Jones 3D Cog Script
+#
+# TEM_MonkeyKey.cog
+#
+# monkeyKey = 54
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activated
+    message     entered
+    message     pulse
+    
+    thing       player      local       
+    thing       torch0
+    thing       torch1
+    thing       flame0
+    thing       flame1
+    thing       interpCam
+    
+    thing       monkeyKey
+    
+    thing       debrisPos0
+    thing       debrisPos1
+    thing       debrisPos2
+    thing       debrisPos3
+    thing       debrisPos4
+    thing       debrisPos5
+    thing       debrisPos6
+    thing       debrisPos7
+    
+    sector      wat_Sec0        linkID=1
+    sector      wat_Sec1        linkID=1
+    sector      wat_Sec2        linkID=1
+    sector      wat_Sec3        linkID=1
+    
+    template    tpl_Debris=+dummy_debris        local
+    
+    sound       burning=gen_torch_burnin_c.wav      local
+    sound       lite=gen_torchlitet_c.wav           local
+    sound       snd_Key=Inxj169.wav                 local   # i think it's a key
+    
+    # ** music **
+    sound       mus_Danger=mus_jep_indyrescue1b.wav local
+    
+    cog         talkCog         local
+    cog         debris
+    cog         cameraShake
+    cog         cog_Hint
+    
+    flex        flickertime=2.0
+    flex        lituptime=0.5
+    flex        maxradius=0.3
+    flex        minradius=0.3
+    
+    # ** subroutines **
+    flex        pickupKey       local
+    
+    vector      minlite         local
+    vector      maxlite         local
+    vector      zerolite        local
+    
+    int         lit=0           local
+    int         killIt=0        local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	minlite = VectorSet(0.87, 0.55, 0.06);
+	maxlite = VectorSet(0.89, 0.64, 0.30);
+	zerolite = VectorSet(0.25, 0.25, 0.0);
+    
+    SetThingFlags(flame0, 0x10);
+    SetThingFlags(flame1, 0x10);
+    SetThingLight(torch0, zerolite, maxradius, 0.1);
+	SetThingLight(torch1, zerolite, maxradius, 0.1);
+
+    return;
+
+# ========================================================================================
+
+activated:
+
+    player = GetLocalPlayerThing();
+    
+    if ((GetSenderRef() == monkeyKey) && (lit == 0))
+	{
+        # player activated with an IMP part so bail out
+        if((GetCurWeapon(player) >= 14) && (GetCurWeapon(player) <= 18)) return;
+        
+        # player activated with lighter
+        else if(GetCurWeapon(player) == 13)
+        {
+            lit = 1;
+            
+            # put away the lighter
+            DeselectWeapon(player);
+            DeselectWeaponWait(player);
+            
+            Call pickupKey;
+        }
+        
+        # normal activation
+        else
+        {
+            lit = 1;
+            
+            # wait for weapon to be put away
+            DeselectWeaponWait(player);
+            
+            Call pickupKey;
+        }
+    }
+    
+	return;
+        
+# ========================================================================================
+
+entered:
+
+    if(GetSenderID() == 1)
+    {
+        if(killIt == 1)
+        {
+            killIt = 0;
+            
+            # turn off falling debris
+            SendMessage(debris, user1);
+            SendMessage(cameraShake, user1);
+            
+            SetPulse(0.0);
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+pickupKey:
+
+    # solve hint29
+    SendMessage(cog_Hint, user0);
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # offset camera
+    #SetExtCamOffsetToThing(interpCam);
+    
+    # pick up the key
+    PlayMode(player, 60, 0);
+    
+    # Call the Pickup Lines cog
+    talkCog = GetCogByIndex(0);
+    SendMessage(talkCog, 27);
+    
+    # rest and then destroy key
+    Sleep(0.3);
+    DestroyThing(monkeyKey);
+    
+    # add monkeykey to inventory
+    SetInvAvailable(player, 54, 1);
+    ChangeInv(player, 54, 1.0);
+    JonesInvItemChanged(54);
+    
+    # sleep for a bit to wait for talkCog
+    Sleep(1.0);
+    
+    # Johnny, tell the player what he's picked up
+    PlayVoice(player, snd_Key, 1.0, 1);
+    
+    # return camera to player
+    RestoreExtCam();
+    
+    # play music cue
+    PlaySoundLocal(mus_Danger, 1.0, 0.0, 0x0, 0);
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    Sleep(0.5);
+    
+    # light the torches
+    ClearThingFlags(flame0, 0x10);
+    ClearThingFlags(flame1, 0x10);
+    PlaySoundThing(lite, torch0, 1.0, 5, 15, 0x0);                                 
+    PlaySoundThing(lite, torch1, 1.0, 5, 15, 0x0);
+    SetThingLight(torch0, minlite, maxradius, lituptime);                           
+    SetThingLight(torch1, minlite, maxradius, lituptime);
+    
+    PlaySoundThing(burning, torch0, 1.0, 5, 15, 0x1);
+    PlaySoundThing(burning, torch1, 1.0, 5, 15, 0x1);
+    
+    # turn on falling debris
+    SendMessage(debris, user0);
+    
+    # shake the place
+    SendMessage(cameraShake, user0);
+    
+    # start damage debris
+    SetPulse(0.75);
+    killIt = 1;
+    
+    return;
+    
+# ========================================================================================
+
+pulse:
+
+    # create debris
+    CreateThing(tpl_Debris, debrisPos0[RandBetween(0, 7)]);
+    
+    return;
+        
+# ========================================================================================
+
+end
+

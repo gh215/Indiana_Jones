@@ -1,0 +1,97 @@
+# Jones 3D Cog Script
+#
+# pyr_torch_special.cog
+#
+# Lights a torch and a couple of things around it
+#
+# [SXC] [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message     activated
+message     startup
+
+thing       torch            	//the thing you light
+thing       flame		nolink	//flame, hidden at startup
+thing		xtralight	nolink	//another ghost object to widen the flame effect
+thing		xtralight2	nolink	//yet another...
+
+thing		player		local
+
+sound		lightsound=gen_torchlitet_c.wav	local
+sound       burning=gen_torch_burnin_c.wav  local
+
+vector      minlite		local
+vector      maxlite		local
+
+surface		lightit				
+
+int         locked=0	local
+			
+flex		reach=0		//0 for medium, 1 for high
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	minlite = VectorSet(0.87, 0.55, 0.06);
+	maxlite = VectorSet(0.89, 0.64, 0.30);	
+	SetThingFlags(flame, 0x10);
+
+	ClearAdjoinFlags(lightit, 0x2);
+
+	return;
+
+# ........................................................................................
+activated:
+# ---> torch
+
+	if (locked) return;
+	locked = 1;
+	
+    player = GetLocalPlayerThing();
+	
+	# only works with lighter or Marcus
+	if ((GetCurWeapon(player) != 13) && (InEditor() == 0)) return;
+
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+
+	# player reaches medium or high depending on Reach variable
+	PlayMode(player, (60 + reach), 0);
+	Sleep(0.5);
+
+	# make flame visible, play fwoosh, light other stuff too
+	ClearThingFlags(flame, 0x10);
+    PlaySoundThing(lightsound, torch, 0.4, 3, 10, 0);
+	SetThingLight(torch, minlite, 0.3, 0.5);
+	SetThingLight(xtralight, VectorScale(minlite, 0.5), 0.3, 0.5);
+	SetThingLight(xtralight2, VectorScale(minlite, 0.5), 0.3, 0.5);
+
+	Sleep(0.5);
+
+	# start flicker and ongoing burning sound
+	ThingLightAnim(torch, minlite, 0.3,  maxlite, 0.3, 2);
+	PlaySoundThing(burning, torch, 1, 3, 10, 1);
+	
+	sleep(.25);
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+# ........................................................................................
+
+end
+
+
+
+
+
+
+

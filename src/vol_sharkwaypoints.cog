@@ -1,0 +1,119 @@
+# Jones 3D Cog Script
+#
+# vol_SharkWayPoints.cog
+#
+# setup and run sharks on a grid in the vol shark cave area
+#
+# [CMG]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+#.......................MESSAGES.....................    
+    message     startup
+    message     entered
+    message     user0
+    
+    
+#.......................ACTORS.....................    
+	thing       player      					local
+	
+	thing       t_shark00     					
+	thing       t_shark01     					
+    					
+#.......................COGS.....................
+	cog			boatcog
+
+#.......................WAY POINTS.....................    
+	thing		t_ghost00
+	thing		t_ghost01
+	thing		t_ghost02
+	thing		t_ghost03
+	thing		t_ghost04
+	thing		t_ghost05
+	thing		t_ghost06
+	thing		t_ghost07
+	thing		t_ghost08
+	thing		t_ghost09
+    
+
+#.......................TRIGGERS.....................
+	sector		way_trig	
+
+
+#.......................VARIABLES.....................
+	int			n_pos							local				
+    int			n_crossed=0						local				
+	int			curShark						local				
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	Sleep(0.5);
+	player = GetLocalPlayerThing();
+    
+return;    
+	
+# ========================================================================================
+entered:	
+	
+If (n_crossed == 1) return;
+If ((GetSenderRef() == way_trig) && (GetSourceRef() == player))
+{
+
+n_crossed=1;	# the grid will not be set twice
+
+for (n_pos = 0; n_pos <= 9; n_pos = n_pos+1)
+    {
+        AISetWpnt(t_ghost00[n_pos], n_pos);     //assigns each waypoint slot a ghost object 
+    }
+    
+    // LINK WAYPOINTS TO FORM THE GRID STRUCTURE
+    AIConnectWpnts(0, 1);
+    AIConnectWpnts(0, 3);
+    AIConnectWpnts(1, 2);
+    AIConnectWpnts(1, 3);
+    AIConnectWpnts(2, 6);
+    AIConnectWpnts(2, 3);
+    AIConnectWpnts(3, 4);
+    AIConnectWpnts(4, 5);
+    AIConnectWpnts(5, 6);
+    AIConnectWpnts(6, 7);
+    AIConnectWpnts(7, 8);
+    AIConnectWpnts(8, 9);
+    AIConnectWpnts(9, 1);
+
+}
+return;
+
+	
+# ========================================================================================
+user0:
+
+if (GetSenderRef != boatcog) return;
+curShark=GetParam(0);
+
+if (curShark == t_shark00)
+	{
+    AISetInstinctWpntMode(t_shark00); 
+    AIEnableInstinct(t_shark00, "roam", 1);
+	}
+
+if (curShark == t_shark01)
+	{
+    AISetInstinctWpntMode(t_shark01); 
+    AIEnableInstinct(t_shark01, "roam", 1);
+	}
+
+
+return;
+
+# ========================================================================================
+end
+

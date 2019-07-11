@@ -1,0 +1,1137 @@
+# Jones 3D Cog Script
+#
+# aet_Marduk.cog
+#
+# [SCHOLL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+    
+message     startup
+message		aievent
+message		timer
+message		callback
+message		user0
+message		touched
+message		damaged
+message		pulse
+message		blocked
+
+
+thing		t_Marduk					mask=0x0 # I'm capturing this 
+thing		probe						# Charging probe from ceiling.
+cog			Aet_MardukDias		
+thing		t_baseThing
+
+# ************************** MARDUK VARS *******************
+
+vector		v_BasePos			local	# Center of opening that Marduk hovers above
+vector		v_ChargingPos		local	# Center of opening that Marduk hovers above
+vector		v_DestPos			local
+vector		v_MardukPos			local
+vector		v_BaseToMarduk		local
+vector		v_MardukLook		local
+
+int			n_MardukOctant		local
+int			n_MardukFaceDir		local
+int			n_MaxOctChange		local
+int			n_DirToIndy			local
+int			n_Ammo=0			local
+int			e_Mode				local
+template	tpl_CrntWeapon		local
+int			b_AttackLow			local	# if true attack only from low height, false attack only from high height
+int			b_MardukLow				local 	# true is currently flying low
+int			n_TimesBeenHit=0		local	# number of times marduk has been hit by a reflected lightning ball
+
+	
+int			n_MoveSoundChannel=-1		local  
+vector		v_MardukVel				local
+flex		f_MardukVelMag			local
+flex		MIN_MOVE_VOL=0.4		local
+flex		MAX_MOVE_VOL=1.0		local
+flex		VEL_VOL_MUL=1.2			local
+flex		f_MoveVol				local
+flex		MIN_MOVE_PITCH=0.9		local
+flex		MAX_MOVE_PITCH=1.0		local
+flex		VEL_PITCH_MUL=0.4		local
+flex		f_MovePitch				local
+flex		UPDATE_MOVE_VOL_PULSE=0.25	local
+
+int			MAX_HITS=5			local # when marduk has been hit this many times he will flee
+
+flex		DEFAULT_MOVE_SPEED=1.0 local
+flex		FURY_MOVE_SPEED=2.5 local
+
+int			n_ShockLightAnim=-1		local
+flex		SHOCK_LIGHT_DURATION=0.25	local
+	
+
+vector		v_Up				local
+vector		v_Right				local
+vector		v_North				local
+vector		v_East				local
+
+vector		v_Oct0				local
+vector		v_Oct1				local
+vector		v_Oct2				local
+vector		v_Oct3				local
+vector		v_Oct4				local
+vector		v_Oct5				local
+vector		v_Oct6				local
+vector		v_Oct7				local
+
+
+# ************************** INDY VARS *******************
+
+thing		t_Indy				local
+vector		v_IndyPos			local
+vector		v_BaseToIndy		local
+int			n_IndyOctant		local
+int			b_IndyLow			local 	# true if Indy is currently on or near floor
+
+int			b_OKToDamageIndy=1				local
+
+
+# ************************** LIGHTNING VARS *******************
+vector		v_LightningSrcOffset		local	# offset from probe to start lightning
+vector		v_LightningEndPos			local	
+
+flex		LIGHTNING_HEAD_DEST_UP_OFFSET=0.17		local	  	#offset from marduk pos to head along up
+flex		LIGHTNING_WING_DEST_RIGHT_OFFSET=0.025		local	  	#offset from marduk pos to wing along right
+flex		LIGHTNING_WING_DEST_UP_OFFSET=0.1		local	  	#offset from marduk pos to wing along right
+flex		LIGHTNING_DURATION=1.7				local
+flex		LIGHTNING_START_DELAY=1.0			local	#delay from start of charge animation
+flex		LIGHTNING_BASE_RADIUS=0.1			local
+flex		LIGHTNING_TIP_RADIUS=0.05			local
+
+vector		v_MinLight							local 
+vector		v_MaxLight							local 
+int			n_ProbeLightAnim=-1					local
+
+
+# ************************** MISC LOCAL VARS *******************
+
+int			n_OctDist				local
+int			n_eventType				local
+int			n_Track					local
+int			n_TimerID				local
+int			n_TempInt				local
+int			b_TempBool				local
+vector		v_TempVec				local
+flex		f_TempFlex				local
+flex		f_Dot					local 
+flex		f_Dot1					local 
+flex		f_Dist					local
+
+
+# ************************** MARDUK MODES *******************
+
+int			HOVERING_MODE=0				local
+
+int			MOVING_MODE=1				local
+int			FIRING_MODE=2				local
+int			HOVERING_NO_FIRE_MODE=3		local
+int			FURY_MODE=4					local
+int			CHARGING_MODE=5				local
+int			MOVING_TO_CHARGING_POS_MODE=6 local
+int			DO_NOTHING_MODE=7 			local
+
+# ************************** TIMER IDS *******************
+
+int			TIMER_ID_MOVE=0			local
+int			TIMER_ID_ATTACK_DONE=1			local
+int			TIMER_ID_ATTACK_OKAY=2			local
+int			TIMER_ID_START_LIGHTING=3		local
+int			TIMER_ID_STOP_PROBE_LIGHT=4		local
+int			TIMER_ID_CHARGE_COMPLETE=5		local
+int			TIMER_ID_REEVALUATE=6		local
+int			TIMER_ID_STOP_FURY=7			local
+int			TIMER_ID_STOP_SHOCK_LIGHT=8		local
+int			TIMER_ID_START_FURY=9			local
+int			TIMER_ID_CHARGE_SPARKS=10		local
+
+
+# ************************** MISC CONSTANTS *******************
+
+flex		MARDUK_MOVE_RADIUS=0.475	local
+
+flex		ATTACK_TIME=3.0						local
+flex		DELAY_BEFORE_ATTACK_AFTER_MOVE=0.01 local
+flex		AFTER_ATTACK_DELAY=0.01				local
+flex		FURY_DURATION=2.0					local
+flex		FURY_START_DELAY=1.75				local
+flex		CHARGE_SPARK_DELAY=0.3				local
+
+int			MAX_AMMO=5						local	
+flex		CHARGE_DURATION=4.0				local
+
+flex		HIGH_HEIGHT_ADJUST=0.30			local  
+
+
+# ************************** SOUNDS *******************
+
+sound		shock=aet_mr_hit_indy.wav		local
+sound		chargeup=aet_mr_chargeup.wav	local
+sound		fly=aet_mr_fly.wav				local
+sound		defeat=aet_mr_defeat.wav		local
+sound		rebound=aet_mr_ball_rebound.wav local	#load so that engine can play it. 
+sound		hurt=aet_mr_damaged.wav			local
+sound		rico=gen_ricochet_boss.wav		local
+
+template	tpl_ChargeSparks=mardukCharge					local
+
+# ************************** SUBROUTINES *******************
+flex	MoveToNewPosition		local
+flex	MoveToChargingPos		local
+flex	Charge					local
+flex	Set_b_Low				local
+flex	ComputeMardukOctant		local
+flex	ComputeIndyOctant		local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+	v_Up = VectorSet(0.0, 0.0, 1.0);
+	v_North = VectorSet(0.0, 1.0, 0.0);
+	v_East = VectorSet(1.0, 0.0, 0.0);
+	
+	v_Oct0 = VectorSet(0.38, 0.92, 0.0);
+	v_Oct1 = VectorSet(0.92, 0.38, 0.0);
+	v_Oct2 = VectorSet(0.92, -0.38, 0.0);
+	v_Oct3 = VectorSet(0.38, -0.92, 0.0);
+	v_Oct4 = VectorSet(-0.38, -0.92, 0.0);
+	v_Oct5 = VectorSet(-0.92, -0.38, 0.0);
+	v_Oct6 = VectorSet(-0.92, 0.38, 0.0);
+	v_Oct7 = VectorSet(-0.38, 0.92, 0.0);
+
+	return;
+    
+user0:
+	// Initialize for combat
+	CaptureThing(t_Marduk); // so I get all the messages I need
+//	DebugPrint("User0");
+	t_Indy = GetLocalPlayerThing();
+	tpl_CrntWeapon	= GetActorWeapon(t_Marduk);			# save off base weapon setting
+
+	v_ChargingPos = GetThingPos(t_baseThing);
+//	v_ChargingPos = VectorSet(0.20, 0.199, 5.525); // A ghost object location would be a better choice
+//	v_ChargingPos = VectorAdd(v_ChargingPos, VectorScale(v_Up, 0.22));
+	v_BasePos = GetThingPos(t_baseThing);
+//	v_BasePos = VectorSet(0.20, 0.199, 5.525); // A ghost object location would be a better choice
+//	v_BasePos = VectorAdd(v_BasePos, VectorScale(v_Up, 0.22));
+//	SetCollideType(t_Marduk, 0);
+//	MoveThingToPos(t_Marduk, v_BasePos, 0.0);
+//	SetCollideType(t_Marduk, 1);
+
+	AISetMoveSpeed(t_Marduk, DEFAULT_MOVE_SPEED);
+	b_AttackLow = 1;
+	call Charge;
+	
+	n_MoveSoundChannel = PlaySoundThing(fly, t_Marduk, 1.0, 0.0, 20.0, 0x881);
+	SetPulse(UPDATE_MOVE_VOL_PULSE);
+
+	return;
+
+# ........................................................................................
+// Adjust volume of move sound based on velocity
+pulse:
+	if (n_MoveSoundChannel != -1)
+	{
+		v_MardukVel = GetThingVel(t_Marduk);
+		f_MardukVelMag = VectorLen(v_MardukVel);
+//		DebugFlex(f_MardukVelMag, "Vel");
+		f_MoveVol = (VEL_VOL_MUL * f_MardukVelMag) + MIN_MOVE_VOL;
+		if (f_MoveVol > MAX_MOVE_VOL)
+		{
+			f_MoveVol = MAX_MOVE_VOL;
+		}
+
+//		DebugFlex(f_MoveVol, "Vol");
+		ChangeSoundVol(n_MoveSoundChannel, f_MoveVol, UPDATE_MOVE_VOL_PULSE);
+
+		f_MovePitch = (VEL_PITCH_MUL * f_MardukVelMag) + MIN_MOVE_PITCH;
+		if (f_MovePitch > MAX_MOVE_PITCH)
+		{
+			f_MovePitch = MAX_MOVE_PITCH;
+		}
+
+//		DebugFlex(f_MovePitch, "Pitch");
+		ChangeSoundPitch(n_MoveSoundChannel, f_MovePitch, UPDATE_MOVE_VOL_PULSE);
+
+	}
+	else
+	{
+		// Try again to get sound playing
+		n_MoveSoundChannel = PlaySoundThing(fly, t_Marduk, 1.0, 0.0, 20.0, 0x881);
+	}
+
+	return;
+
+# ........................................................................................
+
+aievent:
+	if ( GetSenderRef() != t_Marduk ) return;
+	if (e_Mode == DO_NOTHING_MODE)
+	{
+		return;
+	}
+
+	n_eventType		= GetParam(0);
+//	DebugFlex(n_eventType, "AIEVENT");
+
+	if (n_eventType == 0x10000)		// SITHAI_EVENTPREFIRE
+	{
+//		DebugFlex(e_Mode, "PreFire");
+		// If not hovering, then don't fire
+		// However, because fire is delayed we will get another prefire
+		// when the correct key frame is reached, so allow firing while in firing mode
+		if ( ( (e_Mode != HOVERING_MODE) && (e_Mode != FIRING_MODE)) 
+			 || !n_Ammo)
+		{
+//			DebugFlex(e_Mode, "Fire Aborted");
+			SetActorWeapon(t_Marduk, -1);
+		}
+	}
+	else if (n_eventType == 0x4000)		// SITHAI_EVENTFIRE
+	{
+//		DebugFlex(e_Mode, "Fire - Start Anim");
+		e_Mode = FIRING_MODE;
+		StopMode(t_Marduk, 65, 0.0);
+		n_Track = PlayMode(t_Marduk, 65, 0);
+		FadeInTrack(t_Marduk, n_Track, 0.5);
+		SetTimerEx(ATTACK_TIME, TIMER_ID_ATTACK_DONE, 0, 0);
+
+	}
+	else if (n_eventType == 0x20000) // SITHAI_EVENTPOSTFIRE
+	{
+//		DebugFlex(e_Mode, "PostFire");
+		SetActorWeapon(t_Marduk, tpl_CrntWeapon);
+	}
+	else if (n_eventType == 0x800)// SITHAI_EVENTGOALREACHED
+	{
+//		DebugFlex(e_Mode, "Goal Reached");
+		if (e_Mode == MOVING_TO_CHARGING_POS_MODE)
+		{
+			call Charge; 
+		}
+		else if (e_Mode == MOVING_MODE)
+		{
+			e_Mode = HOVERING_NO_FIRE_MODE;
+			call Set_b_Low;
+
+			// If not at attack height, move again immediately
+			if (b_MardukLow != b_AttackLow)
+			{
+				call MoveToNewPosition;
+			}
+			// If at attack height, then move or attack after delay
+			else
+			{
+				n_TempInt = RandBetween(1,100);
+	
+				v_IndyPos = GetThingPos(t_Indy);
+				v_MardukPos = GetThingPos(t_Marduk);
+
+				f_Dist = VectorDist(v_IndyPos, v_MardukPos);
+
+				// Must be outside min firing distance
+				if ( (n_TempInt < 90) && (f_Dist > 0.35))
+				{
+//					PRINT("Fire Op");
+					AISetSubMode(t_Marduk, 0x2000); // body tracking
+					SetTimerEx(DELAY_BEFORE_ATTACK_AFTER_MOVE, TIMER_ID_ATTACK_OKAY, 0, 0);
+				}
+				else
+				{
+					call MoveToNewPosition;
+				}
+			}
+		}
+		else if (e_Mode == FURY_MODE)
+		{
+			call MoveToNewPosition;
+		}
+	}
+	else if (n_eventType == 0x80000)// SITHAI_EVENTGOALUNREACHABLE
+	{
+		// Try again
+		call MoveToNewPosition;
+	}
+
+	return;
+	
+blocked:				
+//	DebugPrint("Marduk Blocked");
+	if (e_Mode == DO_NOTHING_MODE)
+	{
+		return;
+	}
+	call MoveToNewPosition;
+	return;
+
+# ........................................................................................
+// Damage indy on contact with marduk
+touched:
+	if (e_Mode == DO_NOTHING_MODE)
+	{
+		return;
+	}
+	if ( (GetSourceRef() == t_Indy)
+		 && (GetSenderRef() == t_Marduk)
+		 && b_OKToDamageIndy
+		 )
+	{
+//		Print("Touched Indy");
+		DamageThing(t_Indy, 50, 0x00100000, t_Marduk);
+
+	    PlaySoundThing(shock, t_Indy, 1.0, 0.0, 10.0, 0x880);
+		v_MinLight = VectorSet(0.0, 0.0, 0.0);
+		v_MaxLight = VectorSet(1.0, 1.0, 1.0);
+		n_ShockLightAnim = ThingLightAnim(t_Marduk, v_MinLight, 20.0, v_MaxLight, 20.0, 0.025);
+		SetTimerEx(SHOCK_LIGHT_DURATION, TIMER_ID_STOP_SHOCK_LIGHT, 0, 0);
+		CreateThing(tpl_ChargeSparks, t_Indy);
+		
+		call MoveToNewPosition;
+		b_OKToDamageIndy=0;
+		Sleep(1.0); // so we don't damage him every frame
+		b_OKToDamageIndy=1;
+	}
+	
+	return;
+
+# ........................................................................................
+damaged:
+	if (e_Mode == DO_NOTHING_MODE)
+	{
+		return;
+	}
+
+	SetThingHealth(t_Marduk, GetThingMaxHealth(t_Marduk)); // heal that boy
+
+	n_TempInt = GetParam(1); // damageclass
+	if (BITTEST(n_TempInt, 0x100000))
+	{
+		n_TimesBeenHit = n_TimesBeenHit + 1;
+		
+		// If maxed out then send user1 to other cog
+		if (n_TimesBeenHit == MAX_HITS)
+		{
+//			PRINT("Runaway");
+			e_Mode = DO_NOTHING_MODE;
+			SendMessageEx(Aet_MardukDias, 28, 0, 0, 0, 0);		
+			ReleaseThing(t_Marduk);
+			PlaySoundThing(defeat, t_Marduk, 1.0, 40.0, 40.0, 0x880);
+			if (n_MoveSoundChannel != -1)
+			{
+				StopSound(n_MoveSoundChannel, 0.25);
+				n_MoveSoundChannel = -1;
+				SetPulse(0);
+			}
+            ReturnEx(0); 
+
+		}
+		else if (n_TimesBeenHit < MAX_HITS)
+		{
+			e_Mode = FURY_MODE; // set to fury now so that he won't try to recharge before anim is done
+			SetTimerEX(FURY_START_DELAY, TIMER_ID_START_FURY, 0, 0);
+			PlaySoundThing(hurt, t_Marduk, 1.0, 40.0, 40.0, 0x880);
+			PlaySoundThing(shock, t_Marduk, 1.0, 40.0, 40.0, 0x880);
+            ReturnEx(20); // 20 will force him to play hit animation
+		}
+	}
+	else
+	{
+		if (BITTEST(GetParam(1), 0x1)) 
+		{
+			PlaySoundThing(rico, t_Marduk, 1.0, 20.0, 40.0, 0x880);
+		}
+		ReturnEx(0);
+	}
+
+	return;
+
+
+
+# ........................................................................................
+
+timer:
+	n_TimerID = GetSenderID();
+//	DebugFlex(n_TimerID, "Timer");
+	if (n_TimerID == TIMER_ID_MOVE)
+	{
+//		DebugFlex(e_Mode, "Move Timer");
+		if (e_Mode == DO_NOTHING_MODE)
+		{
+			return;
+		}
+
+		call MoveToNewPosition;
+	}
+	else if (n_TimerID == TIMER_ID_ATTACK_DONE)
+	{
+//		DebugFlex(n_Ammo, "AttackDone");
+
+		if (e_Mode == DO_NOTHING_MODE)
+		{
+			return;
+		}
+
+		n_Ammo = n_Ammo - 1;
+		SetActorWeapon(t_Marduk, tpl_CrntWeapon);
+
+		if (e_Mode != FURY_MODE)
+		{
+			e_Mode = HOVERING_NO_FIRE_MODE;
+			SetTimerEx(AFTER_ATTACK_DELAY, TIMER_ID_REEVALUATE, 0, 0);
+		}
+	}
+	else if (n_TimerID == TIMER_ID_ATTACK_OKAY)
+	{
+//		DebugPrint("Attack Okay");
+		if (e_Mode == DO_NOTHING_MODE)
+		{
+			return;
+		}
+		e_Mode = HOVERING_MODE;
+		// Just in case attack doesn't happen
+		SetTimerEx(1.0, TIMER_ID_REEVALUATE, 0, 0);
+	}
+	else if (n_TimerID == TIMER_ID_START_LIGHTING)
+	{
+//		DebugPrint("Start Lightning");
+		
+	    PlaySoundThing(chargeup, t_Marduk, 1.0, 20.0, 40.0, 0x880);
+
+		SetTimerEX(0.0, TIMER_ID_CHARGE_SPARKS, 0, 0);
+
+		v_LightningSrcOffset = VectorSet(0.0, 0.0, -0.15);
+		v_MardukPos = GetThingPos(t_Marduk);
+		v_Right = GetThingRVec(t_Marduk);
+		v_Up = GetThingUVec(t_Marduk);
+		
+		v_LightningEndPos = VectorAdd(v_MardukPos, VectorScale(v_Up, LIGHTNING_HEAD_DEST_UP_OFFSET));
+		CreateLightning(probe, v_LightningSrcOffset, v_LightningEndPos, LIGHTNING_BASE_RADIUS, LIGHTNING_TIP_RADIUS, LIGHTNING_DURATION);
+	
+		v_LightningEndPos = VectorAdd(v_MardukPos, VectorScale(v_Right, LIGHTNING_WING_DEST_RIGHT_OFFSET));
+		v_LightningEndPos = VectorAdd(v_LightningEndPos, VectorScale(v_Up, LIGHTNING_WING_DEST_UP_OFFSET));
+		CreateLightning(probe, v_LightningSrcOffset, v_LightningEndPos, LIGHTNING_BASE_RADIUS, LIGHTNING_TIP_RADIUS, LIGHTNING_DURATION);
+	
+		v_LightningEndPos = VectorAdd(v_MardukPos, VectorScale(v_Right, -LIGHTNING_WING_DEST_RIGHT_OFFSET));
+		v_LightningEndPos = VectorAdd(v_LightningEndPos, VectorScale(v_Up, LIGHTNING_WING_DEST_UP_OFFSET));
+		CreateLightning(probe, v_LightningSrcOffset, v_LightningEndPos, LIGHTNING_BASE_RADIUS, LIGHTNING_TIP_RADIUS, LIGHTNING_DURATION);
+
+		// Das Blinkin Lites
+		v_MinLight = VectorSet(0.0, 0.0, 0.0);
+		v_MaxLight = VectorSet(1.0, 1.0, 1.0);
+		n_ProbeLightAnim = ThingLightAnim(probe, v_MinLight, 20.0, v_MaxLight, 20.0, 0.025);
+		SetTimerEx(LIGHTNING_DURATION, TIMER_ID_STOP_PROBE_LIGHT, 0, 0);
+//		DebugFlex(n_ProbLightAnim, "Start Probe Light");
+	}
+	else if (n_TimerID == TIMER_ID_STOP_PROBE_LIGHT)
+	{
+//		DebugPrint("Stop Probe Light");
+		if (n_ProbeLightAnim != -1)
+		{
+			StopAnim(n_ProbeLightAnim);
+			n_ProbeLightAnim = -1;
+			v_TempVec = VectorSet(0.0, 0.0, 0.0);
+			SetThingLight(probe, v_TempVec, 0.0, 0.0);
+		}
+	}
+	else if (n_TimerID == TIMER_ID_CHARGE_COMPLETE)
+	{
+//		DebugPrint("Charge Complete");
+		if (e_Mode == DO_NOTHING_MODE)
+		{
+			return;
+		}
+
+		n_Ammo = MAX_AMMO;
+		e_Mode = HOVERING_NO_FIRE_MODE;
+		call MoveToNewPosition;
+	}
+	else if (n_TimerID == TIMER_ID_REEVALUATE)
+	{
+//		DebugFlex(e_Mode, "Re-evaluate");
+		if (e_Mode == DO_NOTHING_MODE)
+		{
+			return;
+		}
+
+		if (e_Mode != FIRING_MODE)
+		{
+//			Print("Re-Evaluate");
+			if (!n_Ammo)
+			{
+				call Charge;
+			}
+			else
+			{
+				call MoveToNewPosition;
+			}
+		}
+	}
+	else if (n_TimerID == TIMER_ID_STOP_FURY)
+	{
+//		DebugPrint("Stop Fury");
+		if (e_Mode == DO_NOTHING_MODE)
+		{
+			return;
+		}
+		
+		e_Mode = MOVING_MODE;
+		
+		// Usually switch attach heights after fury
+		if (RandBetween(0,100) < 80)
+		{
+			if (b_AttackLow)
+			{
+				b_AttackLow = 0;
+			}
+			else
+			{
+				b_AttackLow = 1;
+			}
+		}
+	}
+	else if (n_TimerID == TIMER_ID_STOP_SHOCK_LIGHT)
+	{
+//		DebugPrint("Stop Probe Light");
+		if (n_ShockLightAnim != -1)
+		{
+			StopAnim(n_ShockLightAnim);
+			n_ShockLightAnim = -1;
+			v_TempVec = VectorSet(0.0, 0.0, 0.0);
+			SetThingLight(t_Marduk, v_TempVec, 0.0, 0.0);
+		}
+	}
+	else if (n_TimerID == TIMER_ID_START_FURY)
+	{
+		if (e_Mode == DO_NOTHING_MODE)
+		{
+			return;
+		}
+		call MoveToNewPosition;
+		SetTimerEX(FURY_DURATION, TIMER_ID_STOP_FURY, 0, 0);
+	}
+	else if (n_TimerID == TIMER_ID_CHARGE_SPARKS)
+	{
+		if (n_ProbeLightAnim != -1)
+		{
+			v_MardukPos = GetThingPos(t_Marduk);
+			v_MardukLook = GetThingLVec(t_Marduk);
+			v_MardukLook = VectorScale(v_MardukLook, 0.075);
+			v_LightningEndPos = VectorSet(VectorX(v_MardukLook), VectorY(v_MardukLook), VectorZ(v_MardukLook) + 0.1);
+			v_LightningEndPos = VectorAdd(v_LightningEndPos, v_MardukPos);
+			v_LightningEndPos = VectorAdd(VectorScale(RandVec(), 0.05), v_LightningEndPos);
+			CreateThingAtPos(tpl_ChargeSparks, FindNewSectorFromThing(t_Marduk, v_LightningEndPos), v_LightningEndPos, '0 0 0');
+			SetTimerEX(CHARGE_SPARK_DELAY, TIMER_ID_CHARGE_SPARKS, 0, 0);
+		}
+	}
+
+	return;
+
+
+# ........................................................................................
+callback:
+//	DebugPrint("Callback");
+//	if ( (GetParam(1) == 21) && (e_Mode == WAITING_TO_MOVE_MODE))
+//	{
+//		call MoveToNewPosition;
+//	}
+
+	return;
+
+# ........................................................................................
+MoveToNewPosition:
+//	DebugPrint("MoveToNewPosition");
+	if (e_Mode == DO_NOTHING_MODE)
+	{
+		return;
+	}
+
+	if ( (e_Mode == FIRING_MODE)
+		 || (e_Mode == CHARGING_MODE)
+		 )
+	{
+//		DebugPrint("Doh!!!");
+//		Print("Doh!!");
+		return;
+	}
+
+	// Initialize stuff
+	v_IndyPos = GetThingPos(t_Indy);
+	v_MardukPos = GetThingPos(t_Marduk);
+
+	call ComputeMardukOctant;
+	call ComputeIndyOctant;
+	call Set_b_Low;
+
+	n_OctDist = n_MardukOctant - n_IndyOctant;
+
+	if (n_OctDist > 4)
+	{
+		n_DirToIndy = 1; // clockwise
+	}
+	else if (n_OctDist > 0)
+	{
+		n_DirToIndy = -1; // counter clockwise
+	}
+	else if (n_OctDist == 0)
+	{
+		n_DirToIndy = 0; // same quadrant
+	}
+	else if (n_OctDist > -4)
+	{
+		n_DirToIndy = 1; // clockwise
+	}
+	else
+	{
+		n_DirToIndy = -1; // counter clockwise
+	}
+//	DebugFlex(n_DirToIndy, "Dir to Indy");
+
+	if (e_Mode != FURY_MODE)
+	{
+		// In same octant as Indy
+		if (n_OctDist == 0)
+		{
+			if (b_MardukLow == b_IndyLow)
+			{
+				// change altitude
+				b_TempBool = 1;
+				n_MaxOctChange = 1;
+			}
+			else
+			{
+				// don't change altitude
+				b_TempBool = 0;
+				n_MaxOctChange = 3;
+			}
+		}
+		// Facing around circle towards Indy?
+		else if (n_DirToIndy == n_MardukFaceDir)
+		{
+			// If really close to Indy
+			if (Abs(n_OctDist) <= 1)
+			{
+				// If close to Indy and on same level
+				if (b_MardukLow == b_IndyLow)
+				{
+					// change altitude
+					b_TempBool = 1;
+					n_MaxOctChange = 2;
+				}
+				// If close to indy and not on same level
+				else
+				{
+					// don't change altitude, change direction
+					b_TempBool = 0;
+					n_MaxOctChange = 3;
+					n_MardukFaceDir = n_MardukFaceDir * -1.0;
+				}
+			}
+			// If close to Indy, and facing him
+			else if (Abs(n_OctDist) <= 2)
+			{
+				// If on attack level, lean toward staying on same level
+				if (b_MardukLow == b_AttackLow)
+				{
+					if (RandBetween(0,100) < 10)
+					{
+						// change altitude
+						b_TempBool = 1;
+						n_MaxOctChange = 3;
+					}
+					else
+					{
+						// change direction not altitude
+						b_TempBool = 0;
+						n_MardukFaceDir = n_MardukFaceDir * -1.0;
+						n_MaxOctChange = 3;
+					}
+				}
+				// If not on attack level, lean toward changing level
+				else
+				{
+					if (RandBetween(0,100) < 90)
+					{
+						// change altitude and direction
+						b_TempBool = 1;
+						n_MaxOctChange = 3;
+						n_MardukFaceDir = n_MardukFaceDir * -1.0;
+					}
+					else
+					{
+						// change direction not altitude altitude
+						b_TempBool = 0;
+						n_MaxOctChange = 3;
+						n_MardukFaceDir = n_MardukFaceDir * -1.0;
+					}
+				}
+			}
+			// If not too close to Indy, but facing him
+			else 
+			{
+				// If on attack level, lean toward staying on same level
+				if (b_MardukLow == b_AttackLow)
+				{
+					if (RandBetween(0,100) < 10)
+					{
+						// change altitude
+						b_TempBool = 1;
+						n_MaxOctChange = 3;
+					}
+					else
+					{
+						// don't change altitude
+						b_TempBool = 0;
+						n_MaxOctChange = Abs(n_OctDist) - 1;
+					}
+				}
+				// If not on attack level, lean toward changing level
+				else
+				{
+					if (RandBetween(0,100) < 90)
+					{
+						// change altitude
+						b_TempBool = 1;
+						n_MaxOctChange = Abs(n_OctDist) - 1;
+					}
+					else
+					{
+						// don't change altitude
+						b_TempBool = 0;
+						n_MaxOctChange = 3;
+					}
+				}
+			}
+		}
+		// Facing around circle away from Indy
+		else
+		{
+			// Lean toward staying on or moving to attack level
+			if (b_MardukLow == b_AttackLow)
+			{
+				if (RandBetween(0,100) < 10)
+				{
+					// change altitude
+					b_TempBool = 1;
+					n_MaxOctChange = 3;
+				}
+				else
+				{
+					// don't change altitude
+					b_TempBool = 0;
+					n_MaxOctChange = 3;
+				}
+			}
+			else
+			{
+				if (RandBetween(0,100) < 90)
+				{
+					// change altitude
+					b_TempBool = 1;
+					n_MaxOctChange = 3;
+				}
+				else
+				{
+					// don't change altitude
+					b_TempBool = 0;
+					n_MaxOctChange = 3;
+				}
+			}
+		}
+		// Figure out destination octant
+		//	DebugFlex(n_MaxOctChange, "MaxOctChange");
+		n_TempInt = RandBetween(1, n_MaxOctChange) * n_MardukFaceDir;
+		n_TempInt = n_TempInt + n_MardukOctant;
+
+	}
+	// Fury Mode
+	else
+	{
+		b_TempBool = 0; // don't change altitude
+		n_TempInt = n_MardukFaceDir * 2;
+		n_TempInt = n_TempInt + n_MardukOctant;
+	}
+
+	// Wrap octant destination number
+	if (n_TempInt > 7)
+	{
+		n_TempInt = n_TempInt - 8;
+	}
+	else if (n_TempInt < 0)
+	{
+		n_TempInt = n_TempInt + 8;
+	}
+//	DebugFlex(n_TempInt, "Dest Oct"); 
+
+	v_TempVec = VectorScale(v_Oct0[n_TempInt], MARDUK_MOVE_RADIUS);
+	v_DestPos = VectorAdd(v_TempVec, v_BasePos);
+	
+//	DebugFlex(b_MardukLow, "Marduk Low");
+//	DebugFlex(VectorZ(v_MardukPos), "Marduk Z");
+	
+	// If new dest has high altitude
+	if (b_TempBool == b_MardukLow)
+	{
+		if (e_Mode == FURY_MODE)
+		{
+			f_TempFlex = HIGH_HEIGHT_ADJUST - (Rand() * 0.1);
+		}
+		else
+		{
+			f_TempFlex = HIGH_HEIGHT_ADJUST;
+		}
+	}
+	else
+	{
+		if (e_Mode == FURY_MODE)
+		{
+			f_TempFlex = (Rand() * 0.1);
+		}
+		else
+		{
+			f_TempFlex = 0.0;
+		}
+	}
+	v_DestPos = VectorSet(VectorX(v_DestPos), VectorY(v_DestPos), VectorZ(v_DestPos) + f_TempFlex);
+
+	AISetMovePos(t_Marduk, v_DestPos, 0);
+	AISetLookPos(t_Marduk, v_DestPos);
+	AIClearSubMode(t_Marduk, 0x2000); // clear body tracking
+	
+	if (e_Mode != FURY_MODE)
+	{
+		e_Mode = MOVING_MODE;
+		AISetMoveSpeed(t_Marduk, DEFAULT_MOVE_SPEED);
+	}
+	else // FURY_MODE
+	{
+		AISetMoveSpeed(t_Marduk, FURY_MOVE_SPEED);
+	}
+
+	return;
+
+
+# ........................................................................................
+MoveToChargingPos:
+//	DebugPrint("MoveToChargingPos");
+	e_Mode = MOVING_TO_CHARGING_POS_MODE;
+	AISetLookPos(t_Marduk, v_ChargingPos);
+	AISetMovePos(t_Marduk, v_ChargingPos, 0);
+	AIClearSubMode(t_Marduk, 0x2000); // body tracking
+	AISetMoveSpeed(t_Marduk, DEFAULT_MOVE_SPEED);
+
+	return;
+
+# ........................................................................................
+Charge:
+//	DebugPrint("Attempt Charging");
+
+	// Make sure close enough to charge		
+	v_MardukPos = GetThingPos(t_Marduk);
+	f_Dist = VectorDist(v_MardukPos, v_ChargingPos);
+	if (f_Dist > 0.055)
+	{
+		call MoveToChargingPos;
+		return;
+	}
+
+	AISetSubMode(t_Marduk, 0x2000); // body tracking
+//	DebugPrint("Charging");
+	e_Mode = CHARGING_MODE;
+	StopThing(t_Marduk);
+
+	// Play charging anim
+	n_Track = PlayMode(t_Marduk, 60, 0);
+	FadeInTrack(t_Marduk, n_Track, 0.5);
+
+	SetTimerEx(LIGHTNING_START_DELAY, TIMER_ID_START_LIGHTING, 0, 0);
+	SetTimerEx(CHARGE_DURATION, TIMER_ID_CHARGE_COMPLETE, 0, 0);
+
+
+	return;
+
+
+# ........................................................................................
+Set_b_Low:
+	v_MardukPos = GetThingPos(t_Marduk);
+	f_TempFlex = VectorZ(v_MardukPos) - VectorZ(v_BasePos);
+	if (f_TempFlex > 0.2)
+	{
+		b_MardukLow = 0;
+	}
+	else
+	{
+		b_MardukLow = 1;
+	}
+
+	v_IndyPos = GetThingPos(t_Indy);
+	f_TempFlex = VectorZ(v_IndyPos) - VectorZ(v_BasePos);
+	if (f_TempFlex > 0.2)
+	{
+		b_IndyLow = 0;
+	}
+	else
+	{
+		b_IndyLow = 1;
+	}
+
+	return;
+
+# ........................................................................................
+#
+#		   7 0
+#		  6	  1  	
+#		  5   2 
+#		   4 3
+#
+ComputeMardukOctant:
+	// Initialize stuff
+	v_MardukPos = GetThingPos(t_Marduk);
+
+	// Create flat Base to Marduk vector
+	v_BaseToMarduk = VectorNorm(VectorSub(v_MardukPos, v_BasePos));
+	v_BaseToMarduk = VectorSet(VectorX(v_BaseToMarduk), VectorY(v_BaseToMarduk), 0.0);
+	v_BaseToMarduk = VectorNorm(v_BaseToMarduk);
+
+	f_Dot = VectorDot(v_BaseToMarduk, v_North);
+	f_Dot1 = VectorDot(v_BaseToMarduk, v_East);
+	
+	if (f_Dot > .707)
+	{
+		// most northern octants
+		if (f_Dot1 > 0.0)
+		{
+			n_MardukOctant = 0;
+		}
+		else
+		{
+			n_MardukOctant = 7;
+		}
+	}
+	else if (f_Dot > 0.0)
+	{
+		// northern octants to either side
+		if (f_Dot1 > 0.0)
+		{
+			n_MardukOctant = 1;
+		}
+		else
+		{
+			n_MardukOctant = 6;
+		}
+	}
+	else if (f_Dot > -.707)
+	{
+		// southern octants to either side
+		if (f_Dot1 > 0.0)
+		{
+			n_MardukOctant = 2;
+		}
+		else
+		{
+			n_MardukOctant = 5;
+		}
+	}
+	else
+	{
+		// most southern octants
+		if (f_Dot1 > 0.0)
+		{
+			n_MardukOctant = 3;
+		}
+		else
+		{
+			n_MardukOctant = 4;
+		}
+	}
+
+	v_Right = GetThingRVec(t_Marduk);
+	f_Dot = VectorDot(v_BaseToMarduk, v_Right);
+	if (f_Dot > 0.0)
+	{
+		n_MardukFaceDir  = -1 ; // counter clockwise
+	}
+	else
+	{
+		n_MardukFaceDir  = 1 ; // clockwise
+	}
+
+//	DebugFlex(n_MardukOctant, "Marduk Octant");
+//	DebugFlex(n_MardukFaceDir, "Marduk Face Dir");
+	return;
+
+ComputeIndyOctant:
+	// Initialize stuff
+	v_IndyPos = GetThingPos(t_Indy);
+
+	// Create flat Base to Marduk vector
+	v_BaseToIndy = VectorNorm(VectorSub(v_IndyPos, v_BasePos));
+	v_BaseToIndy = VectorSet(VectorX(v_BaseToIndy), VectorY(v_BaseToIndy), 0.0);
+	v_BaseToIndy = VectorNorm(v_BaseToIndy);
+
+	f_Dot = VectorDot(v_BaseToIndy, v_North);
+	f_Dot1 = VectorDot(v_BaseToIndy, v_East);
+	
+	if (f_Dot > .707)
+	{
+		// most northern octants
+		if (f_Dot1 > 0.0)
+		{
+			n_IndyOctant = 0;
+		}
+		else
+		{
+			n_IndyOctant = 7;
+		}
+	}
+	else if (f_Dot > 0.0)
+	{
+		// northern octants to either side
+		if (f_Dot1 > 0.0)
+		{
+			n_IndyOctant = 1;
+		}
+		else
+		{
+			n_IndyOctant = 6;
+		}
+	}
+	else if (f_Dot > -.707)
+	{
+		// southern octants to either side
+		if (f_Dot1 > 0.0)
+		{
+			n_IndyOctant = 2;
+		}
+		else
+		{
+			n_IndyOctant = 5;
+		}
+	}
+	else
+	{
+		// most southern octants
+		if (f_Dot1 > 0.0)
+		{
+			n_IndyOctant = 3;
+		}
+		else
+		{
+			n_IndyOctant = 4;
+		}
+	}
+
+//	DebugFlex(n_IndyOctant, "Indy Octant");
+
+	return;
+
+end
+

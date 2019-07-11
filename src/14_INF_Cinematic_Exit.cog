@@ -1,0 +1,782 @@
+# Jones 3D Cog Script
+#
+# 14_INF_Cinematic_Exit.cog
+#
+# Indy sends Sophia down the tubes and follows after
+#
+# [HB]+[SXC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+#
+# NOTE:  This cog uses global10 to flag state of inscription reading!
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+    message     activate
+	message		pulse
+    message     timer
+    message     user0
+    message     user1
+    message     user2
+	message		user3
+	message		user7
+	
+# .................................. KEYFRAMES .................................
+	
+	keyframe	in_leverpull=0in_pullever.key			local
+
+	keyframe	in_staggerA=0in_staggerA.key			local # 95x
+	keyframe	in_staggerB=0in_staggerB.key			local # 78x
+	keyframe	in_staggerhang=0in_staggerhang.key		local # 68x
+	keyframe	in_staggerfall=0in_staggerfall.key		local # 72x
+	
+	keyframe	lv_yankleverL=levers_pulleverL_3_3.key	local
+    
+    keyframe    mr_wingkey=0mr_plugin.key               local #2.87 sec
+    keyframe    mr_clampkeys=inf_robot_stand.key        local #2.87 sec
+    
+    keyframe    head_on_anim=inf_robo_head_anim.key         local
+
+# .................................. SOUNDS ....................................
+
+#	sound	    in_sayline=Inxj092.wav				local # Didn't quite work-->sayline[0]
+#	sound	    in_good=Inxj093.wav					local # Good idea...not good enough.
+#	sound	    in_anything=Inxj262.wav				local # That didn't do anything.
+	
+	# fit lines...
+#	sound	    in_there=Inxj108.wav				local # There!-->in_sayline[3]
+#	sound	    in_fits=Inxj109.wav					local # It fits!
+#	sound	    in_okay=Inxj271.wav					local # Okay.
+
+	# read plaque lines...
+#	sound	    in_seewriting=Im05j01a.wav			local
+#	sound	    in_inscription=Im05j06.wav			local
+#	sound	    in_unseen_1=Im05j02.wav				local
+#	sound	    in_unseen_2=Im05j08.wav				local
+	            
+	# scene lines...
+	sound	    so_stopcrazy=Im11s03.wav			local
+	sound	    md_marduksatisfied=Im11i04.wav		local
+	sound	    in_whatdone=Im11j05.wav				local
+	sound	    in_sophiaaa=Im11j06.wav				local
+    
+    # sound fx
+    sound	    pow=imp2_activate.wav	                    local	# Autoloaded
+    sound       horse_wingopen=inf_mr_wings_move.wav        local   # 4.104 sec
+    sound       clampsoundstart=nub_aethdoorarm_start_c.wav local   # 3.936 sec
+    sound       clampsoundstop=nub_aethdoorarm_stop_c.wav   local   # 1.921 sec
+    sound       rumbling=gen_falling_debris_c.wav           local   
+    sound       leverpull=gen_lever_pull.wav                local
+    sound       horse_headopen=inf_mr_headopen.wav          local   # 4.187 sec
+    
+    # not yet lines
+    sound       indylineb0=inxj058.wav                      local
+    sound       indylineb1=inxj059.wav                      local
+    sound       indylineb2=inxj060.wav                      local
+    sound       indylineb3=inxj061.wav                      local
+    sound       indylineb4=inxj090.wav                      local
+    sound       indylineb5=inxj095.wav                      local
+    
+    #music
+    sound       finalmusic=mus_inf_cutscene2.wav            local
+    
+    #fx
+    sound       zapdown=fol_gf_attack.wav                   local
+    sound       bigblast=gen_lightning_c.wav                local
+    sound       chargeup=nub_charged_pad_c.wav              local
+    sound       zapcycle=imp4_on_loop.wav                   local
+
+# ............................... ACTOR THINGS .................................
+
+	thing		player									local
+	thing		indy	    							linkid=0
+    thing       actorindy                 
+	thing		sophia
+	thing		cage
+    thing       marduk_robot
+
+# .............................. OBJECT THINGS .................................
+
+    thing		controlunit
+    thing       impstand                                								
+    thing       fadeplane                               nolink
+    thing       robot_clamp
+
+    thing       pieslice0                               nolink
+    thing       pieslice1                               nolink
+    thing       pieslice2                               nolink
+    thing       pieslice3                               nolink
+    thing       pieslice4                               nolink
+    thing       pieslice5                               nolink
+    thing       pieslice6                               nolink
+    thing       pieslice7                               nolink
+
+# .............................. CAMERA THINGS .................................
+
+	thing		cam_22									nolink
+	thing		cam_23									nolink
+	thing		cam_24									nolink
+	thing		cam_25									nolink
+	thing		cam_26									nolink
+	thing		cam_27									nolink
+    thing       swingpos_cam                            nolink
+    thing       mirrorball_cam                          nolink
+						
+    thing       ct_6                                    nolink
+	thing		ct_22									nolink
+	thing		ct_23									nolink
+	thing		ct_24									nolink
+	thing		ct_25									nolink
+	thing		ct_26									nolink
+	thing		ct_27									nolink
+	thing		ct_28									nolink
+
+# .............................. TARGET THINGS .................................
+
+	thing		in_mk_14								nolink
+	thing		in_mk_15								nolink
+	thing		in_mk_16								nolink
+
+	thing		so_mk_4									nolink
+
+	thing       imppartpos                              nolink
+    thing       mrdk_tgt0                               nolink
+    thing       mrdk_cam0                               nolink
+    thing       mrdk_cam1                               nolink
+    thing       mirrorballcam_tgt                       nolink
+
+# ........................ OTHER ENGINE REFERENCES .............................
+
+	cog			cagespincog
+    cog         hintcog
+    cog         mirrorballcog
+    
+    template    sparks=bluesparks      				    local
+    
+    material    botmat=mrhdfr.mat                       local
+    
+    thing       zaptarget
+    
+    thing       zapsource
+    thing       zapsource1
+    thing       zapsource2
+    thing       zapsource3
+    
+    thing       lightning_strike                        local
+    thing       lightning_strike1                       local
+    thing       lightning_strike2                       local
+    thing       lightning_strike3                       local
+    
+    material	lightningmat0=inf_4sfx_lightning_a.mat	local
+    material	lightningmat1=inf_4sfx_lightning_b.mat	local
+    material	lightningmat2=inf_4sfx_lightning_c.mat	local
+    material	lightningmat3=inf_4sfx_lightning_d.mat	local
+
+# ............................... VARIABLES ....................................
+	
+	vector		posOffset								local
+	vector		angOffset								local
+	
+	flex		in_headRate								local
+	flex		in_rotRate								local
+	flex		so_rotRate								local
+
+	flex		controlcollsize							local
+
+	int			alreadyworking=0						local # prevent false starts
+	int			partisplaced=0						    local # overall state var
+	int			allpartsplaced=0						local # endlevel semaphore		
+
+	int			in_collType								local
+	int			so_collType								local
+	int			cg_collType								local
+	
+	int			in_keyTrack1							local
+
+	int			cursound								local
+	int			vibe									local
+	int			shake									local
+    int         currand                                 local
+    int         lastrand                                local
+    int         cx_colltype                             local
+    int         zapcogflag=0                            local
+    int         clampchanl=0                            local
+    int         headchannel                             local
+    int         lightningon=0                           local
+    int         cnt=0                                   local
+    int         headkey                                 local
+    int         voiceflag=0                             local
+    int         toggleint=0                             local
+    int         rumblsound                              local
+    int         zapcycleint                             local
+    
+    vector      playervec                               local
+    vector      playerxvec                              local
+    vector      playeryvec                              local
+    sector      finalcamsect                            local
+	
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+	
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+    
+    #ThingFadeAnim(fadeplane, 1, 0, 1, 0);
+    SetThingAlpha(fadeplane, 0);
+
+	in_headRate = GetThingMaxHeadVel(indy);
+	in_rotRate = GetThingMaxRotVel(indy);
+	so_rotRate = GetThingMaxRotVel(sophia);
+	in_collType = GetCollideType(indy);
+	so_collType = GetCollideType(sophia);
+	cg_collType = GetCollideType(cage);
+	cx_collType = GetCollideType(controlunit);
+	controlcollsize = GetThingCollideSize(controlunit);
+
+
+# ..............................................................................
+
+user7:
+
+	# IMP's #1, #3, #4 & Robohead ARE CORRECTLY PLACED
+	allpartsplaced = allpartsplaced + 1;
+
+return;
+	
+# ..............................................................................
+#right part
+user0:
+    SendMessage(hintcog, user1);
+    # Do this scene once only...
+	partisplaced = 1;
+    
+    # Shut off Lightning trap above
+        SetCameraFocus(2, mirrorball_cam);
+        SetCameraSecondaryFocus(2, mirrorballcam_tgt);
+        SetCurrentCamera(2);
+        SetCameraFOV(100, 0, 0);
+        Sleep(0.5);
+        SendMessage(mirrorballcog, user0);
+        
+        //play power down noise
+        if (zapcogflag == 1)
+        {
+            zapcogflag = 1;
+            Sleep(1);
+        }
+        
+        if (zapcogflag == 0)
+        {
+            zapcogflag = 1;
+            PlaySoundLocal(zapdown, 1, 0, 0, 0);
+            CreateThing(sparks, mirrorballcam_tgt);
+            sleep(0.5);
+            CreateThing(sparks, mirrorballcam_tgt);
+            Sleep(1);
+        }
+    
+    #finish out scene started in INF_impswitcher
+    CopyOrientAndPos(actorindy, player);
+    SetThingFlags(actorindy, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    ClearThingFlags(player, 0x80000);
+    SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCurrentCamera(1);
+	ResetCameraFOV(90, 0, 0);
+	RestoreExtCam();
+	EndCutScene();
+
+
+	return;
+        
+return;
+
+# ..............................................................................
+#right part
+activate:
+
+    playervec=GetThingLVec(player);
+    playerxvec=VectorX(playervec);
+    playeryvec=VectorY(playervec);
+    printflex(playerxvec);
+    
+#impstand is activated-player is facing the right direction-right part is inserted-final scene is ready to play
+    if ((GetSenderRef() == impstand) &&
+        (playerxvec < 0.924) &&
+        (playerxvec > 0.382) &&
+        (allpartsplaced == 2) &&
+        (partisplaced == 1))
+    {
+        
+        StartCutscene(1);
+        
+        AISetCutsceneMode(actorindy);
+        CopyPlayerHolsters(player, actorindy);
+        StopThing(player);
+        
+        SetActorFlags(player, 0x200000);
+        ClearThingFlags(actorindy, 0x80000);
+        DeselectWeaponWait(player);
+        SetThingFlags(player, 0x80000);
+        
+        SetCameraFocus(2, swingpos_cam);
+        SetCameraSecondaryFocus(2, imppartpos);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0);
+        
+        #music
+		PlaySoundLocal(finalmusic, 1, 0, 0x0, 0);
+        
+        # Indy pulls lever...
+	    PlayKey(controlunit, lv_yankleverL, 4, 0x12, 0);
+        PlaySoundThing(leverpull, controlunit, 1, 10, 20, 0x0080);
+        PlayKey(actorindy, in_leverpull, 4, 0x12, 1);
+        
+        #Revving up of machine
+	    
+	    # Prep...
+	    SetCollideType(cage, 0);
+	    SetCollideType(sophia, 0);
+	    SetCollideType(controlunit, 0);
+        Sleep(1);
+        
+        # Cut to Shot of Marduk Robot opening wings and locking in clamps
+        SetCameraFocus(2, mrdk_cam0);
+        SetCameraSecondaryFocus(2, mrdk_tgt0);
+        SetCurrentCamera(2);
+        SetCameraFOV(110, 0, 0);
+        SetCameraFOV(80, 1, 4);
+
+#Turning on Camera interps        
+        SetCameraLookInterp(2, 1);
+	    SetCameraPosInterp(2, 1);
+        SetCameraInterpSpeed(2, 4);
+        Sleep(0.001);
+        
+        // Shut off collisions to clamp and robot
+        SetCollideType(robot_clamp, 0);
+        SetCollideType(marduk_robot, 0);
+        
+        // slide camera over
+        SetCameraFocus(2, mrdk_cam1);
+        
+        // Play Keys on clamp and robot
+        PlaySoundThing(horse_wingopen, marduk_robot, 1, 10, 20, 0x0080);                // 4.104 sec
+        PlayKey(marduk_robot, mr_wingkey, 2, 0x14, 0);
+        Sleep(1.234); 
+        PlayKey(robot_clamp, mr_clampkeys, 4, 0x14, 0);
+        clampchanl=PlaySoundThing(clampsoundstart, robot_clamp, 1, 10, 20, 0x0080);     // 3.936 sec                              // 2.87  sec
+        Sleep(2.87);
+        PlaySoundThing(clampsoundstop, robot_clamp, 1, 10, 20, 0x0080);                 // 1.921 sec
+        WaitForSound(clampchanl);
+        
+        // Lightning and Thunder
+        SetMaterialCel(botmat, 1);
+        headchannel=PlaySoundThing(horse_headopen, marduk_robot, 0.75, 10, 20, 0x0080);
+        //headkey=PlayKey(marduk_robot, head_on_anim, 1, 0x14, 0);
+        PlaySoundLocal(chargeup, 1, 0, 0, 0);
+        Sleep(2);
+        lightningon=1;
+        SetTimer(0.2);
+        zapcycleint = PlaySoundThing(zapcycle, marduk_robot, 1, 10, 20, 0x0081);
+        //ThingLightAnim(marduk_robot, '0.0 0.5 0.9', 0.65, '0.0 0.9 0.9', 0.65, 1);
+        SetCameraFOV(70, 1, 3);
+        Sleep(3);
+        
+        // Shut off Camera Interps
+        SetCameraLookInterp(2, 0);
+	    SetCameraPosInterp(2, 0);
+        SetCameraInterpSpeed(2, 0);
+        Sleep(0.01);
+        
+	    // Cut to shot of cage...
+	    SetCameraLookInterp(2, 0);
+	    SetCameraPosInterp(2, 0);
+	    SetCameraFocus(2, cam_22);
+	    SetCameraSecondaryFocus(2, ct_22);
+	    SetCurrentCamera(2);
+	    SetCameraFOV(80, 0, 0.0);
+	    DetachThing(ct_6);
+        AttachThingtoThing(ct_22, cage);
+	    Sleep(0.01);
+        
+	    // Track cage descending...
+	    SendMessage(cagespincog, user3); # drop cage & Sophia into Oblivion!
+	    Sleep(1);
+        
+        PlaySoundThing(pow, pieslice0, 1, 10, 20, 0);
+        ThingFadeAnim(pieslice0, 1.0, 0.0, 2.0, 0);
+        ThingFadeAnim(pieslice1, 1.0, 0.0, 2.0, 0);
+        ThingFadeAnim(pieslice2, 1.0, 0.0, 2.0, 0);
+        ThingFadeAnim(pieslice3, 1.0, 0.0, 2.0, 0);
+        ThingFadeAnim(pieslice4, 1.0, 0.0, 2.0, 0);
+        ThingFadeAnim(pieslice5, 1.0, 0.0, 2.0, 0);
+        ThingFadeAnim(pieslice6, 1.0, 0.0, 2.0, 0);
+        ThingFadeAnim(pieslice7, 1.0, 0.0, 2.0, 0);
+        
+	    Sleep(1.0);
+        DetachThing(ct_22);
+	    
+	    // Sophia: "Jones!  Stop!  Are you crazy???"
+	    PlayVoice(sophia, so_stopcrazy, 1.0, 0);
+        
+	    // Prep Indy...
+	    TeleportThing(actorindy, so_mk_4);
+	    AISetLookThing(actorindy, cage);
+        
+	    // Continue tracking cage...
+	    #SetCameraFOV(80, 1, 3.0);
+	    AISetLookThing(actorindy, in_mk_15);
+	    Sleep(3.0);
+        
+	    // Brief shake...
+	    shake = 1; # light
+	    SetPulse(0.1); # shake on
+        rumblsound = PlaySoundLocal(rumbling, 0.7, 0, 1, 0);
+	    Sleep(1.0);
+	    shake = 2; # medium
+	    Sleep(1.0);
+	    shake = 1; # light
+        
+	    // TO DO: visual & sound effects...
+        
+	    // Camera moves in...
+	    SetCameraInterpSpeed(2, 2.0);
+	    SetCameraLookInterp(2, 1);
+	    SetCameraPosInterp(2, 1);
+	    Sleep(0.01);
+	    SetCameraFocus(2, cam_23);
+	    SetCameraSecondaryFocus(2, ct_23);
+	    SetCameraFOV(60, 1, 2.0);
+	    
+	    // actorindy runs out onto platform's edge...
+	    AISetMoveSpeed(actorindy, 2.5);
+	    AISetMoveThing(actorindy, in_mk_14, 0);
+	    Sleep(1.0);
+	    
+	    // Shake off...
+	    SetPulse(0.0); # shake off
+	    AIWaitForStop(actorindy);
+	    AISetLookThing(actorindy, in_mk_16);
+	    CopyOrientAndPos(actorindy, player); 
+                
+	    // actorindy: "Sophia, what have I done?!"
+	    PlayVoice(actorindy, in_whatdone, 1.0, 0);
+	    Sleep(0.5);
+        
+	    // Start Camera shake...
+	    shake = 3; # heavy
+	    SetPulse(0.1);
+	    SetCameraInterpSpeed(2, 1.5);
+	    Sleep(0.5);
+        
+	    // actorindy staggers...
+	    PlayKey(actorindy, in_staggerA, 4, 0x12, 1);
+        
+	    // actorindy slips off platform...
+	    SetCameraSecondaryFocus(2, ct_24);
+	    ClearThingFlags(actorindy, 0x4000); # shadow off	
+	    PlayKey(actorindy, in_staggerB, 4, 0x12, 1);
+	    in_keyTrack1 = PlayKey(actorindy, in_staggerhang, 4, 0x14, 0);
+        
+	    // Cut to up-shot of actorindy...
+	    SetCameraLookInterp(2, 0);
+	    SetCameraPosInterp(2, 0);
+	    SetCameraFocus(2, cam_24);
+	    SetCameraSecondaryFocus(2, ct_25);
+	    SetCameraFOV(70, 0, 0.0);
+	    shake = 1; # light
+        
+	    // Camera moves in...
+	    SetCameraInterpSpeed(2, 2.0);
+	    SetCameraLookInterp(2, 1);
+	    SetCameraPosInterp(2, 1);
+	    Sleep(0.01);
+	    SetCameraFocus(2, cam_25);
+	    SetCameraSecondaryFocus(2, ct_26);
+	    SetCameraFOV(40, 1, 2.0);
+	    Sleep(2.0);
+	    
+	    // Cut to down angle...
+	    SetCameraLookInterp(2, 0);
+	    SetCameraPosInterp(2, 0);
+	    SetCameraFocus(2, cam_26);
+	    SetCameraSecondaryFocus(2, ct_27);
+	    SetCameraFOV(70, 0, 0.0);
+	    TeleportThing(actorindy, in_mk_15); # mid-air
+	    shake = 2; # medium
+	    Sleep(0.01);
+	    SetCameraFOV(30, 1, 3.0);
+        
+	    // actorindy falls into Aetherium...
+	    in_keyTrack1 = PlayKey(actorindy, in_staggerfall, 4, 0x10, 0);
+        
+	    // actorindy: "Sophiaaaa..."
+	    PlayVoice(actorindy, in_sophiaaa, 2.0, 0);
+	    Sleep(3.0);
+	    ResetThing(actorindy);
+	    DestroyThing(actorindy); # see you on the other side
+        
+	    // Cut to Marduk statue...
+	    SetCameraFocus(2, cam_27);
+	    SetCameraSecondaryFocus(2, ct_28);
+	    SetCameraFOV(80, 0, 0.0);
+	    Sleep(0.01);
+	    SetCameraFOV(60, 1, 5.0); # a suggestion only
+	    shake = 1; # light
+	    Sleep(1.0);
+        
+	    // TO DO: maybe change how this sound is played once Marduk statue is in place...
+        # lightningon = 0;
+        SetTimer(0.1);
+        cursound = PlayVoice(marduk_robot, md_marduksatisfied, 1, 0);
+
+        voiceflag=1;
+        WaitForSound(cursound);
+        voiceflag=0;
+        SetMaterialCel(botmat, 1);
+	    SetPulse(0.0);
+	    Sleep(2.0);
+        
+	    // TO DO:  fade out and end level!
+        AttachThingToThing(fadeplane, cam_27);
+        ThingFadeAnim(fadeplane, 0, 1, 2, 0);
+        Sleep(3);
+        SetCameraLookInterp(2, 0);
+	    SetCameraPosInterp(2, 0);
+        EndCutScene();
+	    alreadyworking = 0;
+        allpartsplaced = 3;
+        partisplaced = 2;
+        lightningon = 0;
+        StopSound(rumblsound, 0);
+        StopSound(zapcycleint, 0);
+        finalcamsect=GetThingSector(cam_27);
+        SectorSound(finalcamsect, zapcycle, 0);
+        JonesEndLevel();
+        return;
+    }
+
+    
+    // impstand is activated-player is facing the right direction-right part is inserted-final scene has not played yet
+    if ((GetSenderRef() == impstand) &&
+        (playerxvec < 0.924) &&
+        (playerxvec > 0.382) &&
+        (playeryvec <= 0) &&
+        (allpartsplaced != 2) &&
+        (partisplaced == 1))
+    {
+        StartCutscene(1);
+        
+        AISetCutsceneMode(actorindy);
+        CopyPlayerHolsters(player, actorindy);
+        StopThing(player);
+        
+        SetActorFlags(player, 0x200000);
+        ClearThingFlags(actorindy, 0x80000);
+        DeselectWeaponWait(player);
+        SetThingFlags(player, 0x80000);
+        
+        SetCameraFocus(2, swingpos_cam);
+        SetCameraSecondaryFocus(2, imppartpos);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0);
+        
+        # Indy pulls lever...
+	    PlayKey(controlunit, lv_yankleverL, 4, 0x12, 0);
+        PlaySoundThing(leverpull, controlunit, 1, 10, 20, 0x0080);
+        PlayKey(actorindy, in_leverpull, 4, 0x12, 1);
+        
+        # Shut off Lightning trap above
+        SetCameraFocus(2, mirrorball_cam);
+        SetCameraSecondaryFocus(2, mirrorballcam_tgt);
+        SetCurrentCamera(2);
+        SetCameraFOV(100, 0, 0);
+        Sleep(0.5);
+        SendMessage(mirrorballcog, user0);
+
+        //play power down noise
+        if (zapcogflag == 1)
+        {
+            zapcogflag = 1;
+            Sleep(1);
+        }
+        
+        if (zapcogflag == 0)
+        {
+            zapcogflag = 1;
+            PlaySoundLocal(zapdown, 1, 0, 0, 0);
+            CreateThing(sparks, mirrorballcam_tgt);
+            sleep(0.5);
+            CreateThing(sparks, mirrorballcam_tgt);
+            Sleep(1);
+        }
+        
+        ClearThingFlags(player, 0x80000);          
+        CopyOrientAndPos(actorindy, player); 
+        SetThingFlags(actorindy, 0x80000);
+        SetCurrentCamera(1);            
+        ResetCameraFOV(0, 0.0);
+        RestoreExtCam();               
+        EndCutScene();
+        ClearActorFlags(player, 0x200000);
+        return;
+    }
+
+ClearActorFlags(player, 0x200000);
+            SetCurrentCamera(1);
+             SetCameraFOV(90, 0, 0.0);
+            SetCameraPosition(1, GetThingPos(cam_Reset));
+            # restore player controls
+            ClearActorFlags(player, 0x200000);
+        
+return;
+
+# ..............................................................................
+//wrong part
+user1:
+
+    print("the wrong part has been placed");
+
+return;
+
+# ..............................................................................
+//no part
+user2:
+
+    print("there is no current part");
+
+return;
+
+# ..............................................................................
+
+pulse:
+
+	vibe = RandBetween(1, 4);
+	if (vibe == 1)
+	{
+		if (shake == 1)
+		{
+			posOffset = '-0.005 0.00 -0.002'; #1
+			angOffset = '0.00 -0.002 0.002';
+		}
+		if (shake == 2)
+		{
+			posOffset = '0.01 -0.01 0.005'; #2
+			angOffset = '0.005 0.00 -0.005';
+		}
+		if (shake == 3)
+		{
+			posOffset = '0.01 0.02 -0.02'; #3
+			angOffset = '-0.01 0.01 -0.01';
+		}
+	}
+	else if (vibe == 2)
+	{
+		if (shake == 1)
+		{
+			posOffset = '0.005 -0.005 0.002'; #2
+			angOffset = '0.002 0.00 -0.002';
+		}
+		if (shake == 2)
+		{
+			posOffset = '0.005 0.01 -0.01'; #3
+			angOffset = '-0.005 0.005 -0.00';
+		}
+		if (shake == 3)
+		{
+			posOffset = '-0.01 0.00 0.02'; #4
+			angOffset = '0.00 0.00 0.01';
+		}
+	}
+	else if (vibe == 3)
+	{
+		if (shake == 1)
+		{
+			posOffset = '0.002 0.005 -0.005'; #3
+			angOffset = '-0.002 0.005 -0.005';
+		}
+		if (shake == 2)
+		{
+			posOffset = '-0.01 0.00 0.01'; #4
+			angOffset = '0.00 0.00 0.01';
+		}
+		if (shake == 3)
+		{
+			posOffset = '-0.02 0.00 -0.01'; #1
+			angOffset = '0.00 -0.01 0.01';
+		}
+	}
+	else if (vibe == 4)
+	{
+		if (shake == 1)
+		{
+			posOffset = '-0.002 0.00 0.005'; #4
+			angOffset = '0.00 0.00 0.002';
+		}
+		if (shake == 2)
+		{
+			posOffset = '-0.01 0.00 -0.005'; #1
+			angOffset = '0.00 -0.005 0.005';
+		}
+		if (shake == 3)
+		{
+			posOffset = '0.02 -0.02 0.01'; #2
+			angOffset = '0.01 0.00 -0.01';
+		}
+	}
+
+	SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+
+return;
+    
+# ..............................................................................
+timer:
+
+    if (lightningon == 1)
+    {
+        lightning_strike=CreatePolylineThing(zapsource, zaptarget, '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+        lightning_strike1=CreatePolylineThing(zapsource1, zaptarget, '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+        lightning_strike2=CreatePolylineThing(zapsource2, zaptarget, '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+        lightning_strike3=CreatePolylineThing(zapsource3, zaptarget, '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+        SetTimer(RandBetween(1, 2)*0.1);
+    }
+    
+    toggleint=1-toggleint;
+    if (voiceflag == 0)
+    {
+        return;
+    }
+    
+    if ((toggleint == 0) && (voiceflag == 1))
+    {
+        SetMaterialCel(botmat, 1);
+        SetTimer(RandBetween(1, 2)*0.05);
+        return;
+    }
+    
+    if ((toggleint == 1) && (voiceflag == 1))
+    {
+        SetMaterialCel(botmat, 0);
+        SetTimer(RandBetween(1, 2)*0.05);
+        return;
+    }
+    
+return;
+
+# ..............................................................................
+
+end

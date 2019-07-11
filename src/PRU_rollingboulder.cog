@@ -1,0 +1,746 @@
+# Jones 3D Cog Script
+#
+# PRU_rollingboulder.cog    Boulder chases Indy.
+#
+# [GGJ]	[MDR]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		entered
+message		arrived
+message		touched
+message		startup
+message		timer
+message		blocked
+message		damaged
+message		pulse
+message		exited
+
+thing		player		local
+thing		actor		local
+thing		boulder   	
+thing		deadindy	nolink	local
+thing		floor7		
+thing		killCam		local
+
+thing		branch     	#mask=0x08
+thing		climbStrut0	#mask=0x08
+thing		climbStrut1	#mask=0x08
+thing		swingCam
+thing		climbCam
+thing		climbTarget
+thing		floorCam
+thing		wallBreakCam
+thing		boulderGhost
+thing		finaleGhost0
+thing		finaleGhost1
+thing		stopGhost
+thing		swingDeathActor
+
+thing		ghost0
+thing		ghost1
+thing		ghost2
+thing		ghost3
+thing		ghost4
+thing		ghost5
+thing		ghost6
+thing		ghost7
+thing		ghost8
+thing		ghost9
+thing		ghost10
+thing		ghost11
+thing		ghost12
+thing		ghost13
+thing		ghost14
+thing		ghost15
+thing		ghost16
+thing		ghost17
+thing		ghost18
+thing		ghost19
+thing		ghost20
+thing		ghost21
+thing		ghost22
+thing		ghost23
+thing		ghost24
+
+thing		block0			#top block on upstream side
+thing		block1			#upper middle block on upstream side
+thing		block2			#lower middle block on upstream side
+thing		block3			#bottom block on upstream side
+thing		block4			#downstream side, top
+thing		block5			#downstream side, upper middle
+thing		block6			#downstream side, lower middle
+thing		block7			#downstream side, bottom
+
+thing		debrisGhost
+thing		fadePlate
+thing		smoke0			local
+
+cog			fallingDebris0
+cog			fallingDebris1
+cog			fallingDebris2
+cog			fallingDebris3
+cog			fallingDebris4
+cog			fallingDebris5
+cog			fallingDebris6
+cog			adjoinSettings
+
+template	debris0=stoneshrapa					local
+template	debris1=stoneshrapb					local
+template	debris2=stoneshrapc					local
+
+template    actortpl=indy_sh_actor				local
+
+keyframe	smashed=in_die_buckle.key			local
+keyframe	roll=gen_boulder.key				local
+keyframe	pontificate=0in_figithat_4_4.key	local
+keyframe	in_handsONhips=0in_stand4.key			local
+
+model		whipMod=weap_whip_hip.3do			local
+
+sound		sndDie=tem_temspikes_up_kill_c.wav	local
+sound		floorfall=olv_fallfloor_c.wav		local
+sound		floorcrash=pru_boulder_crash_c.wav	local
+sound		rolling=pru_boulder_rolling_c.wav	local
+sound		tumble=pru_boulder_wallcrash_c.wav	local
+sound		dialogue=pu05j01.wav				local
+sound		musBoulder=mus_gen_danger2.wav		local
+sound		musSwing=mus_gen_indywhip1.wav		local
+sound		musClimb=mus_gen_indy_b_motif1.wav	local
+
+template	tempRef=indy_sh_actor				local
+template	tempRefKill=ghost					local
+template	smoketemplate=+bouldersmoke_spr				local
+
+sector		bldrtrigger
+sector		musSector
+
+surface		whipLand0
+surface		whipLand1
+
+surface		climbLand0		linkID=1
+surface		climbLand1		linkID=1
+surface		climbLand2		linkID=1
+
+surface		hangLedge0
+surface		hangLedge1
+surface		hangLedge2
+surface		slotSurf
+
+
+flex		rollspeed0=2.5		local		#The amount of TIME it takes to move to next target
+flex		rollspeed1=0.4		local
+flex		rollspeed2=0.5		local
+flex		rollspeed3=4.5		local
+flex		rollspeed4=1		local
+flex		rollspeed5=1		local
+flex		rollspeed6=4.5		local
+flex		rollspeed7=3		local
+flex		rollspeed8=3		local
+flex		rollspeed9=3		local
+flex		rollspeed10=1		local
+flex		rollspeed11=1		local 
+flex		rollspeed12=4.5		local	   #was 1.5
+flex		rollspeed13=2		local
+flex		rollspeed14=1		local
+flex		rollspeed15=1		local
+flex		rollspeed16=2		local
+flex		rollspeed17=1		local
+flex		rollspeed18=6.5		local
+flex		rollspeed19=0.5		local
+flex		rollspeed20=0.75	local
+flex		rollspeed21=0.5		local
+flex		rollspeed22=0.5		local
+flex		rollspeed23=0.5		local
+flex		rollspeed24=0.5		local
+
+flex		distanceFlex=0.0	local
+flex		angDelta=180		local
+flex		PosDelta=10			local
+flex		shakePercent		local
+flex		maxDistance=2.5		local
+flex		maxMultiplier		local
+flex		steamroller			local
+flex		swingdeath			local
+
+int			frame=1				local
+int			once=0				local
+int			squished=0			local
+int			bouldersound=0		local
+int			boulderrollkey=0	local
+int			nPos=0				local
+int			nSyncToGhost=0		local
+int			fragment			local
+int			i					local
+int			landed=0			local
+int			curCam				local
+int			climbing=0			local
+int			safe=0				local
+int			hanging=0			local
+int			in_keyTrack1		local
+int			in_keyTrack2		local
+int			collision			local
+int			musOnce=0			local
+int			indyUp=0			local
+int			victim				local
+int			macheteRemove=0		local
+int			slotStand=0			local
+int			swinging=0			local
+int			swingKill=0			local
+int			bldrFlags			local
+
+vector		killCamUp			local
+vector		posOffset			local
+vector		angOffset			local
+vector		finalShot			local
+
+end
+										  
+# .................................................................................	
+code
+startup:
+player = GetLocalPlayerThing();
+
+#maxMultiplier is used in pulse section.
+maxMultiplier=(1/maxDistance);
+collision = GetCollideType(boulder);
+ThingFadeAnim(fadePlate, 1, 0, 0.1, 0);
+return;
+# .................................................................................	
+
+entered:
+if ((GetSenderRef() == musSector) && (musOnce == 0))
+{
+	musOnce=1;
+	PlaySoundLocal(musBoulder, 1.0, 0.0, 0x0, 0);
+	return;
+}
+if (GetSenderRef() == slotSurf)
+{
+	Print("entering bad surface");
+	slotStand = 1;
+	return;
+}
+
+
+#Indy triggers the rolling boulder.
+if ((GetSenderRef() == bldrtrigger) && (once == 0))
+{
+    once = 1;
+	
+	#Pulse operates camera shake.
+	SetPulse(0.1);
+	
+	MoveThingToPos(boulder, GetThingPos(ghost0), rollspeed0);
+    boulderrollkey = PlayKey(boulder, roll, 1, 0x0, 0);
+	bouldersound = PlaySoundThing(rolling, boulder, 1, 4.0, 75.0, 0x81);
+}
+
+#When Indy jumps to safety on the last chunk of floor, remember that he's safe
+if ((GetSenderRef() == floor7) && (once == 1))
+{
+	safe = 1;
+}
+
+#Indy lands after whipswinging.  The camera returns.
+if (((GetSenderRef() == whipLand0) || (GetSenderRef() == whipLand1)) && (landed == 0) && (swinging == 1))
+{
+	if (swingkill == 1)
+	{
+        ClearActorFlags(player, 0x200000);
+		EndCutscene();
+        PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+        DamageThing(player, 1000.0, 0x1, victim);
+		Sleep(2.0);
+		SetCurrentCamera(1);
+		return;
+	}
+	
+	landed = 1;
+	SetCurrentCamera(curCam);
+	#SetCameraFocus(curCam, player);
+    Swinging = 0;
+	ClearActorFlags(player, 0x200000);			#just in case...
+	EndCutscene();
+}
+
+#Indy stops whip climbing.  The camera returns.
+if ((GetSenderID() == 1) && (climbing == 1))
+{
+	climbing = 0;
+	indyUp = 0;
+	SetCurrentCamera(curCam);
+}
+
+#If Indy thinks he can outwit the boulder by hanging from the edge of the pit, he's wrong.
+if ((GetSenderRef() == hangLedge0) || (GetSenderRef() == hangLedge1) || (GetSenderRef() == hangLedge2))
+{
+	hanging=1;
+}
+
+return;
+
+# .................................................................................	
+exited:
+
+if (GetSenderRef() == slotSurf)
+{
+	Print("leaving bad surface");
+	slotStand = 0;
+	return;
+}
+
+if ((GetSenderRef() == floor7) && (once == 1))
+{
+	safe=0;
+	return;
+}
+
+if ((GetSenderRef() == hangLedge0) || (GetSenderRef() == hangLedge1) || (GetSenderRef() == hangLedge2))
+{
+	hanging=0;
+	return;
+}
+return;
+# .................................................................................	
+	
+arrived:
+Print("arrived");
+if (GetSenderRef() == boulder)
+{
+#Boulder comes to a stop and the endlevel cutscene plays.
+    if (nPos == 24)
+	{
+        SetThingCollideSize(boulder, 0.10);
+		StopKey(boulder, boulderrollkey, 0);
+		SetPulse(0.0);
+		StopSound(bouldersound, 0.5);
+        PlaySoundThing(tumble, boulder, 1.0, -1, -1, 0);
+		
+		for(i=0; i<20; i=i+1)
+			{
+				fragment = CreateThing(debris0[RandBetween(0, 2)], stopGhost);
+				SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.05'), 2.0));
+				SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));
+            }
+		smoke0 = CreateThing(smoketemplate, stopGhost);
+		AnimateSpriteSize(smoke0, '0.25 0.25 1.0', '0.75 0.75 0.0', 2.0);
+		if (indyUp == 0)
+			{
+				squished = 1;
+				call steamRoller;
+			}
+		
+        
+		if (squished != 1)
+		{
+			StartCutscene(1);
+			Sleep(2.5);
+			SetCameraSecondaryFocus(2, finaleGhost1);
+			
+			
+			SetCameraFOV(2, 70, 4.0);
+				
+			SetThingFlags(player, 0x80000);	   
+			SetActorFlags(player, 0x200000);
+			actor = CreateThing(actorTpl, finaleGhost0);
+			CaptureThing(actor);
+
+			CopyPlayerHolsters(player, actor);
+			SetThingMesh(actor, 19, whipmod, 0);
+            ClearThingFlags(actor, 0x80000);
+			AISetCutsceneMode(actor);
+			AISetMoveSpeed(actor, 1.0);
+			AISetMoveThing(actor, finaleGhost1, 1);
+			Sleep(0.5);
+            in_keyTrack1 = PlayKey(actor, in_handsONhips, 2, 0x10, 0);
+            
+			in_keyTrack2 = PlayKey(actor, pontificate, 4, 0x12, 0);
+            
+			Sleep(1.5);
+			
+			StopKey(actor, in_keyTrack1, 0.5);
+			StopKey(actor, in_keyTrack2, 0.5);
+			Sleep(0.5);
+			
+            PlayVoice(actor, dialogue, 1, 1);
+			Sleep(1.0);
+            ThingFadeAnim(fadePlate, 0, 1, 2.0, 0);
+			
+			Sleep(3.0);
+			EndCutscene();
+			SetSwimmingInventory(player, 1);
+			JonesEndLevel();
+		}
+		return;
+	}
+  
+	#position of boulder along ghost objects.
+	nPos = nPos + 1;
+	
+    
+	MoveThingToPos(boulder, GetThingPos(ghost0[nPos]), rollspeed0[nPos]);
+		
+		#User messages cause debris to fall.
+		if (nPos == 1)
+		{
+			SendMessage(fallingDebris0, user0);
+		}
+		if (nPos == 3)
+		{
+			SendMessage(fallingDebris0, user1);
+			SendMessage(fallingDebris1, user0);
+		}
+		
+		#Boulder passes over the last chunk of floor, causing it to start to fall.
+		if (nPos == 4)
+		{
+			SendMessage(fallingDebris1, user1);
+			SendMessage(fallingDebris2, user0);
+            
+			#Cut to camera if the player is safely standing on the block.
+			if ((safe == 1) && (squished == 0))
+			{
+				SetActorFlags(player, 0x200000);
+                StartCutscene(0);
+                MakeMeStop();
+				Sleep(0.5);
+                if (GetCurItem(player) != 2)
+				{
+					DeselectWeaponWait(player);
+				}
+                
+				
+				actor = CreateThing(actorTpl, player);
+				CaptureThing(actor);
+                
+                CopyPlayerHolsters(player, actor);
+				SetThingFlags(player, 0x80000);
+				SetActorFlags(player, 0x200000);
+				ClearThingFlags(actor, 0x80000);
+				ResetThing(player);
+			
+				curCam = GetCurrentCamera();
+				SetCameraLookInterp(2, 0);
+				SetCameraPosInterp(2, 0);
+                SetCameraFocus(2, floorCam);
+				SetCameraSecondaryFocus(2, boulder);
+				SetCurrentCamera(2);
+				SetCameraFOV(100, 0, 0.0);
+				return;
+            }
+			if (safe == 0)
+			{
+				call steamRoller;
+				return;
+			}
+		}
+		
+		#return the camera.
+		if ((nPos == 6) && (safe == 1))
+        {
+			Sleep(0.75);
+			SetCurrentCamera(curCam);
+			ResetCameraFOV(0, 0.0);
+			ClearThingFlags(player, 0x80000);
+			ClearActorFlags(player, 0x200000);
+            SetThingFlags(actor, 0x80000);
+		
+			SendMessage(fallingDebris2, user1);
+			ChangeSoundVol(boulderSound, 0.1, 2.0);
+			
+			MoveToFrame(floor7, 3, 5.0);
+			PlaySoundThing(floorfall, floor7, 1.0, -1.0, -1.0, 0x0);
+			SetTimer(2.5);
+			EndCutscene();
+		}
+        
+		if (nPos == 8)
+		{
+			// Rotate boulder 180 degrees
+			SetThingLook( boulder, VectorSub('0 0 0', GetThingLVec(boulder)) );
+			ChangeSoundVol(boulderSound, 1, 1.0);
+			
+	
+		}
+		if (nPos == 10)
+		{
+			SendMessage(fallingDebris2, user0);
+		}
+		
+		if (nPos == 11)
+		{
+			if (hanging == 1)
+			{
+				SetActorFlags(player, 0x200000);
+				DetachThing(player);
+				hanging == 0;
+			}
+			if (slotStand == 1)
+			{
+				Call SteamRoller;
+			}
+		}
+		if (nPos == 12)
+		{
+			SendMessage(fallingDebris2, user1);
+			SendMessage(fallingDebris1, user0);
+        }
+        
+    	
+		if (nPos == 13)
+		{
+			SendMessage(fallingDebris1, user1);
+			SendMessage(fallingDebris0, user0);
+        }
+			
+		if (nPos == 15)
+		{
+			SendMessage(fallingDebris0, user1);
+			SendMessage(fallingDebris3, user0);
+        }
+        
+		if (nPos == 18)
+		{
+			SendMessage(fallingDebris3, user1);
+			SendMessage(fallingDebris4, user0);
+				
+			Sleep(1.0);
+            if (swinging == 1)
+			{
+                call SteamRoller;
+			}
+			Sleep(0.5);
+
+			SendMessage(fallingDebris4, user1);
+			SendMessage(fallingDebris5, user0);
+			
+			
+			
+			Sleep(1.5);
+			SendMessage(fallingDebris5, user1);
+			SendMessage(fallingDebris6, user0);
+		}
+            
+        #Boulder crashes through the wall.
+		if (nPos == 19)
+		{
+			SendMessage(fallingDebris6, user1);
+			SendMessage(adjoinSettings, user0);
+			DestroyThing(block0);
+			DestroyThing(block1);
+			DestroyThing(block2);
+			DestroyThing(block3);
+			DestroyThing(block4);
+			DestroyThing(block5);
+			DestroyThing(block6);
+			DestroyThing(block7);
+			
+			PlaySoundLocal(tumble, 1.0, 0.0, 0x0, 0);
+				
+			if (indyup != 1)
+			{
+	            Sleep(1.0);
+			}
+            
+			SetCollideType(boulder, 0);
+			if (squished != 1)
+			{
+                StartCutscene(1);
+				SetThingFlags(player, 0x80000);
+				SetCameraFocus(2, wallbreakCam);
+				SetCameraSecondaryFocus(2, boulderGhost);
+				SetCurrentCamera(2);
+				ResetCameraFOV(0, 0.0);
+				MoveToFrame(boulderGhost, 1, 5.0);
+                PlaySoundLocal(musClimb, 1.0, 0.0, 0x0, 0);
+            }
+                
+			smoke0 = CreateThing(smoketemplate, debrisGhost);
+			AnimateSpriteSize(smoke0, '0.5 0.5 0.75', '1.75 1.75 0.0', 2.0);
+			for(i=0; i<40; i=i+1)
+			{
+				fragment = CreateThing(debris0[RandBetween(0, 2)], debrisGhost);
+				SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.05'), 2.0));
+				SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));
+            }
+        }
+		
+		if (nPos == 21)
+		{
+			SetCollideType(boulder, collision);
+            bldrFlags = GetPhysicsFlags(boulder);
+			bitSet(bldrFlags, 0x1);
+			SetPhysicsFlags(boulder, bldrFlags);
+            MoveToFrame(wallBreakCam, 1, 2.5);
+		}
+		
+}										 
+#The last chunk of floor falls and crashes.    
+if ((GetSenderRef() == floor7) && (GetCurFrame(floor7) == 4))
+{
+	PlaySoundThing(floorcrash, floor7, 1.0, -1.0, -1.0, 0x0);
+}
+return;
+# .................................................................................	
+
+touched:
+#Boulder hits Indy, killing him.
+if ((GetSenderRef() == boulder) && (GetSourceRef() == player) && (squished == 0))
+{
+	call steamRoller;			
+}
+return;
+# .................................................................................	
+
+timer:
+
+#The last chunk of floor falls free.
+MoveToFrame(floor7, 4, 20.0);
+return;
+# .................................................................................	
+
+blocked:
+Print("blocked");
+#MoveThingToPos(boulder, GetThingPos(ghost0[nPos-nSyncToGhost]), rollspeed0[nPos]);
+return;
+# .................................................................................	
+
+damaged:
+#Damage must be caused by whip.	
+if (GetParam(1) != 0x10) return;
+    
+#Cut to other camera if Indy whipswings across gap.
+if (GetSenderRef() == branch)
+{
+	swinging = 1;
+	StartCutscene(0);
+    curCam = GetCurrentCamera();
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	ResetCameraFOV(0, 0.0);
+	SetCameraFocus(2, swingCam);
+	SetCameraSecondaryFocus(2, player);
+	SetCurrentCamera(2);
+    Sleep(1.5);
+	PlaySoundLocal(musSwing, 1.0, 0.0, 0x0, 0);
+}
+
+#Cut to other camera if Indy whip climbs.
+if ((GetSenderRef() == climbStrut0) || (GetSenderRef() == climbStrut1))
+{
+	indyUp = 1;
+	curCam = GetCurrentCamera();
+	climbing = 1;
+	ResetCameraFOV(0, 0.0);
+	SetCameraFocus(2, climbCam);
+	SetCameraSecondaryFocus(2, climbTarget);
+    SetCurrentCamera(2);
+	SetCameraFOV(100, 0, 0.0);
+	Sleep(1.5);
+    #PlaySoundLocal(musClimb, 1.0, 0.0, 0x0, 0);
+}
+return;
+
+# .................................................................................	
+pulse:
+
+#Find the distance between the player and the boulder.
+distanceFlex=VectorDist(GetThingPos(boulder), GetThingPos(player));
+
+if (hanging == 1) 
+{
+    #If Indy is hanging when the player passes overhead, he falls.
+	if (distanceFlex < .4)
+	{
+		SetActorFlags(player, 0x200000);
+		DetachThing(player);
+		hanging == 0;
+		Print("     You thought you were smart, didn't you?");
+	}
+}
+
+#Raise the distance to the maximum level if it is lower.
+if (distanceFlex > maxdistance)
+{
+	distanceFlex = maxdistance;
+}
+	
+#Calculate what percentage the actual distance is of the maximum distance
+shakePercent = 1.1 - (distanceFlex * maxMultiplier);
+
+#Shake the camera, based on the percentage of distance.
+posOffSet = VectorScale(VectorSet(RandBetween(-1, 1), RandBetween(-1, 1), RandBetween(-1, 1)), shakepercent * 0.0025);
+angOffSet = VectorScale(VectorSet(RandBetween(-1, 1), RandBetween(-1, 1), RandBetween(-1, 1)), shakepercent * 0.025);
+
+SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+
+return;
+
+# .................................................................................	
+steamRoller:
+if (BITTEST(GetThingFlags(player), 0x202))
+	return;			// Indy is already dead or dying - let the normal death cam do its job.
+
+if (squished == 1) return;
+
+squished=1;	
+#	PrintVector(GetThingPos(boulder));
+	
+killCam = CreateThing(tempRefKill, boulder);
+		
+killCam = CreateThingAtPos
+(tempRefKill, GetThingSector(boulder), VectorAdd(GetThingPos(boulder), '0 0 0.1'), '0 0 0');
+	
+CaptureThing(killCam);
+#	PrintVector(GetThingPos(killCam));
+SetCollideType(killCam, 0);
+	
+//killCamUp = GetThingPos(killCam);
+//PrintInt(killCamUp);
+//VectorAdd(killCamUp, '0.0 0.0 1.0');
+//SetThingPos(killCam, killCamUp);
+
+DamageThing(player, 1000.0, 0x1, victim);
+Sleep(0.1);
+if (swinging == 0)
+{
+    PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+}
+if (swinging == 1)
+{
+	swingKill = 1;
+	call SwingDeath;
+}
+#SetThingFlags(player, 0x80000);
+#deadIndy = CreateThing(tempRef, player);
+#CaptureThing(deadIndy);
+
+#ClearThingFlags(deadindy, 0x80000);
+
+SetCameraFocus(2, killCam);
+SetCameraSecondaryFocus(2, player);
+SetCurrentCamera(2);
+
+#PlayKey(deadindy, smashed, 4, 0x14, 0);
+Sleep(0.75);
+SetCollideType(boulder, 0);
+StopSound(boulderSound, 3.0);
+return;
+
+
+
+SwingDeath:
+
+SetThingFlags(player, 0x10);
+CopyPlayerHolsters(player, swingDeathActor);
+ClearthingFlags(swingDeathActor, 0x80000);
+PlayKey(swingDeathActor, smashed, 4, 0x14, 0);
+
+return;
+
+end
+

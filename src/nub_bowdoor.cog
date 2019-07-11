@@ -1,0 +1,95 @@
+# Jones 3D Cog Script
+#
+# nub_BowDoor.cog
+#
+# [TL] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	activated
+message	arrived
+
+thing	door
+thing	button
+thing	player			local
+thing	exitActor
+thing	exitCam
+thing	exitGhost
+
+keyframe	activate=in_activate_medium.key  		local
+
+sound	creak 
+sound	slam
+
+int		done=0			local
+
+end
+
+# ========================================================================================
+code
+
+activated:
+
+player = GetLocalPlayerThing();
+if (GetCurWeapon(player) != 0) return;
+if (done == 1) return;
+done=1;
+
+StartCutscene(1);
+if ( MakeMeStop() == -1 ) return;
+DeselectWeaponWait(player);
+
+CopyPlayerHolsters(player, exitactor);
+
+SetCameraPosInterp(2, 0);
+SetCameraLookInterp(2, 0);
+SetCameraFocus(2, ExitCam);
+SetCameraSecondaryFocus(2, exitghost);
+SetCurrentCamera(2);
+SetCameraFOV(90, 0, 0.0);
+
+SetThingFlags(player, 0x80000);
+ClearThingFlags(exitActor, 0x80000);
+
+PlayKey(exitActor, activate, 4, 0x12, 0);
+Sleep(0.75);
+
+MoveToFrame(button, 1, 1.0); 
+
+PlaySoundThing(creak, door, 1.0, -1.0, -1.0, 0x80);
+Sleep(0.5);
+
+Rotate(door, -90, 2, 0.5);
+PlaySoundThing(slam, door, 1.0, -1.0, -1.0, 0x80);
+SetThingMaxRotVel(exitActor, 190.0);
+AISetLookThingEyeLevel(exitActor, exitGhost);
+Sleep(2.0);
+
+CopyOrientAndPos(exitActor, player);
+SetThingFlags(exitActor, 0x80000);
+ClearThingFlags(player, 0x80000);
+
+SetCameraPosition(1, GetThingPos(exitCam));
+SetCurrentCamera(1);
+
+ClearActorFlags(player, 0x200000);
+EndCutscene();
+
+return;
+
+# ........................................................................................
+arrived:
+
+#if ((GetSenderRef() == button) && (GetCurFrame(button) == 1))
+#{
+#	MoveToFrame(button, 0, 1.0);
+#}
+
+return;
+
+# ........................................................................................
+end
+

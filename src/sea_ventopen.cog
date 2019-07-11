@@ -1,0 +1,72 @@
+# Jones 3D Cog Script
+#
+# sea_ventopen.cog
+#
+# Rotating Door Script
+#
+# [DS & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		activate	
+
+	# keyframe	indylift=0in_armsup_1_1.key				local
+	keyframe	indylift=in_light_stuff_high.key		local
+
+	sound		indysay=inxj107.wav				local	# It's unlocked.
+	sound		opensnd=sea_grate_open.wav			local
+   	thing		grate
+	thing		lock
+	surface		actiface
+	int			open=0					local
+
+	thing		player						local
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player = GetLocalPlayerThing();
+	return;
+
+# ..............................................................................
+
+activate:
+
+	if (GetSenderRef() != actiface)
+	{
+		return;
+	}
+	if (open == 1)
+	{
+		return;
+	}
+	open = 1;
+	SetActorFlags(player, 0x200000); # no control
+	StartCutscene(0);
+	StopThing(player);
+	PlayVoice(player, indysay, 1.0, 1);
+    # PlayMode(player, 60, 0);
+	# sleep(0.5);
+	PlayKey(player, indylift, 4, 0x12, 0);
+	Sleep(0.5);
+	DestroyThing(lock);
+	PlaySoundThing(opensnd, grate, 1, 5, 10, 0);
+	Rotate(grate, -90, 2, 1);
+	WaitForStop(grate);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	return;
+
+end
+

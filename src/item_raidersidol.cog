@@ -1,0 +1,58 @@
+# Jones 3D Cog Script
+#
+# item_RaidersIdol.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	touched
+message taken
+
+thing   player		  	local
+				
+int		treasureBin=36	local
+int		coinBin=80	  	local
+int		value=500	  	local
+
+end
+
+# ===================================================================
+
+code
+
+touched:
+
+    player = GetSourceRef();
+    
+	if (GetInv(player, treasureBin) < GetInvMax(player, treasureBin))
+	{
+		TakeItem(GetSenderRef(), player);
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+taken:
+
+    player = GetSourceRef();
+    
+    ChangeInv(player, treasureBin, value);
+	SetInvAvailable(player, treasureBin, 1);
+	JonesInvItemChanged(coinBin);
+    
+	return;
+
+end
+
+
+
+
+
+
+

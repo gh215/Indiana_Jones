@@ -1,0 +1,1174 @@
+# Jones 3D Cog Script
+#
+# sea_BrigDoor.cog
+#
+#
+# [DS & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+# ................................. MESSAGES ...................................
+
+	message		startup
+	message		activated	
+	message		arrived		
+	message		timer
+	message		entered
+	message		exited
+	message		touched
+	message		callback
+	message		user0
+	message		crossed
+
+# ................................ KEYFRAMES ...................................
+	
+	keyframe	in_hitdoor=0in_bangdoor_1_1.key			local
+	keyframe	in_rtarmup=0in_armsout_1_1.key			local
+	keyframe	in_fall=in_die_buckle.key				local
+	keyframe	in_raiseHands=0in_stand1_bd_3.key		local
+	# keyframe	in_handsUp=0in_stand3.key				local
+	keyframe	in_close=in_activate_medium_left.key	local
+	keyframe	in_standup=0in_getup_bunkbed.key		local # 35x
+
+	keyframe	actdoor=01h_sailor_activatemed.key		local
+	keyframe	acthit=01h_sailor_pistolwhip.key		local
+	keyframe	actlook=01h_sailor_lookaround.key		local
+
+# ............................. INDY SAYLINES ..................................
+
+# Door locked lines...	
+	sound		in_sayline=inxj077.wav				local # It's locked.
+	sound		in_nokey1=Inxj076.wav				local # This door...locked.
+	sound		in_nokey2=Inxj078.wav				local # Locked.
+	sound		in_nokey3=Inxj079.wav				local # Locked again.
+	sound		in_nokey6=Inxj088.wav				local # Nope.
+	sound		in_nokey4=Inxj080.wav				local # Locked...luck never changes.
+	sound		in_nokey5=Inxj081.wav				local # Oh no...why...always locked?
+
+# Not going back in there...
+	sound		in_noway0=inxj060.wav				local # Don't think...right answer.
+	sound		in_noway1=Inxj061.wav				local # I'm not sure...good idea.
+	sound		in_noway2=Inxj096.wav				local # I can't open it.
+	sound		in_noway3=Inxj056.wav				local # That Looks Dangerous.
+	sound		in_noway6=Inxj088.wav				local # Nope.
+	sound		in_noway4=Inxj057.wav				local # That Looks a little too Danger...
+	sound		in_noway5=Inxj043.wav				local # This doesn't feel right.
+
+# .................................. SOUNDS ....................................
+
+	sound		opensnd=sea_doors_open_c.wav			local
+	sound		closesnd=sea_doors_close_c.wav		local
+	sound		bangdoor=sea_indy_hitdoor_c.wav		local
+	sound		bop_indy=sea_bop_indy.wav			local
+	sound		pullgun=gen_pistol_pull.wav			local	# Autoloaded
+	sound		ungh=inxj018a.wav					local
+
+
+	sound		in_betterspot=inxj224.wav			local # I need to find a better spot.
+	sound		in_seasick=se01j02.wav				local # Quick, get me up on deck....
+	sound		sl_nobackup=se01q01.wav				local # No! Backup!
+	sound		sl_foolishamerican=se01q04.wav		local # No! Foolish Amerikanski!
+	sound		sl_enough=se01q05.wav				local # Enough!
+	sound		sl_what=se01q07.wav					local # What? (when not found)
+	sound		sl_haltyou=se01q08.wav				local # Halt You!	
+	sound		sl_goodjoke=se01q03.wav				local # Good Joke. (4.13 sec)
+
+	sound		music0=mus_gen_indyrelief.wav		local
+
+# .................................. THINGS ....................................
+
+	thing		indypos
+	thing		guardpos
+
+  	thing		indyactor								local # create on the fly
+	thing		bunk_indy								local # create on the fly
+	thing		sailor									local # create on the fly
+
+ 	thing		door0
+	thing		movepos0								nolink
+	thing		movepos1								nolink
+	thing		movepos2								nolink
+	thing		movepos3								nolink
+	thing		movepos4								nolink
+	thing		evadepos								nolink
+	thing		campos0									nolink
+	thing		campos1									nolink
+	thing		brig_cam_1								nolink
+	thing		brig_ct_1								nolink
+	thing		brig_ct_2								nolink
+	thing		brig_mk_1								nolink
+	thing		brig_mk_2								nolink
+	thing		brig_mk_3								nolink
+	thing		brig_ct_repeat							local # create on the fly
+	thing		sailor_tgt								local # create on the fly
+	thing		indy_tgt								local # create on the fly
+
+	thing		switch0
+	thing		switch1
+
+	thing		player								local
+	int		touching								local
+	int		movestatus								local
+
+	surface	doorway 								mask=0x004
+
+# ........................... CAMERA FADE THINGS ...............................
+
+	thing		fadeghost								nolink
+	thing		fadething								nolink
+	thing		fader2									nolink
+
+# ........................ OTHER ENGINE REFERENCES .............................
+			
+	sector		hall
+	sector		vent
+	sector		nitch
+	sector		bed
+	sector		targetsector							local # var
+
+	template	indy_tpl=indy_actor						local
+	template	guard_tpl=sailor_tokarev				local
+	template    ghost_tpl=ghost							local
+	
+# ............................... VARIABLES ....................................
+
+	vector		v_dpos									local # door position
+	vector		v_ipos									local # indy position
+	vector		v_idvec									local # indy-to-door vec
+	vector		v_drvec									local # door right vec
+	vector		v_tchdoorPYR							local
+	vector		v_arrdoorPYR							local
+	vector		v_closedoorPYR							local # door aim
+	vector		v_targetpos								local # target creation
+
+	flex		OpenDoors								local
+	flex		CloseDoors								local
+	flex		Hiding									local
+	flex		end_hiding								local
+	flex		in_nitch								local
+	flex		on_bed									local
+	flex		randlocklines							local
+	flex		randnogolines							local
+	
+	flex		f_iposcheck								local # dot result indy relative to door
+	flex		dooryaw									local
+	flex		timeratio								local
+	flex		reopentime								local
+	flex		f_arrdoorY								local # door yaw
+	flex		closeangle								local
+	flex		doortime=1.0							local
+	flex		in_rotRate								local
+	flex		sl_rotRate								local
+
+	int			alreadytouched=0						local	
+	int			dl_newline=50							local
+	int			dl_oldline=50							local
+	int			ng_newline=50							local
+	int			ng_oldline=50							local
+	int			nogoffset=7								local
+	int			lineindex								local # indexes sound array
+	int			open=0									local
+	int			initch=0								local
+	int			onbed=0									local
+	int			waittime=0								local
+	int			solved=0								local
+	int			invent=0								local
+	int			notnow=0								local
+	int			endhide=0								local
+	int			in_keytrack1							local
+	int			wheregrd=0								local
+	int			sayit									local
+	int			sender									local
+	int			speak0									local
+	int			cursound								local
+	int			callevent=0								local
+	int			lookedalready=0							local
+	int			in_track1								local
+	int			nocontrol=0								local
+	int			caughtinbrig=0							local
+	int			indyexists=0							local
+	int			indytargexists=0						local
+	int			sailorexists=0							local
+	int			sailtargexists=0						local
+	int			curhealth								local
+	
+	vector		v_ButLook local   
+	vector		v_IndyLook local   
+	flex		f_dot	local
+
+# .............................. HAL DOOR STUFF ................................
+
+	# NOTE:  door0 has 4 states...
+	# closed	--> open == 0 (init state)
+	# opening	--> open == 1
+	# open		--> open == 2
+	# closing	--> open == 3
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player=GetLocalPlayerThing(); 
+	v_closedoorPYR = GetThingLVecPYR(door0);
+	SetThingFlags(fadething, 0x80000);
+
+	return;
+
+# ..............................................................................
+
+activated:
+
+	if (notnow == 1)
+	{
+		return;
+	}
+
+	sender = GetSenderRef();
+
+	if ( (sender == switch0) || (sender == switch1) )
+	{
+		// Make sure Indy facing button so that he can't activate from other side of thin wall
+//		DebugPrint("Brig Door Activated");
+		v_ButLook = GetThingLVec(GetSenderRef());
+		v_IndyLook = GetThingLVec(player);
+		f_dot = VectorDot(v_ButLook, v_IndyLook);
+//		DebugFlex(f_dot, "dot");
+		if (f_dot < 0.0)
+		{
+			return;
+		}
+	}
+
+	if (sender == switch0)			# inside
+	{
+		notnow = 1;
+
+		MakeMeStop();
+		DeselectWeaponWait(player);
+
+		StartCutscene(0);
+
+	    PlayMode(player, 60, 1);
+		Sleep(0.5);
+# restore controls and camera
+            ClearActorFlags(player, 0x200000);
+            SetCurrentCamera(1);
+             SetCameraFOV(90, 0, 0.0);
+            SetCameraPosition(1, GetThingPos(cam_Reset));
+            # restore player controls
+            ClearActorFlags(player, 0x200000);
+ClearThingFlags(player, 0x80000);
+    ResetCameraFOV(0, 0.0);  
+    ClearActorFlags(player, 0x200000);
+for (bin= 0; bin < 200; bin = bin + 1) 
+{
+   SetInv(player, bin, GetInvMax(player, bin));                     
+   SetInvAvailable(player, bin, 1);
+}
+SetCollideType(player, 0);
+ EndCutscene();
+
+
+		# Indy realizes the brig door is locked...
+		Call randlocklines;
+		WaitForSound(speak0);
+		notnow = 0;
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+	}
+
+	if (sender == switch1) 		# outside
+	{
+		notnow = 1;
+
+#		StopThing(player);
+		MakeMeStop();
+		DeselectWeaponWait(player);
+
+		StartCutscene(0);
+
+	    PlayMode(player, 60, 1);
+		Sleep(0.5);
+
+		# Indy refuses to re-open the brig door...
+		call randnogolines;
+		WaitForSound(speak0);
+		notnow = 0;
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+	}
+
+	if ((sender == door0) && (solved == 0))
+	{
+		notnow = 1;
+
+#		StopThing(player);
+		MakeMeStop();
+		DeselectWeaponWait(player);
+
+		StartCutscene(0);
+
+		# Indy bangs on the brig door...
+		callevent = 1; # constrain callback
+		CaptureThing(player);					# because Randy said so...
+		PlayKey(player, in_hitdoor, 4, 0x12, 1);
+		callevent = 0;
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+		
+		# Sailor delays for increasing amounts of time...
+		# NOTE:
+		# 1st delay == 0
+		# 2nd delay == 6 sec
+		# 3rd delay == 12
+		# nth delay == 18 thereafter
+		
+		if (waittime != 0)
+		{
+			Sleep(waittime);
+		}
+
+		waittime = (waittime + 6);
+		if (waittime >= 18)
+		{
+			waittime = 18;
+		}
+
+		# Make a sailor outside (here and here only)...
+		if (sailorexists != 0)
+		{
+			DestroyThing(sailor);
+		}
+		sailor = CreateThing(guard_tpl, guardpos);
+		AISetCutsceneMode(sailor);
+		CaptureThing(sailor);
+		sailorexists = 1;
+		SetWeaponModel(sailor, 4); # Tokarev pistol
+		ClearThingFlags(sailor, 0x80000);
+		
+		# Establish a camera target near sailor...
+		if (sailtargexists != 0)
+		{
+			DestroyThing(sailor_tgt);
+		}
+		v_targetpos =
+			VectorAdd(VectorTransformToOrient(sailor, '0.0 0.02 0.02'), GetThingPos(sailor));	
+		targetsector = FindNewSectorFromThing(sailor, v_targetpos);
+		sailor_tgt =
+			CreateThingAtPos(ghost_tpl, targetsector, v_targetpos, '0 0 0');
+		CaptureThing(sailor_tgt);
+		sailtargexists = 1;
+		AttachThingToThing(sailor_tgt, sailor);
+		SetActorFlags(player, 0x200000); # lose control
+		StopThing(player);
+
+		if (invent != 1)
+		{
+		#	StopThing(player);
+			MakeMeStop();
+		}
+
+		DeselectWeaponWait(player);
+		StartCutscene(1);
+		
+		# Cut to sailor outside brig...
+  	  	SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, campos1);
+		SetCameraSecondaryFocus(2, sailor_tgt);
+		SetCurrentCamera(2);
+		SetThingFlags(player, 0x80000);
+		
+		# Make a new leading man (here and here only!)...
+		if (indyexists != 0)
+		{
+			DestroyThing(indyactor);
+		}
+		indyactor = CreateThing(indy_tpl, indypos);
+		CaptureThing(indyactor);
+		indyexists = 1;
+
+		if ((initch != 1) && (invent != 1) && (onbed != 1))
+		{
+		#	StopThing(player);
+			MakeMeStop();
+			SetThingAlpha(indyactor, 1.0);
+			ClearThingFlags(indyactor, 0x80000);
+		}
+
+		# Sailor activates switch outside to open brig door...
+
+		PlayKey(sailor, actdoor, 4, 0x12, 0);
+
+	PlaySoundLocal(pullgun, 1.0, 0.0, 0x0, 0);		
+
+		Sleep(0.5);
+		MoveToFrame(switch0, 1, 1);
+		MoveToFrame(switch1, 1, 1);
+		StopThing(player);
+		call OpenDoors;
+	}
+
+	return;
+
+# ..............................................................................
+
+arrived:
+
+	if (GetSenderRef() != door0)
+	{
+		return;
+	}
+
+	# Sailor action starts when the door finishes opening...
+
+	if (open == 1)
+	{
+		open = 2; # door is now open
+
+		if (solved == 0)
+		{
+			# Walk sailor to position outside the open door...
+			AISetMoveSpeed(sailor, 1.0);
+			AISetLookThingEyeLevel(sailor, movepos0);
+			AISetMoveThing(sailor, movepos0, 1);
+
+			if(invent == 1) # player hiding in vent
+			{
+				goto Hiding;
+				return;
+			}
+
+			if (initch == 1) # player hiding in nitch
+			{
+				goto in_nitch;
+				return;
+			}
+
+			if (onbed == 1) # player hiding on bed
+			{
+				goto on_bed;
+				return;
+			}
+
+			AISetLookThing(sailor, indyactor);
+			Sleep(0.5);
+
+			# Cut to shot of sailor from inside brig...
+			SetCameraLookInterp(2, 0);
+			SetCameraFocus(2, campos0);
+			SetCameraSecondaryFocus(2, sailor_tgt);
+			SetCurrentCamera(2);
+
+			# Guard speaks to Indy prisoner...
+
+			if (waittime < 7)
+			{
+				# Indy feigns illness...
+				PlayVoice(sailor, sl_nobackup, 1.0, 1);
+				cursound = PlayVoice(indyactor, in_seasick, 1.0, 0);
+				Sleep(1.0);
+				PlayKey(indyactor, in_rtarmup, 4, 0x12, 0);
+				WaitForSound(cursound);
+				PlayVoice(sailor, sl_goodjoke, 1.0, 0);
+				Sleep(3.0);
+			}
+
+			if ((waittime > 6) && (waittime < 13))
+			{
+				PlayVoice(sailor, sl_foolishamerican, 1.0, 1);
+			}
+
+			if (waittime > 12)
+			{
+				PlayVoice(sailor, sl_enough, 1.0, 1);
+			}
+
+			AISetLookThingEyeLevel(sailor, movepos4);
+			AISetMoveThing(sailor, movepos4, 0);
+			Sleep(1.2);
+			call CloseDoors;
+
+			return;
+		}
+
+		# Don't sleep, time...
+		SetTimer(2.0);
+		return;
+	}
+
+	if (open == 3)
+	{		
+		# This is how player regains control...
+
+		if (alreadytouched == 1)
+		{
+			return;
+		}
+		SetAdjoinFlags(doorway, 2);
+		MoveToFrame(switch0, 0, 1);
+		MoveToFrame(switch1, 0, 1);
+		v_arrdoorPYR = GetThingLVecPYR(door0);
+		f_arrdoorY = Truncate(VectorY(v_arrdoorPYR)); # to lowest integer degree
+
+		if (f_arrdoorY == 0)
+		{
+			SetThingLVecPYR(door0, v_closedoorPYR); # slam it closed for sure
+		}
+
+		if (nocontrol == 1)
+		{
+			# Go no further if Indy is being sent back to bunk...
+			return;
+		}
+
+		if (solved == 1)
+		{
+			DestroyThing(sailor_tgt);
+			DestroyThing(sailor);
+			sailorexists = 0;
+			sailtargexists = 0;
+			DestroyThing(indy_tgt);
+			DestroyThing(indyactor);
+			indyexists = 0;
+			indytargexists = 0;
+					
+			ClearThingFlags(player, 0x80000);
+			SetCurrentCamera(1);
+			EndCutscene();
+			ClearActorFlags(player, 0x200000);
+		}
+
+		open = 0; # door is now closed
+		notnow = 0; 
+
+		if (solved == 0)
+		{
+			# Player was not stopped by a touch...
+			if ((initch != 1) && (invent != 1) && (onbed != 1))
+			{
+				TeleportThing(player, indypos);
+			}
+			SetThingFlags(indyactor, 0x80000);			
+			ClearThingFlags(player, 0x80000);
+			SetCurrentCamera(1);
+			ResetCameraFOV(0, 0.0);
+			ClearActorFlags(player, 0x200000);
+			EndCutscene();
+			return;
+		}
+
+		return;
+	}
+
+# ..............................................................................
+
+entered:
+
+	sender = GetSenderRef();
+
+	if ((sender == hall) && (GetSourceRef() == player))
+	{		
+		if (solved == 1)
+		{
+			return;
+		}
+
+		# Player has escaped...
+		solved = 1;
+
+		if (open > 0)
+		{
+			# Show Indy trapping the guard...
+			StopThing(sailor);
+
+			MakeMeStop();
+#			DeselectWeaponWait(player);
+
+			Sleep(0.01);
+			SetThingFlags(player, 0x80000); # invisible
+			endhide = 1;
+
+			CopyPlayerHolsters(player, indyactor);
+
+			StartCutscene(1);
+			TeleportThing(indyactor, evadepos);
+		
+			# Establish a camera target near Indy...
+			if (indytargexists != 0)
+			{
+				DestroyThing(indy_tgt);
+			}
+			v_targetpos =
+				VectorAdd(VectorTransformToOrient(indyactor, '-0.02 0.00 0.015'), GetThingPos(indyactor));	
+			targetsector = FindNewSectorFromThing(indyactor, v_targetpos);
+			indy_tgt =
+				CreateThingAtPos(ghost_tpl, targetsector, v_targetpos, '0 0 0');
+			CaptureThing(indy_tgt);
+			indytargexists = 1;
+			AttachThingToThing(indy_tgt, indyactor);
+			
+			# Put Indy outside door...
+			ClearThingFlags(indyactor, 0x80000);
+			SetThingAlpha(indyactor, 1.0);
+			
+			# Cut to shot of Indy closing door on the guard...
+			SetCameraFocus(2, campos1);
+			SetCameraSecondaryFocus(2, indy_tgt);
+			SetCurrentCamera(2);
+
+			# Turn Indy toward door switch...
+			AISetLookThingEyeLevel(indyactor, guardpos);
+			Sleep(0.2);
+
+			# Get sailor after player...
+			TeleportThing(sailor, movepos2);
+			AISetMoveThing(sailor, movepos1, 0);
+
+			# Walk Indy to switch...
+			AISetMoveSpeed(indyactor, 0.9);
+			AISetMoveThing(indyactor, guardpos, 0);
+			Sleep(0.9);
+			AISetLookThing(indyactor, switch1);
+
+			# Sailor: "Halt, you!"
+			AISetLookThingEyeLevel(sailor, indypos);
+			SetCollideType(sailor, 0); # so he can't prevent door closing
+			SetThingMaxRotVel(sailor, 200.0);
+			AISetLookThing(sailor, indyactor);
+			PlayVoice(sailor, sl_haltyou, 1.0, 0);
+			Sleep(0.5);
+			AISetMoveThing(sailor, indypos, 0);
+
+	AIWaitForStop(sailor);
+			PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);		
+			PlayKey(indyactor, in_close, 4, 0x12, 0);
+			Sleep(0.5);
+			MoveToFrame(switch0, 0, 1);
+			MoveToFrame(switch1, 0, 1);
+			Call CloseDoors;
+			TeleportThing(player, indyactor);
+			SetCurrentCamera(1);
+		}
+
+		return;
+	}
+
+	if (sender == vent)
+	{
+		invent = 1;
+		return;
+	}
+
+	if (sender == nitch)
+	{
+		initch = 1;
+		return;
+	}
+
+	if (sender == bed)
+	{
+		onbed = 1;
+		invent = 0;
+		return;
+	}
+
+	return;
+
+# ..............................................................................
+
+exited:
+
+	sender = GetSenderRef();
+
+	if (sender == nitch)
+	{
+		initch = 0;
+		return;
+	}
+
+	if (sender == bed)
+	{
+		onbed = 0;
+		return;
+	}
+
+	return;
+
+# ..............................................................................
+
+touched:
+	
+	sender = GetSenderRef();
+
+	if (touching != 0)
+	{
+		return;
+	}
+
+	touching = 1;
+	
+	if ((sender == sailor) && (GetSourceRef() == player))
+	{
+		endhide = 1;
+		SetActorFlags(player, 0x200000); # no control
+		StopThing(sailor);
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(1);
+		TeleportThing(indyactor, player);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indyactor, 0x80000);
+		SetThingAlpha(indyactor, 1.0); # need this?
+		AISetLookThing(sailor, indyactor);
+		AISetLookThing(indyactor, sailor);
+		AIWaitForStop(indyactor);
+
+		# Indy surrenders...
+		in_track1 = PlayKey(indyactor, in_raisehands, 4, 0x14, 0);		
+		Sleep(0.8);
+		PlayKey(sailor, acthit, 4, 0x12, 0);
+		Sleep(0.5);
+		Stopkey(indyactor, in_track1, 0.0);
+		in_track1 = PlayKey(indyactor, in_fall, 4, 0x14, 0);
+
+		# TO DO: add bop sound...
+		PlaySoundLocal(bop_indy, 1.0, 0, 0x0, 0);
+
+		# Record some damage (yes, player can die this way)...
+		curhealth = GetThingHealth(player);
+		SetThingHealth(player, (curhealth - 40));
+		Sleep(1.0);
+
+		# Fade out...
+		SetCollideType(fadething, 0);	
+		ClearThingFlags(fadething, 0x80000);
+		SetThingAlpha(fadething, 0.0); # make sure fader is transparent
+		SetCameraFadeThing(2, fadething, fadeghost, 0);
+		SetCurrentCamera(2);
+		Sleep(0.01);
+		ThingFadeAnim(fadething, 0.0, 1.0, 1.0, 0);
+		ThingFadeAnim(sailor, 1.0, 0.0, 1.0, 0);
+		ThingFadeAnim(indyactor, 1.0, 0.0, 1.0, 0);
+		Sleep(1.0);
+
+		caughtinbrig = 1;
+		Call user0; # it's just a label
+
+		touching = 0;
+		return;
+	}
+
+	if ((sender == door0) && (open == 3))
+	{
+		# Do this if player touches closing door...
+
+		alreadytouched = 1; # do once only
+		# check if Indy is touching back side of door...
+		v_dpos = GetThingPos(door0); # door hinge
+		v_ipos = GetThingPos(player); # our hero
+ 		v_idvec = VectorNorm(VectorSub(v_dpos, v_ipos)); # direction between indy & door 
+		v_drvec = GetThingLVec(door0); # check 90 to door plane
+		f_iposcheck = VectorDot(v_idvec, v_drvec); # places indy in- or outside door
+
+		if (f_iposcheck > 0)
+		{
+			# Don't re-open if Indy is touching back side...
+			touching = 0;
+			return;
+		}
+			
+		open = 1; # door is opening again
+		StopThing(door0);
+		Sleep(0.1); # let engine update
+		v_tchdoorPYR = GetThingLVecPYR(door0);
+		closeangle = (Abs(VectorY(v_closedoorPYR)) + 90);
+		dooryaw = (closeangle - Abs(VectorY(v_tchdoorPYR))); # how far is door open?
+		timeratio = (abs(dooryaw) / 90); # what percentage?
+		reopentime = ( doortime * timeratio); # calculate time
+		Rotate(door0, dooryaw, 1, reopentime); # re-open
+	}
+
+	touching = 0;
+	return;
+
+# ..............................................................................
+
+callback:
+
+	if (callevent != 0)
+	{
+		PlaySoundThing(bangdoor, door0, 1, 5, 20, 0);
+	}
+
+	return;
+
+# ..............................................................................
+
+timer:
+
+	call CloseDoors;
+
+	return;
+
+# ..............................................................................
+
+crossed:
+	If((GetSenderRef() == doorway) && (GetSourceRef() == sailor))
+	{
+
+	# Set doorway no-move.
+	ClearAdjoinFlags(doorway, 2);
+	}
+	return;
+
+# ..............................................................................
+# Player thrown back in cell...
+# ..............................................................................
+
+user0:
+
+	# Thwarted by his captors, Indy broods on his bunk...
+		
+	# prevent regaining control via door arrivial...
+	nocontrol = 1;
+	
+	# Prep...
+	brig_ct_repeat = CreateThing(ghost_tpl, brig_ct_1);
+	ClearThingFlags(fader2, 0x80000);
+	SetThingAlpha(fader2, 1.0);
+
+	# Cut to the brig...
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCameraFocus(2, brig_cam_1);
+	SetCameraSecondaryFocus(2, brig_ct_repeat);
+	SetCurrentCamera(2);
+	SetCameraFOV(61, 0, 0.0);
+
+	# Make sure brig door is closed...
+	if (caughtinbrig == 1)
+	{
+		if (open == 2)
+		{
+			Call CloseDoors;
+			Sleep(doortime);
+		}
+		else
+		{
+			cursound = PlaySoundThing(closesnd, door0, 1, 5, 10, 0);
+			WaitForSound(cursound);		
+		}
+			
+		# And clean up if Indy was caught on the premises...
+		StopKey(indyactor, in_track1, 0.0);
+		SetThingFlags(indyactor, 0x80000);
+		SetThingAlpha(indyactor, 1.0);
+		SetThingFlags(sailor, 0x80000);
+		SetThingAlpha(sailor, 1.0);
+	}
+	else
+	{
+		cursound = PlaySoundThing(closesnd, door0, 1, 5, 10, 0);
+		WaitForSound(cursound);
+	}
+
+	bunk_indy = CreateThing(indy_tpl, brig_mk_3);
+	CaptureThing(bunk_indy);
+	ClearThingFlags(bunk_indy, 0x80000);
+	CopyPlayerHolsters(player, bunk_indy);
+	in_track1 = PlayKey(bunk_indy, in_standup, 4, 0x12, 0);
+	PauseKey(bunk_indy, in_track1); # hold
+
+	# Fade in on Indy...
+	SetThingFlags(fadething, 0x80000); # lose this for now
+	ThingFadeAnim(fader2, 1.0, 0.0, 1.0, 0);
+	Sleep(1.0);
+	SetThingFlags(fader2, 0x80000);
+
+	# Indy stands up...
+	ResumeKey(bunk_indy, in_track1);
+	PlayVoice(bunk_indy, ungh, 1.0, 0);
+	SetCameraFOV(82, 1, 2.2);
+	Sleep(1.2);
+	StopKey(bunk_indy, in_track1, 0.0);
+	AttachThingToThing(brig_ct_repeat, bunk_indy);
+	AISetMoveSpeed(bunk_indy, 0.9);
+	AISetLookThingEyeLevel(bunk_indy, brig_mk_1);
+	Sleep(0.1);
+	AISetMoveThing(bunk_indy, brig_mk_1, 1);
+	AISetLookThingEyeLevel(bunk_indy, brig_mk_2);
+	Sleep(0.3);
+
+	# Clean up & restore control...
+	SetThingAlpha(player, 1.0);
+	TeleportThing(player, bunk_indy);
+	SetThingAlpha(player, 1.0); # make sure he's opaque
+	SetCameraInterpSpeed(2, 1);	# reset default
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(brig_cam_1)); # prep follow-cam
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	ClearThingFlags(player, 0x80000);
+	DestroyThing(brig_ct_repeat);
+	DestroyThing(bunk_indy);
+	caughtinbrig = 0;
+	nocontrol = 0;
+	solved = 0; # still a prisoner
+	notnow = 0; # allowed to try again
+	open = 0; # door is closed
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+# ..............................................................................
+
+OpenDoors:
+
+	Rotate(door0, 90, 1, doortime);
+	PlaySoundThing(opensnd, door0, 1, 5, 10, 0);
+	open = 1;
+	alreadytouched = 0; # init every time door opens
+
+	return;
+
+# ..............................................................................
+
+CloseDoors:
+
+	Rotate(door0, -90, 1, doortime);
+	PlaySoundThing(closesnd, door0, 1, 5, 10, 0);
+	open = 3;
+	alreadytouched = 0; # Indy can stop it again
+
+	return;
+
+# ..............................................................................
+# Player hiding options...
+# ..............................................................................
+
+Hiding:							# in vent
+
+	endhide = 0;
+	ClearThingFlags(sailor, 0x80000);
+	AISetLookThingEyeLevel(sailor, movepos1);
+	Sleep(1.0);
+   	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, campos0);
+	SetCameraSecondaryFocus(2, sailor_tgt);
+	SetCurrentCamera(2);
+	PlayVoice(sailor, sl_what, 1.0, 1);
+	AISetMoveThing(sailor, movepos1, 1);
+
+	if (lookedalready == 0)
+	{
+		PlayKey(sailor, actlook, 4, 0x12, 1);
+		lookedalready = 1;
+	}
+
+	AISetLookThingEyeLevel(sailor, movepos2);
+	AISetMoveThing(sailor, movepos2, 1);
+	AISetLookThingEyeLevel(sailor, movepos3);
+	AISetMoveThing(sailor, movepos3, 1);
+	ClearThingFlags(player, 0x80000);
+	EndCutscene();
+	SetCurrentCamera(1);
+	ClearActorFlags(player, 0x200000);
+
+	# time to leave cell...
+	Sleep(8.0);
+	goto end_hiding;
+
+	return;
+
+# ..............................................................................
+
+end_hiding:
+
+	if (endhide == 1)
+	{
+		return;
+	}
+
+	AISetLookThingEyeLevel(sailor, movepos2);
+	AISetMoveThing(sailor, movepos2, 1);
+	wheregrd = 1;
+
+	if (endhide == 1)
+	{
+		return;				# did he get touched?
+	}
+
+	AISetLookThingEyeLevel(sailor, movepos1);
+	AISetMoveThing(sailor, movepos1, 1);
+	wheregrd = 2;
+
+	if (endhide == 1)
+	{
+		return;				# did he get touched?
+	}
+	AISetLookThingEyeLevel(sailor, movepos0);
+	AISetMoveThing(sailor, movepos0, 1);
+	wheregrd = 3;
+
+	if (endhide == 1)
+	{
+		return;				# did he get touched?
+	}
+
+	if (solved == 0) 
+	{
+		AISetLookThingEyeLevel(sailor, movepos4);
+		AISetMoveThing(sailor, movepos4, 1);
+		Call CloseDoors;
+	}
+
+	return;
+
+# ..............................................................................
+
+in_nitch:
+
+	ClearThingFlags(sailor, 0x80000);
+	AISetLookThingEyeLevel(sailor, movepos1);
+	Sleep(1.0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, campos0);
+	SetCameraSecondaryFocus(2, sailor_tgt);
+	SetCurrentCamera(2);
+	PlayVoice(sailor, sl_what, 1.0, 1);
+	AISetMoveThing(sailor, movepos1, 1);
+
+	if (lookedalready == 0)
+	{
+		PlayKey(sailor, actlook, 4, 0x12, 1);
+		lookedalready = 1;
+	}
+
+	AISetLookThingEyeLevel(sailor, movepos2);
+	AISetMoveThing(sailor, movepos2, 1);
+	AISetLookThing(sailor, player);
+	cursound = PlayVoice(sailor, sl_nobackup, 1.0, 0);
+	WaitForSound(cursound);
+	AISetLookThingEyeLevel(sailor, movepos1);
+	AISetMoveThing(sailor, movepos1, 1);
+	AISetLookThingEyeLevel(sailor, movepos0);
+	AISetMoveThing(sailor, movepos0, 1);
+	AISetLookThingEyeLevel(sailor, movepos4);
+	AISetMoveThing(sailor, movepos4, 1);
+	Call CloseDoors;
+	SetCurrentCamera(1);
+	ClearThingFlags(player, 0x80000);
+	EndCutscene();
+	PlayVoice(player, in_betterspot, 1.0, 1);
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+# ..............................................................................
+
+on_bed:
+
+	ClearThingFlags(sailor, 0x80000);
+	AISetLookThingEyeLevel(sailor, movepos1);
+	Sleep(1.0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, campos0);
+	SetCameraSecondaryFocus(2, sailor_tgt);
+	SetCurrentCamera(2);
+	PlayVoice(sailor, sl_what, 1.0, 1);
+	AISetMoveThing(sailor, movepos1, 1);
+
+	if (lookedalready == 0)
+	{
+		PlayKey(sailor, actlook, 4, 0x12, 1);
+		lookedalready = 1;
+	}
+
+	AISetLookThing(sailor, player);
+	cursound = PlayVoice(sailor, sl_nobackup, 1.0, 0);
+	WaitForSound(cursound);
+	AISetLookThingEyeLevel(sailor, movepos0);
+	AISetMoveThing(sailor, movepos0, 1);
+	AISetLookThingEyeLevel(sailor, movepos4);
+	AISetMoveThing(sailor, movepos4, 1);
+	Call CloseDoors;
+	SetCurrentCamera(1);
+	ClearThingFlags(player, 0x80000);
+	EndCutscene();
+	PlayVoice(player, in_betterspot, 1.0, 1);
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+# ..............................................................................
+
+randlocklines:
+
+	while (dl_newline == dl_oldline)
+	{		
+		dl_newline = RandBetween(0, 19);
+		if (dl_newline < 14)
+		{	
+			dl_newline = RandBetween(0, 2); # ~1/4 chance for 0 thru 2
+		}
+		if (dl_newline > 17)
+		{
+			dl_newline = (dl_newline - 13); # 1/20 chance for 5 or 6 
+		}	
+		if (dl_newline > 15)
+		{
+			dl_newline = 4; # 1/10 chance
+		}
+		if (dl_newline > 13)
+		{
+			dl_newline = 3; # 1/10 chance
+		}
+	}
+	dl_oldline = dl_newline;
+	speak0 = PlayVoice(player, in_sayline[dl_newline], 1.0, 0);
+
+	return;
+
+# ..............................................................................
+
+randnogolines:
+
+	while (ng_newline == ng_oldline)
+	{		
+		ng_newline = RandBetween(0, 19);
+		if (ng_newline < 14)
+		{	
+			ng_newline = RandBetween(0, 2); # ~1/4 chance for 0 thru 2
+		}
+
+		if (ng_newline > 17)
+		{
+			ng_newline = (ng_newline - 13); # 1/20 chance for 5 or 6 
+		}	
+		if (ng_newline > 15)
+		{
+			ng_newline = 4; # 1/10 chance
+		}
+		if (ng_newline > 13)
+		{
+			ng_newline = 3; # 1/10 chance
+		}
+	}
+	ng_oldline = ng_newline;
+	lineindex = nogoffset + ng_newline;
+	speak0 = PlayVoice(player, in_sayline[lineindex], 1.0, 0);
+	return;
+
+end
+

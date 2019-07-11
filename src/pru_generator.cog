@@ -1,0 +1,68 @@
+# Jones 3D Cog Script
+#
+# PRU_Generator2.COG
+#
+# Simplified single-enemy generator triggered by entering a sector
+# Useful to prevent early enemy wakeup, slow framerates at long distances, etc.
+#
+# [RKD] [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+message	entered
+message timer
+message	killed
+
+sector		trigger
+thing		generator_pos	nolink					desc=generator_ghost
+template	enemy_tpl								desc=enemy_to_generate
+int			population=0		local
+int			newEnemy			local		mask=0x004
+int			enemy				local
+
+end
+# ........................................................................................
+code
+
+entered:
+Print("entered");
+	if (population >= 2) return;
+	
+	Print("population is");
+	PrintInt(population);
+    
+	enemy = CreateThing(enemy_tpl, generator_pos);
+	CaptureThing(enemy);
+	population = population + 1;
+	SetTimer(2.0);
+    return;
+	
+Timer:
+Print("timer");
+    if (population >= 2)	return;
+
+    Print("population is");
+	PrintInt(population);
+
+	Sleep(Rand() * 10);
+	newEnemy = CreateThing(enemy_tpl, generator_pos);
+	CaptureThing(newEnemy);
+	population = population + 1;
+    SetTimer(1.0);
+	return;
+	
+killed:
+	Print("killed");
+	population = population - 1;
+	if (population <= 1)
+	{
+		SetTimer(1.0);
+	}
+    
+	Print("population is");
+	PrintInt(population);
+
+	return;
+end

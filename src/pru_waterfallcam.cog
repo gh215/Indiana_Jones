@@ -1,0 +1,57 @@
+# Jones 3D Cog Script
+#
+# PRU_waterfallCam.cog
+#
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message	crossed
+message	startup
+
+surface waterfall
+
+sound	swimMus=mus_lag_uwatertemple.wav	local
+thing	camera0										
+thing	player				local
+int		curCam				local					
+
+end
+# ========================================================================================
+code
+
+startup:
+player = GetLocalPlayerThing();
+return;
+
+crossed:
+
+StartCutscene(0);
+SetActorFlags(player, 0x200000);
+
+curCam = GetCurrentCamera();
+
+SetCameraLookInterp(2, 0);
+SetCameraPosInterp(2, 0);
+ResetCameraFOV(0, 0.0);
+SetCameraFocus (2, camera0);
+SetCameraSecondaryFocus(2, player);
+SetCurrentCamera(2);
+
+Sleep(2.0);
+
+PlaySoundLocal(swimMus, 1, 0, 0x0, 0);
+
+SetCurrentCamera(curcam);
+
+ClearActorFlags(player, 0x200000);
+
+EndCutscene();
+
+return;
+end

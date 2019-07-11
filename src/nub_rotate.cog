@@ -1,0 +1,99 @@
+# Jones 3D Cog Script
+#
+# nub_Rotate.cog
+#
+# [RKD] [TL] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	arrived
+message	crossed
+message	entered
+
+thing	gear0
+thing	gear1
+thing	gear2
+thing	gear3
+thing	gear4
+thing	gear5
+thing	gear6
+
+surface	soundon
+surface	soundoff
+
+sector	soundLow
+sector	soundHi
+
+sound	gearmove=nub_gears_moving_c.wav	local
+int		gearchannel						local
+int		stopflag=1						local
+int		soundVol=0						local
+
+end
+
+# ========================================================================================
+code
+
+crossed:
+
+if (GetSenderRef() == soundon)
+{
+    stopflag = 0;
+	gearchannel = PlaySoundThing(gearmove, gear3, 1.0, 5.0, 20.0, 0x881);
+	Rotate(gear0, -360, 0, 4.0);
+	Rotate(gear1, 360, 0, 2.0);
+	Rotate(gear2, -360, 0, 1.0);
+	Rotate(gear3, 360, 0, 8.0);
+	Rotate(gear4, -360, 0, 1.0);
+	Rotate(gear5, 360, 0, 4.0);
+	Rotate(gear6, -360, 0, 4.0);
+	return;
+}
+if (GetSenderRef() == soundoff)
+{
+    stopflag = 1;
+	StopSound(gearchannel, 0);
+	return;
+}
+return;
+#........................................................................................
+entered:
+
+if (GetSenderRef() == soundLow)
+{
+    if (soundVol == 1) return;
+	ChangeSoundVol(gearchannel, 0.35, 3.0);
+	soundVol=1;
+	return;
+}
+if (GetSenderRef() == soundHi)
+{
+    if (soundVol == 2) return;
+    ChangeSoundVol(gearchannel, 1.0, 3.0);
+	soundVol=2;
+	return;
+}
+
+return;
+
+#........................................................................................
+arrived:
+
+if (stopflag == 1) return;
+
+Rotate(gear0, -360, 0, 4.0);
+Rotate(gear1, 360, 0, 2.0);
+Rotate(gear2, -360, 0, 1.0);
+Rotate(gear3, 360, 0, 8.0);
+Rotate(gear4, -360, 0, 1.0);
+Rotate(gear5, 360, 0, 4.0);
+Rotate(gear6, -360, 0, 4.0);
+
+return;
+
+#........................................................................................
+end
+

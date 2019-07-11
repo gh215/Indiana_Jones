@@ -1,0 +1,49 @@
+# Jones 3D Cog Script
+#
+# 00_AINotBeMoved
+#
+# Keeps objects (pedestrians) in place when touched
+#
+# [RD]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup
+	message	touched
+	message	timer
+
+	thing		unmoved
+
+	int		mass=0	local
+	int		locked=0	local
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	mass = GetThingMass(unmoved);
+	return;
+
+# ........................................................................................
+
+touched:
+	if (locked) return;
+	
+	locked = 1;
+	SetThingMass(unmoved, 0);
+	SetTimer(.25);
+	return;	
+	
+# ........................................................................................
+
+timer:
+	SetThingMass(unmoved, mass);
+	locked = 0;
+	return;
+
+end
+

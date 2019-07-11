@@ -1,0 +1,121 @@
+# Jones 3D Cog Script
+#
+# TEO_Drop.cog
+#
+# Raindrops in the cistern
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    message     startup
+    message     crossed
+    message     pulse
+                
+    sound       plunk0
+    sound       plunk1
+    sound       plunk2
+    sound       plunk3
+                
+    surface     startsurf0      linkid=2
+    surface     startsurf1      linkid=2
+    surface     startsurf2      linkid=2
+    surface     startsurf3      linkid=2
+    surface     startsurf4      linkid=2
+                
+    surface     stopsurf0       linkid=3
+    surface     stopsurf1       linkid=3
+    surface     stopsurf2       linkid=3
+    surface     stopsurf3       linkid=3
+    surface     stopsurf4       linkid=3
+    
+    thing       droppos0            
+    thing       droppos1            
+    thing       droppos2            
+    thing       droppos3            
+                
+    thing       player          local
+    
+    template    waterrings=+ripples     local
+                
+    int         pulsetime       
+    float       dropFreq        local
+    int         dropchannel     local
+    thing       droprings       local
+    vector      smallvec        local
+    vector      largevec        local
+    int         check           local
+        
+end
+
+code
+# ........................................................................................
+startup:
+        player = GetLocalPlayerThing();
+        smallvec = VectorSet(0.01, 0.01, 1);
+        largevec = VectorSet(0.3, 0.3, 0);
+        return;
+# ........................................................................................
+crossed:
+        //print("hit crossed");
+        //printint(GetSenderID());
+        if ((GetSourceRef() == player) && (GetSenderID() == 2))
+        {
+                check = 1;
+                SetPulse(pulsetime);
+        }
+        else if ((GetSourceRef() == player) && (GetSenderID() == 3))
+        {
+                SetPulse(0);
+                StopSound(dropchannel, 1);
+        }                
+        return;
+# ........................................................................................
+
+pulse:
+        dropFreq = Rand();
+        
+        if (GetThingFlags(player) & 0x2000000)
+        {
+        //print("player is underwater");
+        return;
+        }
+  
+        if (dropFreq < 0.16)
+        {
+                dropchannel = PlaySoundLocal(plunk0, 0.4, 0, 0x0, 0);
+                droprings = CreateThing(waterrings, droppos0);
+                CaptureThing(droprings);
+                AnimateSpriteSize(droprings, smallvec, largevec, 2);
+        }
+        
+        if ((dropFreq > 0.16) && (dropFreq < 0.32))
+        {
+                dropchannel = PlaySoundLocal(plunk1, 0.4, 0, 0x0, 0);
+                droprings = CreateThing(waterrings, droppos1);
+                CaptureThing(droprings);
+                AnimateSpriteSize(droprings, smallvec, largevec, 2);
+        }
+        
+        if ((dropFreq > 0.32) && (dropFreq < 0.48))
+        {
+                dropchannel = PlaySoundLocal(plunk2, 0.4, 0, 0x0, 0);
+                droprings = CreateThing(waterrings, droppos2);
+                CaptureThing(droprings);
+                AnimateSpriteSize(droprings, smallvec, largevec, 2);
+        }
+        
+        if ((dropFreq > 0.48) && (dropFreq < 0.64))
+        {
+                dropchannel = PlaySoundLocal(plunk3, 0.4, 0, 0x0, 0);
+                droprings = CreateThing(waterrings, droppos3);
+                CaptureThing(droprings);
+                AnimateSpriteSize(droprings, smallvec, largevec, 2);
+        }
+        
+        return;
+        
+end                                
+        

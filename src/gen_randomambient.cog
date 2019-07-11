@@ -1,0 +1,50 @@
+# Jones 3D Cog Script
+#
+# gen_RandomAmbient.cog
+#
+# Plays a random sound at random intervals with random volume and panning
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	        startup
+	message	        timer
+
+        thing           player
+        
+	sound		wav0
+	sound		wav1
+	sound		wav2
+	sound		wav3
+	int		numsounds
+
+	flex		min_interval
+	flex		range_interval
+	flex		min_volume
+	flex		range_volume
+
+	int		temp		local
+        int             sndchannel      local
+end
+
+code
+
+# ........................................................................................
+
+startup:
+        player = GetLocalPlayerThing();
+	settimer(min_interval+(rand()*range_interval));
+	return;
+
+# ........................................................................................
+
+timer:
+	temp = rand()*numsounds;
+	sndchannel = playsoundlocal(wav0[temp], (min_volume+(rand()*range_volume)), ((rand()*2)-1.0), 0x0, 0);
+	settimer(min_interval+(rand()*range_interval));
+	return;
+end
+

@@ -1,0 +1,56 @@
+# Jones 3D Cog Script
+#
+# RIV_AmbRapids2.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message	    entered
+
+	thing		soundPos0		nolink
+    
+    sector      start_Amb1      linkID=1
+    
+    sector      stop_Amb1       linkID=0
+    sector      stop_Amb2       linkID=0
+    sector      stop_Amb3       linkID=0
+    
+	sound		snd_rapids=gen_waterfall_a.wav      local
+    
+    int         playing=0               local
+    int         channel0=0              local
+    
+    flex        min_Pos0=-1
+    flex        max_Pos0=-1
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	if((GetSenderID() == 1) && (playing == 0))
+    {
+        playing = 1;
+        
+        Sleep(Rand()+0.5);
+        channel0 = PlaySoundThing(snd_Rapids, soundPos0, 1.0, min_Pos0, max_Pos0, 0x0001);
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        playing = 0;
+        StopSound(channel0, 2.0);
+    }
+    
+	return;
+
+# ========================================================================================
+
+end

@@ -1,0 +1,43 @@
+# Jones 3D Cog Script
+#
+# TEO_DemoIs.cog
+#
+# Tells the level that this is the demo or not
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    message     startup
+        
+    cog         mirrorgodcog
+        
+    thing       door0
+    thing       door1
+    thing       door2
+    thing       door3        
+        
+    int         isdemo=0
+    int         count=0
+end
+
+code
+# ........................................................................................
+startup:
+    if (isdemo == 1) 
+    {
+        SendMessage(mirrorgodcog, user0);
+        for (count=0; count < 3; count=count+1)
+        {
+            //MoveToFrame(door0[count1], 1, 1);
+            print("opening up statlock doors");
+        }            
+    }
+    return;
+        
+# ........................................................................................
+
+end
+

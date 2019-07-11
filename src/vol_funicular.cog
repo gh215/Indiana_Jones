@@ -1,0 +1,880 @@
+# Jones 3D Cog Script
+#
+# VOL_Funicular.cog
+#
+# This cog will play the funicular puzzle area in Vol.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+#.......................MESSAGES....................
+message	startup
+message	activated
+message	entered
+message	exited
+message	aievent
+message	pulse
+message	arrived
+
+#.......................ACTORS....................
+thing	player													local
+thing	indyActor
+thing	indyInTram
+
+#.......................ACTOR LOOK TARGETS....................
+thing	in_endlook
+
+
+#.......................PROPS....................
+thing	funicular												
+thing	pivotrack
+thing	realpivotghost
+thing	crate													
+thing	switch
+thing	fixtarget
+
+thing	switchhitplate
+
+
+#.......................CAMERA TARGETS....................
+thing	indyActortarget												local
+
+# first set of camtargets
+thing	fixfailcamtarg
+thing	fixcamtarg
+thing	showCamtarg
+thing	lavacrosstarg
+thing	blastwalltarg
+thing	endscenetarg
+thing	switchshottarg
+thing	fixendcampos
+
+# second set of camtargets
+thing	rollawaytarg	# cam offsets to this positions
+thing	zoom1targ			
+thing	zoom2targ			
+thing	templetarget
+
+
+#.......................ACTOR MV_TARGETS....................
+thing	commietarget
+thing	commietarget2
+thing	commietarget3
+thing	commietarget4
+thing	commietarget5
+
+thing	commie													local
+thing	goalThing												local
+thing	in_mv0
+thing	in_fixmv
+thing	in_endscenemv
+
+thing	lastfirepos0											# final commie blasting position
+thing	lastfirepos1                                            # final commie blasting position
+thing	lastfirepos2                                            # final commie blasting position
+thing	lastfirepos3                                            # final commie blasting position
+
+#.......................EVENT LOCATIONS....................
+thing	blastpos
+thing	thepiece												local
+thing	commiespot_targ									
+thing	commiecreate_spot									
+thing	endfire_target1			
+thing	endfire_target2			
+
+#.......................CAMERAS....................
+thing	curCam													local
+
+# first set of cams
+thing	fixfailcam												# cam for failed repair attempt
+thing	showCam													# camera for indyActor's "Volodnikov..." line
+thing	fixCam                                                  # camera for indyActor's fix it position
+thing	panCam                                                  # camera pans to cruciform
+thing	blastwallcam                                            # camera to show commies' entry
+thing	endscenecam                                            	# to return player control
+
+# second set of cams
+thing	rollCam                                                  # camera for first zoom shot
+thing	butCam                                                  # camera for indyActor's button position
+thing	zoom1cam												# cam for first of highspeed tram shots
+thing	wideshotcam                                           	# wide rolling shot
+thing	arrivalcam												# final tram movement shot
+
+thing	end_campos												# cam1 will be placed here at the very end
+#.......................TRIGGERS....................
+surface	blastwall
+surface	cratespot							mask=0x80
+sector	line1trigger
+
+
+#.......................MODELS......................
+model	wheelhand=hand_in_pulleywheel.3do						local
+
+#.......................ENEMIES....................
+thing	commie0
+thing	commie1
+thing	commie2
+thing	commie3
+
+#.......................COGS....................
+cog		hintcog
+cog		waycog
+
+
+#.......................KEYFRAMES....................
+keyframe	in_fix=0in_place_pulleywheel.key					local 
+keyframe	release=vol_release_arm.key							local
+keyframe	in_switchhit=in_activate_medium.key					local
+keyframe	switchrun=vol_release_arm.key						local
+
+#.......................SAYLINES....................
+sound	in_line1=VL07J01.WAV									local	# Volodnikov must have been here. Too bad...
+sound	in_line2=VL07J02.WAV									local	# This thing needs a replacement pulley.
+sound	in_line3=VL07J03.WAV									local	# Ok, ready to roll.
+
+#.......................SOUND_FX....................
+sound	click=tem_monkeykey_unlock_c.wav						local
+sound	snap=teo_crush_prime_c.wav								local	
+sound	com_cue=mus_gen_russbold1.wav							local	
+sound	spot_cue=mus_gen_russsubdued1.wav						local	
+sound	tramcreak1=jep_sus_crk_1.WAV							local
+sound	tramcreak2=jep_sus_crk_2.WAV							local
+sound	releasesnd=gen_lever_reset.wav							local
+
+sound	commie_entry1=nub_aethdoorarm_stop_c.wav				local	# twice at low volume	
+sound	commie_entry2=nub_croc_stop_c.wav						local	# once louder	
+sound	escape_cue=mus_jep_indyrescue2.wav						local
+
+
+
+
+#.......................TEMPLATES....................
+template	thepart=trampivot									local
+template	dust=explosiondust									local
+template	shot=+dummy_bazooka									local
+template	ghostTpl=ghost										local
+
+
+#.......................VARIABLES....................
+int		inthezone=0			   									local
+int		inthecar=0			   									local
+int		inonthecrate=0		   									local
+int		fixed=0				   									local
+int		attempted=0			   									local
+int		cratecamtarg=0											local
+int		isrocking=0												local
+int		in_line													local
+int		in_swapref												local		 
+int		i					   									local
+int		animId				   									local
+int		curSound			   									local
+
+flex	pulsetime=1.75	       									
+flex	tempheadspeed											local	       									
+flex	escape													local	       									
+flex	fixscene												local	       									
+flex	inboxprep												local	       									
+flex	playerrestore											local	       									
+
+#.......................VECTORS....................
+vector	camPos				   									local
+vector 	lookVector			   									local
+vector	indyActorTargPos										local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+	Sleep(.25);
+    
+	# get the player
+	player = GetLocalPlayerThing();
+	
+    # fix camera
+	ResetCameraFOV(0, 0);
+	
+	# disable indyActorActors' AI
+	AISetCutSceneMode(indyActor);
+
+	# disable the commies at startup
+	for (i = 0; i <= 3; i = i + 1) 
+	{
+        SetThingFlags(commie0[i], 0x80000);
+        #AISetMode(commie0[i], 0x12040);		// Disable the AI, but make sure we still gat messages, and don't check for cliffs while moving.
+		AISetCutSceneMode(commie0[i]);
+	}
+
+    # no collide for the switch
+	SetCollideType(switch, 0);
+	
+	return;
+
+# ========================================================================================
+activated:
+
+	
+	If (GetSenderRef() == fixtarget)	# player activates the trams' damaged mount	piece
+    {
+
+			If (inthezone == 0) return;
+			If (inonthecrate == 0) return;
+			If (fixed == 0)	
+			{
+				StartCutscene(1);
+                
+				If (GetCurItem(player) == 107)	# player has the pulley wheel in his hand
+				{
+                    
+					# disable the player
+					MakeMeStop();
+                    
+					# line up the actor
+					DeselectWeaponWait(player); # stow any weapon or lighter
+					# get actor in player's location
+					CopyOrientAndPos(player, indyActor);
+					CopyPlayerHolsters(player, indyActor); # make sure actor has matching props
+					SetThingFlags(player, 0x80000);
+					ClearThingFlags(indyActor, 0x80000);
+					
+					# play anims and sounds, replace part
+                    ChangeInv(player, 107, -1);
+					call fixscene;
+                    #restore the player
+					call playerrestore;
+					return;
+                }
+
+				
+			else
+				{
+                # prep the actor on the box
+				call inboxprep;
+				
+				If (cratecamtarg == 0)
+				{
+                # create a target right above and in front of indyActor actor
+				indyActorTargPos = VectorAdd(VectorTransformToOrient(indyActor, '0.0 0.02 0.02'), GetThingPos(indyActor));
+				indyActortarget = CreateThingAtPos(ghostTpl, GetThingSector(indyActor), indyActorTargPos, '0 0 0');
+				CaptureThing(indyActortarget);
+				cratecamtarg = 1;
+				}
+
+				# camera control
+				ResetCameraFOV(0, 0);
+				Sleep(0.01);
+				curCam=GetCurrentCamera();
+				SetExtCamOffsetToThing(fixfailcam);
+				SetExtCamLookOffsetToThing(showCamtarg);
+				#Sleep(1.0);
+				#SetCameraSecondaryFocus(2, indyActortarget);
+				#SetCameraFocus(2, fixfailcam);
+				#SetCurrentCamera(2);
+				#SetCameraLookInterp(2, 1);
+				#SetCameraInterpSpeed(2, 1.0);
+				#Sleep(0.01);
+                #SetCameraSecondaryFocus(2, showCamtarg);
+				SetCameraFOV(80, 1, 0.5);
+				
+				# play anim , "this thing needs..."
+				AIEnableHeadTracking(indyActor, showCamtarg);
+				#PlayMode(indyActor, 60, 0);
+				PlayVoice(indyActor, in_line2, 1.0, 1);
+				Sleep(0.5);
+				ResetCameraFOV(0, 0);
+                
+				AIDisableHeadTracking(indyActor);
+				SetCurrentCamera(curCam);
+				#restore the player
+                call playerrestore;
+                }
+			}
+            
+			
+    }
+
+	If (GetSenderRef() == switchhitplate)
+		{
+			If (inthecar != 1) return;
+			If (fixed == 1)
+			{
+            call escape;
+			}
+
+			else If (fixed == 0)
+			{
+            # disable the player
+			StartCutscene(1);
+			SetActorFlags(player, 0x200000);
+			MakeMeStop();
+
+            # line up the actor
+			DeselectWeaponWait(player); # stow any weapon or lighter
+			TeleportThing(indyActor, player);
+			CopyPlayerHolsters(player, indyActor); # make sure actor has matching props
+            SetThingFlags(player, 0x80000);
+			ClearThingFlags(indyActor, 0x80000);
+
+			# offset camera to the fixCam position
+            SetExtCamOffsetToThing(butCam);
+			SetExtCamLookOffsetToThing(switchshottarg);
+			
+            # reset then set camera FOV
+			ResetCameraFOV(0, 0);
+			Sleep(0.01);
+			SetCameraFOV(60, 1, 1.0);
+
+            Sleep(0.25); # wait a beat
+			
+			AISetLookThing(indyActor, switchshottarg);
+			Sleep(0.5);
+            PlayKey(indyActor, in_switchhit, 4, 0x12, 0);
+			Sleep(0.25);
+			PlayVoice(indyActor, in_line2, 1.0, 1);
+			Sleep(0.25);
+            TeleportThing(player, indyActor);
+			ClearActorFlags(player, 0x200000);
+			ClearThingFlags(player, 0x80000);
+			SetThingFlags(indyActor, 0x80000);
+            inthecar = 1;
+			ResetCameraFOV(0, 0);
+			RestoreExtCam();
+			EndCutscene();
+			ClearActorFlags(player, 0x200000);
+			
+			}
+        }
+
+return;
+
+# ========================================================================================
+# ========================================================================================
+fixscene:
+
+    # scene cannot repeat
+	fixed = 1;
+	
+	# clear the hint
+	SendMessage(hintcog, user0);
+    
+	AttachThingToThing(pivotrack, funicular);
+	
+    # play anims on actor
+	PlayKey(indyActor, in_fix, 4, 0x12, 0);
+	Sleep(0.5);
+	# swap hand mesh
+    in_swapref=SetThingMesh(indyActor, 15, wheelhand, 0);
+	
+    # indyActor looks at the damaged piece
+    AIEnableHeadTracking(indyActor, pivotrack);
+
+	# get camera to the fixCam position	on action cut
+	curCam=GetCurrentCamera();
+	SetCameraFocus(2, fixCam);
+	SetCameraSecondaryFocus(2, fixcamtarg);
+	SetCurrentCamera(2);
+	TeleportThing(indyActor, in_fixmv);
+	SetCameraFOV(48, 0, 0);
+
+    Sleep(1.0);
+    PlaySoundLocal(click, 1.0, 0.0, 0x0, 0);
+	
+	Sleep(.75);
+	RestoreThingMesh(indyActor, in_swapref); # drop that wheel
+    PlaySoundLocal(snap, 0.75, 0.0, 0x0, 0);
+	# move funicular into place, create correct parts
+    DestroyThing(pivotrack);
+	thepiece=CreateThing(thepart, realpivotghost);
+	CaptureThing(thepiece);
+	
+    # lock them down
+	AttachThingToThingEx(thepiece, funicular, 0x000C);
+    Sleep(.5);
+
+    
+	# "ok now i'm ready...'
+	PlayVoice(indyActor, in_line3, 1.0, 1);
+	#Sleep(.5);
+
+	# commie penetration sounds
+	PlaySoundThing(commie_entry1, blastwalltarg, 0.75, 6, 30, 0x0);
+	Sleep(0.5);
+    PlaySoundThing(commie_entry1, blastwalltarg, 0.75, 6, 30, 0x0);
+	
+	# indyActor stops looking at the pivotrack
+    AIDisableHeadTracking(indyActor);
+	
+	# indy checks out the commotion
+	SetThingMaxRotVel(indyActor, 120.0);
+	AISetLookThing(indyActor, blastpos);
+	Sleep(0.75);
+
+    # music plays
+	PlaySoundLocal(com_cue, 1.0, 0.0, 0x0, 0);
+	
+	# Camera pans/dollys to blastwall
+	#SetCameraInterpSpeed(2, 2.0);
+	#SetCameraLookInterp(2, 1);
+	#Sleep(0.01);
+	#SetCameraSecondaryFocus(2, lavacrosstarg);
+	
+	animId=MoveThingToPos(fixcamtarg, GetThingPos(blastwalltarg), 3.0);
+	#Sleep(2.0);
+	MoveToFrame(fixCam, 1, 3.5);
+	Sleep(3.0);
+	SetCameraLookInterp(2, 0);
+	WaitForStop(fixCam);
+	#Sleep(0.5);
+	#animId=MoveThingToPos(lavacrosstarg, GetThingPos(blastpos), 1.0);
+    
+	# last commie noise
+	PlaySoundThing(commie_entry2, blastpos, 1, 8, 40, 0x0);
+	#Sleep(0.5);
+    
+    #animId = MoveThingToPos(line3targ, GetThingPos(lavacrosstarg), 1.0);
+    #Sleep(2.0);
+    
+	# new camera looks from lavacross to blastwall
+	#SetCameraFocus(2, blastwallcam);
+	#SetCameraFOV(90, 1, 2);
+	#Sleep(2.0);
+
+    # wall explodes, commies rush in
+	CreateThing(shot, blastpos);
+	# screenshake and dust
+	SetPulse(0.05);
+
+	Sleep(0.5);
+
+    # commies are drawn
+	for (i = 0; i <= 3; i = i + 1)
+		{
+		ClearThingFlags(commie0[i], 0x80000);
+        }
+
+	SetAdjoinFlags(blastwall, 2);
+    SetAdjoinFlags(GetSurfaceAdjoin(blastwall), 2);
+	SetFaceGeoMode(blastwall, 0);
+
+	Sleep(0.25);
+	# stop screenshake and dust
+	SetPulse(0.0);
+	
+	# commies rush in
+	for (i = 0; i <= 3; i = i + 1)
+		{
+        AISetMoveSpeed(commie0[i], 2.0);
+        AISetLookThing(commie0[i], commietarget);
+		AISetMoveThing(commie0[i], commietarget, 0);
+		Sleep(.01);
+        }
+
+	Sleep(2.0);
+
+	# put indyActor in endcutscene position
+    TeleportThing(indyActor, in_endscenemv);
+	# put the player at the actor's position, end the scene
+    TeleportThing(player, indyActor);
+	ClearThingFlags(player, 0x80000);
+	SetThingFlags(indyActor, 0x80000);
+    
+	# restore the game cam
+	SetCameraPosition(1, GetThingPos(endscenecam));
+	SetCurrentCamera(1);
+    ResetCameraFOV(0, 0);
+    
+	# restore player control
+	ClearActorFlags(player, 0x200000);
+	EndCutScene();
+	RestoreExtCam();
+
+	# begin backup commie generation
+	SendMessage(waycog, user0);
+    
+
+return;
+
+
+# ========================================================================================
+escape:
+
+	# prep actor
+	SetActorFlags(player, 0x200000);
+	StartCutScene(1);
+	
+	# line up the actor
+	DeselectWeaponWait(player); # stow any weapon or lighter
+	CopyOrientAndPos(player, indyActor);
+	CopyPlayerHolsters(player, indyActor); # make sure actor has matching props
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyActor, 0x80000);
+	AISetLookThingEyeLevel(indyActor, switchshottarg);
+    
+    # goto take off camera
+	SetCameraSecondaryFocus(2, rollawaytarg);
+	SetCameraFocus(2, rollCam);
+	SetCurrentCamera(2);
+	SetCameraFOV(70, 0, 0);
+
+    
+	# indy hits switch, tram rolls off
+	AIWaitForStop(indyActor);
+    Sleep(0.25);
+    PlayKey(indyActor, in_switchhit, 4, 0x12, 0);
+	Sleep(0.25);
+
+	# animate the switch
+    PlayKey(switch, switchrun, 4, 0x12, 0);
+    PlaySoundLocal(releasesnd, 1, -1, 0x0, 0);
+	
+	Sleep(0.25);
+	PlaySoundLocal(commie_entry1, 1, 0, 0x0, 0);
+	
+	# Actor looks at temple target, funicular is away
+	SetThingMaxRotVel(indyActor, 250.0);
+    AISetLookThingEyeLevel(indyActor, templetarget);
+	AttachThingToThing(zoom2targ, funicular);
+	AIWaitForStop(indyActor);
+	#StopThing(indyActor);
+    AttachThingToThingEx(indyActor, funicular, 0x000C);
+    AttachThingToThingEx(indyInTram, funicular, 0x000C);
+    MoveToFrame(funicular, 1, 6);
+    Sleep(2.0);
+
+    # show the in tram actor, hide the indyActor
+	SetThingFlags(indyActor, 0x80000);
+	ClearThingFlags(indyInTram, 0x80000);
+    CopyPlayerHolsters(player, indyInTram); # make sure actor has matching props
+	
+	# cut to first zoom shot
+	SetCameraSecondaryFocus(2, zoom1targ);
+	SetCameraFocus(2, zoom1cam);
+
+	# commies blasting on edge
+	for (i = 0; i <= 3; i = i + 1)
+		{
+        If (commie0[i] != -1)
+			{
+            AISetMoveThing(commie0[i], lastfirepos0[i], 0);
+			Sleep(0.5);
+			AIEnableInstinct(commie0[i], "lookfortarget", 0);
+			}
+        }
+
+	AISetFireTarget(commie0, endfire_target1);
+	AISetFireTarget(commie1, endfire_target2);
+	AISetFireTarget(commie2, endfire_target1);
+	AISetFireTarget(commie3, endfire_target2);
+	
+    SetCameraFOV(60, 0, 0);
+	Sleep(1.0);
+
+    # play escape cue
+    PlaySoundLocal(escape_cue, 1.0, 0.0, 0x0, 0);
+	Sleep(2.0);
+
+	# cut to long shot
+    SetCameraSecondaryFocus(2, zoom2targ);
+	SetCameraFocus(2, wideshotcam);
+    SetCameraFOV(100, 0, 0);
+	Sleep(2.0);
+	
+	# cut to last zoom
+	SetCameraSecondaryFocus(2, templetarget);
+	SetCameraFocus(2, arrivalcam);
+
+    
+return;
+	
+	# finish is handled in the arrived handler
+# ========================================================================================
+entered:
+
+If ((GetSenderRef() == line1trigger) &&  (attempted == 0))
+	{
+    
+	attempted = 1;	#line won't repeat
+
+	curCam = GetCurrentCamera();
+	
+	StartCutScene(1);
+	# disable the player
+	SetCollideType(crate, 0);
+	MakeMeStop();
+
+    # create a target right above and in front of indyActor actor and attach it to him
+	indyActorTargPos = VectorAdd(VectorTransformToOrient(player, '0.0 0.02 0.015'), GetThingPos(player));
+	indyActortarget = CreateThingAtPos(ghostTpl, GetThingSector(player), indyActorTargPos, '0 0 0');
+	CaptureThing(indyActortarget);
+	AttachThingToThing(indyActortarget, indyActor);
+
+	
+	# cut camera out to showCam position
+	SetCameraSecondaryFocus(2, indyActortarget);
+	SetCameraFocus(2, showCam);
+	SetCurrentCamera(2);
+    SetCameraLookInterp(2, 0);
+	Sleep(0.01);
+	SetCameraFOV(70, 0, 0);
+
+	# line up the actor
+    DeselectWeapon(player); # stow any weapon or lighter
+	CopyOrientAndPos(player, indyActor);
+	CopyPlayerHolsters(player, indyActor); # make sure actor has matching props
+    #Sleep(0.25); # wait a beat
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyActor, 0x80000);
+
+	
+    # play the spot cue
+    PlaySoundLocal(spot_cue, 0.5, 1, 0x0, 0);
+	
+
+    # Move indyActor over to the tram 
+	AISetLookThingEyeLevel(indyActor, in_mv0);
+	AIWaitForStop(indyActor);
+	
+	AISetMoveSpeed(indyActor, 1.0);
+	AISetMoveThing(indyActor, in_mv0, 0);
+	
+	# get player maxheadrotvel and slow down indy
+	tempheadspeed=GetThingMaxHeadVel(player);
+	SetThingMaxHeadVel(indyActor, 100.0);
+	
+	Sleep(0.5);
+    
+	# indyActor looks at the damaged piece
+    AIEnableHeadTracking(indyActor, pivotrack);
+	Sleep(0.75);
+	SetThingMaxRotVel(indyActor, 120.0);
+	AISetLookThingEyeLevel(indyActor, pivotrack);
+	AIWaitForStop(indyActor);
+	Sleep(0.25);
+    # say volodnikov line
+	in_line=PlayVoice(indyActor, in_line1, 1.0, 0);
+	#Sleep(2.0);
+	DetachThing(indyActortarget);
+	
+	# camera begins to zoom
+    SetCameraFOV(50, 1, 5.0);
+    
+	# move camera focus object up to pivotrack
+    animId = MoveThingToPos(indyActortarget, GetThingPos(showCamtarg), 5.0);
+	#Sleep(1.0);
+	MoveToFrame(showCam, 1, 0.84);
+    WaitForSound(in_line);
+	Sleep(1.0);
+
+	# camera look interp is on
+	#SetCameraLookInterp(2, 1);
+	#SetCameraInterpSpeed(2, 5);
+    # camera pans to the pivotrack
+	#SetCameraSecondaryFocus(2, pivotrack);
+	
+    AIDisableHeadTracking(indyActor);
+	
+    # interp from behind at end
+	
+	
+	# restore the player at indyActorActor's position
+	CopyOrientAndPos(indyActor, player);
+    SetThingFlags(indyActor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+    EndCutScene();
+	ClearActorFlags(player, 0x200000);
+    SetCollideType(crate, 3);
+	
+	# restore the camera
+	# camera interps back from this position
+    Sleep(0.01);
+	SetCameraPosition(1, GetThingPos(fixendcampos));
+	SetCurrentCamera(1);
+    ResetCameraFOV(0, 0);
+	RestoreExtCam();
+	Sleep(0.01);
+    ResetCameraFOV(0, 0);
+    DestroyThing(indyActortarget);
+}
+
+
+If ((GetSenderRef() == funicular) && (GetSourceRef() == player))
+	{
+    inthecar = 1;
+	}
+
+If ((GetSenderRef() == cratespot) && (GetSourceRef() == crate))
+	{
+	inthezone = 1;
+	}
+
+If ((GetSenderRef() == crate) && (GetSourceRef() == player))
+	{
+    inonthecrate = 1;
+	}
+    
+return;
+
+# ========================================================================================
+exited:
+
+
+If ((GetSenderRef() == cratespot) && (GetSourceRef() == crate))
+	{
+	inthezone = 0;
+	}
+
+If ((GetSenderRef() == funicular) && (GetSourceRef() == player))
+	{
+	inthecar = 0;
+	}
+
+If ((GetSenderRef() == crate) && (GetSourceRef() == player))
+	{
+	inonthecrate = 0;
+	}
+    return;	
+
+
+# ========================================================================================
+aievent:
+	
+	If (GetSenderRef() == indyActor) return;
+    
+    if (GetParam(0) != 0x2000)			// We only care about the "goal near" AI event.
+		return;
+
+	commie = GetSenderRef();
+	goalThing = AIGetGoalThing(commie);
+
+	
+    
+	
+	if (goalThing == commietarget)
+	{
+		AISetLookThing(commie, commietarget2);
+		AISetMoveThing(commie, commietarget2, 0);
+		return;
+	}
+
+	if (goalThing == commietarget2)
+	{
+		AISetLookThing(commie, commietarget3);
+		AISetMoveThing(commie, commietarget3, 0);
+		return;
+	}
+
+    if (goalThing == commietarget3)
+	{
+		AISetLookThing(commie, commietarget4);
+		AISetMoveThing(commie, commietarget4, 0);
+		return;
+	}
+
+    if (goalThing == commietarget4)
+	{
+        #AIClearMode(commie, 0x12040);				// Re-enable the AI and turn cliff-checking back on.
+		AIClearCutSceneMode(commie);
+		AISetLookThing(commie, indyActor);	
+		AISetFiretarget(commie, indyActor);
+        #AISetMode(commie, 0x202);					// Set our mode to active and attacking.
+		
+		AISetMoveThing(commie, commietarget5, 0);	// And head towards our last target.
+		return;
+	}
+
+return;
+	
+# ========================================================================================
+inboxprep:
+
+	# disable the player
+	MakeMeStop();
+    
+	# line up the actor
+	DeselectWeapon(player); # stow any weapon or lighter
+	CopyOrientAndPos(player, indyActor);
+	CopyPlayerHolsters(player, indyActor); # make sure actor has matching props
+	Sleep(0.25); # wait a beat
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyActor, 0x80000);
+	#AISetLookThingEyeLevel(indyActor, in_fixmv);
+    AISetMoveSpeed(indyActor, 1.0);
+	AISetMoveThing(indyActor, in_fixmv, 1);
+	AISetLookThing(indyActor, pivotrack);
+	AIWaitForStop(indyActor);
+
+return;
+
+# ========================================================================================
+playerrestore:
+
+	CopyOrientAndPos(indyActor, player);
+	SetThingFlags(indyActor, 0x80000);
+    ClearThingFlags(player, 0x80000);
+	ResetCameraFOV(0, 0);
+	SetCameraLookInterp(2, 0);
+	Sleep(0.01);
+	SetCurrentCamera(curCam);
+	RestoreExtCam();
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+
+return;
+
+# ========================================================================================
+pulse:
+
+		SetPOVShake('0.0 0.0 0.03', '0.0 0.0 0.00', 80.0, 0.80);
+        CreateThing(dust, blastpos);
+return;
+
+# ========================================================================================
+arrived:
+
+	If (GetSenderRef() != funicular) return;
+	If (isrocking != 0) return;
+	{
+    	isrocking=1;
+		PlaySoundThing(commie_entry2, funicular, 1, 3, 20, 0x0);
+		StopSound(curSound, 0.0);
+	}
+	
+	# rocking animations play here
+	Rotate(funicular, -5, 0, 0.5);
+    PlaySoundLocal(tramcreak1, 1, 1, 0x0, 0); 
+	Sleep(0.5);
+    Rotate(funicular, 10, 0, 0.5);
+    Sleep(0.5);
+    Rotate(funicular, -5, 0, 0.5);
+    PlaySoundLocal(tramcreak2, 1, -1, 0x0, 0); 
+	Sleep(0.5);
+	
+	# hide the tram actor, show indyactor
+	SetThingFlags(indyInTram, 0x80000);
+	ClearThingFlags(indyActor, 0x80000);
+	
+	# indy looks at the gate
+	
+	SetThingMaxRotVel(indyActor, 150.0);
+	AISetLookThing(indyActor, in_endlook);
+	
+	Sleep(1.0);
+	SetCameraPosition(1, GetThingPos(end_campos)); # prep follow-cam to swing behind indy
+	call playerrestore;
+
+return;
+
+# ========================================================================================
+# ========================================================================================
+# ========================================================================================
+
+end
+
+
+
+

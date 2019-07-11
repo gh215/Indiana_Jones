@@ -1,0 +1,107 @@
+# Jones 3D Cog Script
+#
+# pyr_eyeblock.cog
+#	
+# Eyeblock vs. Taklit's part
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+symbols
+message	startup
+message	pulse
+message	crossed
+
+thing   eyeblock
+thing	player	local
+
+surface	blockout1	linkid=1
+surface	blockout2	linkid=1
+
+surface blockback1	linkid=2
+surface	blockback2	linkid=2
+
+material	bigeye=pyr_a_wall_horus_eye.mat		local
+
+int		movedirection=0		local
+
+sound	click=nub_anubisarm_place_c.wav		local
+
+# subroutines
+flex	blockback=0.0	local
+flex	blockout=0.0	local
+end
+
+code
+startup:
+	SetThingLight(eyeblock, '1 1 .5', .001, .01);
+	
+	return;
+
+crossed:
+# ---> all four adjoins
+
+	player = GetLocalPlayerThing();
+	
+	# if leaving area...
+	if (GetSenderID() == 2)
+	{
+		# send block back and turn off pulse
+		SetPulse(0);
+		call blockback;
+	}
+	else
+	{
+		# otherwise start pulse
+		SetPulse(.2);
+	}
+	
+	return;
+	
+blockout:
+	# movedirection values:
+		# 0: moving into wall or fully in
+		# 1: moving out from wall or fully out
+	
+	# if block is out or on the way, return
+	if (movedirection == 1) return;
+	
+	# open eye, move block out
+	movedirection = 1;
+	SetMaterialCel(bigeye, 1);
+	PlaySoundThing(click, eyeblock, 1, -1, -1, 0);
+	
+	sleep(.5);
+
+	if (moveDirection == 1)
+		MoveToFrame(eyeblock, 1, 2.5);
+
+	return;
+
+blockback:
+	# if block is in or on the way, return;
+	if (movedirection == 0) return;
+
+	# close eye, move block back
+	movedirection = 0;
+	SetMaterialCel(bigeye, 0);
+	PlaySoundThing(click, eyeblock, 1, -1, -1, 0);
+
+	MoveToFrame(eyeblock, 0, 2);
+
+	return;
+
+pulse:
+	if (IsInvisible(player))
+	{
+		call blockback;
+	}
+	else
+	{
+		call blockout;
+	}
+
+	return;
+
+end

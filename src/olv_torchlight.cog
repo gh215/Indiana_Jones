@@ -1,0 +1,88 @@
+# Jones 3D Cog Script
+#
+# olv_torchlight.cog
+#
+# [SXC & DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message     activated
+message     startup
+message     timer
+
+sound       fwoosh=gen_torchlitet_c.wav     local
+sound       burning=gen_torch_burnin_c.wav  local
+thing       player                          local
+
+thing       torchobj
+thing       flamepos
+template    flametemplate=torchflame	local
+keyframe	in_light=in_light_stuff.key	local
+
+int         islit = 0
+int		donelit=0				local
+flex        rvalmin=0.87			local
+flex        gvalmin=0.60			local
+flex        bvalmin=0.10			local
+flex        rvalmax=0.94			local
+flex        gvalmax=0.74			local
+flex        bvalmax=0.5				local
+vector      minlite				local
+vector      maxlite				local
+vector      zerolite				local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	minlite = VectorSet(rvalmin, gvalmin, bvalmin);
+	maxlite = VectorSet(rvalmax, gvalmax, bvalmax);
+	zerolite= VectorSet(0.0, 0.0, 0.0);
+	SetThingLight(torchobj, zerolite, 0.3, 0.1);
+	if (islit == 1)
+	{
+		SetTimer(0.5);
+		CreateThing(flametemplate, flamepos);
+		SetThingLight(torchobj, minlite, 0.3, 0.01);
+		donelit=1;
+	}                        
+	return;
+
+activated:
+    if ((GetSenderRef() == torchobj) && (GetCurWeapon(player) == 13))
+	{
+		if(donelit == 1) return;
+		donelit=1;
+		MakeMeStop();
+		StartCutscene(0);
+		PlayKey(player, in_light, 4, 0x12, 1);
+		CreateThing(flametemplate, flamepos);                                 
+		SetThingLight(torchobj, minlite, 0.3, 0.01);
+		PlaySoundThing(fwoosh, torchobj, 0.4, 3, 10, 0);
+		SetTimer(0.1);
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+	}
+	return;
+        
+timer:
+	ThingLightAnim(torchobj, minlite, 0.3, maxlite, 0.3, 1.0);
+	PlaySoundThing(burning, torchobj, 1, 3, 10, 1);
+	return;
+
+end
+
+
+
+
+
+
+

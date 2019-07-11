@@ -1,0 +1,122 @@
+# Jones 3D Cog Script
+#
+# gen_GetGemGreen.cog
+#
+# [RT] [TL]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		activated
+message		callback
+message		startup
+
+
+# Change these variables ONLY!
+# -------------------------------------------------------------------
+
+# Use in_pickup_low or in_pickup_med for the "get" keyframe
+keyframe	get=in_pickup_med.key	local
+#keyframe	get=in_reach_high.key	local
+
+# Item-specific voice line
+sound		foundSnd=INXJ193.wav	local
+
+# Item bin number
+int			bin=95					local
+thing		target							# Tagert ghost for offset.	
+
+
+# Don't touch!
+# -------------------------------------------------------------------
+
+cog			talkCog					local
+
+thing		player					local
+thing		item
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+return;
+
+# -------------------------------------------------------------------
+activated:
+
+	# Check to see if player is holding something. 
+	if (GetCurItem(player) != 0)
+		{
+		return;
+		}
+
+	player = GetSourceRef();
+
+	# Disable player controls and stuff
+	if (MakeMeStop() == -1)
+		return;
+	DeselectWeaponWait(player);
+
+	# Make sure this pickup is valid
+	if (GetInv(player, bin) < GetInvMax(player, bin))
+	{
+        StartCutscene(0);
+
+		# Capture player so we get callback message
+		CaptureThing(player);
+		# Start the animation
+		PlayKey(player, get, 5, 0x12, 0); 
+	}
+	else
+	{
+		ClearActorFlags(player, 0x200000);
+		return;
+	}
+
+	# Call the Pickup Lines cog
+    talkCog = GetCogByIndex(0);
+	SendMessage(talkCog, 27);
+
+	# Set up the camera
+	SetExtCamOffsetToThing(target);
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	ReleaseThing(player);
+
+	# Get rid of the item
+	DestroyThing(item);
+	
+	# Add to inventory
+	ChangeInv(player, bin, 1.0);
+	SetInvAvailable(player, bin, 1);
+	JonesInvItemChanged(bin);
+
+	# Wait a bit, then start the voice line
+    Sleep(1.0);
+	PlayVoice(player, foundSnd, 1.0, 0);
+
+	# Reset the camera
+    RestoreExtCam();
+
+	# Enable player control
+    ClearActorFlags(player, 0x200000);
+	EndCutscene();
+
+	return;
+
+end
+

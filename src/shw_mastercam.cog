@@ -1,0 +1,49 @@
+# Jones 3D Cog Script
+#
+# MasterCam.cog
+#
+# Camera Control
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+	message	startup
+	message	user0
+	message	user1
+
+	thing	player	local
+
+	int	curCam	local
+	int	nofreak=0	
+end
+#============================================================
+code
+
+startup:
+
+		player = GetLocalPlayerThing();
+	return;
+
+
+# ============================================================
+user0:
+
+		SetThingFlags(player, 0x80000);
+		curCam = GetCurrentCamera();
+		SetCurrentCamera(2);
+		return;
+# ============================================================
+user1:
+
+		ClearThingFlags(player, 0X80000);
+		ClearActorFlags(player, 0X200000);
+		ResetCameraFOV(0,0);
+		SetCurrentCamera(1);
+		return;
+
+# ============================================================
+end
+

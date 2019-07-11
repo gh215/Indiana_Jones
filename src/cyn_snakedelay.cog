@@ -1,0 +1,80 @@
+# Jones 3D Cog Script
+#
+# cyn_snakedelay.cog
+#
+# This cog will cause a snake to attack upon the players' entry onto a specified face
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+#.......................... MESSAGES .....................
+	message		startup
+	message		entered
+	message		killed
+
+#.......................... ACTORS .....................
+	thing		snake
+	thing		player								local
+
+#.......................... ACTOR MARKS .....................
+
+#.......................... TRIGGERS .....................
+	surface		triggersurf
+
+#.......................... SOUNDS .....................
+	sound		strike=fol_sn_hiss.wav				local
+
+#.......................... VARIABLES .....................
+	int			attacked=0							local
+	int			i_deadsnake=0						local
+
+end
+# ========================================================================================
+code
+
+startup:
+
+	player=GetLocalPlayerThing();
+	AISetCutsceneMode(snake);
+
+	return;
+
+# ========================================================================================
+entered:
+
+	if (GetSenderRef() != triggersurf) return;
+	if (GetSourceRef() != player) return;
+	if (attacked == 1) return;
+	if (i_deadsnake == 1) return;
+
+	attacked = 1;
+    PlaySoundThing(strike, snake, 1, 6, 12, 0x0);
+    Sleep(1.0);
+    AIClearCutSceneMode(snake);
+	AISetFireTarget(snake, player);
+
+	return;
+
+# ========================================================================================
+killed:
+
+If(GetSenderRef() == snake)
+	{
+    i_deadsnake=1;
+	}
+return;
+# ========================================================================================
+
+	
+	
+end
+
+
+
+
+
+

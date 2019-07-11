@@ -1,0 +1,94 @@
+# Jones 3D Cog Script
+#
+# weap_Mirror.cog
+#
+# This cog controls the freaking mirror in the Aetherium.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		selected
+message		deselected
+message		callback
+
+model		mirrorHand=hand_in_mirror.3do	local
+
+sound		pullSnd=gen_grenade_pull.wav	local
+sound		putSnd=gen_grenade_put.wav		local
+
+thing		player							local
+
+int			handMesh						local
+int			callNum							local
+int			swapRef							local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	handMesh = GetMeshByName(player, "inrhand");
+
+	return;
+
+# -------------------------------------------------------------------
+
+selected:
+
+	SetAimWait(player, 0.0);
+	SetMountWait(player, 0.67);
+
+	SetArmedMode(player, 2);
+	SetCurWeapon(player, 50);
+	SetThingFireOffset(player, '0.0 0.0 0.0'); 
+
+	CaptureThing(player);
+	PlayMode(player, 66, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deselected:
+
+	SetMountWait(player, 0.67);
+	StopMode(player, 66, 0);
+
+	CaptureThing(player);
+	PlayMode(player, 67, 0);
+
+	SetArmedMode(player, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	callNum = GetParam(1);
+	ReleaseThing(player);
+
+	if (callNum == 28)
+	{
+		PlaySoundThing(pullSnd, player, 1, -1, -1, 0x880);
+		swapRef = SetThingMesh(player, handMesh, mirrorHand, 0);
+	}
+	else if (callNum == 29)
+	{
+		PlaySoundThing(putSnd, player, 1, -1, -1, 0x880);
+		RestoreThingMesh(player, swapRef);
+	}
+
+	return;
+
+end

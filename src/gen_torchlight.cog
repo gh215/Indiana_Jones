@@ -1,0 +1,104 @@
+# Jones 3D Cog Script
+#
+# gen_torchlight.cog
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message		startup
+message		activated
+message		timer
+
+thing		torchobj								# the thing you light
+thing		flamepos						nolink	# ghostobject for the position of the flame
+thing		player							local
+
+template	flametemplate							# template for the flame
+
+keyframe	litit=in_light_stuff.key		local
+
+sound		burning=gen_torch_burnin_c.wav  local
+
+flex		rvalmin=0.87
+flex		gvalmin=0.55
+flex		bvalmin=0.06
+
+flex		rvalmax=0.89
+flex		gvalmax=0.64
+flex		bvalmax=0.3
+
+flex		flickertime=2
+flex		lituptime=0.5
+flex		maxradius=0.3
+flex		minradius=0.3
+flex		radius=0.3						local
+
+int			islit=0
+int			lit=0							local
+
+vector		minlite							local
+vector		maxlite							local
+vector		zerolite						local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	player = GetLocalPlayerThing();
+
+	minlite = VectorSet(rvalmin, gvalmin, bvalmin);
+	maxlite = VectorSet(rvalmax, gvalmax, bvalmax);
+	zerolite= VectorSet(0.0, 0.0, 0.0);
+	SetThingLight(torchobj, zerolite, radius, 0.1);
+	if (islit == 1)
+	{
+		SetTimer(0.5);
+		CreateThing(flametemplate, flamepos);
+		SetThingLight(torchobj, minlite, radius, lituptime);
+		lit = 1;
+	}
+	return;
+
+# ........................................................................................
+activated:
+	if (lit == 0)
+	{
+		if (GetCurWeapon(player) != 13) return;
+		if (GetSenderRef() != torchobj) return;
+
+        lit = 1;
+
+		SetActorFlags(player, 0x200000);
+		StopThing(player);
+		StartCutscene(0);
+
+        PlayKey(player, litit, 4, 0x12, 0);
+		Sleep(0.4);
+		CreateThing(flametemplate, flamepos);
+		SetThingLight(torchobj, minlite, radius, lituptime);
+		SetTimer(lituptime);
+	}
+	return;
+
+# ........................................................................................
+timer:
+	if (lit == 1)
+	{
+		lit = 2;
+		ThingLightAnim(torchobj, minlite, minradius, maxlite, maxradius, flickertime);
+		PlaySoundThing(burning, torchobj, 1, 3, 10, 1);
+		Sleep(0.7); # RT: Don't enable before anium is finished!
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+	}
+	return;
+
+end

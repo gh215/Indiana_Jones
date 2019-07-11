@@ -1,0 +1,344 @@
+# Jones 3D Cog Script
+#
+# shw_PowerRoom_Sliuce.cog
+#
+# Sluiceway Alternating Script for the power room.
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+		
+	#	MESSAGES
+	message	startup		
+    message	user0		
+	message	user1
+	message	user2
+	message	arrived
+    
+	#	WATER SECTORS
+    sector  Awater0
+	sector  Awater1
+	sector  Awater2
+	sector  Awater3
+	sector  Awater4
+	sector  Awater5
+	sector  Awater6
+    
+    sector  Bwater0
+	sector  Bwater1
+	sector  Bwater2
+	sector  Bwater3
+	sector  Bwater4
+	sector  Bwater5
+	sector  Bwater6
+
+    #	THE WATER CONE 3dos
+    thing     Acone  
+    thing     Bcone
+
+	#	SPLASH EFFECT POSITION GHOSTS
+    thing	Aconemistpivot
+	thing	Aconemistobject1
+	thing	Aconemistobject2
+
+    thing	Bconemistpivot
+	thing	Bconemistobject1
+	thing	Bconemistobject2
+            
+	#	SURFACES IN THE SLUICES
+    surface Awatersurf0
+    surface Awatersurf1
+    surface Awatersurf2
+    surface Awatersurf3
+    surface Awatersurf4
+    surface Awatersurf5
+    surface Awatersurf6
+    surface Awatersurf7
+
+    surface Bwatersurf0
+    surface Bwatersurf1
+    surface Bwatersurf2
+    surface Bwatersurf3
+    surface Bwatersurf4
+    surface Bwatersurf5
+    surface Bwatersurf6
+    surface Bwatersurf7
+    
+	#	SOUNDS
+	sound	watersnd=shs_h2odrain_c.wav	local
+	
+	#	VARIABLES
+    int      thaw=0			local
+    int      index=0		local
+    int      aconerun=0		local
+    int      bconerun=0		local
+    int      soundrun=0		local
+    int      ringrun1		local
+    int      ringrun2		local
+    int      ringrun3		local
+    int      ringrun4		local
+    int      ringrun5		local
+    int      ringrun6		local
+	
+	#	TEMPLATES
+    template    mist=TitanicH2Ofx		local        
+	template	ring=+ripples	local
+    
+	# VECTORS
+    vector  sect_light      local
+    vector	ringstart		local
+	vector	ringend			local
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	Call Clearsluice1;
+	Call Clearsluice2;
+
+	#	attach the particle and ring sprite objects to the pivot object for A
+	AttachThingToThing(Aconemistobject1, Aconemistpivot);
+	AttachThingToThing(Aconemistobject2, Aconemistpivot);
+
+    #	attach the particle and ring sprite objects to the pivot object for B
+	AttachThingToThing(Bconemistobject1, Bconemistpivot);
+	AttachThingToThing(Bconemistobject2, Bconemistpivot);
+
+	# setup vectors for the water ripple sprites
+	ringstart = VectorSet(0.1, 0.1, 1.0);
+	ringend	= VectorSet(0.3, 0.3, 0.0);
+
+return;
+        
+# ========================================================================================
+Clearsluice1:    
+#pathA clearing
+
+sect_light = VectorSet(0.0, 0.0, 0.0);
+
+	for (index = 0; index <= 6; index = index + 1)
+		{
+		clearsectorflags(Awater0[index], 0x2);
+        setsectorlight(Awater0[index], sect_light, .1);
+        }
+	for (index = 0; index <= 7; index = index + 1)
+	    {
+		Setfacegeomode(Awatersurf0[index], 0);
+        }
+		SetThingFlags(Acone, 0x80000);
+
+		If (aconerun ==1)	# if the spray is running, stop it
+		{
+            aconerun=0;
+			StopThing(Aconemistpivot);
+            StopSound(soundrun,0);
+        }
+return;
+
+# ========================================================================================
+    
+Clearsluice2:    
+#pathB clearing
+	
+sect_light = VectorSet(0.0, 0.0, 0.0);
+	for (index = 0; index <= 6; index = index + 1)
+		{
+		clearsectorflags(Bwater0[index], 0x2);
+		setsectorlight(Bwater0[index], sect_light, .1);
+		}
+	for (index = 0; index <= 7; index = index + 1)
+		{
+		Setfacegeomode(Bwatersurf0[index], 0);
+        }
+		SetThingFlags(Bcone, 0x80000);
+
+        If (bconerun == 1)	# if the spray is running, stop it
+		{
+            bconerun=0;
+			StopThing(Bconemistpivot);
+			StopSound(soundrun,0);
+        }
+		
+
+return;		
+
+# ========================================================================================
+user1:
+
+
+sect_light = VectorSet(0.0, 0.2, 1.0);
+
+	for (index = 0; index <= 6; index = index + 1)
+		{
+		setsectorflags(Awater0[index], 0x2);
+		setsectorlight(Awater0[index], sect_light, 3);
+		}
+#set faces to draw & set faces to full light
+	for (index = 0; index <= 7; index = index + 1)
+	    {
+		setfacegeomode(Awatersurf0[index], 4);
+        setfacelightmode(Awatersurf0[index], 0);
+        }
+                        
+#create water object clean channelB
+		ClearThingFlags(Acone, 0x80000);
+        Call Clearsluice2;
+
+		aconerun = 1;
+		Rotate(Aconemistpivot, 360, 1, 0.5);
+        soundrun=PlaySoundThing(watersnd, acone, 1, 6, 12, 0x1);
+		
+  
+                
+        return;
+        
+# ========================================================================================
+
+
+user2:
+  
+
+sect_light = VectorSet(0.0, 0.2, 1.0);
+
+	for (index = 0; index <= 6; index = index + 1)
+		{
+		setsectorflags(Bwater0[index], 0x2);
+		setsectorlight(Bwater0[index], sect_light, 3);
+		}
+#set faces to draw & set faces to full light
+	for (index = 0; index <= 7; index = index + 1)
+		{
+		setfacegeomode(Bwatersurf0[index], 4);
+        setfacelightmode(Bwatersurf0[index], 0);
+        }
+                        
+#create water object
+		ClearThingFlags(Bcone, 0x80000);
+        Call Clearsluice1;
+
+        bconerun = 1;
+		Rotate(Bconemistpivot, 360, 1, 0.5);
+               
+        soundrun=PlaySoundThing(watersnd, bcone, 1, 6, 12, 0x1);
+  
+        return;
+       
+# ========================================================================================
+
+user0:
+
+    Call Clearsluice1;
+	Call Clearsluice2;
+        
+return;
+# ========================================================================================
+arrived:
+
+If ((GetSenderRef() == Aconemistpivot) && (aconerun == 1))
+{
+	
+	Rotate(Aconemistpivot, 360, 1, 0.5);
+	
+	#	create splash particles at center of system
+	CreateThing(mist, Aconemistpivot);
+	#	create the first ring at the center of the system
+	ringrun1=CreateThing(ring, Aconemistpivot); 
+	AnimateSpriteSize(ringrun1, ringstart, ringend, 0.75);
+    CreateThing(mist, Aconemistpivot);
+	
+	Sleep(0.1);
+    ringrun2=CreateThing(ring, Aconemistpivot); 
+	AnimateSpriteSize(ringrun2, ringstart, ringend, 0.75);
+	
+	
+	#	create splash particles at obj2 and center of system
+    CreateThing(mist, Aconemistpivot);
+	CreateThing(mist, Aconemistobject2);
+	CreateThing(mist, Aconemistpivot);
+	#	create the first ring at obj1 of the system
+	ringrun3=CreateThing(ring, Aconemistobject1); 
+	AnimateSpriteSize(ringrun3, ringstart, ringend, 0.75);
+
+    Sleep(0.1);
+    
+	#	create splash particles at obj1 and center of system
+	CreateThing(mist, Aconemistobject1);
+	CreateThing(mist, Aconemistpivot);
+	#	create the first ring at obj2 of the system
+	ringrun4=CreateThing(ring, Aconemistobject2); 
+	AnimateSpriteSize(ringrun4, ringstart, ringend, 0.75);
+    CreateThing(mist, Aconemistobject2);
+	
+	Sleep(0.1);
+    
+	ringrun5=CreateThing(ring, Aconemistpivot); 
+	AnimateSpriteSize(ringrun5, ringstart, ringend, 0.75);
+
+    #	create splash particles at obj1 and center of system
+	CreateThing(mist, Aconemistpivot);
+	CreateThing(mist, Aconemistobject2);
+	CreateThing(mist, Aconemistobject1);
+
+    ringrun6=CreateThing(ring, Aconemistobject1); 
+	AnimateSpriteSize(ringrun6, ringstart, ringend, 0.75);
+}
+
+If ((GetSenderRef() == Bconemistpivot) && (bconerun == 1))
+{
+	
+	Rotate(Bconemistpivot, 360, 1, 0.5);
+	
+	#	create splash particles at center of system
+	CreateThing(mist, Bconemistpivot);
+	#	create the first ring at the center of the system
+	ringrun1=CreateThing(ring, Bconemistpivot); 
+	AnimateSpriteSize(ringrun1, ringstart, ringend, 0.75);
+    CreateThing(mist, Bconemistpivot);
+	
+	Sleep(0.1);
+    ringrun2=CreateThing(ring, Bconemistpivot); 
+	AnimateSpriteSize(ringrun2, ringstart, ringend, 0.75);
+	
+	
+	#	create splash particles at obj2 and center of system
+    CreateThing(mist, Bconemistpivot);
+	CreateThing(mist, Bconemistobject2);
+	CreateThing(mist, Bconemistpivot);
+	#	create the first ring at obj1 of the system
+	ringrun3=CreateThing(ring, Bconemistobject1); 
+	AnimateSpriteSize(ringrun3, ringstart, ringend, 0.75);
+    CreateThing(mist, Bconemistobject2);
+
+    Sleep(0.1);
+    
+	#	create splash particles at obj1 and center of system
+	CreateThing(mist, Bconemistobject1);
+	CreateThing(mist, Bconemistpivot);
+	#	create the first ring at obj2 of the system
+	ringrun4=CreateThing(ring, Bconemistobject2); 
+	AnimateSpriteSize(ringrun4, ringstart, ringend, 0.75);
+
+	Sleep(0.1);
+    
+	ringrun5=CreateThing(ring, Bconemistpivot); 
+	AnimateSpriteSize(ringrun5, ringstart, ringend, 0.75);
+
+    #	create splash particles at obj1 and center of system
+	CreateThing(mist, Bconemistpivot);
+	CreateThing(mist, Bconemistobject2);
+	CreateThing(mist, Bconemistobject1);
+
+    ringrun6=CreateThing(ring, Bconemistobject1); 
+	AnimateSpriteSize(ringrun6, ringstart, ringend, 0.75);
+}
+
+return;
+# ========================================================================================
+
+end
+

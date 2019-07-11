@@ -1,0 +1,168 @@
+# Jones 3D Cog Script
+#
+# 01_BAB_Enter_Archive.cog
+#
+# Indy discovers the Archive room and marvels
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		entered	
+	
+# .................................. KEYFRAMES .................................
+	
+	keyframe	in_handsONhips=0in_stand4.key			local
+	keyframe	in_handsTOhips=0in_stand1_bd_4.key	   	local # 26x
+	keyframe	in_ltarmup=0in_leftarm_1_1.key			local
+	keyframe	in_botharmsup=0in_armsup_1_1.key		local
+		
+# .................................. MODELS ....................................
+
+
+# .................................. SOUNDS ....................................
+
+	sound		in_neblibrary=Bb07j01.wav				local # "...Shh, don't disturb..."
+	
+# ............................... ACTOR THINGS .................................
+
+	thing		player									local
+	thing		arc_indy
+ 	
+# .............................. OBJECT THINGS .................................
+
+
+# .............................. CAMERA THINGS .................................
+
+	thing		arc_cam_1								nolink
+		
+	thing		arc_ct_1								nolink
+	thing		arc_ct_2								nolink
+
+	
+# .............................. TARGET THINGS .................................
+
+	thing		arc_mk_1								nolink
+	thing		arc_mk_2								nolink
+
+# ........................ OTHER ENGINE REFERENCES .............................
+
+	sector		startsector
+
+	template    ghost_tpl=ghost							local
+	
+# ............................... VARIABLES ....................................
+	
+	vector		v_targetpos								local
+
+	int			cutSceneState=0							local
+
+	int			in_keyTrack1							local
+
+	int			cursound								local
+	int			curcam									local
+	
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	# Prepare for much later...
+	SetThingFlags(arc_indy, 0x80000);
+	cutSceneState = 0;
+
+	return;
+
+# ..............................................................................
+
+entered:
+
+	if (cutSceneState != 0)
+	{
+		# Only run cutscene once...
+		return;
+	}
+
+	# Prep engine...
+	player = GetLocalPlayerThing();
+	SetActorFlags(player, 0x200000);
+	cutSceneState = 1;
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutScene(1);
+
+	# Cut to shot of archive entrance...
+	curcam = GetCurrentCamera();
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, arc_cam_1);
+	SetCAmeraSecondaryFocus(2, arc_ct_1);
+	SetCurrentCamera(2);
+	SetCameraFOV(30, 0, 0.0);
+	
+	# Set up Indy...
+	ClearThingFlags(arc_indy, 0x80000);
+	SetThingFlags(player, 0x80000);
+	CopyPlayerHolsters(player, arc_indy);
+
+	# Indy walks to entrance...
+	AISetMoveSpeed(arc_indy, 0.9);
+	AISetLookThingEyeLevel(arc_indy, arc_mk_1);
+	AISetMoveThing(arc_indy, arc_mk_1, 1);
+	
+	# Indy: "Okay...Nebuchadnezzar's library, maybe...dead for thousands of years."
+	cursound = PlayVoice(arc_indy, in_neblibrary, 1.0, 0); # 9.7 sec
+	AISetLookThing(arc_indy, arc_mk_2);
+	SetCameraLookInterp(2, 1); # prep cam
+	Sleep(0.5);
+	in_keyTrack1 = PlayKey(arc_indy, in_handsONhips, 2, 0x10, 0);
+	PlayKey(arc_indy, in_handsTOhips, 4, 0x12, 1);
+
+	# Pan over to take in entire archive...
+	SetCameraInterpSpeed(2, 6.0);
+	SetCameraSecondaryFocus(2, arc_ct_2);
+	SetCameraFOV(100, 1, 6.0);
+	Sleep(5.0);
+
+	# Indy gestures...
+	StopKey(arc_indy, in_keyTrack1, 0.5);
+	Sleep(0.5);
+	PlayKey(arc_indy, in_botharmsup, 4, 0x12, 1);
+	WaitForSound(cursound);
+	AISetLookThingEyeLevel(arc_indy, arc_ct_1);
+	Sleep(0.5);
+
+	# Clean up...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	ClearThingFlags(player, 0x80000);
+	TeleportThing(player, arc_indy);
+	SetThingFlags(arc_indy, 0x80000);
+	
+	# Establish a camera position near Indy and prep follow-cam...			
+	v_targetpos =
+		VectorAdd(VectorTransformToOrient(player, '-0.05 -0.2 0.0'), GetThingPos(player));	
+	SetCameraPosition(1, v_targetpos);
+	
+	SetCurrentCamera(curcam);
+	ResetCameraFOV(0, 0.0);
+
+	# Restore control...
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+end

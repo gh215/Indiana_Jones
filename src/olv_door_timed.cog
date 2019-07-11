@@ -1,0 +1,304 @@
+# Jones 3D Cog Script
+#
+# olv_door_timed.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+   message  startup
+   message  activate      
+   message	arrived
+   message  blocked
+   message	entered
+   message	exited
+   message  timer
+   
+	thing		ghostcampos
+	thing		cam_targ						nolink  
+	thing		switch0
+	thing		switch1
+	thing		switch2
+	thing		door0
+	thing		door1
+	sector	room0	
+	sector	doorjamb
+
+	keyframe	hithead=in_reach_low.key			local
+	sector	doorsec0						local
+	sector	doorsec1						local
+	sound		stopsnd=nub_stonedoor_stop_c.wav		local
+	sound		ungh=inxj018a.wav					local
+	thing		player						local
+	flex		waittime=60.0					local
+	int		closed=0						local
+	int		curcam						local
+	int		solved=0						local
+	int		dr1_open=0						local
+	int		in_jamb=0						local
+	sound		music0=mus_gen_indy_B_motif1.wav		local
+	cog		hints
+	vector	vecZneg						local
+	vector	vecZ							local
+	flex		RandLockLines					local
+	int		speak0						local
+	int		lockoffset=0					local
+	int		difficultylevel					local
+	int		diff_time						local
+	flex		curhealth=0						local
+
+# ---------------------------------------------------------------
+#		Indy Say Lines
+# ---------------------------------------------------------------
+	int	lineindex					local # indexes sound array
+
+	sound	in_stuck0=Inxj096.wav		local # I can't open it
+	sound	in_stuck1=Inxj097.wav		local # For some reason...won't open.
+	sound	in_stuck2=Inxj098.wav		local # It won't budge.
+	sound	in_stuck3=Inxj099.wav		local # Something is holding this door closed.
+	sound	in_stuck4=Inxj102.wav		local # must be way...don't know how.
+	sound	in_stuck5=Inxj090.wav		local # ...something wrong.
+	sound	in_stuck6=Inxj091.wav		local # Of course that didn't work.	
+	int	dl_newline=50			local
+	int	dl_oldline=50			local
+
+end
+# ========================================================================================
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	doorsec0 = GetThingSector(door0);
+	doorsec1 = GetThingSector(door1);
+	SetSectorAdjoins(doorsec0, 0);
+	SetSectorAdjoins(doorsec1, 0);
+    return;
+
+activate:
+	if((GetSenderRef() == door0) || (GetSenderRef() == door1))
+	{
+		SetActorFlags(player, 0x200000);
+		StopThing(Player);
+		StartCutscene(0);
+		DeselectWeaponWait(player);
+	      PlayMode(player, 60, 0);
+		call randlocklines;
+		WaitForSound(speak0);
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+		return;
+	}
+	if((GetSenderRef() == switch0) && (closed == 0))
+ 	{
+		closed=1;
+		curCam = GetCurrentCamera();
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(1);
+	      PlayMode(player, 60, 0);
+		sleep(0.2);
+		MoveToFrame(switch0, 1, 1.0);
+		if(dr1_open == 0)
+		{
+			dr1_open=1;
+			MoveToFrame(switch1, 1, 1.0);
+			SetSectorAdjoins(doorsec1, 1);
+			MoveToFrame(door1, 1, 0.8);
+		}
+		WaitForStop(switch0);
+		SetCameraFocus(2, ghostcampos);
+		SetCameraSecondaryFocus(2, cam_targ);
+		SetCurrentCamera(2);
+		SetSectorAdjoins(doorsec0, 1);
+		MoveToFrame(door0, 1, 0.8);
+		if(solved == 1) return;
+		SendMessageEx(hints, user3, 1, 0, 0, 0);    #param0=1; Switch pushed.
+		return;
+	}
+	if((GetSenderRef() == switch1) && (dr1_open == 0))
+ 	{
+		dr1_open=1;
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(0);
+	      PlayMode(player, 60, 0);
+		sleep(0.2);
+		MoveToFrame(switch1, 1, 1.0);
+		WaitForStop(switch1);
+		SetSectorAdjoins(doorsec1, 1);
+		MoveToFrame(door1, 1, 0.8);
+		sleep(0.4);
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+		return;
+    }
+	if((GetSenderRef() == switch2) && (closed == 0))
+	{
+		closed=1;
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(0);
+	      PlayMode(player, 60, 0);
+		sleep(0.2);
+		MoveToFrame(switch2, 1, 1.0);
+		WaitForStop(switch2);
+		SetSectorAdjoins(doorsec0, 1);
+		MoveToFrame(door0, 1, 0.8);
+		sleep(0.4);
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+		return;
+	}
+    return;
+
+entered:
+	if((GetSenderRef() == room0) && (solved == 0))
+	{
+	solved=1;
+	UpdateDifficulty(difficultylevel);
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+	SendMessageEx(hints, user3, 2, 0, 0, 0);    #param0=2; Entered Room.
+	return;
+	}
+	if((GetSenderRef() == doorjamb) && (GetSourceRef() == player))
+	{
+	in_jamb=1;	
+	}
+	return;
+
+exited:
+	if((GetSenderRef() == doorjamb) && (GetSourceRef() == player))
+	{
+	in_jamb=0;	
+	}
+	return;
+
+arrived:
+	if((GetSenderRef() == door0) && (closed == 1))
+	{
+	PlaySoundThing(stopsnd, door0, 1.0, 25, 50, 0);
+	sleep(0.5);
+
+
+		# TO DO:  Shouldn't timer be related to difficulty?
+		difficultylevel=GetDifficulty();
+		diff_time=waittime+((5 - difficultylevel)* 10.0);
+		SetTimer(diff_time);
+
+	EndCutscene();
+	SetCurrentCamera(curcam);
+	ClearActorFlags(player, 0x200000);
+	return;
+	}
+	if((GetSenderRef() == door0) && (closed == 2))
+	{
+	closed=0;
+	PlaySoundThing(stopsnd, door0, 1.0, 25, 50, 0);
+	SetSectorAdjoins(doorsec0, 0);
+	if(solved == 0)
+		{
+		SendMessageEx(hints, user3, 0, 0, 0, 0);    #param0=0; Reset.
+		}
+	return;
+	}
+	if((GetSenderRef() == door1) && (dr1_open == 2))
+	{
+	dr1_open=0;
+	SetSectorAdjoins(doorsec1, 0);
+	return;
+	}
+
+
+	return;
+
+timer:
+	if(dr1_open == 1)
+	{
+	dr1_open=2;
+	MoveToFrame(switch1, 0, 1.0);
+	MoveToFrame(door1, 0, 0.8);
+	}
+	if(closed == 1)
+	{
+		if(in_jamb ==1)
+		{
+		closed=4;
+		MakeMeStop();
+		StartCutscene(0);
+
+		vecZ = VectorSet(0.0, 0.0,1.0);
+		vecZneg = VectorSet(0.0, 0.0,-1.0);
+		MoveThing(door0, vecZneg, 0.12, 1.5);
+
+		sleep(1.5);
+		PlayKey(player, hithead, 4, 0x12, 0);
+		PlayVoice(player, ungh, 1.0, 0);
+
+		# Record some damage (yes, player can die this way)...
+		curhealth = GetThingHealth(player);
+		if(curhealth <= 40) return;
+		SetThingHealth(player, (curhealth - 40));
+
+		MoveThing(door0, vecZ, 0.12, 1.5);
+		EndCutscene();
+		closed=1;
+		ClearActorFlags(player, 0x200000);
+		return;
+		}
+	closed=2;						# Door is closing.
+	MoveToFrame(switch0, 0, 1.0);
+	MoveToFrame(door0, 0, 0.8);
+	}
+	return;
+
+blocked:
+	if(GetSenderRef() == door0)
+	{
+	MoveToFrame(door0, 1, 0.8);
+	closed=1;
+	Return;
+	}
+	if(GetSenderRef() == door1)
+	{
+	MoveToFrame(door1, 1, 0.8);
+	dr1_open=1;
+	}
+    return;
+
+
+#=====================================================================
+#		Locked lines
+#=====================================================================
+randlocklines:
+
+	while (dl_newline == dl_oldline)
+	{		
+		dl_newline = RandBetween(0, 19);
+		if (dl_newline < 14)
+		{	
+			dl_newline = RandBetween(0, 2); # ~1/4 chance for 0 thru 2
+		}
+
+		if (dl_newline > 17)
+		{
+			dl_newline = (dl_newline - 13); # 1/20 chance for 5 or 6 
+		}	
+		if (dl_newline > 15)
+		{
+			dl_newline = 4; # 1/10 chance
+		}
+		if (dl_newline > 13)
+		{
+			dl_newline = 3; # 1/10 chance
+		}
+	}
+	dl_oldline = dl_newline;
+	lineindex = lockoffset + dl_newline;
+	speak0 = PlayVoice(player, in_stuck0[lineindex], 1.0, 0);
+	return;
+					
+end
+
+

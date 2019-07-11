@@ -1,0 +1,393 @@
+# Jones 3D Cog Script
+#
+# SOL_CtrlLeverA.cog
+#
+# Sets up lever in the "pushed" possition (ready for pull) at level start.
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     user0
+    message     user1
+    message     activate
+   
+    thing       player          local
+    thing       leverGhost      # Lever position
+    thing       indy            # Actor Indy
+    thing       trkSwitch       # Track switch
+    thing       panelTarget     # focus for control panel
+    
+    thing       switchCam       # Switch cam
+    thing       ctrlCam1        # Control panel cam
+
+    thing       pushed          local
+    thing       pulled          local
+    
+    thing       offsetCam
+    
+    surface     switch1
+    surface     switch4
+    surface     switch5
+    
+    # Track faces -- A default -- B secondary
+    surface     switchA    
+    surface     switchB      
+    
+    template    tplLevPull=pullever          local
+    template    tplLevPush=pushlever         local
+    
+    keyframe    leverPull=gen_lever_pull.key        local
+    keyframe    leverPush=gen_lever_push.key        local
+    
+    keyframe    indyPull=in_pull_lever.key          local
+    keyframe    indyPush=in_push_lever.key          local
+    
+    cog         comFalls
+    cog         hintCog
+    
+    sound       sndLever=gen_lever_pull.wav             local
+    sound       sndSwitchTex=sol_panel_switch_c.wav     local
+    sound       inJuice=Sl02j04.wav                     local
+    
+    int         powerOn=0       local
+    int         ready=1         local
+    int         playing=0       local
+    int         switched=0      local
+    int         done=0          local
+    int         curCam          local
+    int         sound2          local
+    
+    # ** subroutines **
+    flex        pullLever       local
+    flex        pushLever       local
+    flex        resetcam        local
+    flex        noPower         local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    pushed = CreateThing(tplLevPull, leverGhost);
+    CaptureThing(pushed);
+    
+    # Mine car track -- Turn off
+    ClearSurfaceFlags(switchA, 0x4000);
+    SetSurfaceFlags(switchB, 0x4000);
+    Sleep(0.5);
+    
+    return;
+
+# ========================================================================================
+
+user0:
+
+    powerOn = 1;
+    return;
+
+# ========================================================================================
+
+activate:
+
+    Print("activated: ctrlLever1");
+
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+    
+    # no power
+    if((GetSenderRef() == pushed) && (IsGhostVisible(player, pushed, 50.0)) && (!powerOn) && (!playing))
+    {
+        playing = 1;
+        Call noPower;
+    }
+    
+    # pull lever    
+    else if((GetSenderRef() == pushed) && (IsGhostVisible(player, pushed, 50.0)) && (powerOn) && (ready))
+    {
+        ready = 0;
+        Call pullLever;
+    }
+        
+    # push lever
+    else if((GetSenderRef() == pulled) && (IsGhostVisible(player, pulled, 50.0)) && (powerOn) && (ready))
+    {
+        ready = 0;
+        Call pushLever;
+    }
+        
+    return;
+        
+# ========================================================================================
+
+pullLever:
+
+    global0 = 1;
+    global1 = 0;
+    global2 = 0;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # outfit Indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # show actor hide player
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # pull the lever
+    PlayKey(pushed, leverPull, 4, 0x14, 0);
+    PlayKey(indy, indyPull, 4, 0x12, 0);
+    Sleep(0.75);
+    PlaySoundLocal(sndLever, 1.0, 0.0, 0x0, 1);
+    
+    # hide Indy so he's not in the shot
+    SetThingFlags(indy, 0x80000);
+    
+    # Cut to Control Panel cam
+    SetCameraFocus(2, ctrlCam1);
+    SetCameraSecondaryFocus(2, panelTarget);
+    SetCurrentCamera(2);
+    SetCameraFOV(70, 0, 0.0);
+    Sleep(0.5);
+    
+    # flip panel switch texture
+    SetWallCel(switch1, 2);
+    sound2 = PlaySoundLocal(sndSwitchTex, 1.0, 0.0, 0x0, 0);
+    WaitForSound(sound2);
+    Sleep(0.5);
+    
+    # Cut to switchCam
+    SetCameraFocus(2, switchCam);
+    SetCameraSecondaryFocus(2, trkSwitch); 
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # rotate track switch
+    Rotate(trkSwitch, 90, 1, 1.0);
+    Sleep(2.0);
+    
+    # go about business as usual
+    if(global3 == 1)
+    {
+        # just restore camera and controls
+        call resetcam;
+    }
+        
+    # deal with comCar issues
+    else if(global3 == 0)
+    {
+        # switch1 and switch4 are ready, switch5 is not: do partial
+        if((GetWallCel(switch1) == 2) && (GetWallCel(switch4) == 2) && (GetWallCel(switch5) == 2))
+        {
+            #Print("CtrlLever1 -- 1 and 4 ready, 5 not ready");
+            
+            # hide indy show player
+            SetThingFlags(indy, 0x80000);
+            ClearThingFlags(player, 0x80000);
+            
+            # watch comCar enter switch4 from frontCam
+            SendMessage(comFalls, user1);
+            
+            # tell comFalls to do partial
+            SendMessage(comFalls, user0);
+        }
+            
+        # switch1 ready, switch4 is not: do nothing
+        else if((GetWallCel(switch1) == 2) && (GetWallCel(switch4) == 1))
+        {
+            #Print("CtrlLever1 -- Switch 1 ready, switch 4 not ready");
+            
+            # just restore camera and controls
+            call resetcam;
+        }
+            
+        # switches 1, 4 and 5 are ready: send comCar over the edge
+        else if((GetWallCel(switch1) == 2) && (GetWallCel(switch4) == 2) && (GetWallCel(switch5) == 1))
+        {
+            #Print("CtrlLever1 -- send commies over edge");
+            
+            # hide indy show player
+            SetThingFlags(indy, 0x80000);
+            ClearThingFlags(player, 0x80000);
+            
+            # watch comCar enter switch4 from frontCam
+            SendMessage(comFalls, user1);
+            
+            # tell comFalls we're go
+            SendMessage(comFalls, user0);
+            
+            # next time we skip all of this 'cus comCar is dead
+            global3 = 1;
+        }
+    }
+        
+    # Destroy old lever and create a new one
+    DestroyThing(pushed);
+    pulled = CreateThing(tplLevPush, leverGhost);
+    CaptureThing(pulled);
+    
+    # Mine car track -- Go straight
+    ClearSurfaceFlags(switchB, 0x4000);
+    SetSurfaceFlags(switchA, 0x4000);
+    
+    # tell hintCog to check switch positions
+    SendMessage(hintCog, user1);
+    
+    ready = 1;
+    return;
+                
+# ========================================================================================
+
+pushLever:
+
+    global0 = 0;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # show actor hide player
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # push the lever
+    PlayKey(pulled, leverPush, 4, 0x14, 0);
+    PlayKey(indy, indyPush, 4, 0x12, 0);
+    Sleep(0.85);
+    PlaySoundLocal(sndLever, 1.0, 0.0, 0x0, 1);
+    
+    # hide Indy so he's not in the shot
+    SetThingFlags(indy, 0x80000);
+    
+    # Cut to Control Panel cam
+    SetCameraFocus(2, ctrlCam1);
+    SetCameraSecondaryFocus(2, panelTarget);
+    SetCurrentCamera(2);
+    SetCameraFOV(70, 0, 0.0);
+    Sleep(0.5);
+    
+    # flip panel switch texture
+    SetWallCel(switch1, 1);
+    sound2 = PlaySoundLocal(sndSwitchTex, 1.0, 0.0, 0x0, 0);
+    WaitForSound(sound2);
+    Sleep(0.5);
+    
+    # Cut to switchCam
+    SetCameraFocus(2, switchCam);
+    SetCameraSecondaryFocus(2, trkSwitch);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # rotate track switch
+    Rotate(trkSwitch, -90, 1, 1.0);
+    Sleep(2.0);
+
+    call resetcam;
+    
+    # Destroy old lever and create a new one
+    DestroyThing(pulled);
+    pushed = CreateThing(tplLevPull, leverGhost);
+    CaptureThing(pushed);
+    
+    # Mine car track -- turn off
+    SetSurfaceFlags(switchB, 0x4000);
+    ClearSurfaceFlags(switchA, 0x4000);
+    
+    # tell hintCog to check switch positions
+    SendMessage(hintCog, user1);
+    
+    ready = 1;
+    return;
+
+# ========================================================================================
+
+resetcam:
+
+    # Cut back to player and restore controls
+    #Print("lever1 -- resetcam");
+    
+    # stop any unfinished animations
+    ResetThing(indy);
+    ResetThing(player);
+    
+    # show player and return controls
+    ClearThingFlags(player, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    
+    # return camera to player
+    SetCurrentCamera(curCam);
+    
+    EndCutscene();
+    
+    return;
+
+# ========================================================================================
+
+noPower:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # activate lever
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # say line
+    PlayVoice(player, inJuice, 1.0, 1);
+    Sleep(0.5);
+    
+    # restore controls and camera
+    ClearActorFlags(player, 0x200000);
+    SetCurrentCamera(curCam);
+    
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+
+# ========================================================================================
+
+end
+

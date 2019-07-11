@@ -1,0 +1,240 @@
+# Jones 3D Cog Script
+#
+# olv_spike.cog
+#
+# [DS]
+#
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message	startup
+	message	entered
+	message	exited
+	message	blocked
+	message	arrived
+	message	timer		
+	message touched
+	message pulse
+
+	# Spike needs to include touched messages from snake pieces which are actors
+	thing		spikeTip0						mask=0x4
+	thing		spikeShaft0					
+	thing		elev0
+	int		active=0						local
+	int		elev_sound						local
+	vector	vecZ							local
+	vector	vecZneg						local
+	vector	elevpos						local
+	vector	elevDownPos					local
+	vector	spikepos						local
+	vector	spikeShaftPos						local
+	vector	indyPos								local
+	sound		elev_move=nub_stonedoor_move_c.wav		local
+	sound		spike_up=tem_temspikes_activate_c.wav	local
+
+	int			b_SpikeGoingUp 		local
+	int			n_elevState			local
+	int			n_moveAnim=-1		local 
+
+#------------- CONSTANTS -----------------------------------------
+	flex	SPIKE_MOVE_DISTANCE=0.6	local
+	flex	SPIKE_UP_TIME=0.5		local
+	flex	SPIKE_HOLD_TIME=0.25  	local
+	flex	SPIKE_DOWN_TIME=1.5		local
+
+	flex	ELEV_MOVE_DISTANCE=0.70	local 
+
+	int		ELEV_AT_TOP=0			local
+	int		ELEV_AT_BOTTOM=1			local
+	int		ELEV_GOING_DOWN=2			local
+	int		ELEV_GOING_UP=3			local
+
+	flex	ELEV_VOL=0.3			local
+
+	flex	ELEV_RADIUS=0.101		local
+
+	thing		player				local
+
+#-------------SUBROUTINES -----------------------------------------
+
+flex	GoBackUp		local
+
+end
+#----------------------------------------------------------------------------------------------
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	vecZ = VectorSet(0.0, 0.0, 1.0);
+	elevpos = GetThingPos(elev0);
+	elevDownPos = VectorSet(VectorX(elevPos), VectorY(elevPos), VectorZ(elevPos) - ELEV_MOVE_DISTANCE);
+	spikepos = GetThingPos(spikeTip0);
+	spikeShaftPos = GetThingPos(spikeShaft0);
+	SetCollideType(spikeShaft0, 0); // never collide. just for show
+	SetCollideType(spikeTip0, 0); // not collidable until it moves up
+	n_elevState = ELEV_AT_TOP;
+	return;
+
+entered:
+	if( (GetSenderRef() == elev0) 
+		&& (GetSourceRef() == player)
+		&& (n_elevState == ELEV_AT_TOP))
+	{
+//		Print("Entered");
+		n_elevState = ELEV_GOING_DOWN;
+		active=1;
+		if (n_moveAnim != -1)
+		{
+			StopAnim(n_moveAnim);
+			n_moveAnim = -1;
+		}
+//		Print("Start Down");
+		n_moveAnim = MoveThingToPos(elev0, elevDownPos, 3.0);
+		elev_sound = PlaySoundThing(elev_move, elev0, ELEV_VOL, 10, 30, 1);
+		SetTimer(1.8);
+	}
+	return;
+
+touched:
+	if (GetSenderRef() == spikeTip0) // did spike touch something
+	{
+		// If the spike is hit the boss' head or a tail piece
+		if ((BITTEST(GetActorFlags(GetSourceRef()),0x200)) || BITTEST(GetAttachFlags(GetSourceRef()),0x40))
+		{
+			// Clear collide type so that it won't hit the snake a second time
+//			PRINT("Spike Touched Q");
+			SetCollideType(spikeTip0, 0);
+		}
+	}
+
+	return;
+
+blocked:
+	if(GetSenderRef() == elev0)
+	{
+//		Print("elevator is blocked");
+		n_elevState = ELEV_GOING_UP;
+		if (elev_Sound != -1)
+		{
+			StopSound(elev_sound, 0);
+			elev_Sound = -1;
+		}
+		if (n_moveAnim != -1)
+		{
+			StopAnim(n_moveAnim);
+			n_moveAnim = -1;
+		}
+//		Print("Start up");
+		n_moveAnim = MoveThingToPos(elev0, elevpos, 3.0); // really should recompute time
+		// Don't try to play sound in case the elevator is stuck for a while
+//		elev_sound = PlaySoundThing(elev_move, elev0, 1.0, 10, 30, 1);
+	}
+	return;
+
+exited:
+	if( (GetSenderRef() == elev0) 
+		&& (GetSourceRef() == player)
+		&& ( (n_elevState == ELEV_GOING_DOWN) || (n_elevState == ELEV_AT_BOTTOM))
+		)
+	{
+		SetPulse(0.1);
+	}
+	return;
+
+arrived:
+	if(GetSenderRef() == elev0)
+	{
+//		Print("Arrived");
+		if (elev_Sound != -1)
+		{
+			StopSound(elev_sound, 0);
+			elev_Sound = -1;
+		}
+		if (n_elevState == ELEV_GOING_UP)
+		{
+			n_elevState = ELEV_AT_TOP;
+		}
+		else if (n_elevState == ELEV_GOING_DOWN)
+		{
+			n_elevState = ELEV_AT_BOTTOM;
+		}
+	}
+	else if ( (GetSenderRef() == spikeTip0) && b_SpikeGoingUp )
+	{
+		// only collide on the way up
+		SetCollideType(spikeTip0, 0);
+	}
+	return;
+
+timer:
+	if(active == 1)
+	{
+		// This if is just for debugging
+		// It can cause quetz to split if he runs into the tip
+		// when it is under ground
+#		if (GetCollideType(spikeTip0))
+#		{
+#			DebugPrint("spike collide type bad");
+#		}
+
+		SetCollideType(spikeTip0, 1);
+		MoveThing(spikeTip0, vecZ, SPIKE_MOVE_DISTANCE, SPIKE_UP_TIME);
+		MoveThing(spikeShaft0, vecZ, SPIKE_MOVE_DISTANCE, SPIKE_UP_TIME);
+		PlaySoundThing(spike_up, spikeTip0, 0.8, 10, 30, 0);
+		Sleep(SPIKE_UP_TIME);
+		// Only collide on the way up
+		SetCollideType(spikeTip0, 0);
+		Sleep(SPIKE_HOLD_TIME);
+		MoveThingToPos(spikeTip0, spikepos, SPIKE_DOWN_TIME);
+		MoveThingToPos(spikeShaft0, spikeShaftPos, SPIKE_DOWN_TIME);
+		PlaySoundThing(spike_up, spikeTip0, 0.8, 10, 30, 0);
+	}
+	return;
+
+pulse:
+	// Indy must be out of the column before allowing vator to go back up
+
+	indyPos = GetThingPos(player);
+
+	if (ABS(VectorX(indyPos) - VectorX(elevPos)) >= ELEV_RADIUS)
+	{
+		SetPulse(0.0);
+		call GoBackUp;
+	}
+	else if (ABS(VectorY(indyPos) - VectorY(elevPos)) >= ELEV_RADIUS)
+	{
+		SetPulse(0.0);
+		call GoBackUp;
+	}
+
+	return;
+
+GoBackUp:
+	if (n_elevState != ELEV_GOING_UP)
+	{
+//		Print("going back up");
+		n_elevState = ELEV_GOING_UP;
+		active=0;
+//		StopThing(elev0);
+		if (elev_Sound != -1)
+		{
+			StopSound(elev_sound, 0);
+			elev_Sound = -1;
+		}
+		if (n_moveAnim != -1)
+		{
+			StopAnim(n_moveAnim);
+			n_moveAnim = -1;
+		}
+//		Print("Start up");
+		n_moveAnim = MoveThingToPos(elev0, elevpos, 3.0);
+		elev_sound = PlaySoundThing(elev_move, elev0, ELEV_VOL, 10, 30, 1);
+	}
+
+
+end
+

@@ -1,0 +1,378 @@
+# Jones 3D Cog Script
+#
+# aet_DoorMove.cog
+#
+# [TL] [Whip by RT :)]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		arrived
+message		activated
+message		callback
+message		damaged
+
+thing		player							local
+thing		indy0									# Indy actor 1.
+thing		door0									# Door.
+thing		probe0									# Probe that is whipped to open door.							
+thing		probeA									# Charaged probe for probe 0.	
+
+thing		spritespot
+thing		cam0									# Camera 1.
+thing		cam0_target								# Camera 1 target.
+
+thing		sender							local
+
+keyframe	in_whipit=in_whip_outprobe.key 	local
+keyframe	wh_whipit=wh_whip_outprobe.key	local
+
+keyframe	in_ravel=in_attack_ravel_whip.key	local
+keyframe	wh_ravel=wh_attack_whip_ravel.key	local
+
+int			done0=0							local	# Flag for when door is done opening.
+int			done1=0							local	# Flag for when wrong whip is done being used.
+int			curcam							local
+
+thing		whipThing						local
+
+int			curindy							local	# Current indy actor at any given time. 
+int			curarm							local	# Current door at any time.
+int			indyAnim						local
+int			whipAnim						local
+int			sprite0							local
+
+int			callNum							local
+int			joint							local
+
+int			silverWhip=0					local
+
+sound		success_cue=mus_shw_meltice.wav	local
+sound		charge=aet_mr_chargeup.wav		local	# Whip charge.
+sound		whip=gen_whip_fire.wav			local
+sound		roll=gen_whip_ravel.wav			local
+
+template	whipTpl=+whip_actor				local
+template	sparks0=mophiaSparksLg			local
+template	chargesprite=+tower_glow		local
+
+model		whipHand=weap_whip.3do			local
+
+cog			doortalk		
+
+flex		wrongwhip						local	# Subroutine for when wrong whip cutscene is played.
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+//Sleep(1.0);          	# temp test...take out later...
+//SetWhipElectric(1);		# temp test...take out later... 
+
+# Fade charged probe out.
+ThingFadeAnim(probeA, 1.0, 0.0, 0.1, 0);
+SetCollideType(probeA, 0);
+
+return;
+
+# ........................................................................................
+activated:
+
+# Code for activating door with nothing or wrong thing.
+if (GetSenderRef() == door0)
+	{
+    # Small cutscene for activating doors with no item.
+    if (MakeMeStop() == -1)
+        return;
+    DeselectWeaponWait(player);
+	StartCutscene(0);
+	PlayMode(player, 60, 0);
+	SendMessageEx(doorTalk, user4, player, 0, 0, 0);
+	while (global15 == 0)
+		{
+		#Wait for line to finish...
+		Sleep(0.01);
+		}
+	ResetThing(player);
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();   
+	}
+    
+return;
+
+# ........................................................................................
+damaged:
+
+# Code for whipping probe to cause door to open.
+if ((GetParam(1) == 0x800) && (GetSenderRef() == probe0))
+	{
+    if (done0 == 1) return;
+	done0 = 1;
+    silverWhip = 1;
+    
+	# Prep the indy actor.
+	ResetCameraFOV(0, 0);
+	curcam = GetCurrentCamera();
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+
+	# Play music.
+	PlaySoundLocal(success_cue, 1.0, 0.0, 0x0, 0);
+
+	# Set up camera.
+	SetCameraSecondaryFocus(2, cam0_target);
+	SetCameraFocus(2, cam0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	Sleep(0.01);
+	SetCurrentCamera(2);
+	SetCameraFOV(100, 0, 0);
+	Sleep(0.01);
+	SetCameraFOV(90, 1, 2.0);
+
+	# Prep indy. 
+	CopyPlayerHolsters(player, indy0); # Make sure actor has matching props.
+	ClearThingFlags(indy0, 0x80000);
+	SetThingFlags(player, 0x80000); 
+
+	StartCutScene(1);
+
+    ChangeInv(player, 2, -1.0); # Decrease bin by 1...
+
+	# Prep whip.
+	whipThing = AttachThingToThingMesh(indy0, whipTpl, 15);
+	SetThingMesh(indy0, 15, whipHand, 0);
+
+	# Do the whip swing fake animation...
+	curindy = indy0;
+	curarm = door0;
+	//CaptureThing(indy0); # Make sure we get the callback message...
+	indyAnim = PlayKey(indy0, in_whipit, 5, 0x14, 0); # Indy anim...
+
+    CaptureThing(whipThing); # Make sure we get the callback message...
+	whipAnim = PlayKey(whipThing, wh_whipit, 5, 0x14, 0); # Whip anim...
+	
+	Sleep(1.5);
+
+	# Add VFX here...
+
+	# Cross fade the two probes to show charging.
+	ThingFadeAnim(probe0, 1.0, 0.0, 2.0, 0);
+	ThingFadeAnim(probeA, 0.0, 1.0, 2.0, 0);
+    
+	PlaySoundLocal(charge, 1, 0, 0x0, 0);
+	CreateThing(sparks0, probe0);
+	CreateThing(sparks0, probe0);
+	sprite0 = CreateThing(chargesprite, spritespot);
+    
+	AnimateSpriteSize(sprite0, '0.25 0.25 1.0', '0.35 0.35 0.0', 1.0);
+	
+	# Wait for whip action to go by.
+	Sleep(2.5);
+    }
+# Code for whipping probe with no electric whip.
+if ((GetParam(1) == 0x10) && (GetSenderRef() == probe0))
+	{
+    if (done1 == 1) return;
+	done1 = 1;
+    silverWhip = 0;
+	
+	# Prep the indy actor.
+	ResetCameraFOV(0, 0);
+	curcam = GetCurrentCamera();
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+
+	SetCameraSecondaryFocus(2, cam0_target);
+	SetCameraFocus(2, cam0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	Sleep(0.01);
+	SetCurrentCamera(2);
+	SetCameraFOV(100, 0, 0);
+	Sleep(0.01);
+	SetCameraFOV(90, 1, 2.0);
+
+	# Prep indy. 
+	CopyPlayerHolsters(player, indy0); # Make sure actor has matching props.
+	ClearThingFlags(indy0, 0x80000);
+	SetThingFlags(player, 0x80000); 
+
+	StartCutScene(1);
+
+	# Prep whip.
+	whipThing = AttachThingToThingMesh(indy0, whipTpl, 15);
+	SetThingMesh(indy0, 15, whipHand, 0);
+
+	# Do the whip swing fake animation...
+	curindy = indy0;
+	curarm = door0;
+	//CaptureThing(indy0); # Make sure we get the callback message...
+	indyAnim = PlayKey(indy0, in_whipit, 5, 0x14, 0); # Indy anim...
+
+    CaptureThing(whipThing); # Make sure we get the callback message...
+	whipAnim = PlayKey(whipThing, wh_whipit, 5, 0x14, 0); # Whip anim...
+	
+	Sleep(1.5);
+    
+	PlaySoundLocal(whip, 1.0, 0.0, 0x0, 0);
+	
+	# Wait for action.
+	Sleep(2.5);
+    }
+
+return;
+
+# ........................................................................................
+callback:
+
+	sender = GetSenderRef();
+	callNum = GetParam(1);
+
+	if (sender == curindy)
+	{
+		# Callback from whipping animations.
+		if (GetParam(1) == 24)
+		{
+			# Stop animations.
+			StopKey(curindy, indyAnim, 0);
+			StopKey(whipThing, whipAnim, 0);
+		
+			# Start wind-ups...
+			PlayKey(curindy, in_ravel, 4, 0x12, 0);
+			if (whipThing != -1)
+			{
+				CaptureThing(whipThing);
+				PlayKey(whipThing, wh_ravel, 4, 0x12, 0);
+			}
+			PlaySoundThing(roll, curindy, 1, -1, -1, 0x80);
+		
+			# If callback if from regular whip...
+			if (done1 == 1)
+			{
+				call wrongwhip;
+			}
+			# If callback is from electrowhip move door to frame.
+			if (done0 == 1)
+			{
+				MoveToFrame(curarm, 1, 1.0);
+			}
+		}
+	}
+	else if (sender == whipThing)
+	{
+		if (callNum == 28)
+		{
+			for (joint = 12; joint > 4; joint = joint - 1)
+			{
+				AmputateJoint(whipThing, joint);
+			}
+		}
+		else if (callNum == 29)
+		{
+			AmputateJoint(whipThing, 4);
+		}
+		else if (callNum == 30)
+		{
+			AmputateJoint(whipThing, 3);
+		}
+		else if (callNum == 31)
+		{
+			ReleaseThing(whipThing);
+			AmputateJoint(whipThing, 2);
+
+			if (whipThing != -1)
+			{
+				DetachThingMesh(whipThing);
+				SetWeaponModel(curindy, 2); 
+			}
+			whipThing = -1;
+
+			if (silverWhip) # Electric whip
+			{
+				if (GetInv(player, 2) < 1) # Turn it off if it's outta juice...
+				{
+					SetWhipElectric(0);
+	
+					SetInv(player, 2, 1.0); # Reset the bin to 1...
+					SetInvAvailable(player, 2, 1);
+
+					silverwhip = 0;
+				}
+			}
+		}
+	}
+
+return;
+
+# ........................................................................................
+arrived:
+
+# Once the doors are open...
+if (GetSenderRef() == door0)
+	{
+    SendMessageEx(doorTalk, user1, indy0, 0, 0, 0);
+	while (global15 == 0)
+		{
+		#Wait for line to finish...
+		Sleep(0.01);
+		}
+    # Turn whip flags off of probe.
+    ClearThingFlags(probe0, 0x00000008);		
+	ClearThingFlags(probe0, 0x80000000);		
+    ClearThingFlags(probeA, 0x00000008);		
+	ClearThingFlags(probeA, 0x80000000);		
+
+	# Return to normal.
+	CopyOrientandPos(indy0, player);
+	SetCurrentCamera(1);
+	SetCameraFocus(1, player);
+	SetCameraFOV(90, 0, 0.0);
+	ClearActorFlags(player, 0x200000);
+	SetThingFlags(indy0, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	
+	Sleep(0.01);
+
+	EndCutScene();
+    }
+
+return;
+
+# ........................................................................................
+wrongwhip:
+
+# Subroutine for when wrong whip is used.
+SendMessageEx(doorTalk, user3, indy0, 0, 0, 0);
+while (global15 == 0)
+	{
+	#Wait for line to finish...
+	Sleep(0.01);
+	}
+
+# Return to normal.
+CopyOrientandPos(indy0, player);
+SetCurrentCamera(1);
+SetCameraFocus(1, player);
+SetCameraFOV(90, 0, 0.0);
+ClearActorFlags(player, 0x200000);
+SetThingFlags(indy0, 0x80000);
+ClearThingFlags(player, 0x80000);
+
+done1 = 0;
+
+EndCutScene();
+
+return;
+
+# ........................................................................................
+end
+

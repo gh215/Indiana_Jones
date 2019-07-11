@@ -1,0 +1,101 @@
+# Jones 3D Cog Script
+#
+# TEO_IrisDoor.cog
+#
+# Door Script
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message     startup
+    message     arrived
+    
+    thing       shaft1
+    thing       shaft2
+    thing       shaft3
+    thing       shaft4
+    thing       shaft5
+    
+    thing       irisdoor1     linkid=4
+    thing       irisdoor2     linkid=4
+    thing       irisdoor3     linkid=4
+    
+    int         shaftlit1=0   local
+    int         shaftlit2=0   local
+    int         shaftlit3=0   local
+    int         count=0       local
+    
+end
+
+# ========================================================================================
+
+code
+
+# ........................................................................................
+startup:
+	for (count=0; count<=4; count=count+1)
+    {
+        ThingFadeAnim(shaft1[count], 1, 0, 0.1, 0);
+        SetThingLight(shaft1[count], '0 0 0', 0, 0);
+    }
+	return;
+
+# ........................................................................................
+arrived:
+
+    if ((GetSenderID() == 4) && 
+        (GetCurFrame(irisdoor1) == 1) && 
+        (shaftlit1 == 0))
+    {
+        ThingFadeAnim(shaft1, 0, 1, 0.5, 0);
+        SetThingLight(shaft1, '1.0 1.0 1.0', 1.5, 0.5);
+        shaftlit1 = 1;
+        //print("lighting shaft 1");
+    }
+    
+    
+    if ((GetSenderID() == 4) && 
+        (GetCurFrame(irisdoor2) == 1) && 
+        (shaftlit2 == 0) && 
+        (shaftlit1 == 1))
+    {
+        ThingFadeAnim(shaft2, 0, 1, 0.5, 0);
+        SetThingLight(shaft2, '1.0 1.0 1.0', 1.5, 0.5);
+        shaftlit2 = 1;
+        //print("lighting shaft 2");
+    }
+    
+    
+    if ((GetSenderID() == 4) && 
+        (GetCurFrame(irisdoor3) == 1) && 
+        (shaftlit3 == 0) && 
+        (shaftlit2 == 1) && 
+        (shaftlit1 == 1))
+    {
+        //print("lighting shafts 3-5");
+        ThingFadeAnim(shaft3, 0, 1, 0.5, 0);
+        SetThingLight(shaft3, '1.0 1.0 1.0', 1.5, 0.5);
+        ThingFadeAnim(shaft4, 0, 1, 0.5, 0);
+        SetThingLight(shaft4, '1.0 1.0 1.0', 1.5, 0.5);
+        ThingFadeAnim(shaft5, 0, 1, 0.5, 0);
+        SetThingLight(shaft5, '1.0 1.0 1.0', 1.5, 0.5);
+        shaftlit3 = 1;
+    }
+    
+    if ((GetSenderRef() == irisdoor1) && (GetCurFrame(irisdoor1) == 0) && (shaftlit1 == 1))
+    {
+        for (count=0; count<=4; count=count+1)
+        {
+            ThingFadeAnim(shaft1[count], 1, 0, 0.1, 0);
+            SetThingLight(shaft1[count], '0 0 0', 0, 0.5);
+        }
+    }
+    
+    return;    
+    
+end
+

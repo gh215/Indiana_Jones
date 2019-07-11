@@ -1,0 +1,1326 @@
+# Jones 3D Cog Script
+#
+# shs_flower.cog
+#
+# Grow the flower
+#
+# [JWC] [MDR] [RT]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================
+
+symbols
+
+message	startup
+message	activated
+message	entered
+message	exited
+message	damaged
+message	callback
+
+# ***************************** LINKED GEOM ******************************
+
+surface	wet_snd_0			nolink
+surface	wet_snd_1			nolink
+surface	wet_snd_2			nolink
+
+surface	wet_surf_0			nolink
+surface	wet_surf_1			nolink
+surface	wet_surf_2			nolink
+surface	wet_surf_3			nolink
+surface	wet_surf_4			nolink
+surface	wet_surf_5			nolink
+surface	wet_surf_6			nolink
+surface	wet_surf_7			nolink
+surface	wet_surf_8			nolink
+surface	wet_surf_9			nolink
+surface	wet_surf_10			nolink
+surface	wet_surf_11			nolink
+surface	wet_surf_12			nolink
+surface	wet_surf_13			nolink
+
+# ******************************** THINGS ********************************
+
+thing	t_player			local
+thing	t_Sender			local
+thing	t_PlantCurrent=-1	local
+thing	t_PlantNew=-1		local
+thing	nextPositionGhost	local
+
+thing	flower_indy			# actor
+thing	statue_indy			# actor
+
+thing	pot
+thing	pot_topchain_a		nolink
+thing	pot_topchain_b		nolink
+thing	pot_botchain_a		nolink
+thing	pot_botchain_b		nolink
+thing	pot_top
+thing	pad
+thing	shutter				nolink
+thing	statue
+thing	gate				nolink
+thing	sunlight			nolink
+thing	pot_upperchain		nolink
+
+thing	potcam_1			nolink
+thing	potcam_2			nolink
+thing	potcam_3			nolink
+thing	potcam_6			nolink
+thing	pot_ct_1			nolink
+thing	pot_ct_2			nolink
+
+thing	closeupcam_1		nolink
+
+thing	close_ct_1			nolink
+thing	close_ct_2			nolink
+thing	close_ct_3			nolink
+
+thing	statuecam_1			nolink
+thing	statuecam_1a		nolink
+
+thing	statuecam_2			nolink
+thing	statuecam_2a		nolink
+thing	statue_ct_1			nolink
+thing	statue_ct_1a		nolink
+thing	statue_ct_1b		nolink
+thing	statue_ct_2			nolink
+thing	statue_ct_2a		nolink
+
+thing	whipcam_1			nolink
+thing	whipcam_2			nolink
+
+thing	pushGhost0			nolink
+thing	pushGhost1			nolink
+thing	pushGhost2			nolink
+thing	pushGhost3			nolink
+thing	pushGhost4			nolink
+thing	pushGhost5			nolink
+thing	pushGhost6			nolink
+thing	pushGhost7			nolink
+
+thing	plant_Mark1			nolink
+thing	plant_Mark2			nolink
+
+thing	plant_Cam1			nolink
+thing	plant_Cam2			nolink
+
+thing	waterONpos			
+
+# ****************************** TEMPLATES *******************************
+
+template	t_plantType0=bulb				local	# bulb
+template	t_plantType1=plant				local	# bud
+template	t_plantType2=bud				local	# leafy bud
+template	t_FairyDust=shs_flowerdust		local
+
+# ****************************** KEYFRAMES *******************************
+
+keyframe	sh_open=shs_shtr_light.key		local
+keyframe	sh_close=shs_shtr_lightr.key	local
+keyframe	in_putbud=in_place_bulba.key	local
+keyframe	in_putplant=in_place_bulbb.key	local
+keyframe	in_pushstatue=in_push_post.key	local
+keyframe	in_nomove=in_push_nomove.key	local
+keyframe	in_GetPlant=in_reach_bulb.key	local
+keyframe	in_HandHip=0in_stand1_bd_4.key	local
+keyframe	in_bothup=0in_armsup_1_1.key	local
+
+
+# ******************************** MODELS ********************************
+
+model	hand0=hand_in_bulb.3do				local
+model	hand1=hand_in_leaf.3do				local
+model	hand2=hand_in_bud.3do				local
+
+# ********************************* COGS *********************************
+
+cog		NoWorkTalkcog
+cog		HintCog
+
+# ******************************** SOUNDS ********************************
+
+sound	pot_move=shs_chain.wav						local
+sound	h2o_on=shs_h2odrain_c.wav					local
+sound	pad_stop=nub_croc_stop_c.wav				local
+sound	pad_move=sol_minecar_clatter.wav			local
+sound	shutter_move=sol_minecar_screech_rail3.wav	local
+sound	statue_stop=shs_statue_stop.wav				local
+
+# music cues
+sound	music1=mus_shs_indysunlight.wav				local
+sound	music2=mus_shs_plantdescend.wav				local
+sound	music3=mus_shw_monkchant2.wav				local
+sound	music4=mus_gen_magic2.wav					local
+
+# dialog
+sound	in_flowerpot=ss07j04.wav					local
+sound	in_nobudge=INXJ098.wav						local
+
+sound	in_foundSnd1=SS07J02.wav					local # Plant
+sound	in_foundSnd2=SS07J03.wav					local # Bud
+sound	in_hintSnd=SS07J08.wav						local
+sound	in_clue=INXJ050.wav							local
+
+# wrong spot...
+sound	in_wrongspot0=Inxj219.wav					local # Not lined up right
+sound	in_wrongspot1=Inxj220.wav					local # Need to line up
+sound	in_wrongspot2=Inxj221.wav					local # Need to move over.
+sound	in_wrongspot3=Inxj222.wav					local # Not quite in position.
+sound	in_wrongspot4=Inxj223.wav					local # Need to get in position.
+sound	in_wrongspot5=Inxj224.wav					local # Need to find better spot.
+
+
+# **************************** PZL STATE VARS ****************************
+
+int		n_StatuePos=0		local
+int		n_PotLowered=0		local
+int		n_PlantInPot=0		local
+int		n_WaterOn=0			local
+int		n_ShutterOpen=0		local
+int		n_CurItem=0			local
+
+int		n_PlantState=0		local	# 0 = bulb, 1 = bud, 2 = leafy bud
+int		n_GrowMethod=0		local	# 1 = water, 2 = light
+
+int		n_plantBin_ID0=104	local	# bulb
+int		n_plantBin_ID1=105	local	# bud
+int		n_plantBin_ID2=106	local	# leafy bud
+
+int		b_Solved=0			local
+int		b_Spoken=0			local
+int		bFound=0			local
+
+# *************************** MISC LOCAL VARS ****************************
+
+int		n_idx				local
+
+int		pushType=0			local	# 0 = None, 1 = Push, -1 = No move
+int		pushPosition=0		local
+
+int		pickupSide			local	# 0 = In front of pot, 1 = In water
+
+int		shutterTrack		local
+
+int		in_rotrate			local
+int		in_KeyTrack			local
+
+int		bCutsceneRunning=0	local
+
+int		callbackNum			local
+int		in_swapRef			local
+
+int		curCam				local
+
+int		potloop				local	# allow sound to loop
+int		h2oloop				local
+
+int		played=0			local	# vars for randlocationlines
+int		doplay				local
+int		cursound			local
+int		l_newline=50		local
+int		l_oldline=50		local
+
+
+flex	dotProduct			local
+flex	rightDot			local
+flex	indyDistance		local
+flex	camXOffset			local
+
+sector	curSector			local
+
+vector	indyVector			local
+vector	endCamPos			local
+vector	playerPos			local
+vector	thingPos			local
+vector	createPos			local
+
+# *************************** SUBROUTINES ****************************
+
+flex	nomove				local
+flex	wateron				local
+flex	showgate			local
+flex	checkpuzzlestatus	local
+flex	placeplant			local
+flex	lowerpot			local
+flex	flowercloseup		local
+flex	removeplant			local
+flex	GetPotSide			local
+flex 	randlocationlines	local
+
+end
+
+# ========================================================================
+code
+
+startup:
+
+	sleep(.01);
+
+	t_player = GetLocalPlayerThing();
+	curCam = GetCurrentCamera();
+
+	# Must set bits on in marcus and clear in startup
+	# make water surface invisible
+	for (n_idx = 0; n_idx < 14; n_idx = n_idx + 1)
+	{
+		SetFaceGeoMode(wet_surf_0[n_idx], 0);
+	}
+
+	# attach pot parts
+	AttachThingToThing(pot_topchain_a, pot);
+	AttachThingToThing(pot_topchain_b, pot);
+	AttachThingToThing(pot_botchain_a, pot);
+	AttachThingToThing(pot_botchain_b, pot);
+	AttachThingToThing(pot_top, pot);
+	AttachThingToThing(pot_upperchain, pot);
+
+	# Make sure nothing gets stuck 
+	SetCollideType(pot_topchain_a, 0);
+	SetCollideType(pot_topchain_b, 0);
+	SetCollideType(pot_botchain_a, 0);
+	SetCollideType(pot_botchain_b, 0);
+	SetCollideType(pot_top, 0);
+	SetCollideType(pot_upperchain, 0);
+
+	# move pot to top room
+	MoveToFrame(pot, 1, 20);
+	WaitForStop(pot);
+
+	# Give collision
+	SetCollideType(pot_topchain_a, 3);
+	SetCollideType(pot_topchain_b, 3);
+	SetCollideType(pot_botchain_a, 3);
+	SetCollideType(pot_botchain_b, 3);
+	SetCollideType(pot_top, 3);
+	SetCollideType(pot_upperchain, 3);
+
+	# make non-visible parts out-of-play.
+	SetThingFlags(pot_topchain_a, 0x80000);
+	SetThingFlags(pot_topchain_b, 0x80000);
+	SetThingFlags(pot_top, 0x80000);
+	SetThingFlags(pot_upperchain, 0x80000);
+	SetThingFlags(sunlight, 0x80000);
+	SetThingAlpha(sunlight, 0.0);
+
+	# Remember Indy's rotation rate
+	in_rotRate = GetThingMaxRotVel(statue_indy);
+
+	# Give it some light
+    SetThingLight(pad, '.2 .2 .2', .01, .01);
+	SetThingLight(shutter, '.2 .2 .2', .01, .01);
+	SetThingLight(pot, '.2 .2 .2', .1, .01);
+    SetThingLight(pot_top, '.3 .3 .3', .1, .01);
+
+	####### TEMP #######
+
+	#ChangeInv(t_player, n_plantBin_ID0, 1.0);
+	#SetInvAvailable(t_player, n_plantBin_ID0, 1);
+
+	####################
+
+	return;
+
+# ........................................................................
+
+activated:			
+
+	if (bCutsceneRunning)
+		return;
+
+	t_Sender = GetSenderRef();
+
+	if (t_Sender == statue)	# Handle Statue logic
+	{
+		playerPos = GetThingPos(t_player);
+		thingPos = GetThingPos(statue);
+
+		indyDistance = VectorDist(thingPos, playerPos); # How far away is Indy from the statue?
+		if (indyDistance > 0.25) # Magic number
+			return;
+
+		# Compute vector from statue to Indy
+		indyVector = VectorNorm(VectorSub(thingPos, playerPos));
+
+		# Check to see where Indy is standing relative to the statue
+		dotProduct = VectorDot(GetThingLVec(statue), indyVector);
+		rightDot = VectorDot(GetThingRVec(statue), indyVector);
+
+		pushType = 0;
+
+		if (ABS(dotProduct) <= 0.5)
+		{
+			#DEBUGFLEX(dotProduct, "Dot product:");
+			#DEBUGFLEX(rightDot, "Right dot:");
+			# We're within 45 degrees of one of the handles...
+			if (dotProduct > 0.25 && rightDot < -0.5)
+			{
+				# Indy is behind the right handle
+				pushType = 1;
+				pushPosition = 0;
+			}
+			else if (dotProduct < -0.18 && rightDot < -0.5)
+			{
+				# Indy is in front of the right handle
+				pushType = -1;
+				pushPosition = 1;
+			}
+			else if (dotProduct < -0.26 && rightDot > 0.5)
+			{
+				# Indy is in front of the left handle
+				pushType = 1;
+				pushPosition = 4;
+			}
+			else if (dotProduct > 0.18 && rightDot > 0.5)
+			{
+				# Indy is in behind the left handle
+				pushType = -1;
+				pushPosition = 5;
+			}
+		}
+		# If Indy's not in a valid spot, bail
+		if (!pushType)
+			return;
+
+		# Prep for push statue
+		StartCutscene(1);
+		bCutsceneRunning = 1;
+		SetActorFlags(t_player, 0x200000);		# paralyze him
+		StopThing(t_player);
+
+		# Compensate for statue rotation
+		pushPosition = (pushPosition + (n_StatuePos * 2)) % 8;
+
+		# If the statue puzzle is already solved...
+		if (n_StatuePos > 1)
+		{
+			# Play no move animation
+			call NoMove;
+
+			# "Won't budge..."
+			PlayVoice(t_player, in_nobudge, 1, 1);
+
+			# We're done...
+			bCutsceneRunning = 0;
+			return;
+		}
+
+		# If we're just on the wrong side...
+		if (pushType != 1)
+		{
+			# Play no move animation
+			call NoMove;
+
+			# Play near miss line...
+			call randlocationlines;
+			
+            # We're done...
+			bCutsceneRunning = 0;
+			return;
+		}
+
+		# Handy pointer to next push position ghost
+		nextPositionGhost = pushGhost0[(pushPosition + 2) % 8];
+
+		# Remember current camera
+		curCam = GetCurrentCamera();
+
+		# Set up ending camera position
+		endCamPos = GetThingPos(nextPositionGhost);
+		endCamPos = VectorAdd(VectorTransformToOrient(nextPositionGhost, '1.0 0.5 0.5'), endCamPos);
+
+		# Teleport our actor Indy to the right mark
+		TeleportThing(statue_indy, pushGhost0[pushPosition]);
+
+		# Prep
+		CopyPlayerHolsters(t_player, statue_indy);
+		SetThingFlags(t_player, 0x80000);		# hide him
+		ClearThingFlags(statue_indy, 0x80000);	# reveal our actor
+
+		n_StatuePos = n_StatuePos + 1;
+
+		if (n_StatuePos == 1)			   		# water on
+		{
+			Call WaterOn;
+			n_WaterOn = 1;
+		}
+		else if ( n_StatuePos == 2 )			# gate open
+		{
+			Call ShowGate;
+		}
+
+		call CheckPuzzleStatus;
+
+		return;
+	}
+
+	if (t_Sender == t_PlantCurrent)	# Pick up plant
+	{
+		# Stop player & take away control
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(t_player);
+
+		# Cutscene spleef
+		curCam = GetCurrentCamera();
+		StartCutscene(1);
+		bCutsceneRunning = 1;
+
+		call GetPotSide;
+
+		# Prep Actor
+		CopyPlayerHolsters(t_player, flower_indy);
+		SetThingFlags(t_player, 0x80000);
+		TeleportThing(flower_indy, plant_Mark1[pickupSide]);
+		ClearThingFlags(flower_indy, 0x80000);
+		AISetLookThing(flower_indy, t_PlantCurrent);
+
+		# Camera...
+		SetCameraFocus(2, plant_Cam1[pickupSide]);
+		SetCameraSecondaryFocus(2, plant_Mark1[pickupSide]);
+		SetCurrentCamera(2);
+		SetCameraFOV(40, 0, 0.0);
+
+		# Check item status before we pick it up...
+		bFound = IsItemFound(n_plantBin_ID0[n_PlantState]);
+
+		Sleep(0.33);
+		PlayKey(flower_indy, in_GetPlant, 5, 0x12, 0); 
+
+		# Play voice, but only once
+		if (!bFound)
+		{
+			PlayVoice(flower_indy, in_foundSnd1[n_PlantState - 1], 1, 1);
+			if (n_PlantState == 1)
+			{
+				Sleep(0.5);
+				in_KeyTrack = PlayKey(flower_indy, in_HandHip, 5, 0x14, 0); 
+				SetCameraFOV(30, 1, 2.0);
+				PlayVoice(flower_indy, in_hintSnd, 1, 1);
+				StopKey(flower_indy, in_KeyTrack, 0.5);
+			}
+			else if (n_PlantState == 2)
+			{
+				SendMessage(HintCog, user2);
+			}
+		}
+		else
+		{
+			Sleep(1.75);
+		}
+
+		# Pop Indy to actor location & let him go
+		Sleep(1.0);
+		CopyOrientAndPos(flower_indy, t_player);
+		SetThingFlags(flower_indy, 0x80000);
+		ClearThingFlags(t_player, 0x80000);
+		ClearActorFlags(t_player, 0x200000);
+
+		# Cleanup
+		EndCutscene();
+		ResetCameraFOV(0, 0.0);
+		SetCurrentCamera(curCam);
+		bCutsceneRunning = 0;
+
+		# Set puzzle vars
+		n_PlantInPot = 0;
+		t_PlantCurrent = -1;
+
+		return;
+	}
+
+	if (t_Sender == pot) # Handle pot logic
+	{
+		n_CurItem = GetCurItem(t_player);
+
+		# Bail if no item is current
+		if (n_CurItem == 0)
+		{
+			if(!b_Spoken)
+			{
+				b_Spoken = 1;
+
+				# Say the line if the pot is still up
+				if (n_PotLowered == 0)
+				{
+					PlayVoice(t_player, in_flowerpot, 1, 1);
+				}
+			}
+			return;
+		}
+
+		# Is player placing plant into pot?
+		for (n_idx = 0; n_idx < 3; n_idx = n_idx + 1)
+		{
+			if (n_CurItem == n_plantBin_ID0[n_idx])
+			{
+				n_PlantInPot = 1;
+
+				# Lose plant from Indy's inventory...
+				ChangeInv(t_player, n_plantBin_ID0[n_idx], -1.0);
+
+				# Prep Indy
+				if (MakeMeStop() == -1) return;
+
+				# Cutscene stuff
+				StartCutScene(1);
+				bCutsceneRunning = 1;
+				DeselectWeaponWait(t_player);
+				CopyPlayerHolsters(t_player, flower_indy);
+
+				# Create the plant
+				call PlacePlant;
+
+				# What side are we on?
+				call GetPotSide;
+
+				# Special case of 1st time placed... lower pot
+				if (n_PotLowered == 0)
+				{
+					# Play cutscene
+					Call LowerPot;
+
+					# update state of plant
+					call CheckPuzzleStatus;
+
+					# Show change
+					Call FlowerCloseup;
+
+					# cut back to Indy, camera swings back to return control
+					SetCameraPosition(1, GetThingPos(potcam_6)); # prep for camera to swing back
+					SetCameraLookInterp(2, 0); # kill pan & tilt mode
+					SetCameraPosInterp(2, 0); # kill dolly mode
+					Sleep(0.01);
+					ResetCameraFOV(0, 0.0);
+					SetCurrentCamera(curCam);
+
+					if (t_PlantNew != -1)
+					{
+						call RemovePlant;
+						t_PlantCurrent = t_PlantNew;
+						SetCollideType(t_PlantCurrent, 3);
+						t_PlantNew = -1;
+					}
+
+				}
+				else
+				{
+					# Prep Actor
+					CopyPlayerHolsters(t_player, flower_indy);
+					SetThingFlags(t_player, 0x80000);
+					TeleportThing(flower_indy, plant_Mark1[pickupSide]);
+					ClearThingFlags(flower_indy, 0x80000);
+
+					# Prep camera
+					curCam = GetCurrentCamera();
+					SetCameraFocus(2, plant_Cam1[pickupSide]);
+					SetCameraSecondaryFocus(2, plant_Mark1[pickupSide]);
+					SetCurrentCamera(2);
+					SetCameraFOV(40, 0, 0.0);
+
+					# Offset the camera
+					#SetExtCamOffset('0.15 -0.05 0.04');
+					#SetExtCamLookOffset('0.0 0.02 0.0');
+
+					# Start place plant animation
+					Playkey(flower_indy, in_putplant, 5, 0x12, 1);
+					Sleep(0.25);
+
+					# Restore camera
+					ResetCameraFOV(0, 0.0);
+
+					# Pop player into position
+					CopyOrientAndPos(flower_indy, t_player);
+
+					# Cleanup
+					ResetCameraFOV(0, 0.0);
+					SetCurrentCamera(curCam);
+				}
+
+				SetThingFlags(flower_indy, 0x80000);
+				ClearThingFlags(t_player, 0x80000);
+				ClearActorFlags(t_player, 0x200000);
+				bCutsceneRunning = 0;
+				EndCutscene();
+
+				call CheckPuzzleStatus;
+				return;
+			}
+		}
+		
+		# Call NoWorkTalkCog because player is trying to use an incorrect item.
+        Sleep(.3);
+		SendMessageEx(NoWorkTalkCog, user1, 0, 0, 0, 0);
+	    global15 = 0; # per Randy
+		while (global15 == 0)
+			{
+				Sleep(0.01); # wait for line to finish
+			}
+		
+	}
+
+	return;
+
+# ........................................................................
+
+damaged:
+
+	# check if whip strut
+	if (GetSenderRef() != pot_top) return;
+
+	if (GetParam(1) == 0x10)
+	{
+		# Prep...
+		curCam = GetCurrentCamera();
+		ResetCameraFOV(0, 0.0);
+
+		StartCutscene(1);
+
+		# disable controls, switch camera
+		SetActorFlags(t_player, 0x200000);
+		SetCameraFocus(2, whipCam_1);
+		SetCameraSecondaryFocus(2, t_player);
+		SetCurrentCamera(2);
+		SetCameraFOV(70, 0, 0.0);
+
+		# play music
+		PlaySoundLocal(music1, 1.0, 0, 0x0000, 0);
+	}
+return;
+
+# ........................................................................
+
+entered:
+
+	# check if indy lands on pressure pad 
+	if (GetSenderRef() == pad)
+	{
+		if ((n_ShutterOpen != 0) || (n_PotLowered != 1))
+		{
+			return;
+		}
+
+		# Prep
+		ResetCameraFOV(0, 0.0);
+		SetActorFlags(t_player, 0x200000);
+		DeselectWeapon(t_player);
+		TeleportThing(flower_indy, t_player);
+		AISetCutSceneMode(flower_indy);
+
+		# Switch camera
+		SetCameraFocus(2, whipCam_1);
+		SetCameraSecondaryFocus(2, t_player);
+		SetCurrentCamera(2);
+		SetCameraFOV(70, 0, 0.0);
+
+		n_ShutterOpen = 1;
+
+		# move pad down
+		MoveToFrame(pad, 1, 2);
+		PlaySoundLocal(pad_move, 1.0, 0, 0x0, 0);
+		WaitForStop(pad);
+		PlaySoundLocal(pad_stop, 1.0, 0, 0x0, 0);
+		Sleep(.5); 	# beat
+
+		#cut to shutters
+		SetCameraFocus(2, whipcam_2);
+		SetCameraSecondaryFocus(2, shutter);
+
+		# open shutters
+		PlaySoundLocal(shutter_move, 1.0, 0, 0x0, 0);
+		shutterTrack = PlayKey(shutter, sh_open, 4, 0x14, 0);
+		Sleep(0.33);
+
+		# play light effect
+		SetThingLight(sunlight, '1 1 1', 2.0, .01);
+		SetThingLight(pad, '1 1 1', 4.0, .01);
+
+		ClearThingFlags(sunlight,0x80000);
+		ThingFadeAnim(sunlight, 0, 1, 0.5, 0);
+
+		# Turn Indy
+		CopyPlayerHolsters(t_player, flower_indy);
+		SetThingFlags(t_player, 0x80000);
+		ClearThingFlags(flower_indy, 0x80000);
+		AISetLookThing(flower_indy, pot);
+
+		# Follow sunlight
+		SetCameraLookInterp(2, 1); # enable pan & tilt mode
+		SetCameraInterpSpeed(2, 3.0);
+		Sleep(0.33);
+		SetCameraSecondaryFocus(2, pot);
+		Sleep(3.5);
+
+		# Update state
+		Call CheckPuzzleStatus;
+
+		# Get rid of sunlight
+		ThingFadeAnim(sunlight, 1, 0, 0.1, 0);
+
+		# Show change if puzzle's not already solved
+		if (!b_Solved)
+		{
+			Call FlowerCloseup;
+		}
+
+		# Housekeeping...
+		SetCameraPosition(1, GetThingPos(whipcam_2));	# prep for camera to swing back
+		CopyOrientAndPos(flower_indy, t_player);
+		SetThingFlags(flower_indy, 0x80000);
+		ClearActorFlags(t_player, 0x200000);
+		ClearThingFlags(t_player, 0x80000); 
+		SetCameraLookInterp(2, 0); # kill pan & tilt mode
+		SetCameraPosInterp(2, 0); # kill dolly mode
+		Sleep(0.01);
+		SetCurrentCamera(curCam);
+		ResetCameraFOV(0, 0.0);
+		EndCutscene();
+
+		if (t_PlantNew != -1)
+		{
+			call RemovePlant;
+			t_PlantCurrent = t_PlantNew;
+			SetCollideType(t_PlantCurrent, 3);
+			t_PlantNew = -1;
+		}
+	}
+	return;
+
+# ........................................................................
+
+exited:
+
+	# See if Indy leaves pad
+	if (GetSenderRef() == pad)
+	{
+		if (n_ShutterOpen != 1)
+		{
+			return;
+		}
+		
+		# Wait a bit and see if Indy's just jumping up and down...
+		Sleep(0.75);
+		if (VectorZ(VectorSub(GetThingPos(t_player), '0.0 0.0 0.2')) >= VectorZ(GetThingPos(pad)))
+		{
+			return;
+		}
+
+		# Move pad up
+		MoveToFrame(pad, 0, 3);
+		PlaySoundLocal(pad_move, 1.0, 0, 0x0, 0);
+		WaitForStop(pad);
+		PlaySoundLocal(pad_stop, 1.0, 0, 0x0, 0);
+
+		# Close shutters
+		PlayKey(shutter, sh_close, 8, 0x12, 0);
+		StopKey(shutter, shutterTrack, 0.0);
+		Sleep(0.66);
+
+		# Turn off light effect
+		SetThingFlags(sunlight, 0x80000);
+		SetThingLight(pad, '0 0 0', 0.0, .01);
+		
+		n_ShutterOpen = 0;
+	}
+
+	return;
+
+# ........................................................................
+
+callback:
+
+	callbackNum = GetParam(1);
+
+	if (callbackNum == 21)
+	{
+		# Pull plant from pouch
+		in_swapRef = SetThingMesh(flower_indy, 15, hand0[n_PlantState], 0);
+	}
+	else if (callbackNum == 22) # Place plant
+	{
+		# Restore hand mesh
+		RestoreThingMesh(flower_indy, in_swapRef);
+
+		# Light bud.  Heh.
+		ClearThingFlags(t_PlantCurrent, 0x80000);
+		SetThingLight(t_PlantCurrent, '1 1 1', .01, 0);
+	}
+	else if (callbackNum == 23)
+	{
+		# Take plant from pot
+		in_swapRef = SetThingMesh(flower_indy, 15, hand0[n_PlantState], 0);
+		call RemovePlant;
+	}
+	else if (callbackNum == 24)
+	{
+		ChangeInv(t_player, n_plantBin_ID0[n_PlantState], 1);
+		SetInvAvailable(t_player, n_plantBin_ID0[n_PlantState], 1);
+		JonesInvItemChanged(n_plantBin_ID0[n_PlantState]);
+
+		# Restore hand mesh
+		RestoreThingMesh(flower_indy, in_swapRef);
+
+		# Look up...
+		AISetLookThingEyeLevel(flower_indy, pot);
+	}
+	else if (callbackNum == 26)
+	{
+		# This callback comes from the statue push keyframe to let us know it's time to start rotating the statue.
+		Rotate(statue, -90, 1, 3.8); # spin statue
+	}
+
+	return;
+
+# ========================================================================
+#	Subroutines
+# ========================================================================
+
+PlacePlant:
+
+	#DEBUGFLEX(n_PlantState, "Created plant THING.  Current plant state is");
+
+	if (t_PlantCurrent != -1)
+		DestroyThing(t_PlantCurrent);
+
+    curSector = GetThingSector(pot);
+
+	t_PlantCurrent = CreateThingatPos(t_plantType0[n_PlantState], curSector, GetThingPos(pot), '0 0 0');
+	CaptureThing(t_PlantCurrent);
+	AttachThingToThingEx(t_PlantCurrent, pot, 0x08);
+
+	# Hide placed plant until the right moment
+	SetThingFlags(t_PlantCurrent, 0x80000);
+
+	return;
+
+# ........................................................................
+
+RemovePlant:
+
+	if (t_PlantCurrent != -1)
+	{
+		DetachThing(t_PlantCurrent);
+		DestroyThing(t_PlantCurrent);
+		t_PlantCurrent = -1;
+	}
+
+	return;
+
+# ........................................................................
+
+CheckPuzzleStatus:
+
+	if ( n_PlantInPot == 1 )
+	{
+		if ( n_PlantState == 0 )			# bulb
+		{
+			if ( n_ShutterOpen == 1 ) 		# using sunlight
+			{
+				n_PlantState = 1;
+				n_GrowMethod = 2;			# remember used sunlight
+			}
+
+			if ( n_WaterOn == 1 )			# using	water
+			{
+				n_PlantState = 1;
+				n_GrowMethod = 1;			# remember used water
+			}
+		}
+
+		if ( n_PlantState == 1 )		# bud
+		{
+			# Check what method was used and only allow the other
+
+			if ( (n_GrowMethod==2) && (n_WaterOn==1) )
+			{
+				n_PlantState = 2;
+			}
+
+			if ( (n_GrowMethod==1) && (n_ShutterOpen==1) )
+			{
+				n_PlantState = 2;
+			}
+			
+		}
+	}
+
+	return;
+# ........................................................................
+
+FlowerCloseup:
+
+	# Create new plant off camera so it doesn't pop in
+	if (t_PlantNew == -1)
+	{
+		t_PlantNew = CreateThing(t_plantType0[n_PlantState], t_PlantCurrent);
+		AttachThingToThingEx(t_PlantNew, pot, 0x08);
+		CaptureThing(t_PlantNew);
+		SetThingLight(t_PlantNew, '1 1 1', .01, 0);
+		SetThingAlpha(t_PlantNew, 0.0);
+	}
+
+	# Music...
+	PlaySoundLocal(music4, 1.0, 0, 0x0000, 0);
+
+	# prep camera
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	Sleep(.01);
+	SetCameraFocus(2, closeupcam_1);
+	if (n_PlantState == 1)
+	{
+		SetCameraSecondaryFocus(2, close_ct_1);
+		SetCameraFOV(50, 0, 0.0);
+	}
+	else
+	{
+		SetCameraSecondaryFocus(2, close_ct_2);
+		SetCameraFOV(50, 0, 0.0);	
+	}
+
+	# Check if bulb in pot
+	if (n_PlantInPot == 0 )
+		return;
+
+	# pan up to show growth
+	SetCameraLookInterp(2, 1); 		# yes pan & tilt mode
+	SetCameraInterpSpeed(2, 2.5);  	# same amount of time as fade in
+	Sleep(.01);
+
+	# Fade out current plant, fade in new
+	ThingFadeAnim(t_PlantCurrent, 1.0, 0.0, 5.0, 0);
+	ThingFadeAnim(t_PlantNew, 0.0, 1.0, 3.0, 0);
+
+	# check plant state for camera target
+	if (n_PlantState == 1)
+	{
+		SetCameraSecondaryFocus(2, close_ct_2);
+		SetCameraFOV(45, 1, 2.5);
+	}
+	else
+	{
+		SetCameraSecondaryFocus(2, close_ct_3);
+		SetCameraFOV(53, 1, 2.5);
+
+		# We're in the bud state -- puzzle solved
+		b_Solved = 1;
+	}
+
+	# RT: Make some fairy dust
+	for (n_idx = 0; n_idx < 8; n_idx = n_idx + 1)
+	{
+		curSector = GetThingSector(t_PlantCurrent);
+		thingPos = GetThingPos(t_PlantCurrent);
+        createPos = VectorAdd(thingPos, '0.0 0.0 0.008');
+		CreateThingAtPos(t_FairyDust, curSector, createPos, '0 0 0');
+		Sleep(0.2);
+	}
+
+	Sleep(2.0);
+
+	return;
+
+# ........................................................................
+
+LowerPot:
+
+	# Make sure nothing gets stuck on the way down
+	SetCollideType(pot_topchain_a, 0);
+	SetCollideType(pot_topchain_b, 0);
+	SetCollideType(pot_botchain_a, 0);
+	SetCollideType(pot_botchain_b, 0);
+	SetCollideType(pot_top, 0);
+	SetCollideType(pot_upperchain, 0);
+
+	AttachThingToThing(pot_ct_1, pot);
+
+	# make parts visible
+	ClearThingFlags(pot_topchain_a,0x80000);
+	ClearThingFlags(pot_topchain_b,0x80000);
+	ClearThingFlags(pot_top,0x80000);
+	ClearThingFlags(pot_upperchain,0x80000);
+
+	# Actor on...
+	SetThingFlags(t_player, 0x80000);
+	ClearThingFlags(flower_indy, 0x80000);
+
+	# cut to behind chains
+	SetCameraLookInterp(2, 0); # no p & t
+	SetCameraPosInterp(2, 0); # no dolly
+	SetCameraFocus(2, potcam_1);
+	SetCameraSecondaryFocus(2, pot_ct_1);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0); # reset FOV just in case
+
+	# Bulb goes in pot
+	AISetLookThing(flower_indy, pot);
+	PlayKey(flower_indy, in_putbud, 4, 0x12, 1); # Indy places bulb in pot
+
+	# pot descends
+	SkipToFrame(pot, 0, 1.5);
+
+	# loop the sound
+	potloop = PlaySoundLocal(pot_move, 1.0, 0, 0x1, 0);
+	PlaySoundLocal(music2, 1.0, 0, 0x0000, 0);
+
+	# camera moves forward to look down
+	SetCameraPosInterp(2, 1);  #yes dolly
+	SetCameraInterpSpeed(2, 2.5);
+	sleep(.01);
+	SetCameraFocus(2, potcam_2);
+	SetCameraSecondaryFocus(2, pot_ct_1);
+	sleep(4.0);
+
+	# cut to below, pot already past opening
+	SetCameraPosInterp(2, 0); # no dolly
+	sleep(.01);
+	SetCameraFocus(2, potcam_3);
+	SetCameraSecondaryFocus(2, pot_ct_1);
+	SetCameraFOV(70, 1, 3.0);
+
+	# track pot to pool
+	WaitForStop(pot);
+	StopSound(potloop, 0.0);
+	PlaySoundLocal(statue_stop, 1.0, 0, 0x0, 0);
+	sleep(.5);
+	DetachThing(pot_ct_1);
+
+	SetCollideType(pot_topchain_a, 3);
+	SetCollideType(pot_topchain_b, 3);
+	SetCollideType(pot_botchain_a, 3);
+	SetCollideType(pot_botchain_b, 3);
+	SetCollideType(pot_top, 3);
+	SetCollideType(pot_upperchain, 3);
+
+	n_PotLowered = 1;
+
+	return;
+
+# ........................................................................
+
+NoMove:
+
+	# Swing camera around
+	SetExtCamLookOffset('0.0 0.02 -0.01');
+	SetExtCamOffset(VectorSet((0.25 * pushType), -0.05, 0.1));
+
+	# Adjust player
+	TeleportThing(t_player, pushGhost0[pushPosition]);
+	#DEBUGFLEX(pushPosition, "Teleporting to start position");
+
+	# Play no-move animation
+	PlayKey(t_player, in_nomove, 4, 0x12, 1);
+
+	# Housekeeping...
+	ClearActorFlags(t_player, 0x200000);
+	RestoreExtCam();
+	EndCutscene();
+
+	return;
+
+# ........................................................................
+
+ShowGate:
+	
+	# cut to shot of indy rotating statue
+	SetCameraPosInterp(2, 0); # no dolly
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraFocus(2, statuecam_2);
+	SetCameraSecondaryFocus(2, statue_ct_2);
+    SetCurrentCamera(2);
+    SetCameraFOV(70, 0, 0.0);
+
+	# Wait for push anim to finish
+	Playkey(statue_indy, in_pushstatue, 4, 0x12, 1);
+
+	TeleportThing(statue_indy, nextPositionGhost);
+
+	# move gate
+	MoveToFrame(gate, 1, 0.8);
+
+	# Indy looks toward gate
+	SetThingMaxRotVel(statue_indy, 75.0);
+	AISetLookThing(statue_indy, gate);
+
+	# Interp to gate
+	SetCameraPosInterp(2, 1); # yes dolly
+	SetCameraLookInterp(2, 1); # yes pan & tilt mode
+	SetCameraInterpSpeed(2, 2.5);
+	sleep(.01);
+	SetCameraFocus(2, statuecam_2a);
+	SetCameraSecondaryFocus(2, statue_ct_2a);
+	#Sleep(2.0);
+
+	# Wait for gate to stop
+	WaitForStop(gate);
+	Sleep(.5);		# beat
+
+	# return control
+	SetThingFlags(statue_indy, 0x80000);
+	TeleportThing(t_player, nextPositionGhost);
+	ClearThingFlags(t_player, 0x80000);
+	ClearActorFlags(t_player, 0x200000);
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	Sleep(0.01);
+	ResetCameraFOV(0, 0.0);
+	SetCameraPosition(1, endCamPos);	# prep for camera to swing back
+	SetCurrentCamera(curCam);
+	EndCutscene();
+	bCutsceneRunning = 0;
+
+	return;
+
+# ........................................................................
+
+WaterOn:
+
+	# cut to shot of indy rotating statue
+	SetCameraPosInterp(2, 0); # no dolly
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraFocus(2, statuecam_1);
+	SetCameraSecondaryFocus(2, statue_ct_1a);
+	SetCurrentCamera(2);
+	SetCameraFOV(80, 0, 0);
+
+	# play music, monks chanting
+	PlaySoundLocal(music3, 1.0, 0, 0x0000, 0);
+
+	# Wait for push anim to finish
+	Playkey(statue_indy, in_pushstatue, 4, 0x12, 1);
+
+	TeleportThing(statue_indy, nextPositionGhost);
+
+	# Make indy look at water
+	SetThingMaxRotVel(statue_indy, 75.0);
+	AISetLookThing(statue_indy, plant_Mark2);
+
+	# make puddle sound
+	for (n_idx = 0; n_idx < 3; n_idx = n_idx + 1)
+	{
+		SetSurfaceFlags(wet_snd_0[n_idx], 0x40000);
+	}
+
+	# make water surface visible
+	for (n_idx = 0; n_idx < 14; n_idx = n_idx + 1)
+	{
+		SetFaceGeoMode(wet_surf_0[n_idx], 4);
+	}
+
+	# pan to show water in cistern
+
+	h2oloop=PlaySoundLocal(h2o_on, 1.0, 0, 0x1, 0); # water sound
+	Sleep(.5);	# pause for sound before pan
+	SetCameraPosInterp(2, 1);
+	SetCameraLookInterp(2, 1); # yes pan & tilt mode
+	SetCameraInterpSpeed(2, 4.5);
+	Sleep (.01);
+	SetCameraFocus(2, statuecam_1a);
+	SetCameraSecondaryFocus(2, statue_ct_1b);
+	SetCameraFOV(65, 1, 4.5);
+
+	Sleep(5.5); 	# allow for camera to move to spot
+	StopSound(h2oloop, 0.0);
+
+	# cut to pot -- prep camera
+	ResetCameraFOV(0, 0.0);
+	SetCameraPosInterp(2, 0); # no dolly
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraFocus(2, potcam_6);
+	SetCameraSecondaryFocus(2, pot);
+	Sleep (.01);
+
+	# Make sure nothing gets stuck on the way down
+	SetCollideType(pot_topchain_a, 0);
+	SetCollideType(pot_topchain_b, 0);
+	SetCollideType(pot_botchain_a, 0);
+	SetCollideType(pot_botchain_b, 0);
+	SetCollideType(pot_top, 0);
+	SetCollideType(pot_upperchain, 0);
+
+	# pot moves to useable spot
+	SetCameraFOV(70, 1, 2.0);
+	MoveToFrame(pot, 2, 1.0);
+
+	# loop the sound
+	potloop=PlaySoundLocal(pot_move, 1.0, 0, 0x1, 0);
+	PlaySoundThing(h2o_on, waterONpos, 0.5, 2, 10, 0x881);
+	
+
+	WaitForStop(pot);
+	StopSound(potloop, 0.0);
+	PlaySoundLocal(statue_stop, 1.0, 0, 0x0, 0);
+	Sleep(1.0);
+
+	# Give collision
+	SetCollideType(pot_topchain_a, 3);
+	SetCollideType(pot_topchain_b, 3);
+	SetCollideType(pot_botchain_a, 3);
+	SetCollideType(pot_botchain_b, 3);
+	SetCollideType(pot_top, 3);
+	SetCollideType(pot_upperchain, 3);
+
+	# Cleanup
+	SetThingMaxRotVel(statue_indy, in_rotRate);# reset indy rotate velocity
+	SetThingFlags(statue_indy, 0x80000);
+	TeleportThing(t_player, nextPositionGhost);
+	ClearThingFlags(t_player, 0x80000);
+	ClearActorFlags(t_player, 0x200000);
+	
+	# "...some kind of switch"
+	PlayVoice(t_player, in_clue, 1, 0);
+	
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	Sleep(0.01);
+	ResetCameraFOV(0, 0.0);
+	SetCameraPosition(1, endCamPos);	# prep for camera to swing back
+	SetCurrentCamera(curCam);
+	ResetCameraFOV(0, 0.0);
+	EndCutscene();
+	bCutsceneRunning = 0;
+
+	return;
+
+# ........................................................................
+
+GetPotSide:
+
+	# Useful stuff
+	playerPos = GetThingPos(t_player);
+	thingPos = GetThingPos(pot);
+
+	# See which side of the pot Indy is on...
+	indyVector = VectorNorm(VectorSub(thingPos, playerPos));
+	dotProduct = VectorDot(GetThingLVec(pot), indyVector);
+	if (dotProduct > 0) pickupSide = 0; # In front of pot 
+	else pickupSide = 1; # In water
+
+	return;
+
+# ..............................................................................
+
+randlocationlines:
+
+	Print("locationlines");
+	
+	while (l_newline == l_oldline)
+	{		
+		l_newline = RandBetween(0, 5);
+	}
+	l_oldline = l_newline;
+	
+	cursound = PlayVoice(t_player, in_wrongspot0[l_newline], 1, 0);
+
+	doplay = Randbetween(0, 2);
+	if ((doplay == 0) || (played == 0))
+	{
+		Print("playing key...");
+		PlayKey(t_player, in_bothup, 4, 0x12, 0);
+		played = 1;
+	}
+	WaitForSound(cursound);
+
+	return;
+
+# ..............................................................................
+
+end

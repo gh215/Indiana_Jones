@@ -1,0 +1,32 @@
+# Jones 3D Cog Script
+#
+# gen_FoamFall.cog
+#
+# Continuous global animation of gen_a4fall_foam.mat material
+#
+# [HB]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+message		startup
+
+material	foam=gen_a4foam_fall.mat	local	desc=animating_material
+
+flex		fps=15.0					local	desc=playback_speed
+
+end
+
+# ........................................................................................
+
+code
+
+startup:
+
+	materialanim(foam, fps, 1);
+	return;
+
+end
+

@@ -1,0 +1,175 @@
+# Jones 3D Cog Script
+#
+# PRU_voicelineLightTrap.cog
+#
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message	entered
+message	startup
+message	activated
+
+sector	trapSector
+
+cog		lightTrap									
+
+sound	dialogue=pu02j01.wav	local				
+
+template		tplActor=indy_sh_actor			local	
+
+keyframe		kneel=0in_stand6.key				local
+
+thing	camTarget0
+thing	handTarget
+thing	armGhost
+thing	kneelGhost
+thing	familiarCam										
+thing	LTresetCam
+thing	handCam
+thing	forrestal									
+thing	actor				local					
+thing	arm
+thing	shaftGhost									
+thing	player				local
+thing	LTstartGhost					
+
+int		once=0				local					
+int		tempCam				local					
+int		curCam				local					
+
+flex	tempRotVel			local
+flex	playerSpot			local
+
+end
+# ========================================================================================
+code
+startup:
+	player = GetLocalPlayerThing();
+	SetThingCollideSize(forrestal, 0.075);
+    SetThingFlags(arm, 0x80000);
+    
+return;
+
+entered:
+Print("entered");
+if ((GetSenderRef() == trapSector) && (once == 0))
+{
+	once = 1;
+    curCam = GetCurrentCamera();
+	
+	#Stop the player from moving and put him in a standing position
+	StopThing(player);
+	PlayMode(player, 1, 0);
+	DeselectWeapon(player);
+    DeselectWeaponWait(player);
+	Sleep(0.01);
+
+	#jump the player forward to a ghost
+	CopyOrientandPos(LTstartGhost, player);
+    
+	#Create an actor at the player's location and swap them out
+    actor = CreateThing(tplActor, player);
+	CaptureThing(actor);
+    
+	CopyPlayerHolsters(player, actor);
+	SetThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	ClearThingFlags(actor, 0x80000);
+
+    SetCameraFocus (2, familiarCam);
+	SetCameraLookInterp(2, 0);
+	SetCameraSecondaryFocus(2, LTcamTarget0);
+	SetCurrentCamera(2);
+	SetCameraFOV(45, 0, 0.0);
+	Sleep(0.5);
+	
+	SetCameraLookInterp(2, 1);
+	SetCameraInterpSpeed(2, 3.5);
+	
+	Sleep(0.25);
+	MoveToFrame(LTcamTarget0, 1, 0.5);
+    MoveToFrame(familiarCam, 1, 1.5);
+	
+    SetCameraFOV(90, 1, 3.25);
+	
+	Sleep(0.1);
+	
+	SetCameraSecondaryFocus(2, forrestal);
+	
+    #Turn actor to look at the shaft
+    tempRotVel=GetThingMaxRotVel(actor);
+	SetThingMaxRotVel(actor, 100.0);
+	AISetLookThing(actor, shaftGhost);
+	Sleep(0.5);
+    
+    PlayVoice(actor, dialogue, 1, 0);
+	Sleep(1.5);
+	
+	AISetLookThing(actor, forrestal);
+	Sleep(4.0);
+	
+	CopyOrientandPos(actor, player);
+	SetThingFlags(actor, 0x80000);
+	SetThingMaxRotVel(actor, tempRotVel);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	ResetCameraFOV(0, 0.0);
+    SetCameraLookInterp(2, 0);
+    
+	tempCam = GetThingPos(LTresetCam);
+	SetCameraPosition(curcam, tempCam);
+
+			
+	SetCurrentCamera(curcam);
+}
+return;
+
+activated:
+if (GetSenderRef() == forrestal)
+{
+	actor = CreateThing(tplActor, kneelGhost);
+	CaptureThing(actor);
+	SetThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	ClearThingFlags(actor, 0x80000);
+    CopyOrientandPos(actor, player);
+    
+	PlayKey(actor, kneel, 4, 0x12, 0);
+	
+	Sleep(1.0);
+	
+	SetCameraFocus (2, handCam);
+	SetCameraLookInterp(2, 0);
+	SetCameraSecondaryFocus(2, handTarget);
+	SetCurrentCamera(2);
+	SetCameraFOV(30, 0, 0.0);
+	Sleep(0.5);
+	
+    ClearThingFlags(arm, 0x80000);
+	AISetMoveThing(arm, armGhost, 1);
+	Sleep(1.0);
+    SetThingFlags(arm, 0x80000);
+	SetCurrentCamera(curCam);
+	SendMessage(lightTrap, user0);
+    Sleep(1.0);
+	AISetLookThing(actor, Sapito);
+	Sleep(4.0);
+    
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	SetThingFlags(actor, 0x80000);
+}
+return;
+end
+	
+
+
+
+
+

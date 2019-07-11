@@ -1,0 +1,413 @@
+# Jones 3D Cog Script
+#
+# BAB_Truckmove.cog
+# This cog is based on the brilliant groundbreaking cog work pioneered by Reed Derleth
+#
+# [SXC & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+## MESSAGES ##############################################################################
+
+message     startup
+message     entered
+message     pulse
+message     user0
+
+## SURFACES ##############################################################################
+
+surface     trigger
+
+surface     stopface0       mask=0x004
+surface     stopface1       mask=0x004
+
+surface     stopface2       mask=0x004
+surface     stopface3       mask=0x004
+
+surface     stopface4       mask=0x004
+surface     stopface5       mask=0x004
+surface     stopface6       mask=0x004
+
+## THINGS ################################################################################
+
+thing		truck
+thing       startpos
+thing       door0
+thing       door0a
+thing       door1
+thing       door2
+thing       door3
+thing       door4
+thing       player              local
+thing       actorindy
+thing       spinpos 
+thing       teleport_pos
+thing       invisitruck
+
+## CAMERAS ###############################################################################
+
+thing       cam0										nolink
+thing       cam0_tgt0									nolink
+thing       cam1										nolink
+thing       cam1_tgt0									nolink
+thing       cam1_tgt1									nolink
+thing       nd_look_tgt0								nolink
+thing       nd_move_tgt0								nolink
+thing		nd_move_tgt1								nolink
+thing       nd_look_tgt1								nolink
+thing       hint28
+
+## SOUNDS ################################################################################
+
+sound       truckline=bb03j03.wav						local //3.75 sec
+sound       theme=mus_gen_danger2.wav					local
+sound       metaldoor_start=bab_gate_start.wav          local
+sound       metaldoor_move=bab_gate_move.wav            local
+sound       metaldoor_stop=bab_gate_stop.wav            local
+sound       trucktheme=mus_bab_truck.wav                local
+
+## KEYFRAMES #############################################################################
+
+keyframe    in_leanin=0in_leanin_2_2.key				local
+keyframe    in_handsONhips=0in_stand4.key				local
+keyframe    in_sideTOhips=0in_stand1_bd_4.key			local
+keyframe	in_armsCrossed=0in_stand2.key				local
+keyframe	in_crossArms=0in_stand1_bd_2.key		   	local //48x
+
+## MISC ##################################################################################
+
+int		    curframe=0		    local
+int		    begun=0			    local
+int		    crossframe=0	    local
+int         aimessageblock=0    local
+int         killflag=0          local
+int         in_track0			local     
+int         firsttime=0         local
+int         doorchan=0          local
+int         isontruck=0         local
+int         sceneflag=0         local
+int         schollhack=0        local
+
+vector      kickvector          local
+
+flex		in_rotRate			local
+flex        in_headRate         local
+flex        range               local
+
+##########################################################################################
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+    SetThingFlags(truck, 0x80000);      //set truck inviso
+    SetCollideType(door0, 0);
+    SetCollideType(door0a, 0);
+	player = GetLocalPlayerThing();
+    kickvector = VectorSet(0, 2, 0);
+	in_headRate = GetThingMaxHeadVel(player);
+	in_rotRate = GetThingMaxRotVel(player);
+    
+return;
+
+# ........................................................................................
+entered:
+
+    if ((GetSenderRef() == trigger) &&
+		 (begun == 0))
+	    {
+            begun = 1;
+	        //actor visible player invisible
+			MakeMeStop();
+            StartCutscene(1);
+			CopyPlayerHolsters(player, actorindy);
+            SetThingFlags(player, 0x80000);
+            ClearThingFlags(actorindy, 0x80000);
+            ClearThingFlags(truck, 0x80000);
+            AttachThingToThing(hint28, truck);
+            
+            //Set camera to track Indy...
+            AISetCutsceneMode(actorindy);
+            SetCameraFocus(2, cam0);
+		    SetCameraSecondaryFocus(2, cam0_tgt0);
+            SetCurrentCamera(2);
+            SetCameraFOV(45, 0, 0);
+			Sleep(0.01);
+			SetCameraFOV(30, 1, 3.0);
+            
+            //Walk Indy forward to overlook...
+			AttachThingToThing(cam0_tgt0, actorindy);
+			SetThingMaxHeadVel(actorindy, 100.0);			
+			SetThingMaxRotVel(actorindy, 200.0);
+			AISetMoveSpeed(actorindy, 0.9);
+            AISetLookThingEyeLevel(actorindy, nd_look_tgt0);
+            AISetMoveThing(actorindy, nd_move_tgt0, 0);
+			Sleep(2.8);
+			AISetLookThingEyeLevel(actorindy, nd_move_tgt1);
+			AISetMoveThing(actorindy, nd_move_tgt1, 0);
+            PlaySoundLocal(trucktheme, 0, 0, 0, 0);
+	   		Sleep(0.7);
+
+			AIEnableHeadTracking(actorindy, cam1_tgt1);
+			AIWaitForStop(actorindy);
+			AISetLookThing(actorindy, cam1_tgt1);
+			AIWaitForStop(actorindy);
+			AIDisableHeadTracking(actorindy);     		
+			DetachThing(cam0_tgt0);			
+			in_track0 = PlayKey(actorindy, in_handsONhips, 2, 0x00, 0);
+			PlayKey(actorindy, in_sideTOhips, 4, 0x12, 1);
+
+			//Pan to truck...
+			SetCameraLookInterp(2, 1);
+			SetCameraInterpSpeed(2, 1.35);
+			AttachThingToThing(nd_look_tgt1, truck);
+			Sleep(0.01);
+			SetCameraSecondaryFocus(2, nd_look_tgt1);
+			SetCameraFOV(30, 1, 1.35);
+     		PlaySoundLocal(trucktheme, 1, 0, 0, 0); 
+			Sleep(1.5);
+			StopKey(actorindy, in_track0, 0.5);
+			//Sleep(0.5);
+			
+            //Kick truck to start it moving 1st time...
+			SetCameraLookInterp(2, 0); # lock target rigidly onto truck
+     		SetThingThrust(truck, kickvector);
+			AIEnableBodyTracking(actorindy, truck); 
+			SetCameraFOV(60, 1, 3.0);     
+            return;
+	    }
+  
+//AT TOP OF HILL
+    if ((GetSenderRef() == stopface0) && (GetSourceRef() == truck))
+        {
+            StopThing(truck);
+            Sleep(1);
+            PlaySoundThing(metaldoor_start, door0, 1, 10, 50, 0x0080);
+            MoveToFrame(door0, 1, 1);
+            MoveToFrame(door0a, 1, 1);
+            doorchan=PlaySoundThing(metaldoor_move, door0, 1, 10, 50, 0x0081);
+            WaitForStop(door0);
+            StopSound(doorchan, 0);
+            PlaySoundThing(metaldoor_stop, door0, 1, 10, 50, 0x0080);
+            SetThingThrust(truck, kickvector);
+            return;
+        }
+        
+    if ((GetSenderRef() == stopface1) && (GetSourceRef() == truck))
+        {
+            StopThing(truck);
+            Sleep(1);
+            PlaySoundThing(metaldoor_start, door0, 1, 10, 50, 0x0080);
+            MoveToFrame(door0, 0, 1);
+            MoveToFrame(door0a, 0, 1);
+            MoveToFrame(door3, 0, 1);
+            MoveToFrame(door4, 0, 1);
+            doorchan=PlaySoundThing(metaldoor_move, door0, 1, 10, 50, 0x0081);
+            WaitForStop(door0);
+            StopSound(doorchan, 0);
+            PlaySoundThing(metaldoor_stop, door0, 1, 10, 50, 0x0080);
+            Sleep(1);
+            SetThingThrust(truck, kickvector);
+            SetCollideType(door1, 0);  
+            SetCollideType(door2, 0);
+            return;
+        }            
+         
+        
+//AT FRONT GATE    
+    if ((GetSenderRef() == stopface2) && (GetSourceRef() == truck))
+        {
+            //print("at stopface2");
+            StopThing(truck);
+            Sleep(1);
+            PlaySoundThing(metaldoor_start, door1, 1, 10, 50, 0x0080);
+            MoveToFrame(door1, 1, 1);
+            MoveToFrame(door2, 1, 1);
+            doorchan=PlaySoundThing(metaldoor_move, door1, 1, 10, 50, 0x0081);
+            WaitForStop(door2);
+            StopSound(doorchan, 0);
+            PlaySoundThing(metaldoor_stop, door1, 1, 10, 50, 0x0080);
+            SetCollideType(door1, 0);
+            SetCollideType(door2, 0);
+            SetThingThrust(truck, kickvector);
+            return;
+        }   
+        
+    if ((GetSenderRef() == stopface3) && (GetSourceRef() == truck))
+        {
+            //print("entering stopface3");
+            StopThing(truck);			
+			Sleep(1);
+            PlaySoundThing(metaldoor_start, door1, 1, 10, 50, 0x0080);
+            MoveToFrame(door1, 0, 1);
+            MoveToFrame(door2, 0, 1);
+            doorchan=PlaySoundThing(metaldoor_move, door1, 1, 10, 50, 0x0081);
+            WaitForStop(door1);
+            StopSound(doorchan, 0);
+            PlaySoundThing(metaldoor_stop, door1, 1, 10, 50, 0x0080);
+            Sleep(1);
+            SetThingThrust(truck, kickvector);
+            SetCollideType(door3, 0);  
+            SetCollideType(door4, 0);
+            
+            //Continue cutscene...
+            if (begun == 1)
+            {
+                begun=2;
+                
+				//cut to shot of Indy...
+				SetCameraFocus(2, cam1);
+				SetCameraSecondaryFocus(2, cam1_tgt0);
+				SetCameraFOV(40, 0, 0.0);
+				Sleep(0.01);
+				SetCameraFOV(25, 1, 5.35); //cover crossarms plus truckline
+				DetachThing(nd_look_tgt1);
+				AIDisableBodyTracking(actorindy);
+				in_track0 = PlayKey(actorindy, in_armsCrossed, 2, 0x00, 0);
+				PlayKey(actorindy, in_crossArms, 4, 0x12, 1);
+				PlayVoice(actorindy, truckline, 1, 1);
+				StopKey(actorindy, in_track0, 0.5);
+				Sleep(0.5);
+				
+				//Print("resetting camera");
+                //Sleep(0.5);
+                CopyOrientAndPos(actorindy, player);
+                SetCameraLookInterp(2, 0);
+                SetCameraPosInterp(2, 0);
+                SetCameraInterpSpeed(2, 0);
+                Sleep(0.01);
+                SetCameraPosition(1, GetThingPos(spinpos));
+                ClearThingFlags(player, 0x80000);
+                SetThingMaxHeadVel(actorindy, in_headRate); //restore
+                SetThingMaxRotVel(actorindy, in_rotRate); //restore
+				SetThingFlags(actorindy, 0x80000);
+                SetCurrentCamera(1);
+                ResetCameraFOV(0, 0.0);
+                EndCutscene();
+                ClearActorFlags(player, 0x200000);
+                return;
+            }
+            return;
+        }
+        
+//EXITING SIDE OF COURTYARD    
+    if ((GetSenderRef() == stopface4) && (GetSourceRef() == truck))
+        {
+            if (firsttime == 0)
+            {
+                firsttime=1;
+                TeleportThing(truck, startpos);
+                TeleportThing(hint28, startpos);
+                AttachThingToThing(hint28, truck);
+                CopyOrient(truck, teleport_pos); 
+                AttachThingToThingEx(teleport_pos, truck, 0x000C);
+                CopyOrient(truck, invisitruck);
+                AttachThingToThingEx(invisitruck, truck, 0x000C);
+                Sleep(1);
+                SetThingThrust(truck, kickvector);
+                MoveToFrame(door3, 0, 1);
+                MoveToFrame(door4, 0, 1);
+                return;
+            }
+            StopThing(truck);
+            Sleep(10);
+            //checks to see if indy is near truck
+            range = ABS(VectorDist(GetThingPos(truck), GetThingPos(player)));
+            SetPulse(1);
+            While (range < 0.6)
+            {
+                //print("..");
+                //printflex(range); 
+                Sleep(0.5);   
+            }    
+            
+            Sleep(1);
+            PlaySoundThing(metaldoor_start, door3, 1, 10, 50, 0x0080);
+            MoveToFrame(door3, 1, 1);
+            MoveToFrame(door4, 1, 1);
+            doorchan=PlaySoundThing(metaldoor_move, door3, 1, 10, 50, 0x0081);
+            WaitForStop(door3);
+            StopSound(doorchan, 0);
+            PlaySoundThing(metaldoor_stop, door3, 1, 10, 50, 0x0080);
+            SetCollideType(door3, 0);
+            SetCollideType(door4, 0);
+            Sleep(1);
+            SetThingThrust(truck, kickvector);
+            return;
+        }
+        
+    if ((GetSenderRef() == stopface5) && (GetSourceRef() == truck))
+        {
+            //print("entered stopface 5");
+            StopThing(truck);
+            Sleep(1);
+            PlaySoundThing(metaldoor_start, door3, 1, 10, 50, 0x0080);
+            MoveToFrame(door3, 0, 1);
+            MoveToFrame(door4, 0, 1);
+            doorchan=PlaySoundThing(metaldoor_move, door3, 1, 10, 50, 0x0081);
+            WaitForStop(door3);
+            StopSound(doorchan, 0);
+            PlaySoundThing(metaldoor_stop, door3, 1, 10, 50, 0x0080);
+            Sleep(1);
+            SetThingThrust(truck, kickvector);
+            return;
+        }
+        
+//TELEPORT TRUCK BACK TO STARTPOINT
+    if ((GetSenderRef() == stopface6) && (GetSourceRef() == truck))
+        {
+            //print("entered stopface 6");
+            StopThing(truck);
+            
+            //kill truck move because steve scholl didn't want to fix this bug
+            if (schollhack == 1)
+            {
+                 SetThingFlags(truck, 0x80000);
+                 DestroyThing(truck);
+                 return;
+            }
+            
+            TeleportThing(truck, startpos);
+            TeleportThing(hint28, startpos);
+            AttachThingToThing(hint28, truck);
+            CopyOrient(truck, teleport_pos);
+            AttachThingToThingEx(teleport_pos, truck, 0x000C);
+            CopyOrient(truck, invisitruck);
+            AttachThingToThingEx(invisitruck, truck, 0x000C);
+            Sleep(1);
+            SetThingThrust(truck, kickvector);
+            return;
+        }
+        
+return;
+
+# .......................................................................................
+pulse:
+
+    If (range > 0.6)
+    {
+        SetPulse(0);
+        return;
+    }
+
+    range = ABS(VectorDist(GetThingPos(truck), GetThingPos(player)));
+    
+return;
+
+# .......................................................................................
+user0:
+
+    schollhack=1;
+    
+return;
+
+# .......................................................................................
+    
+end
+

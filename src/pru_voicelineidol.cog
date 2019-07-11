@@ -1,0 +1,124 @@
+# Jones 3D Cog Script
+#
+# PRU_voicelineIdol.cog
+#
+# Mini-cutscene when Indy sees original pedastal
+#
+# (GGJ)
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+message     touched
+message		startup
+message		user0
+message		user1
+
+thing       pedestal
+thing		actor								local
+
+template    tplActor=indy_sh_actor	            	local
+
+keyframe	armsCrossed=0in_stand2.key			local
+keyframe	crossingArms=0in_stand1_bd_2.key	local
+keyframe	shakingHead=0in_hedshak_2_2.key		local
+keyframe	armup=0in_armsout_1_1.key			local
+
+
+sound		hadIdol=pu02j03.wav					local
+
+int			player								local
+int			trackNum							local
+int			once=0								local
+int			dartflying=0						local
+int			keytrack							local
+
+vector		idolSpot							local
+
+end
+#=================================================================================================
+code
+startup:
+SetThingLight(pedestal, '0.4 0.4 0.35', 1.0, 1.25);
+return;
+
+touched:
+player = GetLocalPlayerThing();
+
+if (dartFlying == 1) return;
+
+if ((GetSenderRef() != pedestal) || (once == 1)) return;
+
+#Make sure the player isn't on top of the pedestal.
+if (VectorZ(GetThingPos(player)) < (VectorZ(GetThingPos(pedestal)) + 1.0))
+{
+	once = 1;
+	StartCutscene(1);
+	
+	#Stop the player from moving and put him in a standing position
+	#PlayMode(player, 1, 0);
+    MakeMeStop();
+    DeselectWeaponWait(player);
+	Sleep(0.01);
+	
+    #Create an actor at the player's location and swap them out
+	actor = CreateThing(tplActor, player);
+	CaptureThing(actor);
+	
+    CopyPlayerHolsters(player, actor);
+    SetThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	ClearThingFlags(actor, 0x80000);
+	
+	#Tell the actor to look at a spot just above the pedestal.
+	idolSpot = VectorAdd(GetThingPos(pedestal), '0.0 0.0 0.1');
+    AISetLookPos(actor, idolSpot);
+	AIWaitForStop(actor);
+	
+	#Move the player to match the actor so the camera move will be correct.
+	CopyOrientandPos(actor, player);
+    
+	#Bring the camera around
+	SetExtCamLookOffset('0.0 0.04 0.014');
+	SetExtCamOffset('0.15 0.08 0.09');
+	
+	Sleep(1.0);
+	
+	#Indy crosses his arms, shakes his head, and says his line
+#	trackNum = PlayKey(actor, armsCrossed, 2, 0x10, 0);
+	
+    PlayVoice(actor, hadIdol, 1, 0);
+	Sleep(0.5);
+    keytrack = PlayKey(actor, armup, 4, 0x12, 0);
+	Sleep(0.75);
+	PauseKey(actor, keyTrack);
+	Sleep(0.5);
+	ResumeKey(actor, keyTrack);
+	Sleep(1.0);
+
+#	PlayKey(actor, crossingArms, 4, 0x12, 1);
+#	PlayKey(actor, shakingHead, 2, 0x12, 1);
+#	Sleep(0.75);
+#	StopKey(actor, trackNum, 0.5);
+	
+    #Move the player again so he's in the same spot as the actor, and swap them back
+	CopyOrientandPos(actor, player);
+    SetThingFlags(actor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+    ClearActorFlags(player, 0x200000);
+	
+	RestoreExtCam();
+	EndCutscene();
+	}
+return;
+
+user0:
+dartFlying = 1;
+return;
+
+user1:
+dartFlying = 0;
+return;
+
+end

@@ -1,0 +1,66 @@
+# Jones 3D Cog Script
+#
+# SHS_SnowTowers.cog   Makes it snow between CT and BT.
+# 
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+
+symbols
+	
+    message crossed
+	message	pulse
+	
+    surface BTon			linkid=1
+    surface BToff			linkid=2
+	surface	CTon			linkid=1
+	surface CToff	 		linkid=2
+	surface windowon 		linkid=1
+	surface windowoff   	linkid=2
+
+
+	thing	ghost0
+              
+    template	particle
+	
+    int	        dummy       local
+	int         crosschk=0  local            
+ 
+    flex		pulsetime=.5
+    
+end
+
+code
+
+
+crossed:
+	
+
+	# make sure Indy player is sending message
+    If (GetSourceRef() != GetLocalPlayerThing()) return;
+
+	# turn snow on
+	If ((crosschk == 0)  && (GetSenderId() == 1))
+    {
+        Print("snow on");
+		crosschk = 1;
+        setpulse(pulsetime);
+	}    
+    
+	# turn snow off
+	If ((crosschk == 1) && (GetSenderId() == 2))
+    {
+        Print("snow off");
+		crosschk=0;
+        setpulse(0);
+	}
+    return;
+
+pulse:
+	dummy=CreateThing(particle, ghost0);
+	return;
+	
+
+end
+

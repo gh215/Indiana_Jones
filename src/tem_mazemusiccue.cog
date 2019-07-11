@@ -1,0 +1,65 @@
+# Jones 3D Cog Script
+#
+# TEM_MazeMusicCue.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    
+    thing       player      local
+    
+    sector      shore_Door
+    sector      shore_Shark
+    sector      shore_Boulder
+    
+    sound       mus_Relief=mus_gen_indyrelief.wav       local
+    
+    int         bin_Tiki=53         local
+    int         bin_Shark=85        local
+    
+    int         played_Door=0       local
+    int         played_Shark=0      local
+    int         played_Boulder=0    local
+        
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    player = GetLocalPlayerThing();
+    
+    # player reaches shore_Shark
+    if((GetSenderRef() == shore_Shark) && (played_Shark == 0))
+    {
+        played_Shark = 1;
+        PlaySoundLocal(mus_Relief, 1.0, 0.0, 0x0, 0);
+    }
+    
+    # player reaches shore_Boulder with shark key
+    if((GetSenderRef() == shore_Boulder) && (GetInv(player, bin_Shark) > 0) && (played_Boulder == 0))
+    {
+        played_Boulder = 1;
+        PlaySoundLocal(mus_Relief, 1.0, 0.0, 0x0, 0);
+    }
+    
+    # player reaches shore_Door with tiki key
+    if((GetSenderRef() == shore_Door) && (GetInv(player, bin_Tiki) > 0) && (played_Door == 0))
+    {
+        played_Door = 1;
+        PlaySoundLocal(mus_Relief, 1.0, 0.0, 0x0, 0);
+    }
+    
+    return;
+        
+# ========================================================================================
+
+end
+

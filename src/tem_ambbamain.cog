@@ -1,0 +1,85 @@
+# Jones 3D Cog Script
+#
+# TEM_AmbBAMain.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message	    entered
+    message     pulse
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+    thing		soundPos2		nolink
+    thing		soundPos3		nolink
+    thing		soundPos4		nolink
+    thing		soundPos5		nolink
+    thing		soundPos6		nolink
+    
+    sector      start_Amb1      linkID=1
+    sector      start_Amb2      linkID=1
+    
+    sector      stop_Amb1       linkID=0
+    sector      stop_Amb2       linkID=0
+
+	sound		ambient0=tem_wind01_c.wav   local
+	sound		ambient1=tem_wind02_c.wav   local
+	sound		ambient2=tem_wind03_c.wav   local
+	sound		ambient3=tem_wind04_c.wav   local
+	sound		ambient4=tem_wind05_c.wav   local
+    
+    sound       animals0=gen_canyon_a2.wav      local
+    sound       animals1=olv_outside_a01.wav    local
+    sound       animals2=olv_outside_a02.wav    local
+    sound       animals3=olv_outside_a03.wav    local
+    sound       animals4=olv_outside_a08.wav    local
+    sound       animals5=olv_outside_a04.wav    local
+    sound       animals6=olv_outside_a06.wav    local
+    
+    int         randNum     local
+    int         soundsOn=0  local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	if((GetSenderID() == 1) && (soundsOn == 0))
+    {
+        soundsOn = 1;
+        SetPulse(2.0);
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        soundsOn = 0;
+        SetPulse(0.0);
+    }
+    
+	return;
+
+# ========================================================================================
+
+pulse:
+
+    PlaySoundThing(ambient0[RandBetween(0, 4)], soundPos0[RandBetween(0, 6)], 1.0, 15, 30, 0);
+    
+    randNum = RandBetween(1, 2);
+    
+    if(randNum == 1)
+    {
+        PlaySoundThing(animals0[RandBetween(0, 6)], soundPos0[RandBetween(0, 6)], 1.0, 15, 30, 0);
+    }
+    
+    return;
+
+# ========================================================================================
+
+end

@@ -1,0 +1,113 @@
+# Jones 3D Cog Script
+#
+# gen_DoorCam.cog
+#
+# This is the generic door with a camera attached
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+   message  startup
+   message  activate
+   message	arrived
+   message  blocked
+   message  timer
+
+	thing	switch0         linkid=1              //switch on one side of the door
+	thing	switch1         linkid=1              //switch on the other side of the door (optional)
+	thing	door0
+	thing	player          local
+   	thing	ghostcampos
+
+   flex     doorspeed=1.0
+   flex     switchspeed=2.0
+   flex     camspeed=1.0
+   flex     waittime=5.0
+
+   int		flag=0          local
+   int      blockcheck=0    local
+   int      actcheck=0      local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    player = GetLocalPlayerThing();
+    return;
+
+#........................................................................................
+activate:
+   if ((GetSenderID() == 1) &&
+       (GetCurFrame(door0) == 0) && (actcheck == 0))
+ 	{
+        PlayMode(player, 60, 0);
+        actcheck = 1;
+		if (switch0 >= 0) MoveToFrame(switch0, 1, switchspeed);
+        if (switch1 >= 0) MoveToFrame(switch1, 1, switchspeed);
+    }
+    return;
+
+#........................................................................................
+
+arrived:
+
+	if ((GetSenderID() == 1) &&
+		 (blockcheck == 0))
+	{
+        blockcheck = 1;
+        SetActorFlags(GetLocalPlayerThing(), 0x200000);
+		
+		//SetCameraFocus(0, ghostcampos);
+        //SetCurrentCamera(0);
+		MoveToFrame(door0, 1, doorspeed);
+        MoveToFrame(ghostcampos, 1, camspeed);
+	}
+
+	if ((GetSenderRef() == door0) &&
+		 (flag == 0))
+	{
+        flag = 1;
+        SetTimer(waittime);
+        //ClearActorFlags(GetLocalPlayerThing(), 0x200000);
+	    //SetCurrentCamera(1);
+        //SetCameraFocus(1, GetLocalPlayerThing());
+	}
+
+    if ((GetSenderRef() == door0) &&
+       (GetCurFrame(door0) == 0))
+    {
+        flag = 0;
+        blockcheck = 0;
+    }
+
+    return;
+
+#........................................................................................
+
+timer:
+    if (switch0 >= 0) MoveToFrame(switch0, 0, switchspeed);
+    if (switch1 >= 0) MoveToFrame(switch1, 0, switchspeed);
+    MoveToFrame(door0, 0, doorspeed);
+    MoveToFrame(ghostcampos, 0, camspeed);
+    actcheck = 0;
+    return;
+
+#........................................................................................
+
+blocked:
+    if (GetSenderRef() == door0)
+    {
+        MoveToFrame(door0, 1, doorspeed);
+        SetTimer(waittime);
+    }
+    return;
+					
+end
+
+

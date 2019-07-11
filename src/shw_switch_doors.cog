@@ -1,0 +1,232 @@
+# Jones 3D Cog Script
+#
+# shw_general_doors.cog
+#
+# Generic Door Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup		
+    message	activated		
+
+	thing		door0							linkid=0
+	thing		button0		
+	thing		button1		
+    thing		player							local
+
+	flex		doortime=1.0
+	float		doorspeed=1.0					local
+	float		sleepTime=3.0
+	int			open=0							local
+    
+	vector	vecLightValue						local
+
+    sector	doorSector							local
+
+	sound	click=sol_panel_switch_c.wav		local
+	sound	open_squeak=sea_doors_open_c.wav	local
+	sound	close_squeak=sea_doors_close_c.wav	local
+
+# ---------HAL DOOR STUFF----------
+	
+	int		notnow=0							local
+	int		alreadytouched=0					local
+	vector	v_dpos								local # door position
+	vector	v_ipos								local # indy position
+	vector	v_idvec								local # indy-to-door vec
+	vector	v_drvec								local # door right vec
+	vector	v_tchdoorPYR						local
+	flex	f_iposcheck							local # dot result indy relative to door
+	flex	dooryaw								local
+	flex	timeratio							local
+	flex	reopentime							local
+	flex	f_arrdoorY							local # door yaw
+	vector	v_arrdoorPYR						local
+	vector	v_closedoorPYR						local # door aim
+	flex	closeangle							local
+
+		# NOTE:  door0 has 4 states...
+		# closed		--> open == 0 (init state)
+		# opening		--> open == 1
+		# open		--> open == 2
+		# closing		--> open == 3
+
+#subroutines
+		
+	flex 	opendoors							local
+	flex	closedoors							local
+
+
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	doorSector = GetThingSector(door0);
+	SetSectorAdjoins(doorSector, 0);
+    #v_closedoorPYR = GetThingLVecPYR(door0);
+    return;
+
+# ........................................................................................
+
+activated:
+
+		if (notnow == 1) return;
+        if (IsThingMoving(door0)) return;
+		if (getSenderRef() == button0)
+        {
+                notnow=1;
+				# disable player control
+                SetActorFlags(player, 0x200000);
+				DeselectWeapon(player); # stow any weapon or lighter
+				Sleep(0.5); # wait a beat
+                SetSectorAdjoins(doorSector, 1);
+                # animate the player
+				PlayMode(player, 60, 0);
+                Sleep(0.25);
+				# Player regains control
+				ClearActorFlags(player, 0x200000);
+				# play sounds, move the buttons and door
+				MoveToFrame(button0, 1, 1);
+                MoveToFrame(button1, 1, 1);
+				PlaySoundThing(click, button0, 1, 3, 10, 0x0);
+				Sleep(0.25);
+                Rotate(door0, 90, 1, doorspeed);
+                PlaySoundThing(open_squeak, door0, 1, 3, 10, 0x0);
+                waitforstop(door0);
+                sleep(sleepTime);
+                Rotate(door0, -90, 1, doorspeed);
+                PlaySoundThing(close_squeak, door0, 1, 3, 10, 0x0);
+                waitforstop(door0);
+                PlaySoundThing(click, door0, 1, 3, 10, 0x0);
+                MoveToFrame(button0, 0, 4);
+                MoveToFrame(button1, 0, 4);
+                SetSectorAdjoins(doorSector, 0);
+                notnow = 0;
+                return;
+            
+        }
+    else
+        
+        if (GetSenderRef() == button1)
+        {
+            if (IsThingMoving(door0)) return;
+            {
+                notnow=1;
+				SetActorFlags(player, 0x200000);
+				DeselectWeapon(player); # stow any weapon or lighter
+				Sleep(0.5); # wait a beat
+                SetSectorAdjoins(doorSector, 1);
+                PlayMode(player, 60, 0);
+				Sleep(0.5);
+				ClearActorFlags(player, 0x200000);
+				MoveToFrame(button0, 1, 1);
+                MoveToFrame(button1, 1, 1);
+				PlaySoundThing(click, button1, 1, 3, 10, 0x0);
+				Sleep(0.25);
+                Rotate(door0, -90, 1, doorspeed);
+                PlaySoundThing(open_squeak, door0, 1, 3, 10, 0x0);
+                waitforstop(door0);
+                sleep(sleepTime);
+                Rotate(door0, 90, 1, doorspeed);
+                PlaySoundThing(close_squeak, door0, 1, 3, 10, 0x0);
+                waitforstop(door0);
+                PlaySoundThing(click, door0, 1, 3, 10, 0x0);
+                MoveToFrame(button0, 0, 4);
+                MoveToFrame(button1, 0, 4);
+                SetSectorAdjoins(doorSector, 0);
+                notnow = 0;
+                return;
+            }
+        }
+        
+# ........................................................................................
+arrived:
+
+
+	if (GetSenderRef() == door0 && open == 1)
+	{
+		open = 2; 							# door is now open
+		SetTimer(sleepTime);
+	}
+	if (GetSenderRef() == door0 && open == 3)
+	{
+		if(alreadytouched == 1) return;
+		movetoframe(button0, 0, 1);
+		movetoframe(button1, 0, 1);
+		v_arrdoorPYR = GetThingLVecPYR(door0);
+		f_arrdoorY = Truncate(VectorY(v_arrdoorPYR));	# to lowest integer degree
+		if (f_arrdoorY == 0)
+		{
+			SetThingLVecPYR(door0, v_closedoorPYR); # slam it closed for sure
+		}
+		open = 0; 						    # door is now closed
+		notnow=0;
+	}
+	return;
+
+# ........................................................................................
+touched:
+	if (GetSenderRef() == door0 && open == 3)
+	{
+	alreadytouched = 1; # do once only
+		# check if Indy is touching back side of door...
+		v_dpos = GetThingPos(door0); # door hinge
+		v_ipos = GetThingPos(player); # our hero
+ 		v_idvec = VectorNorm(VectorSub(v_dpos, v_ipos)); # direction between indy & door 
+		v_drvec = GetThingLVec(door0); 			# check 90 to door plane
+		f_iposcheck = VectorDot(v_idvec, v_drvec); 	# places indy in- or outside door
+	if (f_iposcheck > 0)
+	{
+	# Don't re-open if Indy is touching back side...
+	return;
+	}	
+	open = 1; 							# door is opening again
+	StopThing(door0);
+#	Print("door is blocked");
+	Sleep(0.1); # let engine update
+	v_tchdoorPYR = GetThingLVecPYR(door0);
+	closeangle = (Abs(VectorY(v_closedoorPYR)) + 90);
+	dooryaw = (closeangle - Abs(VectorY(v_tchdoorPYR)));	# how far is door open?
+#	printflex(dooryaw);
+	timeratio = (abs(dooryaw) / 90); 				# what percentage?
+	reopentime = ( doortime * timeratio); 		# calculate time
+	Rotate(door0, dooryaw, 1, reopentime); 		# re-open 
+	}
+	return;
+
+# ........................................................................................
+timer:
+	call CloseDoors;
+	return;
+
+# ........................................................................................
+OpenDoors:
+	Rotate(door0, 90, 1, doortime);
+	#PlaySoundThing(opensnd, door0, 1, 5, 10, 0);
+	open = 1;
+	alreadytouched = 0; # init every time door opens
+	return;	
+	
+
+	
+# ........................................................................................
+CloseDoors:
+	Rotate(door0, -90, 1, doortime);
+	#PlaySoundThing(closesnd, door0, 1, 5, 10, 0);
+	open = 3;
+	alreadytouched = 0; # Indy can stop it again
+	return;
+
+# ........................................................................................
+
+end
+

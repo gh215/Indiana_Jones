@@ -1,0 +1,65 @@
+# Jones 3D Cog Script
+#
+# BAB_CourtyardCommmie.cog
+# This cog is based on the brilliant groundbreaking cog work pioneered by Reed Derleth
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user1
+    
+    thing       player          local
+    
+    thing       commie0         mask=0x408
+    thing       commie1         mask=0x408
+    thing       commie2         mask=0x408
+    thing       commie3         mask=0x408
+    
+    int         x=0             local
+    
+    cog         BAB_Commie_Grid 
+        
+end
+
+code
+
+# ========================================================================================
+
+startup:
+ 
+    player = GetLocalPlayerThing();
+    for (x=0; x<=3; x=x+1)
+    {
+        if (commie0[x] > 0)
+        {
+            AISetCutsceneMode(commie0[x]);
+        }
+    }
+    
+return;
+
+#----------------------------------------------------------------------------------------
+user1:
+
+    //print("turning AI on");
+    for (x=0; x<=3; x=x+1)
+    {
+        if (commie0[x] > 0)
+        {
+            AIClearCutsceneMode(commie0[x]);
+            Sleep(1.5);
+        }
+    }
+    
+    SendMessage(BAB_Commie_Grid, user0);
+    
+return;
+
+#----------------------------------------------------------------------------------------
+
+end

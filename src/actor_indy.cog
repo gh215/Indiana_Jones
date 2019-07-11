@@ -1,0 +1,370 @@
+# Jones 3D Cog Script
+#
+# actor_Indy.cog
+#
+# [RT]
+#
+# Indy's script.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		startup
+#	message		created
+	message		damaged
+	message		killed
+	message		splash
+	message		callback
+	message		pulse
+	message		user0
+	message		user1
+	message		user2
+	message		user3
+	message		user6
+	message		user7
+
+	keyframe	hatSpin=gen_hat_spin.key		local
+
+	material	mat=gen_a4sfx_splash.mat		local
+
+	model		noHatHead=hand_yl_bloom.3do	local
+	model		hatHand=hand_in.3do			local
+	model		guybrush=aet_gy.3do				local
+	model		saveModel						local
+
+	sound		burnSnd=gen_torchlitet_c.wav	local
+
+	template	tpl_Splash=splashenter			local
+	template	tpl_Spray=+spray				local
+	template	tpl_Ripple=+ripples				local
+
+	template	tpl_Fire=+bazooka_exp_fire		local
+	template	tpl_Smoke=+bazooka_exp_smoke	local
+	template	tpl_Sparks=lavadeathsparks		local
+
+	template	tpl_Hat=hat						local
+
+	thing		indy							local
+	thing		tempIndy						local
+	thing		newThing						local
+
+	flex		poisonDamage=15.0				local
+
+	int			hatMesh							local
+	int			headMesh						local
+	int			handMesh						local
+	int			hatMeshRef						local
+	int			headMeshRef						local
+	int			handMeshRef						local
+
+	int			param							local
+	int			index							local
+	int			damageType						local
+
+	int			bPoisoned=0						local
+	int			bGuybrush=0						local
+
+	sector		createSec						local
+	vector		createPos						local
+
+# ************************ SUBROUTINES *************************
+
+	flex		SplashGenerator					local
+	flex		RippleGenerator					local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	indy = GetLocalPlayerThing();
+
+	hatMesh = GetMeshByName(indy, "inhat");
+	headMesh = GetMeshByName(indy, "inhead");
+	handMesh = GetMeshByName(indy, "inrhand");
+
+	# Indy gets the pistol & whip
+	SetInv(indy, 2, 1);
+	SetInvAvailable(indy, 2, 1);
+	SetInv(indy, 3, 1);
+	SetInvAvailable(indy, 3, 1);
+
+	# Set up Indy heads...
+	SetThingVoiceHeads(indy, "inhead", "", "head_in_asound.3do", "head_in_amsound.3do", "head_in_osound.3do");
+
+	# Voice settings for ALL actors...
+	SetVoiceHeadHeight(0, 0, 0, 0, 0);
+	SetVoiceHeadHeight(1, 1, 1, 1, 1);
+	SetVoiceHeadHeight(2, 2, 2, 2, 2);
+	SetVoiceHeadHeight(3, 3, 3, 3, 3);
+
+	SetVoiceParams(0.87, 1060);
+
+	return;
+
+# -------------------------------------------------------------------
+
+#created:
+
+	# Enable weapons in case Indy died in the water
+#	SetSwimmingInventory(indy, 1);
+
+#	return;
+
+# -------------------------------------------------------------------
+
+damaged:
+
+	# Set this every time so that damage in other vehicles works.
+	tempIndy = GetLocalPlayerThing();
+
+	if (!bPoisoned)
+	{
+		if ((GetParam(1) == 0x100) && (!BitTest(GetActorFlags(tempIndy), 0x8)))
+		{
+			bPoisoned = 1;
+
+			if (Rand() < 0.33)
+				PlayVoiceMode(tempIndy, 92);
+
+			SetActorFlags(tempIndy, 0x2000);
+			SetPulse(1.0);
+		}
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+killed:
+
+	damageType = GetParam(1);
+	
+	# Killed by lava?
+	if (damageType == 0x200)
+	{
+		Sleep(0.1);
+		CreateThing(tpl_Fire, indy);
+		PlaySoundThing(burnSnd, indy, 1.0, -1, -1, 0x0);
+		Sleep(0.3);
+		CreateThing(tpl_Smoke, indy);
+		SetThingFlags(indy, 0x80000);
+
+		for (index = 0; index < 10; index = index + 1)
+		{
+			CreateThing(tpl_Sparks, indy);
+			Sleep(0.03);
+		}
+	}
+	# Killed by cold water?
+	else if (damageType == 0x40000000)
+	{
+		# Where we is?
+		createSec = GetThingSector(indy);
+		createPos = GetThingPos(indy);
+		createPos = VectorAdd(createPos, '0.0 0.0 -0.09');
+
+		# Splash and wait for death anim to finish
+		call SplashGenerator;
+		Sleep(0.2);
+		call RippleGenerator;
+		Sleep(0.4);
+
+        # Poor Indy lost his hat...
+		createSec = GetThingSector(indy);
+        createPos = GetThingPos(indy);
+        createPos = VectorAdd(createPos, '0.0 0.0 -0.025');
+		newThing = CreateThingAtPos(tpl_Hat, createSec, createPos, '0 0 0');
+        PlayKey(newThing, hatSpin, 5, 0x0, 0);
+		
+		# Make him disappear, just in case...
+		SetThingFlags(indy, 0x80000);
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+splash:
+
+	# Splash message sources: 1 = entering water; 0 = leaving water
+	
+	if (GetSenderRef() != indy) return;
+	
+	if (GetSourceRef() == 1)
+	{
+		# Put away drawn weapon
+		if (GetCurWeapon(indy) != 7)
+		{
+			DeselectWeapon(indy);
+		}
+
+		# No weapons, etc. except machete while swimming!
+		SetSwimmingInventory(indy, 1);
+
+		# Get rid of the hat and put on a new head
+		if (!bGuybrush)
+		{
+			headMeshRef = SetThingMesh(indy, headMesh, noHatHead, 0);
+			hatMeshRef = SetThingMesh(indy, hatMesh, noHatHead, 1);
+		}
+
+		# Where the heck are we?
+		createSec = GetThingSector(indy);
+		createPos = GetThingPos(indy);
+
+		call SplashGenerator;
+		Sleep(0.4);
+		call RippleGenerator;
+	}
+	else
+	{
+		# Restore weapons
+		SetSwimmingInventory(indy, 1);
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	# if (pThing->moveStatus != SITHPLAYERMOVE_PULLINGUP) 
+	if (GetMoveStatus(indy) != 26) return;
+
+	param = GetParam(1);
+
+	if (!bGuybrush)
+	{
+		if (param == 21)
+		{
+			# Put the hat in Indy's hand
+			handMeshRef = SetThingMesh(indy, handMesh, hatHand, 0); 
+			return;
+		}
+		else if (param == 22)
+		{
+			# Now take it out of his hand and put it on his head
+			RestoreThingMesh(indy, handMeshRef);
+			RestoreThingMesh(indy, headMeshRef);
+			RestoreThingMesh(indy, hatMeshRef);
+			return;
+		}
+	}
+
+# -------------------------------------------------------------------
+
+pulse:
+
+	# Get so that in vehicle stuff will work		
+	tempIndy = GetLocalPlayerThing();
+
+	if(BitTest(GetActorFlags(tempIndy), 0x2000))
+	{
+		DamageThing(tempIndy, poisonDamage, 0x100, indy);
+    }
+	else
+	{
+		SetPulse(0);
+		bPoisoned = 0;
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+user0:
+
+	# user0 = Guybrush cheat on
+	saveModel = GetThingModel(indy);
+	SetThingModel(indy, guybrush);
+	bGuybrush = 1;
+
+	return;
+
+# -------------------------------------------------------------------
+
+user1:
+
+	# user1 = Guybrush cheat off
+	SetThingModel(indy, saveModel);
+	bGuybrush = 0;
+
+	return;
+
+# -------------------------------------------------------------------
+
+user2:
+
+	# user2 = Cutscene started
+	if (bPoisoned)
+		SetPulse(0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+user3:
+
+	# user3 = Cutscene ended
+	if (bPoisoned)
+		SetPulse(1.0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+user6:
+
+	# user6 = start writing with chalk...
+	SetActorFlags(indy, 0x2000000);
+	StopThing(indy);
+	StartCutScene(0);
+	return;
+
+# -------------------------------------------------------------------
+
+user7:
+
+	# user7 = end writing with chalk...
+	ClearActorFlags(indy, 0x2000000);
+	EndCutScene();
+	return;
+
+# -------------------------------------------------------------------
+
+SplashGenerator: # Assumes createSec & createPos are already set...
+
+	# Make a splash...
+	CreateThingAtPos(tpl_Splash, createSec, createPos, '0 0 0');
+	MaterialAnim(mat, 12.0, 0x0);
+
+	# ...and some spray
+	newThing = CreateThingAtPos(tpl_Spray, createSec, createPos, '0 0 0');
+	SetThingFlags(newThing, 0x8000000);
+
+	return;
+
+# -------------------------------------------------------------------
+
+RippleGenerator: # Assumes createSec & createPos are already set...
+
+	# Make some ripples
+	newThing = CreateThingAtPos(tpl_Ripple, createSec, VectorAdd(createPos, '0.02 0.0 0.0'), '0 0 0');
+	AnimateSpriteSize(newThing, '0.28 0.28 1.0', '0.5 0.5 0.0', 0.5);
+	newThing = CreateThingAtPos(tpl_Ripple, createSec, VectorAdd(createPos, '-0.02 0.0 0.0'), '0 0 0');
+	AnimateSpriteSize(newThing, '0.28 0.28 1.0', '0.4 0.4 0.0', 0.5);
+	newThing = CreateThingAtPos(tpl_Ripple, createSec, VectorAdd(createPos, '0.0 0.02 0.0'), '0 0 0');
+	AnimateSpriteSize(newThing, '0.28 0.28 1.0', '0.4 0.4 0.0', 0.5);
+	newThing = CreateThingAtPos(tpl_Ripple, createSec, VectorAdd(createPos, '0.0 -0.02 0.0'), '0 0 0');
+	AnimateSpriteSize(newThing, '0.28 0.28 1.0', '0.4 0.4 0.0', 0.5);
+
+	return;
+
+end

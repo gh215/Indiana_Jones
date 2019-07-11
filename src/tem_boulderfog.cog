@@ -1,0 +1,114 @@
+# Jones 3D Cog Script
+#
+# TEM_BoulderFog.cog
+#
+# [MDR] && [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     user0
+    message     user1
+    message     entered
+    message     pulse
+    
+    thing       player          local
+    thing       fogGhost
+    
+    sector      boulderRoom
+    sector      lavaRoom
+                       
+    vector      vec_facing      local
+    
+    int         inHall=0        local
+    
+end
+
+# ========================================================================================
+
+code
+
+user0:
+
+    # fog override for boulder cutscene
+    SetPulse(0.0);
+        
+    # set fog to red
+    SetFog(1, '0.5, 0.05 0.05', 40, 180);
+    #SetFog(1, '0.5, 0.05 0.05', 1, 180);
+    
+    return;
+    
+# ========================================================================================
+
+user1:
+
+    # return fog control
+    SetPulse(0.5);
+    
+    # set fog to grey
+    #SetFog(1, '0.15 0.15 0.15', 40, 110);
+
+    return;
+
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    
+    if(GetSenderRef() == boulderRoom)
+    {
+        Print("entered boulderRoom");
+        inHall = 1;
+        SetPulse(0.5);
+    }
+    
+    if(GetSenderRef() == lavaRoom)
+    {
+        Print("entered lavaRoom");
+        inHall = 0;
+        SetPulse(0.0);
+        
+        # set fog to red
+        SetFog(1, '0.5, 0.05 0.05', 15, 180);
+    }
+        
+    return;
+        
+# ========================================================================================
+
+pulse:
+
+    vec_facing = VectorSub( GetThingPos(fogGhost), GetThingPos(player));
+    vec_facing = VectorNorm(vec_facing);
+    
+    if(inHall == 1)
+    {
+        if (VectorDot(GetThingLVec(player), vec_facing) >= 0)
+        {
+            # Player is facing fogGhost
+            # set fog to red
+            SetFog(1, '0.5, 0.05 0.05', 40, 180);
+            #SetFog(1, '0.5, 0.05 0.05', 1, 180);
+        }
+        
+        else
+        {
+            # player's back is to fogGhost
+            # set fog to grey
+            SetFog(1, '0.15 0.15 0.15', 40, 110);
+        }
+    }
+    
+    else
+        return;
+    
+    return;
+        
+# ========================================================================================
+
+end
+

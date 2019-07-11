@@ -1,0 +1,53 @@
+# Jones 3D Cog Script
+#
+# TEM_LavaAmbient.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    
+    thing       ambientPos
+    
+    sector      stopAmbients
+    sector      startAmbients
+
+    sound       sndLava=gen_lava_flow_a.wav     local
+    
+    int         looping     local
+    int         soundsOn=0  local
+    
+    flex        vol=0.5
+    flex        min=8.0
+    flex        max=12.0
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    if((GetSenderRef() == startAmbients) && (soundsOn == 0))
+    {
+        soundsOn = 1;
+        looping = PlaySoundThing(sndLava, ambientPos, vol, min, max, 0x0001);
+    }
+
+    if((GetSenderRef() == stopAmbients) && (soundsOn == 1))
+    {
+        soundsOn = 0;
+        StopSound(looping, 0.0);
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

@@ -1,0 +1,131 @@
+# Jones 3D Cog Script
+#
+# VOL_LavaCragAmbient.cog
+#
+# Produces random ambient cave sounds when crossing adjoins
+# Based on code from TEO_Drops.cog by SXC.
+#
+# [TRM & SXC]  modified 12/3 by [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+
+	#................MESSAGES........................
+    message     startup
+    message     crossed
+    message     pulse
+    
+	#................ACTORS..........................
+	
+	thing		player								local
+	
+	
+	#................TRIGGERS........................
+    surface       oncross               linkID=2
+    surface       oncross1              linkID=2
+
+    
+    
+    surface       offcross              linkID=3
+    surface       offcross1             linkID=3
+
+    
+            
+	#................SOUNDS........................
+    sound       sndCave0=gen_amb_eerie_03.wav    	local
+    sound       sndCave1=olv_outside_a03.wav		local
+    sound       sndCave2=gen_lava_bloop_a.wav		local
+    sound       sndCave3=gen_cave_a2.wav  			local
+    sound       sndCave4=gen_lava_blurp_a.wav  		local
+    sound       sndCave5=gen_sg_squawk.wav    		local
+        
+	#................VARIABLES........................
+    
+	float       caveFreq        					local
+    
+    flex        pulseTime							local
+    flex        vol=1.0								local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+
+return;
+
+
+# ========================================================================================
+crossed:
+
+    If ((GetSenderID() == 2) && (GetSourceref() == player))
+            {
+            pulseTime=RandBetween(4, 12);
+			SetPulse(pulseTime);
+            #print("starting shark cave sound");
+            }
+    
+    If ((GetSenderID() == 3) && (GetSourceref() == player))
+            {
+            SetPulse(0);
+            #print("stopping shark cave sound");
+            }
+
+return;
+# ========================================================================================
+pulse:
+
+		#print("soundcheck");
+		pulseTime=RandBetween(4, 8);
+		SetPulse(pulseTime);
+
+	
+		# check if indy is swimming, if so set the pelsu then drop out
+		if (GetMoveStatus(player) == 12) return;
+	
+
+    caveFreq = Rand();
+
+    if (caveFreq < 0.16)
+        {
+            PlaySoundLocal(sndCave0, vol, 1, 0, 0);
+        }
+        
+    if ((caveFreq > 0.16) && (caveFreq < 0.32))
+        {
+            PlaySoundLocal(sndCave1, vol, 1, 0, 0);
+        }
+        
+    if ((caveFreq > 0.32) && (caveFreq < 0.48))
+        {
+            PlaySoundLocal(sndCave2, 0.25, -1, 0, 0);
+        }
+    
+    if ((caveFreq > 0.48) && (caveFreq < 0.64))
+        {
+            PlaySoundLocal(sndCave3, vol, 1, 0, 0);
+        }
+    
+    if ((caveFreq > 0.64) && (caveFreq < 0.80))
+        {
+            PlaySoundLocal(sndCave4, 0.25, 0, 0, 0);
+        }
+    
+    if ((caveFreq > 0.80) && (caveFreq < 0.96))
+        {
+            PlaySoundLocal(sndCave5, 0.1, -1, 0, 0);
+        }
+		
+		return;
+    
+return;
+# ========================================================================================
+        
+end

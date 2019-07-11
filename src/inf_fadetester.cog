@@ -1,0 +1,52 @@
+# Jones 3D Cog Script
+#
+# INF_FlyingRobot.cog
+# Controls the robot sector thing
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    surface     aethadjoin0
+    surface     aethadjoin1
+    int         x                                           local
+    int         y                                           local
+    int         foo=1                                       local
+      
+end
+
+
+code
+startup:
+
+
+Sleep(1);    
+While(foo == 1)
+{
+    //fade the aeth sector out
+    for(x=254; x>=0; x=x-20)
+    {
+        SetAdjoinAlpha(aethadjoin0, x);
+        SetAdjoinAlpha(aethadjoin1, x);
+        Sleep(0.01);
+    }
+    
+    for(x=0; x<=254; x=x+20)
+    {
+        SetAdjoinAlpha(aethadjoin0, x);
+        SetAdjoinAlpha(aethadjoin1, x);
+        Sleep(0.01);
+    }
+    
+}
+    return;
+
+#........................................................................................
+
+end
+
+

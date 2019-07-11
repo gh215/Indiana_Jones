@@ -1,0 +1,96 @@
+
+# Jones 3D Cog Script
+#
+# PRU_RandomAmbient.cog
+#
+# [SXC] [TL] on bass... [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# =======================================================================================
+symbols
+
+message	timer
+message	entered
+
+sector	soundOnSector0		linkid=1
+sector	soundOnSector1		linkid=1
+sector	soundOnSector2		linkid=1
+
+sector	soundOffSector0		linkid=2
+sector	soundOffSector1		linkid=2
+sector	soundOffSector2		linkid=2
+
+sound	wav0=gen_cave_a6.wav		local
+sound	wav1=shw_amb7.wav			local
+sound	wav2=shw_amb3.wav			local
+sound	wav3=gen_amb_eerie_01.wav	local
+sound	wav4=gen_amb_eerie_06.wav	local
+sound	wav5=gen_amb_eerie_10.wav	local
+sound	wav6=gen_cave_a1.wav		local
+
+
+flex	min_interval=1			local
+flex	range_interval=5		local
+
+int		pruSound=0				local
+int		b_IsPlaying=0			local
+int		TIMERID_AMB=1			local
+
+end
+
+# ========================================================================================
+code
+
+# ........................................................................................
+timer:
+
+	# Dont play sound if already doing so, but try again later
+	if ( b_IsPlaying == 1 )
+	{
+		SetTimerEx(min_interval+(rand()*range_interval), TIMERID_AMB, 0, 0);
+		return;
+	}
+
+	pruSound = playsoundlocal(wav0[RandBetween(0, 6)], 1, (RandBetween(-1, 1)), 0, 0);
+
+	if (pruSound != -1)
+	{
+		b_IsPlaying = 1;
+
+		ChangeSoundPitch(pruSound, (Rand() + 0.25), 0.01);
+		WaitForSound(pruSound);
+
+		b_IsPlaying = 0;
+	}
+
+	SetTimerEx(min_interval+(rand()*range_interval), TIMERID_AMB, 0, 0);
+
+	return;
+
+
+# ........................................................................................
+entered:
+
+	if (GetSenderID() == 1)
+	{
+		SetTimerEx(min_interval+(rand()*range_interval), TIMERID_AMB, 0, 0);
+		return;
+	}
+
+	if (GetSenderID() == 2)
+	{
+		KillTimerEx(TIMERID_AMB);
+
+		if ( b_IsPlaying == 1 )
+		{
+			Reset();
+			b_IsPlaying = 0;
+			StopSound(pruSound, 0.9);
+		}
+	}
+
+	return;
+
+# ........................................................................................
+end

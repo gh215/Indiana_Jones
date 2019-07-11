@@ -1,0 +1,606 @@
+# Jones 3D Cog Script
+#
+# PYR_SkitoTruck.cog
+#
+# Commies arrive in Meroe
+#
+# [PAZ (Skito!)] + [RKD]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message 	startup
+message		entered
+message		crossed
+message		timer
+	
+# Commies that swoop the scene
+thing		truckspot						#spot for minecar truck
+thing		truck			   	local		#thing you create, capture, and move, then  destroy
+thing		newspot							#where the new truck thing gets created when the minecar is destroyed
+	
+thing 		team1_1			   				#teams of commies
+thing		team1_2
+thing		t1_1_spot            			#teams' destinations
+thing		t1_2_spot
+	
+thing		team2_1
+thing		team2_2
+thing		t2_1_spot            				
+thing		t2_2_spot
+	
+thing		team3_1
+thing		team3_2
+thing		t3_1_spot            				
+thing		t3_2_spot
+	
+thing		team4_1
+thing		team4_2
+thing		t4_1_spot            				
+thing		t4_2_spot
+	
+# Indy and his cutscene stuff             	
+thing		player				local
+thing		indy
+
+# jeep hiding mechanism
+thing		jeep
+thing		actorjeep
+sector		nojeepsector1
+sector		nojeepsector2
+sector		nojeepsector3
+thing		jeepjump1
+thing		jeepjump2
+thing		jeepjump3
+thing		hint57
+		
+# trigger 1 and prerequisites
+surface		trigger1						# trigger surface
+sector		trigger1a						# indy must enter lightroom before commies will enter
+thing		scene1cam1			       		# camera spots for cutscenes
+thing		scene1look						# camera lookthing
+thing		aispot1							# ai marks for cutscenes
+	
+# trigger 2 and prerequisites
+surface		trigger2
+surface		trigger2a		mask=0x080		# pushblock has to enter this face before scene will be triggered
+thing		scene2cam1
+thing		scene2cam2
+thing		scene2look2						# camera lookthing
+thing		aispot2
+thing		indyport						# teleport Indy to a good spot for walking
+	
+# trigger 3
+surface		trigger3
+thing		scene3cam1
+thing		aispot3
+
+# trigger 4
+surface		trigger4
+thing		dunedoor
+thing		indylook4
+thing		scene4cam1
+thing		scene4cam2
+thing		scene4look2
+thing		aispot4
+
+# music
+sound		tunes=mus_gen_russbold_shrt2.wav  local  #scary russian tunes...eeek!
+
+# saylines
+sound		uhoh=Inxj011.wav				local	# Uh-oh
+sound		reds=Inxj068.wav				local	# Reds, they're everywhere
+sound		truckwav=jep_reverse_loop.wav	local	# Commie truck
+	
+# templates
+template	minetruck=commietruck		local #topless minecar truck w/two commies
+template	newtruck=staticflatbed		local #topless static truck thing
+	
+# variables
+int		locked=0		local
+int		ready1=0		local
+int		ready2=0		local
+int		cam1=0			local	# represents current camera ghost
+flex	cursound=0.0	local
+
+# subroutines
+flex	scene1=0.0		local
+flex	scene2=0.0		local
+flex	scene3=0.0		local
+flex	scene4=0.0		local
+flex	stopscene=0.0	local
+flex	startscene=0.0	local
+flex	commies=0.0		local
+flex	movetruck=0.0	local
+flex	afterscene=0.0	local
+end
+
+#========================================================================================
+
+code
+startup:
+	sleep(.01);
+
+	# hide all commies
+	SetThingFlags(team1_1, 0x80000);
+	SetThingFlags(team1_2, 0x80000);
+	SetThingFlags(team2_1, 0x80000);
+	SetThingFlags(team2_2, 0x80000);
+	SetThingFlags(team3_1, 0x80000);
+	SetThingFlags(team3_2, 0x80000);
+	SetThingFlags(team4_1, 0x80000);
+	SetThingFlags(team4_2, 0x80000);
+
+	return;
+	
+entered:
+# ---> trigger prerequisites
+
+	player = GetLocalPlayerThing();
+	
+	if (locked) return;
+
+	# if player has gotten into pyr1 lightroom, exiting 1 will trigger commies
+	if (GetSenderRef() == trigger1a)
+	{
+		ready1 = 1;
+	}
+	
+   	# if block is pushed out, next exit will trigger commies
+	if (GetSenderRef() == trigger2a)
+	{
+		# prepare for future exit
+		ready2 = 1;
+
+		# if kid is already gone, start cutscene now instead
+		if (global3 == 3)
+		{
+			call scene2;
+		}
+	}
+	
+	return;
+	
+crossed:
+# ---> trigger adjoins
+	
+	# if kid is still around or scene already ran, return
+	if (global3 != 3) return;
+	if (locked) return;
+
+	player = GetLocalPlayerThing();
+	
+	# leaving front top of pyramid 1
+	if ((GetSenderRef() == trigger1) && (ready1))
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		# play commie sound
+		call scene1;
+	}
+
+	# leaving front of pyramid 2
+	if ((GetSenderRef() == trigger2) && (ready2))
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		# play commie sound
+		cursound = PlaySoundThing(truckwav, scene2cam2, .1, 1, 50, 1);
+		ChangeSoundVol(cursound, 1, 2);
+		sleep(1);
+		call scene2;
+	}
+	
+	# leaving hole behind pyramid 3
+	if (GetSenderRef() == trigger3)
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		call scene3;
+	}	
+	
+	# leaving desert trap door (if it's open);
+	if ((GetSenderRef() == trigger4) && (GetCurFrame(dunedoor) == 1))
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		# play commie sound
+		cursound = PlaySoundThing(truckwav, indylook4, .1, 1, 50, 1);
+		ChangeSoundVol(cursound, 1, 2);
+		sleep(1);
+		
+		call scene4;
+	}	
+	
+	return;
+
+startscene:
+	# Prep for cutscene...
+	StartCutscene(1);
+	
+	# stop all future cutscenes
+	locked = 1;
+
+	# Switch actor indy for player...
+	CopyPlayerHolsters(player, indy);
+	TeleportThing(indy, player);
+	SetThingFlags(player, 0x80000); # hide him
+	
+	ClearThingFlags(indy, 0x80000); # reveal our actor
+	
+	Sleep(0.01);
+	
+	# Bring commies out of hiding
+	ClearThingFlags(team1_1, 0x80000);
+	AISetCutsceneMode(team1_1);
+	ClearThingFlags(team1_2, 0x80000);
+	AISetCutsceneMode(team1_2);
+	ClearThingFlags(team2_1, 0x80000);
+	AISetCutsceneMode(team2_1);
+	ClearThingFlags(team2_2, 0x80000);
+	AISetCutsceneMode(team2_2);
+	ClearThingFlags(team3_1, 0x80000);
+	AISetCutsceneMode(team3_1);
+	ClearThingFlags(team3_2, 0x80000);
+	AISetCutsceneMode(team3_2);
+	ClearThingFlags(team4_1, 0x80000);
+	AISetCutsceneMode(team4_1);
+	ClearThingFlags(team4_2, 0x80000);
+	AISetCutsceneMode(team4_2);
+	
+	# Prep camera & cut...
+	SetCameraLookInterp(2, 0); # kill pan & tilt to lock on 2nd target
+	SetCameraPosInterp(2, 0); # kill dolly mode too
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, indy);
+	SetCurrentCamera(2);
+	Sleep(0.01);
+	
+	# move indy's jeep if it's in perilous sector 1
+	if (GetThingSector(jeep) == nojeepsector1)
+	{
+		TeleportThing(jeep, jeepjump1);
+		TeleportThing(actorjeep, jeepjump1);
+		TeleportThing(hint57, actorjeep);
+		AttachThingToThing(hint57, actorjeep);
+	}
+
+   	# move indy's jeep if it's in perilous sector 2
+	if (GetThingSector(jeep) == nojeepsector2)
+	{
+		TeleportThing(jeep, jeepjump2);
+		TeleportThing(actorjeep, jeepjump2);
+		TeleportThing(hint57, actorjeep);
+		AttachThingToThing(hint57, actorjeep);
+	}
+
+   	# move indy's jeep if it's in perilous sector 3
+	if (GetThingSector(jeep) == nojeepsector3)
+	{
+		TeleportThing(jeep, jeepjump3);
+		TeleportThing(actorjeep, jeepjump3);
+		TeleportThing(hint57, actorjeep);
+		AttachThingToThing(hint57, actorjeep);
+	}
+
+	return;
+	
+#========================================================================================
+
+stopscene:
+	# Set up cam1 to interp back to player
+	TeleportThing(player, indy);
+	Sleep(0.01);
+	SetCameraFOV(90, 0, 0.0);
+	SetCameraPosition(1, GetThingPOS(cam1));
+	Sleep(0.01);
+	SetCurrentCamera(1);
+	
+	# Return player to game...
+	SetThingFlags(indy, 0x80000); # hide actor
+	ClearThingFlags(player, 0x80000); # player visible
+	ClearThingFlags(jeep, 0x80000); # his jeep is too
+	ClearActorFlags(player, 0x200000); # player in control
+	SetCameraFOV(90, 0, 0.0);
+	Sleep(0.01);
+
+	AIClearCutsceneMode(team1_1);
+	AIClearCutsceneMode(team1_2);
+	AIClearCutsceneMode(team2_1);
+	AIClearCutsceneMode(team2_2);
+	AIClearCutsceneMode(team3_1);
+	AIClearCutsceneMode(team3_2);
+	AIClearCutsceneMode(team4_1);
+	AIClearCutsceneMode(team4_2);
+
+	AISetInstinctWpntMode(team1_1);
+	AISetInstinctWpntMode(team1_2);
+	AISetInstinctWpntMode(team2_1);
+	AISetInstinctWpntMode(team2_2);
+	AISetInstinctWpntMode(team3_1);
+	AISetInstinctWpntMode(team3_2);
+	AISetInstinctWpntMode(team4_1);
+	AISetInstinctWpntMode(team4_2);
+	
+	# Delay before enabling roam, so that commies arrive at
+	# their destinations
+	SetTimer(30.0);
+
+	EndCutScene();
+	
+	return;
+	
+
+#========================================================================================
+timer:
+    AIEnableInstinct(team1_1, "roam", 1);
+    AIEnableInstinct(team1_2, "roam", 1);
+    AIEnableInstinct(team2_1, "roam", 1);
+    AIEnableInstinct(team2_2, "roam", 1);
+    AIEnableInstinct(team3_1, "roam", 1);
+    AIEnableInstinct(team3_2, "roam", 1);
+    AIEnableInstinct(team4_1, "roam", 1);
+    AIEnableInstinct(team4_2, "roam", 1);
+	
+	return;
+
+#========================================================================================
+
+movetruck:
+	# create, capture, move: Minecar truck
+	truck=CreateThing(minetruck, truckspot);
+	CaptureThing(truck);
+	Sleep(0.01);
+	SetThingThrust(truck, '0.0 2.0 0.0');
+	return;
+	
+#========================================================================================
+
+commies:
+
+	# Bring commies out of hiding
+	ClearThingFlags(team1_1, 0x80000);
+	AISetCutsceneMode(team1_1);
+	ClearThingFlags(team1_2, 0x80000);
+	AISetCutsceneMode(team1_2);
+	ClearThingFlags(team2_1, 0x80000);
+	AISetCutsceneMode(team2_1);
+	ClearThingFlags(team2_2, 0x80000);
+	AISetCutsceneMode(team2_2);
+	ClearThingFlags(team3_1, 0x80000);
+	AISetCutsceneMode(team3_1);
+	ClearThingFlags(team3_2, 0x80000);
+	AISetCutsceneMode(team3_2);
+	ClearThingFlags(team4_1, 0x80000);
+	AISetCutsceneMode(team4_1);
+	ClearThingFlags(team4_2, 0x80000);
+	AISetCutsceneMode(team4_2);
+	
+	#team 1:
+	AiSetLookThing(team1_1, t1_1_spot);
+	AiSetMoveThing(team1_1, t1_1_spot, 0);
+	AiSetLookThing(team1_2, t1_2_spot);
+	AiSetMoveThing(team1_2, t1_2_spot, 0);
+	
+	#team 2:
+	AiSetLookThing(team2_1, t2_1_spot);
+	AiSetMoveThing(team2_1, t2_1_spot, 0);
+	AiSetLookThing(team2_2, t2_2_spot);
+	AiSetMoveThing(team2_2, t2_2_spot, 0);
+	
+	#team 3:
+	AiSetLookThing(team3_1, t3_1_spot);
+	AiSetMoveThing(team3_1, t3_1_spot, 0);
+	AiSetLookThing(team3_2, t3_2_spot);
+	AiSetMoveThing(team3_2, t3_2_spot, 0);
+	
+	#team 4:
+	AiSetMoveSpeed(team4_1, 2.0);
+	AiSetMoveSpeed(Team4_2, 2.0);
+	AiSetLookThing(team4_1, t4_1_spot);
+	AiSetMoveThing(team4_1, t4_1_spot, 0);
+	AiSetLookThing(team4_2, t4_2_spot);
+	AiSetMoveThing(team4_2, t4_2_spot, 0);
+
+	return;
+
+#========================================================================================
+
+afterscene:
+	#wait 'til truck stops moving, destroy, create new truck, commies
+	AiWaitForStop(truck);
+	DestroyThing(truck);
+	Sleep(0.01);
+	CreateThing(newtruck, newspot);
+	
+	return;
+
+#========================================================================================
+
+scene1:
+	cursound = PlaySoundThing(truckwav, scene1cam1, .5, 10, 50, 1);
+	
+	# reassign cam1
+	cam1 = scene1cam1;
+	Sleep(0.01);
+	
+    call startscene;
+	
+	# SetCamera 2's FOV
+	SetCameraFOV(50, 0, 0.0);
+	
+	# move indy out to scope the scene
+	sleep(.5);
+	AiSetLookThing(indy, aispot1);
+	PlayVoice(indy, uhoh, 1, 0);
+	AiSetMoveThing(indy, aispot1, 1);
+	AiSetLookThing(indy, newspot);
+	Sleep(0.5);
+	
+	# kick out the jams
+	PlaySoundLocal(tunes, 1.0, 0, 0x0000, 0);
+	ChangeSoundVol(cursound, 0, 4);   	
+
+	# call in the troops
+	call commies;
+	call movetruck;
+	
+	# camera cuts over to look at commies
+	SetCameraLookInterp(2, 0);
+	SetCameraSecondaryFocus(2, scene1look);
+	SetCameraFOV(90, 1, 10.0);
+	sleep(2);
+	MoveToFrame(scene1look, 1, 4);
+	sleep(4);
+	PlayVoice(indy, reds, 1, 0);
+	Sleep(3.5);
+	
+	call stopscene;
+	call afterscene;
+	
+	return;
+	
+#========================================================================================
+
+scene2:
+	cursound = PlaySoundThing(truckwav, scene2cam2, .1, 1, 50, 1);
+	ChangeSoundVol(cursound, .3, 2);
+	sleep(1);
+	
+	# reassigne cam1
+	cam1 = scene2cam1;
+	Sleep(0.01);
+	
+	call startscene;
+	
+	TeleportThing(indy, indyport);
+
+	# SetCamera 2's FOV
+	SetCameraFOV(100, 0, 0.0);
+	   	
+	# move indy out to scope the scene
+	AiSetLookThing(indy, aispot2);
+	PlayVoice(indy, uhoh, 1, 0);
+	AiSetMoveThing(indy, aispot2, 1);
+	AiSetLookThing(indy, newspot);
+	Sleep(0.5);
+	
+	# kick out the jams
+	PlaySoundLocal(tunes, 1.0, 0, 0x0000, 0);
+	ChangeSoundVol(cursound, 0, 6);   	
+	
+	# call in the troops
+	call commies;
+	call movetruck;
+	
+	# camera cuts over to look at commies
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraSecondaryFocus(2, scene2look2);
+	SetCameraInterpSpeed(2, 5.8);
+	SetCameraFOV(75, 1, 5.8);
+	SetCameraFocus(2, scene2cam2);
+	sleep(4.0);
+	PlayVoice(indy, reds, 1, 0);
+	Sleep(4.0);
+	
+	call stopscene;
+	call afterscene;
+	
+	return;
+
+#========================================================================================
+
+scene3:
+
+	# reassign cam1
+	cam1 = scene3cam1;
+	Sleep(0.01);
+	
+    call startscene;
+	
+	# SetCamera 2's FOV
+	SetCameraFOV(70, 0, 0.0);
+	   	
+	# move indy out to scope the scene
+	AiSetLookThing(indy, aispot3);
+	PlayVoice(indy, uhoh, 1, 0);
+	AiSetMoveThing(indy, aispot3, 1);
+	AiSetLookThing(indy, team1_1);
+	Sleep(0.5);
+	
+	# call in the troops
+	call commies;
+	call movetruck;
+	
+	# kick out the jams
+	PlaySoundLocal(tunes, 1.0, 0, 0x0000, 0);
+	
+	# camera cuts over to look at commies
+	SetCameraLookInterp(2, 0);
+	SetCameraSecondaryFocus(2, truck);
+	MoveToFrame(scene3cam1, 1, 1);
+	Sleep(4);
+	PlayVoice(indy, reds, 1, 0);
+	Sleep(5);
+	
+	call stopscene;
+	call afterscene;
+	
+	return;
+	
+#========================================================================================
+
+scene4:
+	# reassign cam1
+	cam1 = scene4cam1;
+	Sleep(0.01);
+	
+	call startscene;
+	
+	# SetCamera 2's FOV
+	SetCameraFOV(100, 0, 0.0);
+	   	
+	# move indy out to scope the scene
+	AiSetLookThing(indy, indylook4);
+	PlayVoice(indy, uhoh, 1, 0);
+	AiSetMoveThing(indy, aispot4, 1);
+	AIWaitForStop(indy);
+	Sleep(1);
+	
+	# call in the troops
+	call commies;
+	call movetruck;
+	
+	# kick out the jams
+	PlaySoundLocal(tunes, 1.0, 0, 0x0000, 0);
+	ChangeSoundVol(cursound, 0, 6);   	
+	
+	# camera cuts over to look at commies
+	SetCameraFOV(70, 0, 1);
+	SetCameraFocus(2, scene4cam2);
+	SetCameraLookInterp(2, 0);
+	SetCameraSecondaryFocus(2, scene4look2);
+	SetCameraFOV(110, 1, 8);
+	Sleep(4);
+	PlayVoice(indy, reds, 1, 0);
+	Sleep(5);
+	
+	call stopscene;
+	call afterscene;
+	
+	return;
+
+end
+	
+

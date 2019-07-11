@@ -1,0 +1,92 @@
+# Jones 3D Cog Script
+#
+# gen_whip cam.cog
+#
+# Generic whip swing camera offset Script
+#
+# [CMG]
+#
+# [DS] Added music cue.
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+
+	#..................MESSAGES................
+    message		damaged		
+    message		startup		
+
+	
+	#..................ACTORS................
+	thing		player          					local
+    
+
+	#..................CAMERAS................
+    thing       swingCam          		
+	
+    #..................PROPS................
+    thing		whipstrut
+
+	#..................SOUNDS................
+	sound       sndFalling=gen_fallingrock_c.wav        local
+	sound		music0=mus_gen_indywhip1.wav			local
+    		
+	#..................VARIABLES................
+    int			curCam					local
+	int		musplayed=0					local
+	
+    
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	player=GetLocalPlayerThing();
+
+return;
+# ========================================================================================
+
+damaged:
+
+if ((GetSenderRef() == whipstrut) && (GetParam(1) == 0x10))
+	{
+        # Indy whips across the gap...
+		
+		# Prep...
+		StartCutScene(1);
+		SetActorFlags(player, 0x200000);
+		curCam = GetCurrentCamera();
+		SetCameraPosInterp(2, 0); # kill dolly
+		SetCameraLookInterp(2, 0); # kill pan & tilt
+		Sleep(1.0);
+        
+		# move cam to known position with a wide angle
+		SetExtCamOffsetToThing(swingCam);
+	        SetCameraFOV(100, 1, 1.0);
+		Sleep(1.0);
+
+        # sound and object creation for collapsing whip strut
+#		PlaySoundLocal(sndFalling, 1.0, 0.0, 0x0, 0);
+
+		#indy whip music cue.
+		if(musplayed == 0)
+		{
+		musplayed=1;
+		PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+		}
+		Sleep(0.5);
+		RestoreExtCam();
+        SetCameraFOV(90, 1, 0.25);
+		Sleep(2.0);
+		ClearActorFlags(player, 0x200000);
+		EndCutScene();
+	}
+return;
+# ========================================================================================
+	
+end
+

@@ -1,0 +1,67 @@
+# Jones 3D Cog Script
+#
+# PRU_waterfallSpray.cog    Particles at base of falls
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+message startup
+message	arrived
+
+thing		rotateGhost
+thing		mistGhost0
+thing		mistGhost1
+
+template	mist0=splashenter		local #H2Ofallfx	local
+template	mist1=splashenter		local #	splashin		local #H2Ofallfx	local
+
+material	mat1=gen_a4sfx_splash.mat	 	local			#obj_pyr_a4sfx_splash_bot.mat		local	
+#material	mat0=obj_pyr_a4sfx_splash.mat			local
+
+end
+# ========================================================================================
+code
+startup:
+AttachThingToThing(mistGhost0, rotateGhost);
+AttachThingToThing(mistGhost1, rotateGhost);
+
+Sleep(0.1);
+
+MoveToFrame(rotateGhost, RandBetween(0, 3), (0.5 * Rand() + 0.1));
+
+Sleep(0.5 * Rand() + 0.1);
+
+CreateThing(mist0, mistGhost0);
+MaterialAnim(mat1, 16, 0x0);
+#MaterialAnim(mat0, 20, 0x0);
+
+Sleep(Rand());
+CreateThing(mist1, mistGhost1);
+MaterialAnim(mat1, 16, 0x0);
+#MaterialAnim(mat0, 20, 0x0);
+
+
+return;
+
+arrived:
+
+MoveToFrame(rotateGhost, RandBetween(0, 3), (0.5 * Rand() + 0.1));
+
+CreateThing(mist0, mistGhost0);
+MaterialAnim(mat1, 16, 0x0);
+#MaterialAnim(mat0, 20, 0x0);
+
+Sleep(0.5 * Rand() + 0.1);
+
+CreateThing(mist1, mistGhost1);
+MaterialAnim(mat1, 16, 0x0);
+#MaterialAnim(mat0, 20, 0x0);
+
+
+
+
+return;
+end

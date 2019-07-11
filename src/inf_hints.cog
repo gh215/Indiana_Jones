@@ -1,0 +1,245 @@
+# Jones 3D Cog Script
+#
+# INF_Hint.cog
+#
+# Solves hints    
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+        message         startup
+        message         activate
+        message         entered
+        message         taken
+        message         user0
+        message         user1
+        
+        thing           player                          local
+
+        thing           hint1
+        
+        thing           hint2
+        sector          hint2_sector
+        
+        thing           hint4
+        thing           hint4_button
+        
+        thing           hint6
+        sector          hint6_sector
+        
+        thing           hint8
+        sector          hint8_sector
+        
+        thing           hint10
+        sector          hint10_sector
+        
+        thing           hint12
+        sector          hint12_sector
+                                     
+        thing           hint14
+        sector          hint14_sector
+        
+        thing           hint16
+        surface         hint16_surface
+        
+        thing           hint18
+        sector          hint18_sector
+        
+        thing           hint20
+        thing           hint20_spar
+        
+        thing           hint22
+        sector          hint22_sector
+        
+        thing           hint24
+        thing           hint24_elevator
+        
+        thing           hint26
+        sector          hint26_sector
+        
+        thing           hint28
+        thing           hint28_gem
+        
+        thing           hint30
+        thing           hint30_gem
+        
+        thing           hint32
+        thing           hint32_button
+        
+        thing           hint34
+        sector          hint34_sector
+        
+        thing           hint36
+        sector          hint36_sector
+        
+        thing           hint38
+        thing           hint38_elevator
+        
+        thing           hint40
+        
+        thing           hint42
+        
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+    SetHintSolved(hint1);
+    player = GetLocalPlayerThing();
+    
+return;
+
+# ========================================================================================
+activate:
+
+    If ((GetSenderRef() == hint4_button) && (GetHintSolved(hint4) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint4);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint32_button) && (GetHintSolved(hint32) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint32);
+        return;
+    }
+    
+return;        
+        
+# ========================================================================================
+entered:
+
+    If ((GetSenderRef() == hint2_sector) && (GetHintSolved(hint2) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint2);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint6_sector) && (GetHintSolved(hint6) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint6);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint8_sector) && (GetHintSolved(hint8) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint8);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint10_sector) && (GetHintSolved(hint10) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint10);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint12_sector) && (GetHintSolved(hint12) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint12);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint14_sector) && (GetHintSolved(hint14) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint14);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint16_surface) && (GetHintSolved(hint16) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint16);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint18_sector) && (GetHintSolved(hint18) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint18);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint20_spar) && (GetHintSolved(hint20) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint20);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint22_sector) && (GetHintSolved(hint22) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint22);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint24_elevator) && (GetHintSolved(hint24) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint24);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint26_sector) && (GetHintSolved(hint26) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint26);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint34_sector) && (GetHintSolved(hint34) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint34);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint36_sector) && (GetHintSolved(hint36) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint36);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint38_elevator) && (GetHintSolved(hint38) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint38);
+        return;
+    }
+    
+        
+return;        
+
+# ========================================================================================
+taken:
+
+    If ((GetSenderRef() == hint28_gem) && (GetHintSolved(hint28) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint28);
+        return;
+    }
+    
+    If ((GetSenderRef() == hint30_gem) && (GetHintSolved(hint30) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint30);
+        return;
+    }
+            
+return;
+
+# ========================================================================================
+user0:
+    
+    SetHintSolved(hint40);
+    
+return;
+
+# ========================================================================================
+user1:
+
+    SetHintSolved(hint42);
+    
+return;
+
+
+end
+

@@ -1,0 +1,198 @@
+# Jones 3D Cog Script
+#
+# pyr_johplatform.cog
+#	
+# Timed platform that closes under the Jewel of Heaven in pyramid 4
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	activated
+message	entered
+message	exited
+message	timer
+message	crossed
+
+# world things
+thing	platform		nolink
+thing	button			
+thing	player			local
+
+# cameras
+thing	buttoncam		nolink
+thing	platformcam		nolink
+
+# camera lookthings
+thing	platformcamlook	nolink
+
+# various ghosts
+thing	plasmaGhost		nolink
+
+# where the jewel stream will turn on
+surface	jeweltrigger	linkid=3
+sector	jewelsector1	linkid=3
+sector	jewelsector2	linkid=3
+sector	jewelsector3	linkid=3
+
+# hint 51 uses the overdoor surface to work
+thing	hint51			nolink
+
+surface	overdoor	linkid=2
+surface	underdoor	linkid=2
+
+material    mat0=gen_4aplasma_jewel.mat	local       # animating plasma texture
+
+sound	platsnd=nub_2mstep_move_c.wav	local
+sound	platstop=nub_weight_stop_c.wav	local
+
+int		oktoclose=1			local
+int		locked=0			local
+
+# subroutines
+flex	startscene=0.0	local
+flex	endscene=0.0	local
+flex	fixcams=0.0		local
+end
+
+
+code
+startup:	
+	SetThingLight(platform, '.5 .5 1', .001, .01);
+	return;
+
+activated:
+# ---> button
+
+	if (GetSenderRef() == jeweltrigger) return;
+	if (locked) return;
+	locked = 1;
+	
+	# start cutscene
+	player = GetLocalPlayerThing();
+	DeselectWeaponWait(GetLocalPlayerThing());
+	call startscene;
+
+	# animate plasma material
+	MaterialAnim(mat0, 9.0, 1);
+	
+	# player presses button
+	SetExtCamOffsetToThing(buttoncam);
+	PlayMode(player, 60, 0);
+	sleep(.5);
+	
+	# move button in
+	MoveToFrame(button, 1, 1);
+	
+	sleep(.5);
+
+	SetCameraFocus(2, platformcam);
+	SetCameraSecondaryFocus(2, platformcamlook);
+	SetCurrentCamera(2);
+	SetCameraFOV(100, 0, 0);
+		
+	sleep(.5);
+
+	# open platform
+	PlaySoundThing(platsnd, platform, 1, -1, -1, 0);
+	MoveToFrame(platform, 1, 1);
+	
+	SetCameraFOV(70, 1, 2);
+	
+	WaitForStop(platform);
+	PlaySoundThing(platstop, platform, 1, -1, -1, 0);
+
+	sleep(1);
+	
+	# set timer to make door close again
+	# timer ranges from 20 on easy to 40 on hard
+	SetTimer(40 - (4 * GetDifficulty()));
+
+	# end cutscene
+	call endscene;
+
+	return;
+
+entered:
+# ---> jeweltrigger, jewelsectors
+	
+	if (GetSenderID() != 3) return;
+
+	if (GetCurFrame(platform) == 1)
+	{
+		JewelFlyingStatus(1, plasmaGhost);	
+	}
+
+	return;
+
+exited:
+# ---> jeweltrigger, jewelsectors
+	
+	if (GetSenderID() != 3) return;
+
+	JewelFlyingStatus(0, plasmaGhost);
+	return;
+	
+crossed:
+	if (GetSenderRef() == overdoor)
+	{
+		oktoclose = 0;
+		SetHintSolved(hint51);
+	}
+	else if (GetSenderRef() == underdoor)
+	{
+		oktoclose = 1;
+	}
+
+	return;
+	
+startscene:
+	call fixcams;
+	StartCutscene(1);
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+			
+	return;
+				
+endscene:
+	ClearActorFlags(player, 0x200000);
+
+	SetCurrentCamera(1);
+	
+	call fixcams;
+	EndCutscene();
+	return;
+	
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	RestoreExtCam();
+	return;
+
+timer:
+	# if the plasmaghost is out of play or player is below the lightroom and column
+	if ((GetThingFlags(plasmaghost) & 0x80000) && (oktoclose == 1))
+	{
+		JewelFlyingStatus(0, plasmaghost);
+		
+		PlaySoundThing(platsnd, platform, 1, -1, -1, 0);
+		MoveToFrame(platform, 0, 2);
+		MoveToFrame(button, 0, 2);
+		WaitForStop(platform);
+		PlaySoundThing(platstop, platform, 1, -1, -1, 0);
+	
+		locked = 0;
+	}
+	else
+	{
+		SetTimer(5);
+	}
+
+	return;
+
+end

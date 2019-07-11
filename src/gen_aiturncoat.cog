@@ -1,0 +1,61 @@
+# Jones 3D Cog Script
+#
+# 00_AITurnCoat.cog
+#
+# "turncoat" attacks something besides Kyle
+# Triggered by entered, activate, or user0
+#
+# [RD]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	activate
+	message	entered
+	message	killed
+	message	user0
+
+	thing		turncoat	mask=-1
+	thing		victim	mask=-1
+
+	sector	fight	
+
+	int		locked=0	local
+end
+
+# ========================================================================================
+
+code
+
+activate:
+	call entered;
+	return;
+
+# ........................................................................................
+
+user0:
+	call entered;
+	return;
+
+# ........................................................................................
+
+entered:
+	if (locked) return;
+
+	locked = 1;
+	AISetFireTarget(turncoat, victim);
+	AISetMoveThing(turncoat, victim);
+	AISetLookPos(turncoat, GetThingPos(victim));
+	AISetMode(turncoat, 0x202);
+	AIClearMode(turncoat, 0x1004);
+	return;
+
+# ........................................................................................
+
+killed:
+	locked = 1;
+	return;
+
+end
+

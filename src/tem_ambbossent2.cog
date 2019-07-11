@@ -1,0 +1,67 @@
+# Jones 3D Cog Script
+#
+# TEM_AmbBossEnt2.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message	    entered
+    message     pulse
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+    thing		soundPos2		nolink
+    thing		soundPos3		nolink
+    thing		soundPos4		nolink
+    thing		soundPos5		nolink
+    
+    sector      start_Amb1      linkID=1
+    sector      start_Amb2      linkID=1
+    
+    sector      stop_Amb1       linkID=0
+
+	sound		ambient0=gen_cave_a1.wav   local
+	sound		ambient1=gen_cave_a2.wav   local
+	sound		ambient2=gen_cave_a3.wav   local
+	sound		ambient3=gen_cave_a4.wav   local
+	sound		ambient4=gen_cave_a5.wav   local
+    sound		ambient5=gen_cave_a6.wav   local
+    
+    int         soundsOn=0  local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	if((GetSenderID() == 1) && (soundsOn == 0))
+    {
+        soundsOn = 1;
+        SetPulse(2.0);
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        soundsOn = 0;
+        SetPulse(0.0);
+    }
+    
+	return;
+
+# ========================================================================================
+
+pulse:
+
+    PlaySoundThing(ambient0[RandBetween(0, 5)], soundPos0[RandBetween(0, 5)], 1.0, 10, 20, 0);
+    return;
+
+# ========================================================================================
+
+end

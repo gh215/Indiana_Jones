@@ -1,0 +1,42 @@
+# Jones 3D Cog Script
+#
+# gen_PlayDialog.cog
+#
+# plays a line of dialogue as you enter a sector
+# modified from 08_kkjoadr.cog
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	entered
+	message	startup
+
+	int		bnosound=0       		local
+	flex		dialoguelength=3.0
+	sector	triggersector
+	sound		dialogue
+end
+
+# ========================================================================================
+
+code
+startup:
+	bnosound=0;
+	return;
+
+# ........................................................................................
+
+entered:
+	if (bnosound==0)
+	{
+		bnosound=1;
+		playsoundlocal(dialogue, 1, 0, 0x0, 0);
+		sleep(dialoguelength);
+	}
+	return;
+
+end
+

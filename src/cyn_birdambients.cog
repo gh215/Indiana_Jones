@@ -1,0 +1,156 @@
+# Jones 3D Cog Script
+#
+# CYN_BirdAmbients.cog
+#
+# Produces random ambient bird sounds.
+#
+# [CMG] [RT]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	#..........................MESSAGES......................
+	message		startup
+	message		pulse
+	message		entered
+	message		user0
+	message		user3
+
+	
+	#..........................COGS......................
+	cog			endscenecog
+	
+	#..........................ACTORS......................
+	thing		player									local
+
+
+	#..........................SOUNDS......................
+	sound		falcon=gen_canyon_a2.wav				local
+	sound		raven=gen_canyon_a3.wav					local
+	sound		hawk=gen_canyon_a4.wav					local
+	sound		crickets=olv_outside_a01.wav			local
+	sound		littlegrits=olv_outside_a02.wav			local
+	sound		tucan=olv_outside_a04.wav				local
+
+
+	#..........................SOUND THINGS......................
+	thing		sndObj00								nolink
+	thing		sndObj01                                nolink
+	thing		sndObj02                                nolink
+	thing		sndObj03                                nolink
+	thing		sndObj04                                nolink
+	thing		sndObj05                                nolink
+
+
+	#..........................TRIGGERS......................
+    sector		on_sect00								linkID=2 
+    sector		on_sect01								linkID=2 
+
+    sector		off_sect00								linkID=3 
+    sector		off_sect01								linkID=3 
+	
+	
+	#..........................VARIABLES......................
+	int			birdsong=1								local
+	int			lastsong=0								local
+	int			location								local
+	int			killsound=0								local
+	int			no_olv=0								local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	player=GetLocalPlayerThing();
+	Sleep(18.0);    
+	PlaySoundLocal(hawk, 1, -1, 0, 0);
+	SetPulse(15.0);
+
+	return;
+
+# ========================================================================================
+pulse:
+
+	if (killsound == 1) return;
+
+
+	SetPulse(RandBetween(8, 15));
+    
+	# check if indy is swimming, if so set the timer then drop out
+	if (GetMoveStatus(player) == 12) return;
+
+	while(birdsong == lastsong)		# choose a sound
+	{
+		birdsong = RandBetween(1, 6);
+	}
+
+	lastsong = birdsong;
+
+	# choose a location for the sound
+	location = RandBetween(0, 5);
+	
+	if (birdsong == 1)
+        PlaySoundThing(hawk, sndObj00[location], 1, 40, 8, 0x0);
+        
+	else if (birdsong == 2)
+		PlaySoundThing(falcon, sndObj00[location], 1, 40, 8, 0x0);
+	
+	else if (birdsong == 3)
+        PlaySoundThing(raven, sndObj00[location], 1, 40, 8, 0x0);
+
+    else if (birdsong == 4)  
+		{
+		if (no_olv == 1) return;
+        print("olv_outside_a01 would have played");
+		PlaySoundThing(crickets, sndObj00[location], 1, 40, 8, 0x0);
+        }
+        
+	else if (birdsong == 5)
+        PlaySoundThing(littlegrits, sndObj00[location], 1, 40, 8, 0x0);
+
+    else if (birdsong == 6)
+        PlaySoundThing(tucan, sndObj00[location], 1, 40, 8, 0x0);
+	
+	
+    return;
+
+
+# ========================================================================================
+entered:
+
+If (GetSourceRef() != player) return;
+
+	If (GetSenderID() == 2)
+		{
+		SetPulse(8.0);
+		}
+
+    If (GetSenderID() == 3)
+		{
+        SetPulse(0.0);
+		}
+return;
+	
+# ========================================================================================
+user0:
+	
+	if (GetSenderRef() != endscenecog) return;
+	
+	no_olv = 1;
+
+return;
+
+# ========================================================================================
+user3:
+
+	killsound = 1;
+
+return;
+# ========================================================================================
+
+end

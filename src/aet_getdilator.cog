@@ -1,0 +1,248 @@
+# Jones 3D Cog Script
+#
+# aet_GetDilator.cog
+#
+# [RT] [TL]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message     startup
+message		activated
+message		callback
+message		timer
+message		entered
+message		exited
+
+# Change these variables ONLY!
+# -------------------------------------------------------------------
+
+# Use in_pickup_low or in_pickup_med or in_reach_high.key for the "get" keyframe
+keyframe	get=in_pickup_med.key	local
+
+# Item-specific voice line
+sound		foundSnd=INXJ205.wav	local
+
+# Item bin number
+int			bin=18					local
+
+# Added for level specific item
+thing		moveImp5
+
+thing		origin0												# Lightning targets.
+thing		target0
+thing		lightThing											# Dynamic pulseing light.
+thing		offsetTarget0										# Camera offset targets.
+thing		offsetTarget1										
+thing		offsetTarget2										
+thing		offsetTarget3										
+
+surface		surface0											# Surfaces to check to see where he is.
+surface		surface1											
+surface		surface2											
+surface		surface3											
+
+material	lightningmat0=aet_4sfx_lightning_v2_a.mat	local	# Mats for lightning.
+material	lightningmat1=aet_4sfx_lightning_v2_b.mat	local
+material	lightningmat2=aet_4sfx_lightning_v2_c.mat	local
+material	lightningmat3=aet_4sfx_lightning_v2_d.mat	local
+material	lightningmat4=aet_4sfx_lightning_v2_e.mat	local
+
+sound		strike0=aet_lightning_01.wav				local
+sound		strike1=aet_lightning_02.wav				local
+sound		strike2=aet_lightning_03.wav				local
+sound		strike3=aet_lightning_04.wav				local
+
+int			cnt											local
+int			onSurf0=0									local	# Toggles for knowing which surface he is on.
+int			onSurf1=0									local
+int			onSurf2=0									local
+int			onSurf3=0									local
+int			pickupDone=0								local
+int			strikechannel								local
+int			randnum										local
+int			inCallback=0								local
+
+sound		fade=nub_charged_pad_c.wav					local
+
+thing		player										local
+
+int			returnVal									local	# (temp) value for testing...			
+
+sound		charge=aet_mr_chargeup.wav					local				
+template	sparks0=mophiaSparksLg						local
+
+end
+
+# ===================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+# Hiding the dynamic light for now.
+SetThingFlags(lightThing, 0x80000);
+# Setting timer for lightning.
+SetTimer(1.0);
+
+return;
+    
+# ........................................................................................
+entered:
+
+if (pickupDone == 1) return;
+# Setting toggles for which surface Indy is on.
+if (GetSenderRef() == surface0)
+	{
+	onSurf0 = 1;
+	}
+if (GetSenderRef() == surface1)
+	{
+	onSurf1 = 1;
+	}
+if (GetSenderRef() == surface2)
+	{
+	onSurf2 = 1;
+	}
+if (GetSenderRef() == surface3)
+	{
+	onSurf3 = 1;
+	}
+
+return;
+    
+# ........................................................................................
+exited:
+
+if (pickupDone == 1) return;
+# Setting toggles for when Indy leaves these surfaces.
+if (GetSenderRef() == surface0)
+	{
+	onSurf0 = 0;
+	}
+if (GetSenderRef() == surface1)
+	{
+	onSurf1 = 0;
+	}
+if (GetSenderRef() == surface2)
+	{
+	onSurf2 = 0;
+	}
+if (GetSenderRef() == surface3)
+	{
+	onSurf3 = 0;
+	}
+
+return;
+
+# ........................................................................................
+activated:
+
+if (GetSenderRef() != moveImp5) return;
+
+if (pickupDone == 1) return;
+pickupDone = 1;
+
+SetTimer(0.0);
+
+StartCutscene(0);
+
+# Disable player controls and stuff
+if (MakeMeStop() == -1)
+	return;
+DeselectWeaponWait(player);	
+
+# Capture player so we get callback message
+CaptureThing(player);
+# Start the animation
+returnVal = PlayKey(player, get, 5, 0x12, 0); 
+
+# Set up the camera
+if (onSurf0 == 1)
+	{
+	SetExtCamOffsetToThing(offsetTarget0);
+	}
+if (onSurf1 == 1)
+	{
+    SetExtCamOffsetToThing(offsetTarget1);
+	}
+if (onSurf2 == 1)
+	{
+    SetExtCamOffsetToThing(offsetTarget2);
+	}
+if (onSurf3 == 1)
+	{
+    SetExtCamOffsetToThing(offsetTarget3);
+	}
+
+return;
+
+# ........................................................................................
+callback:
+
+if (inCallback == 1) return;
+inCallback = 1;
+
+ReleaseThing(player);
+
+# Get rid of the item
+PlaySoundLocal(charge, 0.2, 0, 0x0, 0);
+CreateThing(sparks0, moveImp5);
+
+DestroyThing(moveImp5);
+moveImp5 = -1;
+
+PlaySoundLocal(fade, 1.0, 0, 0x0000, 0);
+
+# Add to inventory
+ChangeInv(player, bin, 1.0);
+SetInvAvailable(player, bin, 1);
+JonesInvItemChanged(bin);
+
+# Wait a bit, then start the voice line
+Sleep(1.0);
+PlayVoice(player, foundSnd, 1.0, 0);
+
+# Reset the camera
+RestoreExtCam();
+
+# Enable player control
+ClearActorFlags(player, 0x200000);
+
+EndCutscene();
+
+return;
+
+# ........................................................................................
+timer:
+
+if (moveImp5 == -1) 
+	{
+	return;
+	}
+# Code for lightning and light pulse.
+randnum = RandBetween(0, 3);
+ClearThingFlags(lightThing, 0x80000);
+strikechannel = PlaySoundThing(strike0[randnum], target0, 0.5, 2.5, 5.0, 0);
+	for (cnt = 2; cnt <= RandBetween(2, 5); cnt = cnt + 1)
+		{
+		CreatePolylineThing(origin0, target0, '0 0 0', lightningmat0[RandBetween(0, 4)], 0.05, 0.05, 0.05);
+		if (onSurf0 == 1)
+			{
+            # If player is standing on hot spot, then hit him with lightning.
+			DamageThing(player, 10, 0x1, surface0);	# NOTE: this code causes a "stack" bug...fix later...
+			}
+		Sleep(0.05);
+		}
+SetTimer(Rand() * 1.5);
+SetThingFlags(lightThing, 0x80000);
+//StopSound(strikechannel, 0);
+
+return;
+
+# ........................................................................................
+end
+

@@ -1,0 +1,275 @@
+# Jones 3D Cog Script
+#
+# BAB_GeneratorPull.cog
+#
+# [SXC & revised by HB]
+#
+# Indy starts generator.
+#
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		activated
+	message		user4 # news from alarmcog
+    
+    model       litlamp=bab_lamp_hang.3do               local
+	keyframe	in_pull=in_push_lever.key	            local
+	keyframe	lever_down=bab_ngin_lite_lever.key	    local
+    keyframe    engine_rotate=bab_ngin_lite.key         local
+    
+    material    animat=elvatr_rock_chain.mat            local
+    
+    sound       zapsound
+    sound       powerHum=pyr_gas_motor.wav              local
+    sound       gatesqueal=fol_in_scrapemetal_med.wav   local
+    sound       leverpull=nub_lever_pull_c.wav  local   local
+    sound       leverback=nub_lever_reset_c.wav local   local
+    sound       gatestop=tem_ldoorr_ldoorl_close_c.wav  local
+    sound       gatesqueal=fol_in_scrapemetal_med.wav   local
+    sound       dangerwav=mus_gen_danger3.wav           local
+
+	cog			alarmcog
+    
+    template    spark0
+    template    spark1
+   
+	thing		player							        local
+
+	thing		indy							        nolink
+    thing		powerCam								nolink
+    thing       badguyCam								nolink
+    thing       sparkpos0
+    thing       sparkpos1
+    thing       generator                               linkid=1
+    thing       fenceDoor
+    thing       fencedoor1
+    thing       fencedoor2
+    thing       enemy0
+    thing       enemy1
+    thing       tgt0
+    thing       tgt1
+	thing		badguytarget							nolink
+    
+    thing       lamp0
+    thing       lamp1
+    thing       lamp2
+    thing       lamp3
+    thing       lamp4
+    thing       lamp5
+    thing       lamp6
+    thing       lamp7
+
+	int			count					                local
+    vector      litVec                                  local
+    int         check=0                                 local
+    int         gatechannel                             local
+    int         gatechannel1                            local
+    int         wepnum=1        local
+    int         lastrand=-1     local
+    int         currand=0       local
+    
+    sound       indylineb0=inxj058.wav      local
+    sound       indylineb1=inxj059.wav      local
+    sound       indylineb2=inxj060.wav      local
+    sound       indylineb3=inxj061.wav      local
+    sound       indylineb4=inxj090.wav      local
+    sound       indylineb5=inxj095.wav      local
+    
+    cog         BAB_Commie_grid         #Added by JM
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    litVec = VectorSet(0.7, 0.8, 0.8);
+    SetThingFlags(enemy0, 0x80000);
+    SetThingFlags(enemy1, 0x80000);
+    
+return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+    if ((GetSenderRef() == generator) && 
+        (GetSourceRef() == player) && 
+        (check == 0) && 
+        (GetCurItem(player) == 0))
+        {
+            check = 1;
+        	# Disable and hide player
+            While(wepnum !=0)
+                {
+                    wepnum = GetCurWeapon(player);
+                    DeselectWeaponWait(player);
+                    DeselectWeapon(player);
+                    //printint(wepnum);
+                }
+            StartCutscene(1);
+            SetActorFlags(player, 0x200000);
+            SetThingFlags(player, 0x80000);
+            
+        	# Cut to cutscene camera
+        	SetCameraFocus(0, powerCam);
+            SetCurrentCamera(0);
+            SetCameraFOV(90, 0, 0);
+            CopyPlayerHolsters(player, indy);
+            ClearThingFlags(indy, 0x80000);
+        
+        	# Play the animations - wait for Indy's
+            PlayKey(generator, lever_down, 4, 0x12, 0);
+            PlayKey(indy, in_pull, 4, 0x12, 0);
+            Sleep(0.5);
+            PlaySoundThing(leverpull, generator, 1, 3, 10, 0);
+            
+            # Generate Sparks and start machine sound loop
+            PlaySoundLocal(zapsound, 1, 0, 0x0, 0);
+            CreateThing(spark0, sparkpos0);
+            sleep(0.25);
+            CreateThing(spark0, sparkpos0);
+            PlaySoundLocal(zapSound, 1, 0, 0x0, 0);
+            CreateThing(spark0, sparkpos0);
+            sleep(0.25);
+            CreateThing(spark0, sparkpos0);
+            PlayKey(generator, engine_rotate, 4, 0x00, 0);
+            MaterialAnim(animat, 12, 1);
+            PlaySoundThing(powerHum, generator, 0.75, 1, 5, 1);
+            
+            SetThingModel(lamp0, litlamp);
+            SetThingModel(lamp1, litlamp);
+            SetThingModel(lamp2, litlamp);
+            SetThingModel(lamp3, litlamp);
+            SetThingModel(lamp4, litlamp);
+            SetThingModel(lamp5, litlamp);
+            SetThingModel(lamp6, litlamp);
+            SetThingModel(lamp7, litlamp);
+            
+            For (count=0; count<=7; count=count+1)
+            {
+                SetThingLight(lamp0[count], litVec, 0.6, 1);
+            }
+            
+            Sleep(2.0);
+        
+        	# Watch the gate open...
+            SetCameraLookInterp(2, 0);
+            SetCameraFocus(2, badguyCam);
+            SetCameraSecondaryFocus(2, fencedoor);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0);
+            SetCollideType(fenceDoor, 0);
+            MoveToFrame(fenceDoor, 1, 1);
+            gatechannel = PlaySoundThing(gatesqueal, fencedoor, 1, 10, 20, 1);
+            Sleep(0.01);
+        	SetCameraFOV(60, 1, 3.0);
+        	WaitForStop(fencedoor);
+            SetCollideType(fencedoor, 3);
+            StopSound(gatechannel, 0);
+            PlaySoundThing(gatestop, fencedoor, 1, 10, 20, 0);
+            Sleep(0.5);
+        	# Warn Volodnikov that Indy's on the loose in his dig site...
+        	SendMessage(alarmcog, user4);
+            Sleep(11);
+            SetCollideType(fencedoor1, 0);
+            SetCollideType(fencedoor2, 0);
+            gatechannel1 = PlaySoundThing(gatesqueal, fencedoor1, 1, 10, 20, 1);
+            MoveToFrame(fenceDoor1, 1, 1);
+            MoveToFrame(fenceDoor2, 1, 1);
+        }
+    
+    if ((GetCurItem(player) != 0) && (GetSenderID() == 1))
+        {
+            StopThing(player);
+            StartCutscene(1);
+            SetActorFlags(player, 0x200000);
+            currand = RandBetween(0, 5);
+            While (lastrand == currand)
+            {
+                currand = RandBetween(0, 5);
+            }
+            PlayVoice(player, indylineb0[currand], 1, 1);
+            lastrand = currand;
+            EndCutscene();
+            ClearActorFlags(player, 0x200000);
+        }
+
+return;
+
+# ..............................................................................
+user4:
+
+	# This message comes from the alarmcog
+	# after Volodnikov orders his men to catch Indy...
+   
+ 	# Watch the enemy march in...
+    ClearThingFlags(enemy0, 0x80000);
+    ClearThingFlags(enemy1, 0x80000);
+	AISetMoveSpeed(enemy0, 1.0);
+	AISetMoveSpeed(enemy1, 1.0);
+	AISetLookFrame(enemy0, 1);
+    AISetMoveFrame(enemy0, 1);
+	AISetLookFrame(enemy1, 1);
+    AISetMoveFrame(enemy1, 1);
+ 
+	# Play warning music...
+    PlaySoundLocal(dangerwav, 1, 0, 0, 0);
+
+	# Cut to shot near gate that just opened...
+	SetCameraLookInterp(2, 0);
+    SetCameraFocus(2, badguyCam);
+    SetCameraSecondaryFocus(2, badguytarget);
+    SetCameraFOV(60, 0, 0.0);	
+	
+	Sleep(0.01);
+	SetCameraFOV(45, 1, 3.0);
+
+    Sleep(1);
+	AISetMoveSpeed(enemy1, 1.0);
+   
+    AISetLookFrame(enemy1, 2);
+    AISetMoveFrame(enemy1, 2);
+    
+    AISetLookFrame(enemy0, 2);
+    AISetMoveFrame(enemy0, 2);
+    
+    AIWaitForStop(enemy1);
+    AIWaitForStop(enemy0);
+    
+    AISetLookThing(enemy0, tgt0);
+    AISetLookThing(enemy1, tgt1);
+    Sleep(1.0);
+    
+    WaitForStop(fencedoor1);
+    StopSound(gatechannel1, 0);
+    PlaySoundThing(gatestop, fencedoor1, 1, 10, 20, 0);
+
+    # Return control and camera to player...
+    TeleportThing(player, indy);
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+	Sleep(0.1);
+    SetCameraFocus(0, player);
+    SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+    EndCutscene();
+    ClearActorFlags(player, 0x200000);
+    SetCollideType(fencedoor1, 3);
+    SetCollideType(fencedoor2, 3);
+    SendMessage(BAB_Commie_Grid, user1);    //Added by JM
+
+return;
+
+# ..............................................................................
+    
+end
+

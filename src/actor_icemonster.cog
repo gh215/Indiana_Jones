@@ -1,0 +1,155 @@
+# Jones 3D Cog Script
+#
+# actor_IceMonster.cog
+#
+# [PKM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		created
+	message		aievent
+	message		damaged
+	message		timer
+	message		statechange
+	message		callback
+
+# ************************** TEMPLATES *************************
+	keyframe	hop=si_hop.key					local
+
+	template	smoke=+ice_chicken_spr			local # RT: Used by weapon -- don't remove!
+
+	template	blast=+ice_spr_exp_blast		local # RT: Used by explosion -- don't remove!
+	template	shards=+ice_spr_exp_shards		local # RT: Used by explosion -- don't remove!
+	template	cloud=+ice_spr_exp_cloud   		local # RT: Used by explosion -- don't remove!
+
+# *********************** WEAPON HANDLERS **********************
+	vector		standingFireOffset				local
+	vector		walkingFireOffset				local   
+
+# *********************** MISC LOCAL VARS **********************
+	thing		sender						   	local
+	int			n_eventType						local
+	int			n_param							local
+	int			damageType						local
+
+end
+
+# ===================================================================
+code
+
+# -------------------------------------------------------------------
+created:
+
+	sender = GetSenderRef();
+
+	standingFireOffset = VectorSet(0.0, 0.05, 0.05);
+	walkingFireOffset = VectorSet(0.0, 0.025, 0.0025);
+	SetThingFireOffset(sender, standingFireOffset);
+
+	return;
+
+
+# -------------------------------------------------------------------
+aievent:
+
+	sender = GetSenderRef();
+	n_eventType = GetParam(0);
+	# newAIMode is GetParam(1)
+	# oldAIMode is GetParam(2)
+
+	if ( n_eventType == 0x100)	#---- EVENT_MODECHANGED
+	{
+		if (!BITTEST(GetParam(2), 0x800) && BITTEST(GetParam(1), 0x800))
+		{
+			# We've entered "flee" mode - set our armed mode accordingly.
+            SetThingStateChange(sender, 0, 7);
+		}
+
+		if (BITTEST(GetParam(2), 0x800) && !BITTEST(GetParam(1), 0x800))
+		{
+			# We've left "flee" mode - set our armed mode accordingly.
+            SetThingStateChange(sender, 0, 0);
+		}
+	}
+	if (n_eventType == 0x10000)	#---- EVENT_PREFIRE
+	{
+		if (BITTEST(AIGetMode(sender), 0x01))
+		{
+			# We're now moving.
+			SetThingFireOffset(sender, walkingFireOffset);
+		}
+		else
+		{
+			# We're now standing.
+			SetThingFireOffset(sender, standingFireOffset);
+		}
+	}
+
+	return;
+
+
+# -------------------------------------------------------------------
+damaged:
+
+	sender = GetSenderRef();
+	damageType = GetParam(1);
+
+   	# RT: Don't pay attention to chicken damage....
+	if (BITTEST(damageType, 0x80000000))
+	{
+		ReturnEx(0);
+		return;
+	}
+
+	# Dont Re-flee
+	if ( !BITTEST(AIGetMode(sender), 0x800) )
+	{
+		AIFlee(sender, GetLocalPlayerThing());
+		SetThingTimer(sender, Rand() + Rand() + 3.0);
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+timer:
+
+	sender = GetSenderRef();
+	AIStopFlee(sender);
+	return;
+
+# -------------------------------------------------------------------
+statechange:
+
+	PlayKey(GetSenderRef(), hop, 3, 0x12, 0);
+	return;
+
+# -------------------------------------------------------------------
+callback:
+
+	sender	= GetSenderRef();
+    n_param	= GetParam(1);
+
+    if (n_param == 21)										#---- Left foot down (walk)
+	{
+		PlaySoundClass(sender, 6);								# play 'lwalkhard'
+	}
+    if (n_param == 22)										#---- Right foot down (walk)
+	{
+		PlaySoundClass(sender, 7);								# play 'rwalkhard'
+	}
+    if (n_param == 23)										#---- Left foot down (run)
+	{
+		PlaySoundClass(sender, 8);								# play 'lrunhard'
+	}
+    if (n_param == 24)										#---- Right foot down (run)
+	{
+		PlaySoundClass(sender, 9);								# play 'rrunhard'
+	}
+
+	return;
+
+end

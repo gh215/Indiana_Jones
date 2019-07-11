@@ -1,0 +1,59 @@
+# Jones 3D Cog Script
+#
+# lag_EndLevel.cog
+#
+# [RT & DS]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message	startup
+	message	crossed
+
+	surface	crossurf
+
+# ---------Camera Fade Stuff----------------------------------------------
+	thing		fadeghost
+	thing		fadething
+	thing		player				local
+
+end
+
+# ========================================================================================
+
+code
+startup:
+	player = GetLocalPlayerThing();
+	SetThingAlpha(fadething, 0.0);			#transparent.
+	return;
+
+
+crossed:
+	if (GetSourceRef() == (GetLocalPlayerThing()))
+	{
+	SetActorFlags(player, 0x200000);		#no control.
+#	StopThing(player);
+	StartCutscene(2);
+	SetCameraFadeThing(2, fadething, fadeGhost, 0);
+	SetCurrentCamera(2);
+	ThingFadeAnim(fadething, 0, 1, 1.5, 0);
+	Sleep(1.5);
+	EndCutscene();
+	JonesEndLevel();
+	}
+	return;
+
+# ........................................................................................
+
+
+end
+
+
+
+
+
+
+

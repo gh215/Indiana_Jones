@@ -1,0 +1,422 @@
+# Jones 3D Cog Script
+#
+# SHS_bellmove.cog    moves bell to upper position & back
+#
+# [JWC & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+# **************************** MESSAGES *****************************
+
+message		startup
+message		activated
+message		arrived
+message		user0
+message		user1
+message		user2
+
+# *************************** KEYFRAMES *****************************
+
+keyframe	in_handsOnHips=0in_stand4.key			local
+keyframe	in_handsToHips=0in_stand1_bd_4.key	   	local
+
+keyframe	in_pull=in_pull_lever_down.key			local
+keyframe	lever_down=gen_lever.key				local		
+
+# **************************** MODELS *******************************
+	
+			
+# **************************** SOUNDS *******************************
+
+sound		in_oops=Inxj089.wav						local # didn't work
+sound		in_nope=Inxj088.wav						local
+sound		in_nobudge=Inxj098.wav					local
+sound		in_hmm=Inxj269.wav						local
+
+sound		leverpull=nub_lever_pull_c.wav			local
+sound		leverback=nub_lever_reset_c.wav			local
+sound		bellmove=shs_rope.wav					local
+sound		bellstop=shs_statue_stop.wav 			local
+sound		dooropen=shs_belldoors_open.wav 		local
+sound		doorclose=shs_belldoors_close.wav		local
+sound		whoosh=shs_bellwhoosh_c.wav				local 
+sound		musBellrise=mus_shs_bellrising.wav		local 
+
+
+# **************************** THINGS *******************************
+
+thing		door0									# bell doors
+thing		door1                        			#
+thing		lever									# lever
+thing		bell
+thing		rope0
+thing		rope1
+thing		rope2
+thing		rope3
+thing		rope4 
+thing		rope5
+	
+thing		player									local
+thing		indy									nolink
+
+thing		bellcam_1								nolink
+thing		bellcam_2								nolink
+thing		bc_t1									nolink
+thing		bc_t2									nolink
+
+thing		in_mk1									nolink
+
+thing		bellGlow								local
+
+thing		bellmark								local # create on fly
+thing		lookmark								local # create on fly
+
+thing		bellumbrella							#to prevent an "A"bug		
+
+# ************************ ENGINE WEIRDNESS *************************
+
+	cog			moviecog
+	cog			deathbybellcog
+
+ 	sector		marksector							local # var
+	
+	template	bellGlow_tpl=shs_bellglow			local
+	template	ghost_tpl=ghost						local
+
+# *************************** VARIABLES *****************************
+	
+vector		camPos									local
+
+flex		randomValue								local
+flex		newComment=0							local
+flex		oldComment=0							local
+flex		temp									local
+
+int			leverState=0							local
+int  		bellState=0 							local
+int			curCam									local
+int			musicplayed=0							local	    
+int			moveloop								local
+int			in_keyTrack1							local
+
+int			pl_rotrate								local
+int			newline=50								local
+int			oldline=50								local
+int			saidoops=0								local
+int			markexists=0							local
+
+# SUB-ROUTINES
+
+flex		backtoplay								local
+
+
+end
+
+# ===================================================================
+
+code
+
+# ...................................................................
+
+startup:
+
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+    SetThingFlags(bellumbrella, 0x80000);	# hide invisible collision
+
+	return;
+
+# ...................................................................
+
+activated:
+
+	if (GetSenderRef() == lever && leverState == 0)
+	{
+		leverState = 1;
+
+		# Prep for cutscene...
+		curCam = GetCurrentCamera();
+
+		if (markexists == 0)
+		{
+			markexists = 1;	
+			marksector = FindNewSectorFromThing(player, '-6.74 -0.54 2.09'); # measured spot (was -6.48)
+			bellmark =
+				CreateThingAtPos(ghost_tpl, marksector, '-6.74 -0.54 2.09', '0 0 0');
+			CaptureThing(bellmark);
+			SetThingLVecPYR(bellmark, '0.0 -90.0 0.0');
+		}
+		
+		# Disable and hide player...
+		MakeMeStop();
+		DeselectWeaponWait(player); # stow any weapon or lighter
+		StartCutscene(1);
+		CopyPlayerHolsters(player, indy); # make sure our actor has matching props
+		
+		# Switch actor indy for player...
+		TeleportThing(indy, in_mk1);
+		SetThingFlags(player, 0x80000); # hide player
+		ClearThingFlags(indy, 0x80000); # reveal our actor
+
+		pl_rotrate = GetThingMaxRotVel(player);
+		SetThingMaxRotVel(indy, 200.0);
+		
+		# Prep camera & cut...
+		SetCameraLookInterp(2, 0); # kill pan & tilt to lock on 2nd target
+		SetCameraPosInterp(2, 0); # kill dolly mode too
+		SetCameraFocus(2, bellcam_1);
+		SetCameraSecondaryFocus(2, bc_t1);
+		SetCurrentCamera(2);
+		SetCameraFOV(55, 0, 0.0);
+		Sleep(0.01);
+
+		PlayKey(lever, lever_down, 4, 0x12, 0);
+		PlayKey(indy, in_pull, 4, 0x12, 0);
+		Sleep(1.2);
+		PlaySoundLocal(leverpull, 1.0, 0, 0x0000, 0);
+		Sleep(1.4);
+		PlaySoundLocal(leverback, 1.0, 0, 0x0000, 0);
+		Sleep(0.3);
+
+		if (bellState == 0)
+		{
+			# RT: Indy turns to see what's up...
+			AISetLookThingEyeLevel(indy, rope3);
+
+			# Lift bell to platform...
+			AttachThingToThing(rope0, bell);
+			AttachThingToThing(rope1, bell);
+			AttachThingToThing(rope2, bell);
+			AttachThingToThing(rope3, bell);
+			AttachThingToThing(rope4, bell);
+			AttachThingToThing(rope5, bell);
+			
+			if (musicplayed == 0)
+			{
+				PlaySoundLocal(musBellrise, 1.0, 0, 0x0, 0);
+				musicplayed = 1;
+			}
+
+			MoveToFrame(bell, 1, 1.5);
+			moveloop=PlaySoundLocal(bellmove, .5, 0, 0x1, 0);
+
+			# Pan to watch the bell move up...
+
+			# NOTE:  this is a complex dolly, pan, and double tilt move,
+			# interping both look & pos and moving the 2nd look-target downward
+			# for part of the move, then attaching it to the upward-moving bell
+			# in order to frame and follow the bell to its upper resting place.
+			# Many of the details depend upon thing placements in the Shambala
+			# Sanctuary level, so be careful!
+			 
+			SetCameraLookInterp(2, 1); # enable pan & tilt
+			SetCameraPosInterp(2, 1); # set dolly mode
+			Sleep(0.01);
+			SetCameraInterpSpeed(2, 3.5); # magic numbers
+			SetCameraFocus(2, bellcam_2);
+			SetCameraSecondaryFocus(2, bc_t2);
+			SetCameraFOV(75, 1, 7.5); # match duration of bell move
+			MoveToFrame(bc_t2, 1, 3.0); # magic numbers
+			Sleep(3.5);
+
+			SetCameraLookInterp(2, 0); # kill pan & tilt
+			SetCameraPosInterp(2, 0); # kill dolly mode
+			Sleep(1.1); # magic number
+			StopThing(bc_t2);
+			AttachThingToThing(bc_t2, bell);
+			
+			# No "a" bug
+			ClearThingFlags(bellumbrella, 0x80000);	#  collision
+            
+			# alert deathbybell cog
+			SendMessage(deathbybellcog, user1);
+			
+		}
+
+		if (bellState == 2)
+		{
+            # RT: Indy turns to see what's up...
+			AISetLookThingEyeLevel(indy, bell);
+			Sleep(0.2);
+			
+			# Pan to watch...
+			SetCameraLookInterp(2, 1); # enable pan & tilt
+			SetCameraPosInterp(2, 1); # set dolly mode
+			Sleep(0.01);
+			SetCameraInterpSpeed(2, 2.5);
+			SetCameraFocus(2, bellcam_2);
+			SetCameraSecondaryFocus(2, bell);
+			SetCameraFOV(60, 1, 9.0); # was 50
+			
+			# Drop bell to bottom...
+			bellState = 3;
+			Rotate(door0, 90, 0, 1.0);           
+			Rotate(door1, -90, 0, 1.0);
+			PlaySoundLocal(dooropen, 1.0, 0, 0, 0);
+            Sleep(0.5); 
+			SkipToFrame(bell, 0, 1.5);
+		    moveloop=PlaySoundLocal(bellmove, .5, 0, 0x1, 0);
+		     
+			# alert deathbybell cog
+			SendMessage(deathbybellcog, user0);
+			
+			# make bell umbrella out of play
+			SetThingFlags(bellumbrella, 0x80000);	# hide invisible collision
+			
+		}
+
+		if (bellState == 4)
+		{
+			Sleep(0.5);
+			AISetLookThingEyeLevel(indy, bell);
+			Sleep(1.0);
+
+			AISetMoveSpeed(indy, 0.9);
+			AISetMoveThing(indy, bellmark, 0);
+			SetCameraLookInterp(2, 1);
+			SetCameraInterpSpeed(2, 1.5);
+			Sleep(0.01);
+			SetCameraSecondaryFocus(2, bellmark);
+			SetCameraFOV(65, 1, 1.5);
+			Sleep(1.5);
+			StopThing(indy);
+
+			in_keyTrack1 = PlayKey(indy, in_handsOnHips, 2, 0x10, 0);
+			PlayKey(indy, in_handsToHips, 4, 0x12, 1);
+
+			while (newline == oldline)
+			{		
+				newline = RandBetween(0, 3);
+			}
+			if (saidoops == 0)
+			{
+				newline = 0;
+				saidoops = 1;
+			}
+			oldline = newline;	
+
+			PlayVoice(indy, in_oops[newline], 1.0, 1);
+			
+			Sleep(0.5);
+			StopKey(indy, in_keyTrack1, 0.5);
+			Sleep(0.5);
+
+			call backtoplay;
+		}		
+	}
+		
+	return;
+
+# ...................................................................
+
+user2:
+
+	# NOTE:  This is a signal from moviecog that the bell has been rung and
+	# should now ascend to its final frame...
+
+	if (GetSenderRef() == moviecog)
+	{
+		# RT: Bell FX
+		bellGlow = CreateThing(bellGlow_tpl, bell);
+		AnimateSpriteSize(bellGlow, '0.5 0.5 0.75', '1.5 1.5 0.0', 0.75);
+        PlaySoundLocal(whoosh, 1.0, 0, 0, 0);
+        bellState = 4; # this will freeze bell at top of tower
+		MoveToFrame(bell, 3, 1.5);
+	    moveloop=PlaySoundLocal(bellmove, .5, 0, 0x1, 0);
+	
+		# make bell umbrella out of play
+		SetThingFlags(bellumbrella, 0x80000);	# no need for this anymore.
+	}
+    
+	return;
+			
+# ...................................................................
+
+arrived:
+
+    if (GetSenderRef() == bell && bellState == 0)
+    {
+        # start door rotation when bell reaches frame 1...
+		bellState = 1;
+        MoveToFrame(bell, 2, 1.5);
+		Sleep(0.5);
+        Rotate(door0, -90, 0, 1.0);          
+        Rotate(door1, 90, 0, 1.0);
+        PlaySoundLocal(doorclose, 1.0, 0, 0, 0);		
+	}
+
+	if (GetSenderRef() == bell && bellState == 1)
+    {
+        bellState = 2;
+        
+		Sleep(1.0); # take a beat for doors
+
+		StopSound(moveloop, 0.0);
+        PlaySoundLocal(bellstop, 1.0, 0, 0x0, 0);
+         
+        Sleep(1.0); # take a beat for doors
+
+		# Notify controlling cinematic cog that bell is in place...
+		SendMessage(moviecog, user1);
+		 
+		TeleportThing(indy, bellmark);
+		call backtoplay;
+    }
+
+	if (GetSenderRef() == bell && bellState == 3)
+    {
+        bellState = 0;
+        StopSound(moveloop, 0.0);
+        PlaySoundLocal(bellstop, 1.0, 0, 0x0, 0);
+		Sleep(0.5); # take a shorter beat at bottom
+
+		# Notify controlling cinematic cog that bell not in place...
+		SendMessage(moviecog, user0);
+
+		TeleportThing(indy, bellmark);
+		call backtoplay;
+    }
+
+	if (GetSenderRef() == bell && bellState == 4)
+    {
+        # TO DO: klunk as bell reaches topmost position...
+        StopSound(moveloop, 0.0);
+        PlaySoundLocal(bellstop, 1.0, 0, 0x0, 0);
+
+		# Notify controlling cinematic cog that bell is in place...
+		SendMessage(moviecog, user2);		 
+    }
+
+	return;
+
+# ...................................................................
+
+backtoplay:
+	
+	# restore player control...
+	leverState = 0;
+	SetThingMaxRotVel(indy, pl_rotrate);
+	Sleep(0.01);
+	TeleportThing(player, indy); # move player to actor's spot
+	SetThingFlags(indy, 0x80000);
+	SetCameraPosition(1, GetThingPOS(bellcam_1));
+	ClearThingFlags(player, 0x80000); # player visible
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	Sleep(0.01);
+	SetCurrentCamera(curCam);
+	ResetCameraFOV(0, 0.0);
+
+	# restore the 2nd camera look target...
+	DetachThing(bc_t2);
+	SkipToFrame(bc_t2, 0, 10.0);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000); # player in control
+		
+	return;
+   
+end

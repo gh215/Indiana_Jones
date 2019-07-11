@@ -1,0 +1,55 @@
+# Pushblock correction algorithm
+#
+# Add floor surfaces to suit, they're used only for message delivery
+# Floor surfaces do not have to be 2x2; a single large floor will send an entered message after every push 
+#
+# Cogs that change block position without pushing must report the new position to this cog (variable: oldpos)
+# 	to keep the corrections on track
+#
+
+symbols
+message		startup
+message		entered
+
+surface		floor0	mask=0x080
+
+thing		pushblock			nolink
+
+vector		oldpos		local
+vector		newpos		local
+
+flex		xfix=0.0	local
+flex		yfix=0.0	local
+flex		zfix=0.0	local
+end
+
+code
+startup:
+	//Print("----------");
+	oldpos = GetThingPos(pushblock);
+	
+	//Print("Original Position");
+	//PrintVector(oldpos); 
+	
+	return;
+
+entered:
+	//Print("before correction:");
+	newpos = GetThingPos(pushblock);
+	//PrintVector(GetThingPos(pushblock));
+
+	# determine where it was supposed to be, relative to old position
+	xfix = Round(VectorX(VectorSub(oldpos, newpos)) * 10)/10;
+	yfix = Round(VectorY(VectorSub(oldpos, newpos)) * 10)/10;
+	zfix = Round(VectorZ(VectorSub(oldpos, newpos)) * 10)/10;
+	
+	# adjust it to proper position
+	SetThingPos(pushblock, VectorSet((VectorX(oldpos) - xfix), (VectorY(oldpos) - yfix), (VectorZ(oldpos) - zfix)));  
+
+	//Print("after correction:");
+	//PrintVector(GetThingPos(pushblock));
+	
+	oldpos = GetThingPos(pushblock);
+	
+	return;
+end

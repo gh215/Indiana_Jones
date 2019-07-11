@@ -1,0 +1,80 @@
+# Jones 3D Cog Script
+#
+# Gen_Lavabubble.cog
+#
+# Sophia helps Indy through a critical gate
+#
+# [CMG]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+# ................... MESSAGES ...................
+
+    message	crossed		
+    message	pulse
+
+# ................... triggers ...................
+
+	surface		oncross
+	surface		oncross1
+	surface		offcross
+	surface		offcross1
+
+# .................. cogs .....................	
+
+	cog		lavafx0
+	cog		lavafx1
+	cog		lavafx2
+	cog		lavafx3
+	cog		lavafx4
+	cog		lavafx5
+	cog		lavafx6
+	cog		lavafx7
+	cog		lavafx8
+	cog		lavafx9
+
+# .................. vars .....................
+	int		pulsetime=1		local	
+	int		fxcog		local	
+ 
+
+end
+
+# ==============================================================================
+
+code
+
+
+
+# ..............................................................................
+
+crossed:
+
+	If (GetSenderRef() == oncross)
+	{
+	SetPulse(pulsetime);
+	}
+
+	If (GetSenderRef() == offcross)
+	{
+	SetPulse(0);
+	}
+    return;
+
+# ..............................................................................
+pulse:
+
+fxcog=RandBetween(0,9);
+SendMessage(lavafx0[fxcog], user0);
+pulsetime=RandBetween(1,3);
+SetPulse(pulsetime);
+return;
+
+# ..............................................................................
+end
+
+
+

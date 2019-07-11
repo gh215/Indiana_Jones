@@ -1,0 +1,54 @@
+# Jones 3D Cog Script
+#
+# gen_no_opendoor.cog
+#
+# Generic Door Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+    #..................MESSAGES................
+    message		entered		
+    message		user0		
+    
+	#..................TRIGGERS................
+	sector		triggerSECT
+    
+    #..................COGS................
+	cog			debcog
+	cog			tilecog
+
+    #..................VARIABLES................
+	int			setoff=0					local
+	    
+end
+
+# ========================================================================================
+code
+
+entered:
+If (setoff != 0) return;
+If (GetSenderRef() == triggerSECT)
+    {
+	   	setoff = 1;
+		SendMessage(debcog, user0);
+    }
+return;
+
+# ========================================================================================
+user0:
+
+If (GetSenderRef() == tilecog)
+{
+	SendMessage(debcog, user1);
+}
+return;
+
+# ========================================================================================
+	
+end
+

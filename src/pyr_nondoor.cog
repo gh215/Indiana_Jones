@@ -1,0 +1,119 @@
+# Jones 3D Cog Script
+#
+# pyr_nondoor.cog
+#	
+# Commentary on a non-opening door beneath the pyramids
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	activated
+message	startup
+
+# world things
+thing	door
+thing	player	local
+
+# camera things
+thing	doorcamfront
+thing	doorcamback
+thing	doorcamlookfront
+thing	doorcamlookback
+thing	cam1spot	local
+thing	cam1look	local
+
+# sectors
+sector	frontsector
+sector	backsector
+
+# sounds
+sound	doortome=inxj100.wav				local
+
+# variables
+int		locked=0	local
+end
+
+# ========================================================================================
+
+# Code Section
+code
+startup:
+	sleep(.01);
+	SetSectorAdjoins(GetThingSector(door), 0);
+	return;
+
+activated:
+# ---> door	
+	player = GetLocalPlayerThing();
+	
+	if (locked) return;
+	
+	# prepare the player
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+
+	StartCutscene(0);
+	locked = 1;	
+	
+	# setup offset camera
+	cam1spot = CreateThing(GetThingTemplate(doorcamfront), doorcamfront);
+	cam1look = CreateThing(GetThingTemplate(doorcamfront), doorcamfront);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+
+	if (GetThingSector(player) == frontsector)
+	{
+		SetCameraFocus(2, doorcamfront);
+		SetCameraSecondaryFocus(2, doorcamlookfront);
+	}
+	else
+	{
+		SetCameraFocus(2, doorcamback);
+		SetCameraSecondaryFocus(2, doorcamlookback);
+	}
+
+	# indy gesture and sayline
+	PlayMode(player, 60, 1);
+	PlayVoice(player, doortome, 1, 1);
+	Sleep(.5);
+
+	# restore camera and get rid of objects
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	
+	if (GetThingSector(player) == frontsector)
+	{
+		SetCameraPosition(1, GetThingPos(doorcamfront));
+	}
+	else
+	{
+		SetCameraPosition(1, GetThingPos(doorcamback));
+	}
+
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	DestroyThing(cam1spot);
+	DestroyThing(cam1look);
+	
+	# restore player to normal
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+
+	locked = 0;
+	return;
+
+end
+
+

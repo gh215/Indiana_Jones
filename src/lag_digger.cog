@@ -1,0 +1,172 @@
+# Jones 3D Cog Script
+#
+# lag_digger.cog
+#
+# Digging hole.
+#
+# [DS] [RT]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		startup
+	message		entered
+	message		activated
+	message		callback
+	message		timer
+
+
+	keyframe	in_dig=in_dig.key				local
+	keyframe	in_reach=in_activate_low.key		local
+	material	mat=gen_a4sfx_dirtcloud.mat		local
+	model		shovel=hand_in_shovel.3do		local
+	sound		digready=inxj141.wav			local	#There's something here...
+	sound		nodig=inxj058.wav				local	#That wont work...
+	sound		dugsnd
+	sound		digsnd=lag_in_shovel_in.wav		local
+	sound		throwdirt=lag_in_shovel_toss.wav	local
+	surface	sandsurf
+	template	dirtTpl=dirt				local
+	thing		campos
+	thing		camendpos
+	thing		camtarg
+	thing		telepoint
+	thing		indy
+	thing		player					local
+	thing		dustThing					local
+	int		curcam					local
+	int		dirty=0					local
+	int		spoken=0					local
+	int		bBusy=0					local
+	int		handNode					local
+	int		swapRef					local
+	int		digit						local
+	int		speak0					local
+	vector	createPos					local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	handNode = GetNodeByName(player, "inrhand");
+
+	return;
+
+# -------------------------------------------------------------------
+
+entered:
+
+	if (GetSenderRef() == sandsurf)
+	{
+#	Print("entered dig area");
+        if (spoken == 0)
+		{
+			spoken = 1;
+			MakeMeStop();
+			DeselectWeaponWait(player);
+			StartCutscene(0);
+			PlayKey(player, in_reach, 4, 0x12, 0);
+			sleep(1.0);
+			speak0=PlayVoice(player, digready, 1.0, 0);
+			WaitForSound(speak0);
+			sleep(0.5);
+			EndCutscene();
+			ClearActorFlags(player, 0x200000);
+		}
+	}
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+	if((GetCurItem(player) == 62) && (GetSenderRef() == sandsurf))
+	{
+        # Prep...
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		CopyPlayerHolsters(player, indy);
+		StartCutscene(1);
+
+		# Camera setup
+		curCam = GetCurrentCamera();
+		SetCameraLookInterp(2, 0);	# turns off interp to lookthing.
+		SetCameraFocus(2, campos);
+		SetCameraSecondaryFocus(2, camtarg);
+		SetCurrentCamera(2);
+		SetCameraFOV(60, 0, 0);
+
+		AISetCutsceneMode(indy);
+		SetThingFlags(player, 0x80000);
+        ClearThingFlags(indy, 0x80000);
+	
+		# Put the shovel in Indy's hand (15 is his right hand mesh)
+		swapRef = SetThingMesh(indy, 15, shovel, 0);
+	
+		MoveToFrame(campos, 1, 2);
+        SetCameraFOV(35, 1, 2);
+
+		CaptureThing(indy);
+		SetTimer(1.0);
+		PlayKey(indy, in_dig, 4, 0x12, 1);
+		
+		dirty = 1;
+
+		ReleaseThing(indy);
+		SetAdjoinFlags(sandsurf, 2);
+		SetFaceGeoMode(sandsurf, 0);
+		TeleportThing(indy, telepoint);
+		PlayVoice(indy, dugsnd, 1.0, 0);
+
+		# Get rid of the shovel
+		RestoreThingMesh(player, swapRef);
+
+		# Cleanup...
+        CopyOrientAndPos(indy, player);
+        SetThingFlags(indy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+
+        SetCameraPosition(1, GetThingPos(camendpos));
+		SetCurrentCamera(curCam);
+		ResetCameraFOV(0, 0.0);
+		EndCutscene();
+
+	}
+	else if (!bBusy)
+	{
+        bBusy = 1; 
+		PlayVoice(player, nodig, 1.0, 1);
+        bBusy = 0; 
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+	PlaySoundLocal(throwdirt, 1.0, 0.0, 0x0, 0);
+	createPos = GetThingJointPos(indy, handNode);
+    dustThing = CreateThingAtPos(dirtTpl, GetThingSector(indy), createPos, '0 0 0');
+	AnimateSpriteSize(dustThing, '0.03 0.03 1.0', '0.2 0.225 0.0', 1.1);
+	MaterialAnim(mat, 8, 0x0); 
+if(digit >= 3) return;
+digit = (digit + 1);
+sleep(1.0);
+PlaySoundLocal(digsnd, 1.0, 0.0, 0x0, 0);
+
+	return;
+
+timer:								#first time digsnd played.
+	PlaySoundLocal(digsnd, 1.0, 0.0, 0x0, 0);
+	return;
+
+end

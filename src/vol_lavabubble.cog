@@ -1,0 +1,87 @@
+# Jones 3D Cog Script
+#
+# Gen_Lavabubble.cog
+#
+# Sophia helps Indy through a critical gate
+#
+# [CMG]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+# ................... MESSAGES ...................
+
+    message	startup		
+	message	user0
+	message	arrived
+	
+# .................. OBJECTS .....................	
+
+	thing		bubble
+	thing		particlespot
+
+# ................. MATERIAL ....................
+
+	material	bubbleskin=bubble_a4lava_top.mat		local
+	material	lavaskin=gen_a4sfx_lava_particle.mat	local
+
+
+# ................. TEMPLATES ....................
+	template	particlesystem
+
+
+# ................. SOUNDS ....................
+
+	sound		bloop=gen_lava_blurp_a.wav				local
+
+
+# ................. VARS ....................
+	int			track									local
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+	# make the bubble invisible
+	SetThingFlags(bubble, 0x10);
+    return;
+
+# ..............................................................................
+
+user0:
+
+	ClearThingFlags(bubble, 0x10);
+	SetMaterialCel(bubbleskin, 0);
+	MoveToFrame(bubble, 1, 1.0);
+
+    track=MaterialAnim(bubbleskin, 16, 0x0);
+    return;
+
+# ..............................................................................
+arrived:
+
+If ((GetSenderRef() == bubble) && (GetCurFrame(bubble) == 1))
+{
+    Sleep(0.45);
+	SetThingFlags(bubble, 0x10);
+	SetMaterialCel(lavaskin, 0);
+	PlaySoundThing(bloop, particlespot, 1.0, 8, 15, 0x0); 
+	CreateThing(particlesystem, particlespot);
+	#MaterialAnim(lavaskin, 16, 0);
+	MoveToFrame(bubble, 0, 50);
+}
+
+return;
+
+
+
+# ..............................................................................
+end
+
+
+

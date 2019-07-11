@@ -1,0 +1,142 @@
+# Jones 3D Cog Script
+#
+# gen_DoorCam.cog
+#
+# This is the generic door with a camera attached
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    message     startup
+    message     activate
+    message     blocked      
+                
+    thing	    switch0         linkid=1              //switch on one side of the door
+    thing	    switch1         linkid=1              //switch on the other side of the door (optional)
+    thing       door0
+    thing       player          local
+   
+    sector      doorsector
+   
+    flex        doorspeed=1.0
+    flex        switchspeed=2.0
+    flex        waittime=5.0
+                 
+    int		    flag=0          local
+    int         blockcheck=0    local
+    int         actcheck=0      local
+    int         firstime=0      local
+    int         wepnum=1        local
+    int         lastrand=-1     local
+    int         currand=0       local
+    
+    sound       indylineb0=inxj058.wav      local
+    sound       indylineb1=inxj059.wav      local
+    sound       indylineb2=inxj060.wav      local
+    sound       indylineb3=inxj061.wav      local
+    sound       indylineb4=inxj090.wav      local
+    sound       indylineb5=inxj095.wav      local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    player = GetLocalPlayerThing();
+    SectorAdjoins(doorsector, 0);
+    return;
+
+#........................................................................................
+activate:
+    if ((GetSenderID() == 1) && (actcheck == 0) && (GetCurItem(player) == 0))
+    {
+        actcheck = 1;
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player);
+            DeselectWeaponWait(player);
+            DeselectWeapon(player);
+            //printint(wepnum);
+        }
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        StartCutscene(1);
+        PlayMode(player, 60, 0);
+        Sleep(0.35);
+        if (switch0 != -1) 
+        {
+            MoveToFrame(switch0, 1, switchspeed);
+        }
+        if (switch1 != -1)
+        {
+            MoveToFrame(switch1, 1, switchspeed);
+        }
+        WaitForStop(switch0);
+        Sleep(1);
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        SectorAdjoins(doorsector, 1);
+        MoveToFrame(door0, 1, doorspeed);
+        WaitForStop(door0);
+        Sleep(10);
+        if (switch0 != -1) 
+        {
+            MoveToFrame(switch0, 0, switchspeed);
+        }
+        if (switch1 != -1)
+        {
+            MoveToFrame(switch1, 0, switchspeed);
+        }
+        MoveToFrame(door0, 0, doorspeed);
+        WaitForStop(door0);
+        actcheck = 0;
+        wepnum = 1;
+        return;
+    }
+    
+    if ((GetCurItem(player) != 0) && (GetSenderID() == 1))
+    {
+        StopThing(player);
+        StartCutscene(0);
+        SetActorFlags(player, 0x200000);
+        currand = RandBetween(0, 5);
+        While (lastrand == currand)
+        {
+            currand = RandBetween(0, 5);
+        }
+        PlayVoice(player, indylineb0[currand], 1, 1);
+        lastrand = currand;
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }
+    
+	return;
+    
+#........................................................................................
+blocked:
+    if (GetSenderRef() == door0);
+    {
+        if (switch0 != -1) 
+        {
+            MoveToFrame(switch0, 1, switchspeed);
+        }
+        if (switch1 != -1)
+        {
+            MoveToFrame(switch1, 1, switchspeed);
+        }
+        MoveToFrame(door0, 1, doorspeed);
+        WaitForStop(door0);
+        SetTimer(10);
+        
+    }
+    return;
+        
+
+end
+
+

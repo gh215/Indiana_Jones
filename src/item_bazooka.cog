@@ -1,0 +1,129 @@
+# Jones 3D Cog Script
+#
+# item_Bazooka.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	activated
+message	touched
+message	taken
+
+sound	found=INXJ164.wav		local
+sound	foundOne=INXJ258.wav	local
+sound	foundPack=INXJ166.wav	local
+
+thing	player					local
+thing	sender					local
+
+int		bin=10					local
+int		curAmount				local
+
+int		bUnderwater				local
+int		bFound					local
+
+end
+
+# ===================================================================
+
+code
+
+activated:
+
+    player = GetSourceRef();
+
+	StartCutscene(0);
+
+	if (Rand() < 0.5)
+	{
+		SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+		SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 -0.01');
+
+	return;
+
+# -------------------------------------------------------------------
+
+touched:
+
+	player = GetSourceRef();
+	sender = GetSenderRef();
+    curAmount = GetInv(player, bin);
+
+	if (curAmount < GetInvMax(player, bin))
+	{
+		TakeItem(sender, player);
+	}
+    else
+	{
+		EndCutscene();
+	}
+	
+	return;
+
+# -------------------------------------------------------------------
+
+taken:
+
+	player = GetSourceRef();
+	sender = GetSenderRef();
+	bUnderwater = BitTest(GetThingFlags(player), 0x02000000);
+    bFound = IsItemFound(bin);
+
+    if (IsThingModelName(sender, "weap_rocket_pack.3do"))
+	{
+		JonesInvItemChanged(119);
+		ChangeInv(player, bin, 3);
+		SetInvAvailable(player, bin, 1);
+
+        Sleep(1.0);
+
+		if (!bUnderwater)
+			PlayVoice(player, foundPack, 1.0, 0);
+	}
+	else if (IsThingModelName(sender, "gen_rckt_bzooka.3do"))
+	{
+		JonesInvItemChanged(bin);
+		ChangeInv(player, bin, 1);
+		SetInvAvailable(player, bin, 1);
+
+		Sleep(1.0);
+
+		if (!bUnderwater)
+			PlayVoice(player, foundOne, 1.0, 0);
+	}
+	else
+	{
+    	JonesInvItemChanged(bin);
+		ChangeInv(player, bin, 3);
+		SetInvAvailable(player, bin, 1);
+
+		Sleep(1.0);
+
+        if (!bUnderwater)
+		{
+			if (curAmount < 1 && !bFound)
+			{
+				PlayVoice(player, found, 1.0, 0);
+			}
+			else
+			{
+				PlayVoice(player, foundPack, 1.0, 0);
+			}
+		}
+	}
+
+	EndCutscene();
+
+	return;
+
+end

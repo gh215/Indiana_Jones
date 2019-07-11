@@ -1,0 +1,154 @@
+# Jones 3D Cog Script
+#
+# RIV_CndlGreen.cog
+#
+# [TRM]
+#
+# cndld = 91
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     exited
+    message     activated
+    
+    thing       player      local
+    thing       candle
+    thing       cam_Left
+    thing       cam_Right
+    thing       camPos
+    
+    thing       spider0
+    thing       spider1
+    
+    surface     surf_Left0      linkID=1
+    surface     surf_Left1      linkID=1
+    surface     surf_Left2      linkID=1
+    surface     surf_Left3      linkID=1
+    surface     surf_Right0     linkID=2
+    surface     surf_Right1     linkID=2
+    surface     surf_Right2     linkID=2
+    surface     surf_Right3     linkID=2
+    
+    sound	    foundSnd1=inxj173.wav	local
+    sound	    foundSnd2=rv04j02.wav	local
+    
+    cog         talkCog             local
+    
+    int         gotIt=0             local
+    int         lSpot=0             local
+    int         rSpot=0             local
+    int         curCam              local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    
+    SetActorFlags(spider0, 0x400);  # deaf
+    SetActorFlags(spider1, 0x400);
+    SetActorFlags(spider0, 0x800);  # blind
+    SetActorFlags(spider1, 0x800);
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if(GetSenderID() == 1) lSpot = 1;
+    if(GetSenderID() == 2) rSpot = 1;
+
+    return;
+    
+# ========================================================================================
+
+exited:
+
+    if((GetSenderID() == 1) && (GetSourceRef() == player)) lSpot = 0;
+    if((GetSenderID() == 2) && (GetSourceRef() == player)) rSpot = 0;
+
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    if((GetSenderRef() == candle) && (gotIt == 0))
+    {
+        gotIt = 1;
+        curCam = GetCurrentCamera();
+        
+        ClearActorFlags(spider0, 0x400);
+        ClearActorFlags(spider1, 0x400);
+        ClearActorFlags(spider0, 0x800);
+        ClearActorFlags(spider1, 0x800);
+    
+        # sends message to spider_wall's class cog, saying "user0" (27)
+        SendMessageEx(GetThingClassCog(spider0), 27, spider0, 0, 0, 0);
+        SendMessageEx(GetThingClassCog(spider1), 27, spider1, 0, 0, 0);
+    
+        # do cutscene stuff
+        StartCutscene(1);
+        StopThing(player);
+        MakeMeStop();
+        
+        if(lSpot == 1) SetCameraFocus(2, cam_Right);
+        else if(rSpot == 1) SetCameraFocus(2, cam_Left);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        # put away any weapon
+        DeselectWeaponWait(player);
+        
+        # pickup the candle
+        PlayMode(player, 60, 0);
+        Sleep(0.3);
+        DestroyThing(candle);
+        
+        # Call the Pickup Lines cog
+        talkCog = GetCogByIndex(0);
+    	SendMessage(talkCog, 27);
+        
+        # sleep to wait for talkCog
+        Sleep(1.3);
+        
+        # add oilCan to inventory
+        SetInvAvailable(player, 91, 1);
+        ChangeInv(player, 91, 1.0);
+        JonesInvItemChanged(91);
+        
+        if (!global10)
+    	{
+    		PlayVoice(player, foundSnd1, 1.0, 1);
+            global10 = 1;
+    	}
+        else
+    	{
+    		PlayVoice(player, foundSnd2, 1.0, 1);
+    	}
+    
+        # return camera to player
+        SetCameraPosition(curCam, GetThingPos(camPos));
+        SetCurrentCamera(curCam);
+        
+        # restore controls
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+    }
+
+    return;
+            
+# ========================================================================================
+        
+end
+

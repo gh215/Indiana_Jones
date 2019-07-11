@@ -1,0 +1,333 @@
+# Jones 3D Cog Script
+#
+# CYN_whipfloor.cog
+#
+# minor cutscene cog for ruins in the canyonlands
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		damaged
+	message		entered
+
+	#	cogs
+	cog			hintcog
+
+	#	actors
+	thing		player								local
+	thing		indyActor							
+
+	#	camera objects
+	thing		roomCam								nolink
+	thing		caveCam								nolink
+	thing		whipCam								nolink
+
+	#	props
+	thing		whipobject
+	thing		roofplatform
+	thing		floorplatform						mask=0x80
+	thing		hiddenrock							nolink
+	thing		fallenstrut							nolink
+
+	#	debris objects
+	thing		fragment1							local
+	thing		fragment2							local
+
+
+	#	break wall surfaces
+	surface		fragface0							nolink
+	surface		fragface1							nolink
+	surface		fragface2							nolink
+
+	#	control variables
+	int			sceneplay=0							local
+	int			axis								local
+	int			curCam								local
+	int			falltrack							local
+
+	keyframe	in_brushoff=0in_cleanspants_1_1.key	local
+
+	#	sounds
+	sound		rumblesound=tem_tikikey_place_c.wav	local
+	sound		in_whoa=INXJ007a.WAV				local
+	sound		in_oof=inxj018a.wav					local
+	sound		quake=olv_fallfloor_c.wav			local
+	sound		quake2=sol_block_crash_c.wav		local
+	sound		in_scream=INXJ015.WAV				local
+
+	#	DEBRIS EFFECTS FOR STRUT COLLAPSE
+	sound		sndFalling=gen_fallingrock_c.wav	local
+#	sound		rocksmash=shs_beam_c.wav			local
+	sound		thud=fol_bodyfall_buckle.wav		local
+	sound		whip_cue=mus_gen_indywhip1.wav		local
+	sound		eerie_cue=mus_gen_eerie1.wav		local
+
+	template	debrisTpl=stnshrapa_nc_ns			local
+
+	int			numDebris=2							local
+	int			index								local
+	int			i_playerCT							local
+
+	thing		rocks								local
+	thing		origin								local
+	sector		tempSect							local
+
+	#	Keyframes
+	keyframe	in_falling=in_jump_fall.key			local //159x
+
+	#	Subroutines
+	flex		rockVelocity						local
+	flex		fragVelocity						local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+
+	Sleep(0.3);
+
+	for (index = 0; index <= 2; index = index + 1)
+	{
+		ClearAdjoinFlags(fragface0[index], 2);
+		ClearAdjoinFlags(GetSurfaceAdjoin(fragface0[index]), 2);
+		SetFaceGeoMode(fragface0[index], 4);
+	}
+
+	SetThingFlags(hiddenrock, 0x80000);
+    SetThingFlags(fallenstrut, 0x80000);
+	
+	origin = GetThingPos(whipobject);
+	tempSect = GetThingSector(whipobject);
+    
+	return;
+
+#========================================================
+damaged:
+
+	if (sceneplay == 1) return;
+
+	if ((GetSenderRef() == whipobject) && (GetParam(1) == 0x10))
+	{
+		sceneplay = 1;
+
+		# solve hint
+		SendMessage(hintcog, user0);
+
+		# Prep...
+		StartCutScene(1);
+		curCam = GetCurrentCamera();
+		SetCameraPosInterp(2, 0); # kill dolly
+		SetCameraLookInterp(2, 0); # kill pan & tilt
+
+		# Cut to Indy as he swings...
+		SetCameraFocus(2, whipCam);
+		SetCameraSecondaryFocus(2, player);
+		SetCurrentCamera(2);
+		SetCameraFOV(80, 0, 0.0);
+		Sleep(0.01);
+		SetCameraFOV(70, 1, 4.0);
+		Sleep(2.0);
+
+		# indy theme plays
+		PlaySoundLocal(whip_cue, 1.0, 0.0, 0x0, 0);
+		Sleep(0.5);
+
+		# sound and object creation for collapsing whip strut
+		PlaySoundLocal(sndFalling, 1.0, 0.0, 0x0, 0);
+
+		for(index = 0; index < numDebris; index = index + 1)
+		{
+			rocks = CreateThingAtPos(debrisTpl, tempSect, VectorAdd(origin, '0 0 0'), '0 0 0');
+			call rockVelocity;
+			Sleep(0.1);
+		}
+
+		Sleep(0.5);
+		# sound for whipstrut hitting the ground
+		PlaySoundLocal(thud, 1.0, 1.0, 0x0, 0);
+	}
+
+	return;
+
+#========================================================
+entered:
+
+	if (GetSenderRef() == roofplatform)
+	{
+		# take away player control
+		StopThing(player);
+		DeselectWeapon(player);
+
+		# move cam closer to Indy
+		MoveToFrame(whipCam, 1, 3);
+		# deal with cleaning the animations up
+		# shake the floor tile briefly
+		rumblesound = PlaySoundLocal(quake, 0.5, 0, 0x01, 0);
+		
+        # get the actor to the position of the player
+		CopyOrientAndPos(player, indyActor);
+		#CopyPlayerHolsters(player, indyActor);
+        
+#		SetThingFlags(player, 0x80000);
+		i_playerCT=GetCollideType(player);
+		SetThingFlags(player, 0x10);
+		SetCollideType(player, 0);
+
+		ClearThingFlags(indyActor, 0x80000);
+		AISetCutsceneMode(indyActor);
+		
+		
+		# switch to room cam
+		SetCameraFocus(2, roomCam);
+		SetCameraSecondaryFocus(2, indyActor);
+		#Sleep(0.01);
+		#SetCameraFOV(70, 0, 0);
+		
+		
+		for (index = 0; index <= 6; index = index + 1) 
+		{
+			#DebugFlex(1, "loop start");
+			axis = RandBetween(0, 1);
+			#SetPOVShake('0.0 0.0 0.005', '0.0 0.0 0.0', 80.0, 0.80);
+			Rotate(roofplatform, 6, axis, .025);
+			Sleep(0.025);
+			Rotate(roofplatform, -6, axis, .025);
+			Sleep(0.025);
+		}
+
+        # animate actor fall
+		falltrack = PlayKey(indyActor, in_falling, 2, 0x12, 0);
+		
+		# destroy the tile, indy falls through
+		StopSound(rumblesound, 0.5);
+        
+		fragment1 = CreateThing(debrisTpl, roofplatform);
+		fragment2 = CreateThing(debrisTpl, roofplatform);
+		call fragVelocity;
+
+        DestroyThing(roofplatform);
+        PlaySoundLocal(quake2, 0.75, 0.0, 0x0, 0);
+    
+# inside section
+	
+		Sleep(1.0);
+		StopKey(indyActor, falltrack, 0);
+		# play eerie cue
+		PlaySoundLocal(eerie_cue, 1.0, 0.0, 0x0, 0);
+		# indy hits the ground, says "oof"
+		PlayVoice(indyActor, in_oof, 2, 1);
+        
+        
+		
+		# indy hits the ground, looks at the treasure, says "whoa"
+		AIEnableHeadTracking(indyActor, roomCam);
+		SetThingMaxRotVel(indyActor, 100.0);
+		Sleep(0.1);
+        AISetLookThing(indyActor, roomCam); 
+		AIDisableHeadTracking(indyActor);
+
+		#PlayKey(player, in_brushoff, 4, 0x12, 0);
+		MoveToFrame(roomCam, 1, 4);
+		ResetCameraFOV(1, 2.0);
+		Sleep(.3);
+		PlayVoice(indyActor, in_whoa, 1, 0);
+		Sleep(0.5);
+
+		# floortile collapses
+		rumblesound = PlaySoundLocal(quake, .5, 0, 0x01, 0);
+		for (index = 0 ; index <= 4; index = index + 1) 
+		{
+			#DebugFlex(1, "loop start");
+			axis = RandBetween(0, 1);
+			#SetPOVShake('0.0 0.0 0.005', '0.0 0.0 0.0', 80.0, 0.80);
+			Rotate(floorplatform, 3, axis, .05);
+			Sleep(0.05);
+			Rotate(floorplatform, -6, axis, .05);
+			Sleep(0.05);
+		}
+
+        
+		# get the player to the position of the actor 
+		SetThingFlags(indyActor, 0x80000);
+		
+#		ClearThingFlags(player, 0x80000);
+		ClearThingFlags(player, 0x10);
+		SetCollideType(player, i_playerCT);
+        CopyOrientAndPos(indyActor, player);
+
+		# stop sounds, destroy the floor tile
+		StopSound(rumblesound, 0.5);
+
+		fragment1 = CreateThing(debrisTpl, floorplatform);
+		fragment2 = CreateThing(debrisTpl, floorplatform);
+		call fragVelocity;
+
+		DestroyThing(floorplatform);
+		Sleep(0.25);
+
+        # switch to cavecam
+		SetCameraFocus(2, caveCam);
+		SetCameraSecondaryFocus(2, player);
+		SetCameraFOV(90, 0, 0.0);
+
+		Sleep(2.5);
+
+
+		# restore the camera
+		SetCameraPosition(1, GetThingPos(caveCam));
+		SetCurrentCamera(1);
+		RestoreExtCam();
+
+		# player gains control and hits the water
+		EndCutScene();
+		ClearActorFlags(player, 0x200000);
+
+		for (index = 0; index <= 2; index = index + 1)
+		{
+			SetAdjoinFlags(fragface0[index], 2);
+			SetAdjoinFlags(GetSurfaceAdjoin(fragface0[index]), 2);
+			SetFaceGeoMode(fragface0[index], 0);
+		}
+
+		ClearThingFlags(hiddenrock, 0x80000);
+		
+		ClearThingFlags(fallenstrut, 0x80000);
+		SetCollideType(fallenstrut, 0);
+		SetThingFlags(whipobject, 0x80000);
+		#MoveToFrame(whipobject, 1, 10);
+    
+	}
+return;
+
+#========================================================
+rockVelocity:
+
+	SetThingVel(rocks, VectorScale('0.0 0.0 0.01', 0.7));
+	SetThingRotVel(rocks, '0.0 0.0 360.0');
+	return;
+
+#========================================================
+fragVelocity:
+
+	SetThingMass(fragment1, 1);
+	SetThingMass(fragment2, 1);
+	#SetCollideType(fragment1, 0);
+	#SetCollideType(fragment2, 0);
+	SetThingVel(fragment1, VectorSet(RandBetween(0, 4) * 0.1, RandBetween(0, 2) * 0.1, -0.5));
+	SetThingVel(fragment2, VectorSet(RandBetween(0, 4) * 0.1, RandBetween(0, 2) * 0.1, -0.5));
+	SetThingRotVel(fragment1, VectorScale(RandVec(), 100.0));
+	SetThingRotVel(fragment2, VectorScale(RandVec(), 100.0));
+	return;
+
+#========================================================
+#========================================================
+end

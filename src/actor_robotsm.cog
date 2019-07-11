@@ -1,0 +1,233 @@
+# Jones 3D Cog Script
+#
+# actor_RobotSm.cog
+#
+# Special case behavior for the spinning robot
+#
+# [MDR] 
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		created
+	message		aievent
+	message		damaged
+	message		killed
+	message		callback
+
+# *********************** SUBROUTINES **************************
+	flex		RobotTakeOff			local
+	flex		RobotLand				local
+
+# ************************** TEMPLATES *************************
+	template	tpl_glow=+robotglow_xsm	local
+
+# *********************** MISC LOCAL VARS **********************
+	thing		t_sender				local
+	thing		t_glow					local
+
+	int			eventType				local
+	int			n_damageType			local
+	flex		f_userData				local
+
+	int			FLAG_SETARMEDMODE		local
+	int			FLAG_FIRE				local
+
+	vector		vec_pos					local
+
+end
+
+# ========================================================================================
+code
+
+# ........................................................................................
+startup:
+
+	FLAG_SETARMEDMODE	= 0x20;
+	FLAG_FIRE			= 0x40;
+
+	return;
+
+
+# ........................................................................................
+created:
+
+	t_sender = GetSenderRef();
+
+	SetActorFlags(t_sender, 0x40000);					# Set AF_IMMOBILE
+	SetActorFlags(t_sender, 0x08);						# Set AF_INVULNERABLE
+	AISetMode(t_sender, 0x8000000);						# Set MODE_ARMOREDSKIN
+	AISetMode(t_sender, 0x10000);						# Set MODE_WANTALLEVENTS
+	AISetMode(t_sender, 0x2000000);						# Set MODE_NOCHASING
+
+	SetArmedMode(t_sender, 7);							# Switch to non-active armed mode
+
+	SetThingUserData(t_sender, 0);
+
+	return;
+
+
+# ........................................................................................
+aievent:
+
+	eventType	= GetParam(0);
+
+	t_sender	= GetSenderRef();
+	f_userData	= GetThingUserData(t_sender);
+
+	if ( BITTEST(f_userData, FLAG_SETARMEDMODE) )		# If an armed mode change pending, bail
+		return;
+
+	if ( eventType == 0x40 )							#---- EVENT_MOVETARGETCHANGED
+	{
+		if ( AIGetArmedMode(t_sender) == 7 )				# Non-active armed mode?
+		{
+			call RobotTakeOff;
+		}
+	}
+
+	if ( BITTEST(eventType, 0x80800 ) )					#---- EVENT_GOAL(UNREACHABLE|REACHED)
+	{
+		if ( !BITTEST(AIGetMode(t_sender), 0x202) )
+		{
+			call RobotLand;
+		}
+	}
+
+	if ( eventType == 0x4000 )							#---- EVENT_FIRE
+	{
+		StopMode(t_sender, 65, 0);
+		f_userData = BITSET(f_userData, FLAG_FIRE);			# Set "shot pending" flag
+	}
+
+	SetThingUserData(t_sender, f_userData);					# Record flag settings
+
+	return;
+
+
+# ........................................................................................
+damaged:
+
+	t_sender		= GetSenderRef();
+	n_damageType	= GetParam(1);
+
+	if ( BITTEST(GetActorFlags(t_sender), 0x40000) )
+	{
+		if ( BITTEST(n_damageType, 0x01) )					# DAMAGE_IMPACT?
+		{
+			PlaySoundClass(t_sender, 85);					# Play ricochet sound
+		}
+
+		ReturnEx(0);
+	}
+
+	if ( BITTEST(n_damageType, 0x18) )						# DAMAGE_(FISTS|WHIP)?
+	{
+		ReturnEx(0);
+	}
+
+	return;
+
+
+# ........................................................................................
+killed:
+
+	t_sender	= GetSenderRef();
+	t_glow		= GetThingAttachedThing(t_sender, 13);
+	if ( t_glow > -1 )
+	{
+		DestroyThing(t_glow);
+	}
+
+	return;
+
+
+# ........................................................................................
+callback:
+
+	t_sender	= GetSenderRef();
+	f_userData	= GetThingUserData(t_sender);
+
+	if ( BITTEST(f_userData, FLAG_FIRE) )
+	{
+		PlayMode(t_sender, 65, 0);								# Play fire animation.
+		f_userData = BITCLEAR(f_userData, FLAG_FIRE);			# Clear "shot pending" flag
+	}
+
+	SetThingUserData(t_sender, f_userData);						# Record flag settings
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ........................................................................................
+# Assumes t_sender has been set
+# ........................................................................................
+RobotTakeOff:
+
+	f_userData = GetThingUserData(t_sender);
+
+	ClearPhysicsFlags(t_sender, 0x01);				# Clear PF_USEGRAVITY
+	ClearActorFlags(t_sender, 0x40000);				# Clear AF_IMMOBILE
+	ClearActorFlags(t_sender, 0x08);				# Clear AF_INVULNERABLE
+
+	ResetThing(t_sender);
+	PlayMode(t_sender, 69, 0);						# Play the stand to walk anim
+	PlaySoundClass(t_sender, 131);					# Play spin up sound
+	SetArmedMode(t_sender, 0);						# Switch to active armed mode
+	PlaySoundClass(t_sender, 123);					# Play hover sound
+
+	vec_pos	= VectorAdd( GetThingPos(t_sender), '0 0 -0.03' );
+	t_glow	= CreateThingAtPos(tpl_glow, FindNewSectorFromThing(t_sender, vec_pos), vec_pos, '0 0 0');
+	if ( t_glow > -1 )
+	{
+		AttachThingToThingEx(t_glow, t_sender, 0x08);
+	}
+
+	SetThingUserData(t_sender, f_userData);
+
+	return;
+
+
+# ........................................................................................
+# Assumes t_sender has been set
+# ........................................................................................
+RobotLand:
+
+	f_userData = GetThingUserData(t_sender);
+	f_userData = BITSET(f_userData, FLAG_SETARMEDMODE);
+	SetThingUserData(t_sender, f_userData);
+
+	StopThing(t_sender);
+	ResetThing(t_sender);
+	SetArmedMode(t_sender, 7);						# Switch to non-active armed mode
+	StopSoundClass(t_sender, 123);					# Stop hover sound
+	PlaySoundClass(t_sender, 132);					# Play spin down sound
+	PlayMode(t_sender, 70, 0);						# Play the walk to stand anim
+
+	SetPhysicsFlags(t_sender, 0x01);				# Set PF_USEGRAVITY
+	SetActorFlags(t_sender, 0x40000);				# Set AF_IMMOBILE
+	SetActorFlags(t_sender, 0x08);					# Set AF_INVULNERABLE
+
+	t_glow = GetThingAttachedThing(t_sender, 13);
+	if ( t_glow > -1 )
+	{
+		DestroyThing(t_glow);
+	}
+
+	f_userData = GetThingUserData(t_sender);
+	f_userData = BITCLEAR(f_userData, FLAG_SETARMEDMODE);
+	SetThingUserData(t_sender, f_userData);
+
+	return;
+
+
+end
+
+

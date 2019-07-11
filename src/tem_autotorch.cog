@@ -1,0 +1,93 @@
+# Jones 3D Cog Script
+#
+# TEM_AutoTorch.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    
+    thing       torch
+    thing       flame
+    
+    sector      liteSect
+    sector      sec_NoBurn
+    sector      sec_Burn
+    
+    sound       burning=gen_torch_burnin_c.wav      local
+    sound       lite=gen_torchlitet_c.wav           local
+    
+    flex        lituptime=0.5
+    flex        maxradius=0.35
+    
+    vector      normLight       local
+    vector      redLight        local
+    
+    int         lit=0           local
+    int         burn_Chnl       local
+    int         burn_On         local
+    int         red
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	normLight = VectorSet(0.87, 0.55, 0.06);
+    redLight = VectorSet(0.87, 0.05, 0.05);
+    SetThingFlags(flame, 0x10);
+    return;
+
+# ========================================================================================
+
+entered:
+
+    if((GetSenderRef() == liteSect) && (lit == 0))
+	{
+        Sleep(Rand() + 0.1);
+        lit = 1;
+        ClearThingFlags(flame, 0x10);
+        PlaySoundThing(lite, torch, 1.0, 10, 25, 0x0);
+        burn_Chnl = PlaySoundThing(burning, torch, 1.0, 10, 25, 0x0001);
+                                         
+        if(red == 0)
+        {
+            SetThingLight(flame, normLight, maxradius, lituptime);
+            SetThingLight(torch, normLight, 0.001, lituptime);
+        }
+        
+        else
+        {
+            SetThingLight(flame, redLight, maxradius, lituptime);
+            SetThingLight(torch, redLight, 0.001, lituptime);
+        }
+    }
+    
+    # turn OFF burn sfx
+    if((GetSenderRef() == sec_NoBurn) && (lit == 1) && (burn_On == 1))
+    {
+        burn_On = 0;
+        StopSound(burn_Chnl, 0.5);
+    }
+    
+    # turn ON burn sfx
+    if((GetSenderRef() == sec_Burn) && (lit == 1) && (burn_On == 0))
+    {
+        burn_On = 1;
+        burn_Chnl = PlaySoundThing(burning, torch, 1.0, 10, 25, 0x0001);
+    } 
+    
+	return;
+        
+# ========================================================================================
+        
+end

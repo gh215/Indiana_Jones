@@ -1,0 +1,200 @@
+# Jones 3D Cog Script
+#
+# gen_NoReachNoLineTalk.cog
+#
+# Indy comments upon his poor position in life
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+# NOTE: This is a random verbal reaction to being in the wrong place...
+# Glue it into your level and reach it from a calling cog like this:
+#
+# 1. Create a valid reference to this cog in your calling cog;
+#
+# 2. Use the following verb:
+#    SendMessageEx(thiscogREF, i_userMessage, f_parm0, f_parm1, f_parm2, f_parm3);
+#    (see each section below for details...)
+#
+# 3. Use global15 as a semaphore and return value where neeeded;
+#
+# The resulting chatter is pre-approved by HB...
+#
+# PRODUCT SUPPORT:  cogsrus x8371
+
+# ==============================================================================
+
+symbols
+
+# ................................. MESSAGES ...................................
+
+	message user0	# can't reach lines
+	message user1	# must line up lines
+
+# ................................. SAY LINES ..................................
+
+	# can't reach lines...
+	sound	in_sayline=Inxj215.wav				local # Can't reach-->in_sayline[0]
+	sound	in_noquitereach=Inxj216.wav			local # Can't quite reach.
+	sound	in_noreachthat=Inxj217.wav			local # Can't reach that.
+	sound	in_noreachhere=Inxj218.wav			local # Nothing I can reach here.
+	
+	# not lined up lines...
+	sound	in_notlined=Inxj219.wav				local # Not lined up right-->in_sayline[4]
+	sound	in_needline=Inxj220.wav				local # Need to line up
+	sound	in_moveover=Inxj221.wav				local # Need to move over.
+	sound	in_notinpos=Inxj222.wav				local # Not quite in position.
+	sound	in_needpos=Inxj223.wav				local # Need to get in position.
+	sound	in_betterspot=Inxj224.wav			local # Need to find better spot.
+
+# ............................... VARIABLES ....................................
+
+	flex	talkerREF							local
+	flex	forceTalk							local
+	flex	forceLine							local
+	
+	int		lineindex							local # indexes sound array
+	int		reachoffset=0						local # define
+	int		lineupoffset=4						local # define
+
+	int		alreadyworking=0					local
+
+	int		r_newline=50						local # init outside actual range
+	int		r_oldline=50						local
+	int		l_newline=50						local
+	int		l_oldline=50						local
+
+	int		dummy
+
+# subroutines
+	flex	randreachlines=0.0					local
+	flex	randlineuplines=0.0					local
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+user0:
+
+	# NOTE: Indy comments on something being OUT OF REACH...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(negtalkcogREF, user0, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, the calling cog can use global15 as a semaphore
+	#
+	# Hey!  You can also force a line choice.  Here's how:
+	# 1. Note your intention by setting f_forceTalk parm to some non-zero value
+	# 2. Examine the available lines to find the one you want (counting from 0)
+	# 3. Pass that number in the forceLine parameter (parm2)
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	alreadyworking = 1; # stall multiple calls
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	if (forceTalk > 0)
+	{
+		r_newline = forceLine; # choose this line
+		r_oldline = 0;
+	}
+
+	call randreachlines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ........................................................................................
+
+user1:
+
+	# NOTE: Indy laments that something DIDN'T WORK as hoped...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(negtalkcogREF, user1, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, you can force a line choice.
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	alreadyworking = 1; # stall multiple calls
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	if (forceTalk > 0)
+	{
+		l_newline = forceLine; # choose this line
+		l_oldline = 0;
+	}
+
+	call randlineuplines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ..............................................................................
+
+randreachlines:
+
+	while (r_newline == r_oldline)
+	{		
+		r_newline = RandBetween(0, 3);
+	}
+	r_oldline = r_newline;
+	lineindex = reachoffset + r_newline; # 1/4 chance
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+# ..............................................................................
+
+randlineuplines:
+
+	while (l_newline == l_oldline)
+	{		
+		l_newline = RandBetween(0, 5);
+	}
+	l_oldline = l_newline;
+	lineindex = lineupoffset + l_newline; # 1/6 chance
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+end
+

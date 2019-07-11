@@ -1,0 +1,106 @@
+# Jones 3D Cog Script
+#
+# SHW_CommieCreator.cog
+#
+# Creates a bunch of enemies after various events in the waterworks
+#
+# [CM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message     startup
+        message     crossed
+        message     entered
+ 
+        
+
+	surface	    triggersurf
+	
+        sector      triggersect
+
+	thing		player          local
+	
+        
+        thing	    enemy0          
+        thing	    enemy1          
+        thing	    enemy2          
+        thing	    enemy3          
+        thing	    enemy4          
+        thing	    enemy5
+        
+        int     event=0 local          
+        int     index   local          
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    
+        SetThingFlags(enemy0, 0x80000);
+        SetThingFlags(enemy1, 0x80000);
+        SetThingFlags(enemy2, 0x80000);
+        SetThingFlags(enemy3, 0x80000);
+        SetThingFlags(enemy4, 0x80000);
+        SetThingFlags(enemy5, 0x80000);
+
+return;
+    
+
+# ........................................................................................
+crossed:
+        
+        If ((GetSenderRef() == triggersurf) && (GetSourceRef() == player))
+               {
+                   call guard;
+               }
+return;    
+        
+# ........................................................................................
+entered:        
+        
+        If ((GetSenderRef() == triggersect) && (GetSourceRef() == player))
+               {
+                   call guard1;
+               }    
+                   
+return;      
+	
+# ........................................................................................
+guard:
+
+        
+        
+                {
+                ClearThingFlags(enemy0,0x80000);
+                AISetMoveSpeed(enemy0, 1.0);
+                AISetMoveFrame(enemy0, 1);
+                }
+        return;
+                
+# ........................................................................................
+guard1:
+
+         
+                {
+                For (index = 0 ; index <= 5; index = index + 1)
+                        {
+                        ClearThingFlags(enemy1[index],0x80000);
+                        }
+                AISetMoveSpeed(enemy1, 2.0);
+                AISetMoveFrame(enemy1, 1);        
+                }
+return;
+
+# ........................................................................................
+
+end
+
+

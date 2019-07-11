@@ -1,0 +1,155 @@
+# Jones 3D Cog Script
+#
+# nub_OpenCutScene.cog
+#
+# [TL] et al...
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		user0
+message		entered
+
+thing		player			local
+thing		actor			local
+thing		nubsPresence
+thing		fadePlate
+thing		startCam
+thing		startGhost
+
+sector		startSector
+
+surface		entrancevoice
+sound		voice0=Nb01j01.wav		local #Shattered Dreams
+sound		CSmus=mus_nub_intro.wav	local # was mus_pyr_pyramid1.wav and also mus_bab_tablettrans.wav
+keyframe	in_one=0in_stand4.key	local
+template    tplActor=indy_sh_actor	local
+thing		camera
+thing		platform
+
+int			voicedone=0				local
+int			bSeen=0			local
+flex		playerHealth	local
+vector		v_targetpos		local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+    player = GetLocalPlayerThing();
+
+	playerHealth = GetThingMaxHealth(player);
+#	SetSectorFlags(startSector, 0x1);
+	SetActorFlags(player, 0x200000);
+	#ClearActorFlags(player, 0x08);
+	StartCutscene(2);
+
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, startCam);
+	SetCameraSecondaryFocus(2, startGhost);
+	SetCurrentCamera(2);
+
+	SetCollideType(fadePlate, 0);
+	ThingFadeAnim(fadePlate, 1, 0, 2.0, 0);
+	Sleep(2.0);
+	
+DestroyThing(platform);
+Sleep(2.0);
+
+
+#			#make the sector have gravity again
+#			ClearSectorFlags(startSector, 0x1);
+#			Sleep(0.1);
+#			
+#			#knock the player downward.
+#			SetThingVel(player, '0.0 0.0 -0.5');
+#			Sleep(1.5);
+
+	
+	SetCameraPosition(1, GetThingPos(startCam));
+	SetCurrentCamera(1);
+    ClearActorFlags(player, 0x200000);
+	SetThingHealth(player, playerHealth);
+	#SetActorFlags(player, 0x08);
+	EndCutscene();
+
+	return;
+
+#........................................................................................
+entered:
+
+if (GetSenderRef() == entrancevoice)
+	{
+	if (voicedone == 1)	return;
+    voicedone = 1;
+	
+	StartCutscene(1);
+	PlaySoundLocal(CSMus, 1.0, 0.0, 0x0, 0);
+	#Disable the player and put his weapon away.
+	MakeMeStop();
+	DeselectWeaponWait(player);
+    SetThingFlags(player, 0x80000);
+	
+    actor = CreateThing(tplActor, player);
+    ClearThingFlags(actor, 0x80000);
+	
+	SetCurrentCamera(2);
+	SetCameraFocus(2, camera);
+	SetCameraSecondaryFocus(2, actor);
+	SetCameraFOV(90, 0, 0.0);
+	
+	CopyPlayerHolsters(player, actor);
+    CaptureThing(actor);
+    AISetLookThing(actor, nubsPresence);
+	AIWaitForStop(actor);
+	Sleep(0.5);
+    
+    AIEnableHeadTracking(actor, nubsPresence);
+	MoveToFrame(nubsPresence, 2, 3.0);
+
+	PlayVoice(actor, voice0, 1.0, 0);
+	#PlayKey(actor, in_one, 4, 0x12, 0);
+	MoveToFrame(camera, 1, 1.75);
+	WaitForStop(camera);
+    Sleep(0.3);
+	
+	CopyOrientandPos(actor, player);
+	SetThingFlags(actor, 0x80000);
+	AIDisableHeadTracking(actor);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+
+    # revert cam
+    ResetCameraFOV(0, 0.0);
+	v_targetpos = VectorAdd(VectorTransformToOrient(player, '0.2 -0.05 0.0'), GetThingPos(player));	
+	SetCameraPosition(1, v_targetpos);
+	
+	SetCurrentCamera(1);
+	#SetCameraFocus(0, player);
+	DestroyThing(actor);
+	EndCutscene();
+    
+	}
+
+return;
+
+# ........................................................................................
+end
+

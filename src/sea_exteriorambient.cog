@@ -1,0 +1,39 @@
+# Jones 3D Cog Script
+#
+# olv_exteriorambient.cog
+#
+# Plays random sounds at random locations
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+	thing		soundPos2		nolink
+	thing		soundPos3		nolink
+
+	sound		wav0=sea_deck_a.wav		local
+	thing		player				local
+
+end
+
+code
+
+# ........................................................................................
+
+startup:
+	player=GetLocalPlayerThing();
+	sleep(1.0);
+	PlaySoundThing(wav0, soundPos0, 0.6, 1, 10, 1);
+	PlaySoundThing(wav0, soundPos1, 0.6, 1, 10, 1);
+	PlaySoundThing(wav0, soundPos2, 0.6, 1, 10, 1);
+	PlaySoundThing(wav0, soundPos3, 0.6, 1, 10, 1);
+
+	return;
+
+end

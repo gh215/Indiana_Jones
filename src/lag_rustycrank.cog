@@ -1,0 +1,66 @@
+# Jones 3D Cog Script
+#
+# lag_rustycrank.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# =======================================================================================
+symbols
+	message	startup
+	message	touched
+	message	activated
+
+	thing		rustycrank
+	thing		player						local
+	keyframe	in_reach=in_pickup_med.key			local
+	sound		foundSnd=INXJ179.wav				local
+	sound		ahaSnd=INXJ147.wav				local # Aha...
+	thing		player						local
+	int		talking=0						local
+
+end
+
+# ========================================================================================
+
+code
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+activated:
+	if(MakeMeStop() == -1)  return;
+
+	DeselectWeaponWait(player);
+	StartCutscene(0);
+	PlayVoice(player, ahaSnd, 1.0, 0);
+
+	# ----- Set Cam Offset ---------
+    if (Rand() < 0.5)
+	{
+        SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+        SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 0.0');
+
+	PlayKey(player, in_reach, 4, 0x12, 0);
+	Sleep(0.5);
+	DestroyThing(rustycrank);
+
+	# ----- Add Rusty Crank -------
+	ChangeInv(player, 73, 1.0);
+	SetInvAvailable(player, 73, 1);
+	JonesInvItemChanged(73);
+	Sleep(1.0);
+	PlayVoice(player, foundSnd, 1.0, 1);
+
+	# ----- Reset Camera ----------
+	RestoreExtCam();
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	return;
+end

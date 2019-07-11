@@ -1,0 +1,59 @@
+# Jones 3D Cog Script
+#
+# SHS_ET_NoSee.cog   Turns off Entry Tower sector for framerate.
+# 
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+
+symbols
+	
+    message	startup
+    message crossed
+    
+    surface on		linkid=1
+    surface off		linkid=2
+	
+    sector  doorsec0
+    sector  doorsec1
+    
+	int 	player		local
+
+   
+    
+end
+
+code
+
+startup:
+	player=GetLocalPlayerThing();
+	return;
+
+crossed:
+	
+
+	# make sure Indy player is sending message
+	If (GetSourceRef() != player) return;
+
+	# draw sector
+	If (GetSenderId() == 1)
+    {
+        Print("draw sector");
+		SetSectorAdjoins(doorsec0, 1);
+        SetSectorAdjoins(doorsec1, 1);
+    }    
+    
+	# don't draw sector 
+	If ((GetSenderId() == 2))
+    {
+        Print("draw off");
+		SetSectorAdjoins(doorsec0, 0);
+        SetSectorAdjoins(doorsec1, 0);
+    }
+    return;
+	
+
+
+end
+

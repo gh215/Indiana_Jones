@@ -1,0 +1,274 @@
+# Jones 3D Cog Script
+#
+# VOL_MP1-2Wall Blaster.cog
+#
+# an all-purpose cog for the IMP#1 effect on 2 walls
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+#	MESSAGES
+message 	startup
+message 	activated
+message		damaged
+message		entered
+message		pulse
+
+#	ACTORS
+thing	player										local
+
+#	CAMERAS
+thing       offsetCam
+	
+
+#	THINGS
+thing   	bombpos			
+thing		fragment								local
+thing		dustthing								local
+
+#	SURFACES
+surface		crackedwall		mask=0x408
+surface		crackedwall1	mask=0x408
+
+surface		speaksurf	
+
+#	MATERIALS
+material	dustmat=gen_a4sfx_dustcloud.mat			local
+
+
+#	SOUND FX
+sound		explosion=imp1_wall_break.wav			local
+sound       sfxCharge=imp1_chargeup.wav             local
+sound       mus_Eerie=mus_gen_eerie1.wav            local
+
+
+# ** voice lines **
+sound       inCrumble=Inxj025.wav                   local   # ...ready to crumble.
+sound       inVibrate=Inxj026.wav                   local   # A little vibration...
+
+
+#	TEMPLATES
+template	debris=stoneshrapa_nc					local
+template	bomb=ghost								local
+template	dust=dustcloud4ever						local
+
+#	VARIABLES AND VECTORS
+
+int         saidIt=0						        local
+int			i=0		   								local
+int         done=0          						local
+int         playing=0       						local
+flex        vibeline							    local
+
+
+vector		duststart  								local
+vector		dustend									local
+vector      playervec     							local
+vector      playery        							local
+vector      playerx        							local
+
+end
+
+# ========================================================================================
+code
+startup:
+	
+	
+	player = GetLocalPlayerThing();
+	Sleep(.3);
+	ClearAdjoinFlags(crackedwall, 2);
+	ClearAdjoinFlags(crackedwall1, 2);
+	ClearAdjoinFlags(GetSurfaceAdjoin(crackedwall), 2);
+	ClearAdjoinFlags(GetSurfaceAdjoin(crackedwall1), 2);
+	SetFaceGeoMode(crackedwall, 4);
+	SetFaceGeoMode(crackedwall1, 4);
+	duststart	= VectorSet(0.2, 0.2, 0.5);
+	dustend	= VectorSet(1.2, 1.2, 0.0);
+
+return;
+
+# ========================================================================================
+activated:
+	
+
+    if((GetSenderRef() == crackedwall) && (done == 0) && (playing == 0))
+    {
+        # player activated with an IMP part so bail out
+        if((GetCurWeapon(player) >= 14) && (GetCurWeapon(player) <= 18)) return;
+        
+        # player activated with lighter
+        else if(GetCurWeapon(player) == 13)
+        {
+            playing = 1;
+            
+            # put away the lighter
+            DeselectWeapon(player);
+            DeselectWeaponWait(player);
+            
+            Call vibeLine;
+        }
+        
+        # normal activation
+        else
+        {
+            playing = 1;
+            
+            # wait for weapon to be put away
+            DeselectWeaponWait(player);
+            
+            Call vibeLine;
+        }
+    }   
+
+    return;
+	
+# ========================================================================================
+damaged:
+	
+    if((GetParam(1) == 0x1000) && (done == 0))
+    {
+        done = 1;
+        
+        # do cutscene stuff
+        MakeMeStop();
+        StartCutscene(1);
+        
+        # interp camera
+		SetExtCamOffsetToThing(offsetCam);
+        
+        # start cameraShake
+		SetPulse(0.05);
+       
+        # alter fov for zoom-in effect
+        SetCameraFOV(70, 1, 2.5);
+        
+        # play temp sfx
+        PlaySoundLocal(sfxCharge, 1.0, 0.0, 0x0, 0);
+        
+        # light up the player
+        SetThingLight(bombpos, '0.25 0.55 1.0', 5.0, 2.0);
+        Sleep(1.0);
+
+        # play explosion sfx
+        PlaySoundLocal(explosion, 1, 0, 0x0, 0);
+        
+        Sleep(1.0);
+        
+		# reset fov
+        ResetCameraFOV(0, 0.0);
+        
+        # kill dynamic light
+        SetThingLight(bombpos, '0.0 0.0 0.0', 5.0, 2.0);
+        
+        
+        # create the debris
+		for(i=0; i<8; i=i+1)                                                        	            
+		{
+		fragment = CreateThing(debris, bombpos);                                 
+        SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 1));
+        SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 200.0));
+		Sleep(0.025);
+		}
+		
+		# alter adjoins
+        SetAdjoinFlags(crackedwall, 2);
+		SetAdjoinFlags(GetSurfaceAdjoin(crackedwall), 2);
+		SetAdjoinFlags(crackedwall1, 2);
+		SetAdjoinFlags(GetSurfaceAdjoin(crackedwall1), 2);
+
+		SetFaceGeoMode(crackedwall, 0);
+		SetFaceGeoMode(crackedwall1, 0);
+        
+        # stop the screenshake
+		SetPulse(0);
+
+		# create and animate the dust sprite
+		SetMaterialCel(dustmat, 0);
+		MaterialAnim(dustmat, 8.0, 1);
+		dustthing = CreateThing(dust, bombpos);
+		AnimateSpriteSize(dustthing, duststart, dustend, 7.0);
+        
+		# rest for a bit
+        Sleep(0.5);
+        
+        # restore camera
+        SetCameraPosition(1, GetThingPos(offsetCam));
+        SetCurrentCamera(1);
+        
+        # restore controls
+        RestoreExtCam();
+		ResetCameraFOV(0, 0.0);
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+        
+        # play music cue (temp?)
+        PlaySoundLocal(mus_Eerie, 1.0, 0.0, 0x0, 0);
+    }
+
+return;
+	
+# ========================================================================================
+entered:
+
+    player = GetLocalPlayerThing();
+    playervec = GetThingLVec(player);
+	playery = VectorY(playervec);
+	playerx = VectorX(playervec);
+
+	if((GetSenderRef() == speaksurf) && (saidIt == 0))
+    {
+        if ((playery > 0) && ((playerx > -0.7) && (playerx < 0.7)))     # north
+    	{
+    	    saidIt = 1;
+            PlayVoice(player, inCrumble, 1.0, 1);
+    	}
+    }
+    
+    return;
+
+
+# ========================================================================================
+vibeLine:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # interp camera
+    SetExtCamOffsetToThing(offsetCam);
+    
+    # activate face and say line
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    PlayVoice(player, inVibrate, 1.0, 1);
+    
+    # restore controls and camera
+    RestoreExtCam();
+    
+    EndCutscene();
+	ResetCameraFOV(0, 0.0);
+	ClearActorFlags(player, 0x200000);
+    
+    playing = 0;
+    
+    return;
+
+# ========================================================================================
+pulse:
+
+	
+		SetPOVShake('0.0 0.0 0.001', '0.0 0.0 0.0', 80.0, 0.80);
+	return;
+
+# ========================================================================================
+
+
+end
+
+
+
+

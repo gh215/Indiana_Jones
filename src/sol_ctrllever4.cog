@@ -1,0 +1,822 @@
+# Jones 3D Cog Script
+#
+# SOL_CtrlLever4.cog
+#
+# Controls lever 4 only (the stuck one).  Also handles stuff for fixing switch 4.
+# Sets up lever in the "pulled" possition (ready for pushing) at level start.
+# Swapmesh stuff and callback by [RandyT].
+#
+# [TRM & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     user0
+    message     user1
+    message     activated
+    message     callback
+   
+    thing       player          local
+    thing       leverGhost      # Lever position
+    thing       indy            # Actor Indy
+    thing       trkSwitch       # Track switch
+    thing       panelTarget     # focus for control panel
+    thing       leverCam        # Watch Indy pull the lever
+    
+    thing       switchCam       # Switch cam
+    thing       ctrlCam1        # Control panel cam
+    thing       trk_Cube
+    
+    thing       pushed          local
+    thing       pulled          local
+
+	thing		oilindy								local
+	thing		oilcam_1							local
+	thing		oilcam_2							local
+	thing		oiltarg								local
+	thing		oilmark								local
+    
+    thing       offsetCam
+
+	sector		camsector							local # var
+    
+    surface     switch          # Switch texture
+    surface     switch1
+    surface     switch4
+    surface     switch5
+    
+    # switch track
+    surface     switchA
+    surface     switchB
+    
+    # ** cogs **
+    cog         comFalls
+    cog         hintCog
+    cog         comControl     
+    
+    template    tplLevPull=pullever					local
+    template    tplLevPush=pushlever				local
+	template	tpl_indy=indy_sh_actor				local
+	template	tpl_ghost=ghost						local
+    
+    keyframe    leverPull=gen_lever_pull.key        local
+    keyframe    leverPush=gen_lever_push.key        local
+    keyframe    indyPull=in_pull_lever.key          local
+    keyframe    indyPush=in_push_lever.key          local
+    keyframe    indyStuck=in_stuck_lever.key        local
+    keyframe	indyStand1=0in_stand4.key		    local
+    keyframe    indyHat=0in_figithat_4_4.key        local
+    keyframe	indyStand2=0in_stand1_bd_4.key		local
+    keyframe	use=in_useitem.key				    local	# 83x 
+    
+    model		sourceModel=hand_in_oilcan.3do	    local
+    
+    # ** sfx **
+    sound       sndLever=gen_lever_pull.wav                 local
+    sound       sndSwitchTex=sol_panel_switch_c.wav         local
+    sound       sndOil=sol_oilcan_c.wav                     local   # squirt, squirt
+    
+    # ** voice **
+    sound       inStuck=Sl02j06.wav         local   # first visit to lever
+    sound       inGreaseA=Sl04j01.wav       local   # first visit to switch
+    sound       inGreaseB=Sl04j02.wav       local   # second visit to switch
+    sound       inFixed=Sl03j03.wav         local   # fuse box and switch fixed
+    sound       inJuice=Sl02j04.wav         local   # need juice
+    sound       inGrunt=Inxj032a.wav        local   # grunt
+    
+	vector		v_playpos		local
+	vector		v_switchpos		local
+	vector		v_oilaim		local
+	vector		v_oilspot		local
+
+	flex		f_x				local
+	flex		f_y				local
+	flex		f_z				local
+    
+    int         powerOn=0       local
+    int         ready=1         local
+    int         greased=0       local
+    int         visitA=1        local
+    int         visitB=0        local
+    int         playing=0       local
+    int         done=0          local
+    int         inTrack         local
+    int         curCam          local
+    
+    int         swapRef         local
+    int			bSet=0			local
+    
+    # ** subroutines **
+    flex        noPower         local
+    flex        stuck           local
+    flex        pullLever       local
+    flex        pushLever       local
+    flex        resetcam        local
+    flex        greaseIt        local
+    flex        noOilOne        local
+    flex        noOilTwo        local
+    flex        hasOil          local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    pulled = CreateThing(tplLevPush, leverGhost);
+    CaptureThing(pulled);
+    
+    # Mine Track -- Go Straight
+    SetSurfaceFlags(switchA, 0x4000);
+    ClearSurfaceFlags(switchB, 0x4000);
+    
+    return;
+
+# ========================================================================================
+
+user0:
+
+    powerOn = 1;
+    return;
+
+# ========================================================================================
+
+user1:
+
+    # rotate track switch from comFalls
+    Rotate(trkSwitch, 90, 1, 1.0);
+    return;
+
+# ========================================================================================
+
+activated:
+
+    Print("activated: ctrlLever4");
+    
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+
+# *************
+# ** Lever 4 **
+# *************
+    
+    # no power
+    if((GetSenderRef() == pulled) && (IsGhostVisible(player, pulled, 50.0)) && (!powerOn) && (!playing))
+    {
+        playing = 1;
+        Call noPower;
+    }
+    
+    # the juice is on but the lever is stuck
+    else if((GetSenderRef() == pulled) && (IsGhostVisible(player, pulled, 50.0)) && (powerOn) && (!greased) && (!playing))
+    {
+        playing = 1;
+        Call stuck;
+    }
+        
+    # Switch is oiled, push lever
+    else if((GetSenderRef() == pulled) && (IsGhostVisible(player, pulled, 50.0)) && (powerOn) && (ready) && (greased))
+    {
+        ready = 0;
+        Call pushLever;
+    }
+
+    # Switch is oiled, pull lever
+    else if((GetSenderRef() == pushed) && (IsGhostVisible(player, pushed, 50.0)) && (powerOn) && (ready) && (greased))
+    {
+        ready = 0;
+        Call pullLever;
+    }
+
+# **************
+# ** switch 4 **
+# **************
+
+    else if((GetSenderRef() == trkSwitch) || (GetSenderRef() == trk_Cube))
+    {    
+        # player has oil and uses it properly
+        if((GetCurItem(player) == 81) && (!greased) && (!playing))
+        {
+            playing = 1;
+            Call greaseIt;
+        }
+            
+        # doesn't have oil and is first visit
+        else if((GetInv(player, 81) <= 0) && (visitA) && (!greased))
+        {
+            Call noOilOne;
+        }
+    
+        # doesn't have oil and is second visit
+        else if((GetInv(player, 81) <= 0) && (visitB) && (!greased) && (!playing))
+        {
+            playing = 1;
+            Call noOilTwo;
+        }
+
+        # has oil, not from inv
+        else if((GetInv(player, 81) > 0) && (!greased) && (!playing))
+        {
+            playing = 1;
+            Call hasOil;
+        }
+    }
+           
+    return;
+        
+# ========================================================================================
+
+noPower:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # activate lever
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # say line
+    PlayVoice(player, inJuice, 1.0, 1);
+    Sleep(0.5);
+    
+    # restore controls and camera
+    ClearActorFlags(player, 0x200000);
+    SetCurrentCamera(curCam);
+    
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+
+# ========================================================================================
+
+stuck:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # switch to leverCam
+    SetCameraFocus(2, leverCam);
+    SetCameraSecondaryFocus(2, indy);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # hide player, show actor
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # look at the lever and try to pull
+    AISetLookThing(indy, leverGhost);
+    PlayKey(indy, indyStuck, 4, 0x12, 0);
+    Sleep(1.0);
+    PlayVoice(indy, inGrunt, 1.0, 1);
+    Sleep(1.0);
+    
+    # Move camera as Indy adjusts his hat
+    MoveToFrame(leverCam, 1, 1.0);
+    inTrack = PlayKey(indy, indyStand1, 2, 0x0, 0);
+    PlayKey(indy, indyStand2, 4, 0x12, 1);
+    PlayVoice(indy, inStuck, 1.0, 0);
+    PlayKey(indy, indyHat, 4, 0x12, 1);
+    StopKey(indy, inTrack, 0.5);
+    Sleep(1.0); # may need adjusting for foreign language versions
+
+    # moeve leverCam back to frame0 (necessary?)
+    MoveToFrame(leverCam, 0, 10.0);
+    
+    # hide actor show player
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    
+    # restore camera
+    SetCameraPosition(curcam, GetThingPos(leverCam));
+    SetCurrentCamera(curCam);
+    
+    EndCutscene();
+    playing = 0;
+        
+    return;
+    
+# ========================================================================================
+
+pushlever:
+
+    global0 = 0;
+    global1 = 1;
+    global2 = 0;
+    
+    # tell hintCog to check switch positions
+    SendMessage(hintCog, user1);
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # show actor hide player
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # push the lever
+    PlayKey(pulled, leverPush, 4, 0x14, 0);
+    PlayKey(indy, indyPush, 4, 0x12, 0);
+    Sleep(0.75);
+    PlaySoundLocal(sndLever, 1.0, 0.0, 0x0, 1);
+    
+    # Cut to Control Panel cam
+    SetCameraFocus(2, ctrlCam1);
+    SetCameraSecondaryFocus(2, panelTarget);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    Sleep(0.5);
+    
+    # flip panel switch
+    SetWallCel(switch, 2);
+    PlaySoundLocal(sndSwitchTex, 1.0, 0.0, 0x0, 1);
+    
+    # go about business as usual
+    if(global3 == 1)
+    {
+        # Cut to switch cam
+        SetCameraFocus(2, switchCam);
+        SetCameraSecondaryFocus(2, trkSwitch);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        # rotate track switch
+        Rotate(trkSwitch, 90, 1, 1.0);
+        Sleep(2.0);
+        
+        # hide indy show player
+        SetThingFlags(indy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        
+        # restore camera
+        SetCurrentCamera(curCam);
+        
+        # restore controls
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+    }
+    
+    # deal with comCar issues
+    else if(global3 == 0)
+    {
+        # switch1 and switch4 are ready, switch5 is not: do partial
+        if((GetWallCel(switch1) == 2) && (GetWallCel(switch4) == 2) && (GetWallCel(switch5) == 2))
+        {
+            #Print("CtrlLever4 -- 1 and 4 ready, 5 not ready");
+            
+            # hide indy show player
+            SetThingFlags(indy, 0x80000);
+            ClearThingFlags(player, 0x80000);
+            
+            # watch comCar enter switch4 from comCam1
+            SendMessage(comFalls, user2);
+            
+            # tell comFalls to do partial
+            SendMessage(comFalls, user0);
+            
+            # Cut to switch cam
+            SetCameraFocus(2, switchCam);
+            SetCameraSecondaryFocus(2, trkSwitch);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+            
+            # rotate track switch
+            Rotate(trkSwitch, 90, 1, 1.0);
+            Sleep(2.0);
+            
+            # Mine Track -- turn off
+            SetSurfaceFlags(switchB, 0x4000);
+            ClearSurfaceFlags(switchA, 0x4000);
+        }
+            
+        # switch1 not ready: do nothing
+        else if(GetWallCel(switch1) == 1)
+        {
+            #Print("CtrlLever4 -- Switch 1 not ready");
+            
+            # Cut to switch cam
+            SetCameraFocus(2, switchCam);
+            SetCameraSecondaryFocus(2, trkSwitch);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+            
+            # rotate track switch
+            Rotate(trkSwitch, 90, 1, 1.0);
+            Sleep(2.0);
+    
+            # hide indy show player
+            SetThingFlags(indy, 0x80000);
+            ClearThingFlags(player, 0x80000);
+            
+            # restore camera
+            SetCurrentCamera(curCam);
+            
+            # restore controls
+            ClearActorFlags(player, 0x200000);
+            EndCutscene();
+        }
+            
+        # switches 1, 4 and 5 are ready: Send commies over the edge
+        else if((GetWallCel(switch1) == 2) && (GetWallCel(switch4) == 2) && (GetWallCel(switch5) == 1))
+        {
+            #Print("CtrlLever4 -- send commies over edge");
+            
+            # hide indy show player
+            SetThingFlags(indy, 0x80000);
+            ClearThingFlags(player, 0x80000);
+            
+            # watch comCar enter switch4 from comCam1
+            SendMessage(comFalls, user2);
+            
+            # tell comFalls to send comCar over the edge
+            SendMessage(comFalls, user0);
+            
+            # we're all done with this global0 stuff
+            global3 = 1;
+        }
+    }
+        
+    Sleep(1.0);
+    
+    # Destroy pulled lever and create pushed lever
+    DestroyThing(pulled);
+    pushed = CreateThing(tplLevPull, leverGhost);
+    CaptureThing(pushed);
+    
+    # Mine Track -- turn off
+    SetSurfaceFlags(switchB, 0x4000);
+    ClearSurfaceFlags(switchA, 0x4000);
+    
+    ready = 1;
+        
+    return;
+    
+# ========================================================================================
+
+pullLever:
+
+    global1 = 0;
+    
+    # tell hintCog to check switch positions
+    SendMessage(hintCog, user1);
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # show actor hide player
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # pull the lever
+    PlayKey(pushed, leverPull, 4, 0x14, 0);
+    PlayKey(indy, indyPull, 4, 0x12, 0);
+    Sleep(0.85);
+    PlaySoundLocal(sndLever, 1.0, 0.0, 0x0, 1);
+    
+    # Cut to Control Panel cam
+    SetCameraFocus(2, ctrlCam1);
+    SetCameraSecondaryFocus(2, panelTarget);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    Sleep(0.5);
+    
+    # flip panel switch
+    SetWallCel(switch, 1);
+    PlaySoundLocal(sndSwitchTex, 1.0, 0.0, 0x0, 1);
+    Sleep(0.5);
+    
+    # Cut to switch cam
+    SetCameraFocus(2, switchCam);
+    SetCameraSecondaryFocus(2, trkSwitch);
+    SetCurrentCamera(2);
+    
+    # rotate track switch
+    SetCameraFOV(90, 0, 0.0);
+    Rotate(trkSwitch, -90, 1, 1.0);
+    Sleep(2.0);
+    
+    # hide indy show player
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # restore camera
+    SetCurrentCamera(curCam);
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    
+    # Destroy pushed lever and create pulled lever
+    DestroyThing(pushed);
+    pulled = CreateThing(tplLevPush, leverGhost);
+    CaptureThing(pulled);
+    
+    # Mine Track -- Go Straight
+    SetSurfaceFlags(switchA, 0x4000);
+    ClearSurfaceFlags(switchB, 0x4000);
+    
+    EndCutscene();
+    ready = 1;
+        
+    return;
+    
+# ========================================================================================
+
+resetcam:
+
+    #Print("lever4 -- resetcam");
+    
+    # hide indy show player
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # restore camera
+    SetCurrentCamera(curCam);
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    return;
+
+# ========================================================================================
+
+greaseIt:
+
+    greased = 1;
+    
+    DestroyThing(trk_Cube);
+    
+    # Prep...
+    MakeMeStop();
+    StartCutscene(2);
+    DeselectWeaponWait(player);
+    
+	# Make an actor & aim him...
+	oilindy = CreateThing(tpl_indy, player);
+	CaptureThing(oilindy);
+	v_playpos = GetThingPos(player);
+	v_switchpos = GetThingPos(trkSwitch);
+	f_x  = VectorX(v_switchpos);
+	f_y = VectorY(v_switchpos);
+	f_z = VectorZ(v_playpos);
+	v_switchpos = VectorSet(f_x, f_y, f_z); # force same height
+	v_oilaim = VectorNorm(VectorSub(v_switchpos, v_playpos));
+	SetThingLook(oilindy, v_oilaim);
+
+	# Make cam 1...
+	v_oilspot = VectorAdd(VectorTransformToOrient(player, '0.3 -0.1 0.05'), v_playpos);	
+	camsector = FindNewSectorFromThing(trkSwitch, v_oilspot);
+	oilcam_1 = CreateThingAtPos(tpl_ghost, camsector, v_oilspot, '0 0 0');
+	CaptureThing(oilcam_1);
+
+	# Make cam 2...
+	v_oilspot = VectorAdd(VectorTransformToOrient(player, '0.2 0.2 0.1'), v_playpos);	
+	camsector = FindNewSectorFromThing(trkSwitch, v_oilspot);
+	oilcam_2 = CreateThingAtPos(tpl_ghost, camsector, v_oilspot, '0 0 0');
+	CaptureThing(oilcam_2);
+
+	# Make actor mark & aim it...
+	v_oilspot = VectorAdd(VectorTransformToOrient(player, '0.0 -0.03 0.0'), v_playpos);	
+	camsector = FindNewSectorFromThing(trkSwitch, v_oilspot);
+	oilmark = CreateThingAtPos(tpl_ghost, camsector, v_oilspot, '0 0 0');
+	CaptureThing(oilmark);
+	v_oilaim = VectorNorm(VectorSub(v_switchpos, GetThingPos(oilmark)));
+	SetThingLook(oilmark, v_oilaim);
+
+	# Make a cam target...
+	v_oilspot = VectorAdd(VectorTransformToOrient(oilmark, '0.0 0.06 -0.01'), GetThingPos(oilmark));	
+	camsector = FindNewSectorFromThing(trkSwitch, v_oilspot);
+	oiltarg = CreateThingAtPos(tpl_ghost, camsector, v_oilspot, '0 0 0');
+	CaptureThing(oiltarg);
+
+	# Put actor on mark...
+	TeleportThing(oilindy, oilmark);
+	AISetLookThing(oilindy, oiltarg);
+
+	# Cut to indy oiling switch...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, oilcam_1);
+	SetCameraSecondaryFocus(2, oiltarg);
+	SetCurrentCamera(2);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 5.0);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(oilindy, 0x80000);
+	CopyPlayerHolsters(player, oilindy);
+    
+    # Play the tagged keyframe...
+    PlayKey(oilindy, use, 5, 0x12, 0);
+	Sleep(0.01);
+
+	# Dolly around...
+	SetCameraFocus(2, oilcam_2);
+    Sleep(1.0);
+    PlaySoundLocal(sndOil, 1.0, 0.0, 0x0, 0);
+	Sleep(2.0);
+   
+    # Indy: "Let's see if that changes my luck."
+    PlayVoice(oilindy, inFixed, 1.0, 1);
+    
+    # change inventory...
+    ChangeInv(player, 81, -1);
+	Sleep(0.2);
+    
+    # Restore controls and camera...
+	TeleportThing(player, oilindy);
+	SetThingFlags(oilindy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+
+	SetCameraPosition(1, GetThingPos(oilcam_1));
+	SetCurrentCamera(1);
+
+    EndCutscene();
+    ClearActorFlags(player, 0x200000);
+	Sleep(0.1);
+	DestroyThing(oilindy);
+	DestroyThing(oilcam_1);
+	DestroyThing(oilcam_2);
+	DestroyThing(oiltarg);
+	DestroyThing(oilmark);
+    
+    playing = 0;
+    
+    # tell hintCog to solve hint15
+    SendMessage(hintCog, user0);
+    
+    # turn on second wave of level commies
+    SendMessage(comControl, user2);
+    
+    return;
+    
+# ========================================================================================
+
+noOilOne:
+
+    visitA = 0;
+            
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # offset camera
+    SetExtCamOffset('-0.2 0.0 0.065');
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # activate switch
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # play voice line
+    PlayVoice(player, inGreaseA, 1.0, 1);
+    
+    # restore controls and camera
+    ClearActorFlags(player, 0x200000);
+    RestoreExtCam();
+    
+    EndCutscene();
+    visitB = 1;
+    
+    return;
+    
+# ========================================================================================
+
+noOilTwo:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # offset camera
+    SetExtCamOffset('-0.2 0.0 0.065');
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # activate switch
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # play voice line
+    PlayVoice(player, inGreaseB, 1.0, 1);
+    
+    # restore controls and camera
+    ClearActorFlags(player, 0x200000);
+    RestoreExtCam();
+    
+    EndCutscene();
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+hasOil:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # offset camera
+    SetExtCamOffset('-0.2 0.0 0.065');
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # activate switch
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # play voice line
+    PlayVoice(player, inGreaseB, 1.0, 1);
+    
+    # restore controls and camera
+    ClearActorFlags(player, 0x200000);
+    RestoreExtCam();
+    
+    EndCutscene();
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+callback:
+
+    # Setting
+	if (!bSet)
+	{
+		swapRef = SetThingMesh(oilindy, 15, sourceModel, 0);
+    }
+    
+    # Restoring
+	else
+	{
+		RestoreThingMesh(oilindy, swapRef);        
+	}                                         
+		
+	bSet = 1 - bSet;
+	return;
+
+# ========================================================================================
+
+end
+

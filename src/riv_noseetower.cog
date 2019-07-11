@@ -1,0 +1,90 @@
+# Jones 3D Cog Script
+#
+# RIV_NoSeeTower.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    
+    sector      sec_See_Bridge
+    sector      sec_See_Tower
+    sector      sec_See_RHouse
+    
+    sector      sec_NoSee_Yard1
+    sector      sec_NoSee_Yard2
+    sector      sec_NoSee_Tower
+    
+    surface     adj_Rap0
+    surface     adj_Rap1
+    surface     adj_Rap2
+    surface     adj_Rap3
+    surface     adj_Rap4
+    
+    surface     adj_Tower0
+    surface     adj_Tower1
+    
+    int         surfs=0         local
+    int         num_Surfs=5     local
+    int         noSeeOn=0       local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    # can see down first rapids
+    if((GetSenderRef() == sec_See_Bridge) || (GetSenderRef() == sec_See_RHouse))
+    {
+        Print("sec_See_Bridge or sec_See_RHouse");
+        for(surfs = 0; surfs < num_Surfs; surfs = surfs + 1)
+        {
+            SetAdjoinFlags(adj_Rap0[surfs], 0x1);
+	        SetFaceGeoMode(adj_Rap0[surfs], 0);
+        }
+    }
+    
+    # can't see down first rapids
+    if(GetSenderRef() == sec_NoSee_Yard1)
+    {
+        Print("sec_NoSee_Yard1");
+        for(surfs = 0; surfs < num_Surfs; surfs = surfs + 1)
+        {
+            ClearAdjoinFlags(adj_Rap0[surfs], 0x1);
+	        SetFaceGeoMode(adj_Rap0[surfs], 4);
+        }
+    }
+    
+    # can see into tower
+    if(GetSenderRef() == sec_See_Tower)
+    {
+        Print("sec_See_Tower");
+        SetAdjoinFlags(adj_Tower0, 0x1);
+	    SetFaceGeoMode(adj_Tower0, 0);
+        SetAdjoinFlags(adj_Tower1, 0x1);
+	    SetFaceGeoMode(adj_Tower1, 0);
+    }
+    
+    # can't see into tower
+    if(GetSenderRef() == sec_NoSee_Yard2)
+    {
+        Print("sec_NoSee_Yard2");
+        ClearAdjoinFlags(adj_Tower0, 0x1);
+	    SetFaceGeoMode(adj_Tower0, 4);
+        ClearAdjoinFlags(adj_Tower1, 0x1);
+	    SetFaceGeoMode(adj_Tower1, 4);
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

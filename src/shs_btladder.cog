@@ -1,0 +1,422 @@
+# Jones 3D Cog Script
+#
+# shs_BTladder.cog
+#
+# Make four ladders in the bell tower lower or raise
+#
+# [RKD, JWC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ================================================================================
+
+symbols
+
+message		activated
+message		timer
+message		startup
+message		damaged
+
+keyframe	in_pull=in_pull_lever_down.key			local
+keyframe	lever_down=gen_lever.key				local
+keyframe	in_rtarmup=0in_armsout_1_1.key			local
+keyframe	in_thinking=0in_thinking_4_4.key		local
+keyframe    in_handsONhips=0in_stand4.key       local
+keyframe    in_sideTOhips=0in_stand1_bd_4.key   local
+keyframe    in_hipsTOside=0in_stand4_bd_1.key   local
+
+
+
+sound		leverpull=nub_lever_pull_c.wav			local
+sound		leverback=nub_lever_reset_c.wav			local
+sound		in_readbell=Ss04j01a.wav				local
+sound		in_readbell2=Ss04j01b.wav				local
+sound		laddermove=shs_ladder_creak_c.wav		local
+sound		ladderstop=shs_ladderroll_stop.wav		local
+sound		bellhit=shs_bell_dull.wav				local
+sound		in_mustbediff=Inxj095.wav				local	# Must be a different way
+sound		in_bells=Ss04j04.wav					local
+
+surface		climbable0			nolink	
+surface		climbable1			nolink
+surface		climbable2			nolink
+surface		climbable3			nolink
+surface		climbable4			nolink
+surface		climbable5			nolink
+surface		climbable6			nolink
+surface		climbable7			nolink
+
+thing		player				local
+thing		indy 	    	
+thing		bell       	 		mask=0x408
+
+thing		ladder0				linkid=1
+thing		ladder1				linkid=1
+thing		ladder2				linkid=1
+thing		ladder3				linkid=1
+
+thing   	lever
+thing		cam1
+
+thing		c1_t1
+thing		c1_t2
+thing		c1_t3
+thing		in_mk1
+thing		in_mk2
+thing		in_mk3
+
+vector		indyVector			local
+
+flex		dotProduct			local
+flex		rightDot			local
+
+int			open=0		local
+int			locked=0	local
+int			curCam		local
+int			readbell=0	local
+int			calls=0		local 	# prevent overflow
+	
+int			comment=0	local
+int			index		local
+int			canReadBell	local
+int 		in_track0	local
+int			in_track1 	local
+int			in_rotrate=0local
+
+#SUBROUTINES
+flex		openladders			local
+flex 		closeladders		local
+flex		returncontrol		local
+
+
+
+end
+
+# ================================================================================
+code
+
+startup:
+	
+	# Prep
+	sleep(.01);
+	player = GetLocalPlayerThing();
+    
+
+	return;
+# ................................................................................
+
+activated:
+	
+   	# Indy pulls lever
+	if (GetSenderRef() == lever)
+	{
+		curCam = GetCurrentCamera();
+		if (locked) return;
+		locked = 1;
+    
+		call leverpull;
+         
+		if (open == 0) 
+		{
+			call openladders;
+	   		
+			if (readbell == 0)
+			{	 
+				# Indy reads bell just once
+				call readbell;
+				readbell=1;
+            }
+		}
+		else
+		{
+			call closeladders;
+		}
+  	
+		call returncontrol;
+	}
+	
+	# Indy activates bell
+	
+	if ((GetSenderRef() == bell) && (calls == 0))
+    {
+        #if (read != 1) return;
+
+		# Compute vector from bell to Indy
+		indyVector = VectorNorm(VectorSub(GetThingPos(bell), GetThingPos(player)));
+
+		# Check to see where Indy is standing relative to the statue
+        dotProduct = VectorDot(GetThingLVec(bell), indyVector);
+		rightDot = VectorDot(GetThingRVec(bell), indyVector);
+
+        //DEBUGFLEX(dotProduct, "Dot product:");
+		//DEBUGFLEX(rightDot, "Right dot:");
+
+		canReadBell = 0;
+
+		if ((dotProduct <= 0.256137) && (dotProduct >= -0.6680111) && (rightDot < 0))
+		{
+	        // Indy is in front of one inscription.
+			canReadBell = 1;
+    	}
+        else
+		{
+			if ((dotProduct <= 0.708848) && (dotProduct >= -0.227464) && (rightDot > 0))
+			{
+		        // Indy is in front of the other inscription.
+				canReadBell = 1;
+			}
+		}
+
+		// If Indy's not in a valid spot, bail
+		if (!canReadBell)
+			return;
+
+		calls = 1;
+        SetActorFlags(player, 0x200000); # paralyze him
+        StartCutscene(0);
+		StopThing(player);
+		CopyPlayerHolsters(player, indy); # make sure our actor has matching props
+		CopyOrientAndPos(player, indy);
+				
+		SetExtCamOffset('0.15 -0.1 0.15');
+		#SetExtCamLookOffset('0.0 0.1 0.0'); # this verb is no good
+        
+        SetThingFlags(player, 0x80000);
+		ClearThingFlags(indy, 0x80000);
+		
+		if (readbell != 1)
+		{
+			
+			# "There's some writing..."
+			PlayVoice(player, in_readbell, 1.0, 1);
+            
+			# "Ring for the Master."
+			PlayVoice(player, in_readbell2, 1.0, 0);
+		    
+            # Indy gestures
+			PlayKey(indy, in_rtarmup, 4, 0x12, 1);
+			sleep(.5);
+
+			in_track0 = PlayKey(indy, in_handsONhips, 2, 0x00, 0);
+			PlayKey(indy, in_sideTOhips, 4, 0x12, 1);
+			in_track1 = PlayKey(indy, in_thinking, 4, 0x12, 0);
+			# "Bells are rung..."
+			PlayVoice(indy, in_bells, 1.0, 1);
+           		
+            StopKey(indy, in_track0, 0.5);
+			StopKey(indy, in_track1, 0.5);
+			sleep(1);
+        }
+	    else
+		{
+	        # "Ring for the Master."
+			PlayVoice(player, in_readbell2, 1.0, 1);
+		}
+		
+		readbell=1;
+		calls=0;
+				
+		# Reset the camera
+		RestoreExtCam();
+
+		# Enable player control
+		ReleaseThing(player);
+        ClearThingFlags(player, 0x80000);
+		SetThingFlags(indy, 0x80000);
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+    }
+	return;
+
+# ................................................................................
+
+damaged:
+	 
+	if (GetSenderRef() != bell) return;
+      
+	if (GetCurWeapon(player) == 1)
+	{
+		PlaySoundThing(bellhit, bell, 1.0, 3, 8, 0);
+	}
+	else
+	{
+		Sleep(.2);
+		PlaySoundThing(bellhit, bell, 1.0, 3, 8, 0);
+    }
+	
+	# only if indy has read bell
+    if (readbell == 1)
+	{
+		# just once...
+		if (comment== 1) return; 
+		sleep(1);
+		PlayVoice(player, in_mustbediff, 1.0, 0);
+		comment=1;
+	}
+	return;
+
+# ................................................................................
+
+
+leverpull:	
+	
+ 
+	# Disable player...
+	TeleportThing(indy, in_mk3);
+	SetActorFlags(player, 0x200000); # paralyze him
+	StartCutscene(1);
+	StopThing(player); # right now
+	PlayMode(player, 1, 0); # get him into a nice stand
+	DeselectWeapon(player); # stow any weapon or lighter
+	CopyPlayerHolsters(player, indy); # make sure our actor has matching props
+	Sleep(0.5); # give him some time to do his stuff
+	
+		
+
+	# Switch actor indy for player...
+	SetThingFlags(player, 0x80000); # hide him
+	ClearThingFlags(indy, 0x80000); # reveal our actor
+	
+	# Prep camera & cut...
+	SetCameraLookInterp(2, 0); # no pan & tilt
+	SetCameraPosInterp(2, 0); # no dolly
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, c1_t1);
+	Sleep(0.01);
+	SetCurrentCamera(2);
+	SetCameraFOV(68, 0, 0.0);
+   
+
+	PlayKey(lever, lever_down, 4, 0x12, 0);
+	PlayKey(indy, in_pull, 4, 0x12, 0);
+	Sleep(1.2);
+	PlaySoundLocal(leverpull, 1.0, 0, 0x0000, 0);
+	Sleep(1.4);
+	PlaySoundLocal(leverback, 1.0, 0, 0x0000, 0);
+	Sleep(0.3);
+
+	# Indy turns to ladder
+    in_rotRate = GetThingMaxRotVel(player); 	# remember Indy rate
+	SetThingMaxRotVel(indy, 100.0);
+	AISetLookThing(indy, c1_t2);
+     
+	# Show ladder opening
+	SetCameraLookInterp(2, 1); #  pan & tilt
+	SetCameraInterpSpeed(2, 2.0); #  pan & tilt
+    Sleep(0.01);
+	SetCameraSecondaryFocus(2, c1_t2);
+	sleep(1.0);
+
+
+return;
+
+# ................................................................................
+
+openladders:		
+	
+  
+    # make adjoins no player move and climbable
+		
+	for (index = 0; index < 8; index = index + 1)
+	{
+		ClearAdjoinFlags(climbable0[index], 0x2);
+        SetSurfaceFlags(climbable0[index], 0x2000);
+	}
+	
+    Rotate(ladder0, -90, 0, 1.5);
+	Rotate(ladder1, -90, 2, 1.5);
+	Rotate(ladder2, -90, 0, 1.5);
+	Rotate(ladder3, -90, 2, 1.5);    
+    
+	PlaySoundLocal(laddermove, 1.0, 0, 0x0000, 0);
+    WaitForStop(ladder3);
+    PlaySoundLocal(ladderstop, 1.0, 0, 0x0000, 0);
+    
+	sleep(.5); #beat
+	open=1;
+
+    return;
+    
+# ................................................................................
+
+closeladders:
+		
+	//Close all ladders at once
+	
+	Rotate(ladder0, 90, 0, 1.5);
+	Rotate(ladder1, 90, 2, 1.5);
+	Rotate(ladder2, 90, 0, 1.5);
+	Rotate(ladder3, 90, 2, 1.5);
+    
+	PlaySoundLocal(laddermove, 1.0, 0, 0x0000, 0);
+	WaitForStop(ladder3);
+	PlaySoundLocal(ladderstop, 1.0, 0, 0x0000, 0);
+    
+	sleep(.5); #beat
+	open = 0;
+    return;
+
+# ................................................................................
+
+readbell:
+	 
+	# Indy moves into frame
+ 
+	AISetMoveSpeed(indy, 1.0);
+	AISetLookThing(indy, in_mk2);
+	AISetMoveThing(indy, in_mk1, 0);
+	
+	
+	# move camera to look at bell
+	SetCameraLookInterp(2, 1); #  pan & tilt
+	SetCameraInterpSpeed(2, 2.0); #  pan & tilt
+    Sleep(0.01);
+	SetCameraSecondaryFocus(2, c1_t3);
+	SetCameraFOV(70, 1, 2.0);
+	sleep(2.0);
+    
+	AiWaitForStop(indy);
+    
+	# "There's some writing..." 
+    PlayVoice(indy, in_readbell, 1.0, 1);
+	
+	#"Ring for the Master."
+    PlayVoice(indy, in_readbell2, 1.0, 0);
+
+    # Indy gestures
+    PlayKey(indy, in_rtarmup, 4, 0x12, 1);
+    sleep(.5);
+    in_track0 = PlayKey(indy, in_handsONhips, 2, 0x00, 0);
+    PlayKey(indy, in_sideTOhips, 4, 0x12, 1);
+	in_track1 = PlayKey(indy, in_thinking, 4, 0x12, 0);
+	
+	# "Bells are rung..."
+	PlayVoice(indy, in_bells, 1.0, 1);
+
+    StopKey(indy, in_track0, 0.5);
+    StopKey(indy, in_track1, 0.5);
+	sleep(1);
+
+    return;
+# ................................................................................
+
+returncontrol:
+
+	
+   	locked =0;    //allow activation of switch again
+
+	# Restore player control...
+	CopyOrientAndPos(indy, player); # pop player to actor spot
+	SetThingFlags(indy, 0x80000); # hide actor	
+	ClearThingFlags(player, 0x80000); # player visible
+	SetThingMaxRotVel(indy, in_rotRate);
+	SetCameraPosition(1, GetThingPos(cam1));	# prep for camera to swing back
+	SetCurrentCamera(curCam);
+	ResetCameraFOV(0, 0.0);
+	
+	ClearActorFlags(player, 0x200000); # player in control
+    EndCutscene();
+	return;
+
+
+end
+

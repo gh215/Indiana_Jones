@@ -1,0 +1,43 @@
+# Jones 3D Cog Script
+#
+# TEM_BAT2CamOffset.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+
+    surface     surf0       linkID=1
+
+    surface     surf1       linkID=2
+    surface     surf2       linkID=2
+    surface     surf3       linkID=2
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    if(GetSenderID() == 1)
+    {
+        SetCameraFOV(120, 1, 1.0);
+    }
+    
+    if(GetSenderID() == 2)
+    {
+        SetCameraFOV(90, 1, 1.0);
+    }
+    
+    return;
+    
+# ========================================================================================
+
+end
+

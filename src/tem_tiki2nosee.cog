@@ -1,0 +1,106 @@
+# Jones 3D Cog Script
+#
+# TEM_Tiki2NoSee.cog
+#
+# Sets and removes no see adjoins for Tiki2 area. 
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+        message     startup
+        message     entered
+        
+        thing       player      local
+
+        sector      waterSec1
+        sector      waterSec2
+        sector      pathSec
+        sector      hutSec
+        
+        sector      waterOff
+        sector      pathOff
+        sector      pathOff2
+        sector      hutOff
+        sector      hutOff2
+
+        sector      waterOn
+        sector      hutOn
+        sector      hutOn2
+        sector      pathOn
+        sector      pathOn2
+        
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    SectorAdjoins(waterSec1, 0);
+    SectorAdjoins(waterSec2, 0);
+    SectorAdjoins(pathSec, 0);
+    SectorAdjoins(hutSec, 0);
+    return;
+
+# ========================================================================================
+
+entered:
+        
+    if(GetSourceRef() != player) return;
+    
+    # draw waterfall cave
+    if(GetSenderRef() == waterOff)
+        {
+            Print("draw - waterfall cave");
+            SectorAdjoins(waterSec1, 1);
+            SectorAdjoins(waterSec2, 1);
+        }
+        
+    # draw hut connect
+    if((GetSenderRef() == hutOff) || (GetSenderRef() == hutOff2))
+        {
+            Print("draw - hut connect");
+            SectorAdjoins(hutSec, 1);
+        }
+        
+    # draw path to falling bridge
+    if((GetSenderRef() == pathOff) || (GetSenderRef() == pathOff2))
+        {
+            Print("draw - path2bridge");
+            SectorAdjoins(pathSec, 1);
+        }
+        
+    # don't draw waterfall cave   
+    if(GetSenderRef() == waterOn)
+        {
+            Print("no draw - waterfall cave");
+            SectorAdjoins(waterSec1, 0);
+            SectorAdjoins(waterSec2, 0);
+        }
+        
+    # don't draw hut connect
+    if((GetSenderRef() == hutOn) || (GetSenderRef() == hutOn2))
+        {
+            Print("no draw - hut connect");
+            SectorAdjoins(hutSec, 0);
+        }
+        
+    # don't draw path2bridge
+    if((GetSenderRef() == pathOn) || (GetSenderRef() == pathOn2))
+        {
+            Print("no draw - path2bridge");
+            SectorAdjoins(pathSec, 0);
+        }
+
+        return;
+        
+# ========================================================================================
+
+end
+

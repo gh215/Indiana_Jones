@@ -1,0 +1,59 @@
+# Jones 3D Cog Script
+#
+# lag_shipdoorStuck.cog
+#
+# Locked Ships Rotating Door Script
+#
+# [DS]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# =======================================================================================
+
+symbols
+	message	startup
+	message	touched
+	message	taken	
+
+   	thing		bumpit0
+	thing		stopit0
+
+	sound		bumpwav0=
+	sound		bumpwav1=
+	thing		player						local
+	int		talking=0						local
+	int		sndnum						local
+	int		numsounds=2						local
+	int		tryit							local
+
+end
+
+# ========================================================================================
+
+code
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+taken:
+	if(getsenderref() == stopit0)
+	{
+	talking=2;
+#	printint(talking);
+	}
+	return;
+
+touched:
+	if (GetSenderRef() != bumpit0) return;
+	if(talking >= 1) return;
+	sndnum = rand()*numsounds;
+	talking=1;
+	tryit = PlayVoice(player, bumpwav0[sndnum], 1.0, 0);
+	WaitForSound(tryit);
+	sleep(10);
+	if(talking == 2) return;
+	talking=0;
+	return;
+
+end
+

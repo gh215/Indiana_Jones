@@ -1,0 +1,103 @@
+
+# Jones 3D Cog Script
+#
+# SEA_EngineRoom_AI.cog
+# 
+# Manages wpnt mode for the commies in the Engine Room of the Pudovkin
+# 
+#
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message         startup
+message         crossed
+message         killed
+
+# =================== REFERENCES ===============================
+
+thing           Commie00            LinkID=1
+thing           Commie01            LinkID=1
+thing           Commie02            LinkID=1
+
+surface         AdjoinAIOn0         LinkID=2
+surface         AdjoinAIOn1         LinkID=2
+surface         AdjoinAIOn2         LinkID=2
+         
+surface         AdjoinAIOff0        LinkID=3 
+surface         AdjoinAIOff1        LinkID=3
+surface         AdjoinAIOff2        LinkId=3
+
+# ===================== MISC LOCAL VARIABLES ===================
+
+AI          AI_Sniper=com_2Hsniper.ai   local
+
+int         counter             local
+int         TempCommie          local
+
+# ==================== CONSTANTS ==========================
+
+int         NUMBER_OF_COMMIES=3         local
+
+
+end
+
+# ======================= CODE =============================
+code
+
+# =========================================================
+startup:
+            if(commie01 != -1)
+        {
+            AISetClass(Commie01, AI_sniper);
+        }            
+
+    return;
+    
+# =========================================================
+crossed:
+    
+    if(GetSenderID() == 2)
+    {
+        for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1) 
+        {
+            if(Commie00[counter] != -1)
+                AISetInstinctWpntMode(Commie00[counter]);
+        }
+    }
+    else if(GetSenderID() == 3)
+    {
+        for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+        {
+            if(Commie00[counter] != -1)
+                AIClearInstinctWpntMode(Commie00[counter]);
+        }
+    }
+    
+    return;
+    
+# =========================================================
+killed:
+
+    if(GetSenderID() == 1)
+    {
+        TempCommie = GetSenderRef();
+        
+        for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+        {
+            if(Commie00[counter] == TempCommie)
+            {
+                Commie00[counter] = -1;
+            }
+        }
+    }
+    
+    return;
+
+# ============================================================
+
+end

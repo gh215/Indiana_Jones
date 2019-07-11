@@ -1,0 +1,118 @@
+# Jones 3D Cog Script
+#
+# TEM_BoulderFog.cog
+#
+# [MDR] && [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    message     pulse
+    
+    thing       player          local
+    thing       fogGhost
+    
+    sector      sec_On1
+    sector      sec_On2
+    
+    sector      sec_Blue1
+    sector      sec_Red1
+                       
+    vector      vec_facing      local
+    
+    int         ready=0         local
+    int         on=1            local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    player = GetLocalPlayerThing();
+    
+    # going towards outside, but can still turn around
+    # to look at red lava
+    if(GetSenderRef() == sec_On1)
+    {
+        Print("sec_On1 on");
+        on = 1;
+        ready = 1;
+        SetPulse(0.5);
+        
+        # set fog to blue
+        SetFog(1, '0.5 0.5 0.6', 10, 350);
+    }
+    
+    # far enough outside that we can go totally blue
+    else if(GetSenderRef() == sec_Blue1)
+    {
+        Print("sec_Blue1 on");
+        SetPulse(0.0);
+        
+        # set fog to blue
+        SetFog(1, '0.5 0.5 0.6', 10, 350);
+    }
+    
+    # coming back, but can still turn around to
+    # look at blue outside
+    else if(GetSenderRef() == sec_On2)
+    {
+        Print("sec_On2 on");
+        ready = 1;
+        SetPulse(0.5);
+        
+        # set fog to red
+        SetFog(1, '0.5, 0.05 0.05', 50, 180);
+    }
+    
+    # far enough inside that we can go totally red
+    else if(GetSenderRef() == sec_Red1)
+    {
+        Print("sec_Red1 on");
+        SetPulse(0.0);
+        
+        # set fog to red
+        SetFog(1, '0.5, 0.05 0.05', 50, 180);
+    }
+        
+    return;
+        
+# ========================================================================================
+
+pulse:
+
+    vec_facing = VectorSub( GetThingPos(fogGhost), GetThingPos(player));
+    vec_facing = VectorNorm(vec_facing);
+    
+    if(ready == 1)
+    {
+        if (VectorDot(GetThingLVec(player), vec_facing) >= 0)
+        {
+            # Player is facing fogGhost
+            # set fog to red
+            SetFog(1, '0.5, 0.05 0.05', 50, 180);
+        }
+        
+        else
+        {
+            # player's back is to fogGhost
+            # set fog to blue
+            SetFog(1, '0.5 0.5 0.6', 10, 350);
+        }
+    }
+    
+    else
+        return;
+    
+    return;
+        
+# ========================================================================================
+
+end
+

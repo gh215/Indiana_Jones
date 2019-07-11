@@ -1,0 +1,154 @@
+# Jones 3D Cog Script
+#
+# SHW_CommieCreator.cog
+#
+# Creates a bunch of enemies after various events in the waterworks
+#
+# [CM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	#	MESSAGES
+	message     startup
+    message     killed
+    message     entered
+    message     exited
+    message     timer
+    
+	#	TRIGGERS
+	surface		windowsurf	    
+	surface		debrissurf	    
+    
+	#	ACTORS
+	thing		player      local
+    thing	    enemy0		local          
+    thing	    enemy1      local
+
+	#	MECHANICS
+	thing	createpos
+    
+    #	ACTOR MARKS
+	thing		enemy_mv0
+	thing		enemy_mv1
+    
+	#	SOUNDS
+	sound		dangercue1=mus_gen_russbold_shrt4.wav	local
+    
+	#	TEMPLATES
+	template	commie=snow_mauser	local
+    
+	#	VARIABLES
+	int	in_debspot=0	local
+	int	in_winspot=0	local
+	int	win_com=0	local
+	int	deb_com=0	local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+    
+		player = GetLocalPlayerThing();
+        
+        
+return;
+# ........................................................................................
+entered:
+
+	If (GetSenderRef() == windowsurf)
+	{
+		If (win_com == 1) return;
+        #	player enters winspot create enemy0, set win_com=1
+		enemy0=CreateThing(commie, createpos);
+		CaptureThing(enemy0);
+		win_com = 1;
+		AISetMoveSpeed(enemy0, 2.5);
+		AISetLookThing(enemy0, player);
+		AISetMoveThing(enemy0, enemy_mv0, 1);
+    }
+	
+	#	player enters debspot set in_debspot=1
+	If (GetSenderRef() == debrissurf)
+	{
+		If (deb_com == 1) return;
+        #	player enters debspot create enemy1, set deb_com=1
+		enemy1=CreateThing(commie, createpos);
+		CaptureThing(enemy1);
+		deb_com = 1;
+		AISetMoveSpeed(enemy1, 2.5);
+		AISetLookThing(enemy1, player);
+		AISetMoveThing(enemy1, enemy_mv1, 1);
+    }
+
+#	start a timer
+SetTimer(5.0);
+print("timer has begun");
+	
+return;
+# ........................................................................................
+exited:
+
+	#	stop the timer
+	If ((GetSenderRef() == windowsurf) || (GetSenderRef() == debrissurf))	    
+    SetTimer(0.0);
+	print("thetimerisdead");
+return;
+
+# ........................................................................................
+timer:
+	print("timerhaschecked");
+	
+	#	if win_com=0 create a window commie (enemy0)
+    If (win_com == 0) 
+        {
+		enemy0=CreateThing(commie, createpos);
+		CaptureThing(enemy0);
+		win_com = 1;
+		AISetMoveSpeed(enemy0, 2.5);
+		AISetLookThing(enemy0, player);
+		AISetMoveThing(enemy0, enemy_mv0, 1);
+		AISetFireTarget(enemy0, player);
+		}
+	
+	
+	#	if deb_com=0 create a debris commie
+	If (deb_com == 0)
+		{
+		enemy1=CreateThing(commie, createpos);
+		CaptureThing(enemy1);
+		deb_com = 1;
+		AISetMoveSpeed(enemy1, 2.5);
+		AISetLookThing(enemy1, player);
+		AISetMoveThing(enemy1, enemy_mv1, 1);
+		AISetFireTarget(enemy1, player);
+		}
+return;
+# ........................................................................................
+killed:
+
+	# if sender is the window commie clear it's variable for the next timer creation
+	If (GetSenderRef() == enemy0)
+		{
+		SetLifeLeft(enemy0, 5.0);
+		print("enemy0 life left set to 5 secs");
+		win_com = 0;
+		}
+	
+	# if sender is the debris commie clear it's variable for the next timer creation
+	If (GetSenderRef() == enemy1)
+		{
+		SetLifeLeft(enemy1, 5.0);
+		print("enemy1 life left set to 5 secs");
+		dbe_com = 0;
+		}
+return;
+# ........................................................................................
+	
+end
+
+

@@ -1,0 +1,133 @@
+# Jones 3D Cog Script
+#
+# RIV_AmbPatchShack.cog
+#
+# Plays random ambient sounds at random positions and drops
+# snow at all the positions all the time.
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message	    entered
+    message     pulse
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+    thing		soundPos2		nolink
+    thing		soundPos3		nolink
+    thing       singlePos       nolink
+    
+    sector      start_Amb1      linkID=1
+    sector      start_Amb2      linkID=1
+    sector      start_Amb3      linkID=1
+    
+    sector      stop_Amb1       linkID=0
+    sector      stop_Amb2       linkID=0
+    
+    sector      start_Single
+    sector      sec_Temp
+    
+	sound		ambient0=shw_amb1.wav   local
+	sound		ambient1=shw_amb2.wav   local
+	sound		ambient2=shw_amb3.wav   local
+	sound		ambient3=shw_amb4.wav   local
+	sound		ambient4=shw_amb5.wav   local
+    sound		ambient5=shw_amb6.wav   local
+    sound		ambient6=shw_amb7.wav   local
+    
+    template	tpl_Snow=skitosnow      local
+    template    tpl_Tim=timsnow         local       # 5m rad snow
+    
+    int         playing=0               local
+    int         single=0                local
+    int         randNum                 local
+    
+    int         randWolf                local
+    sound       snd_Wolf=fol_wolf_talk.wav      local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	if((GetSenderID() == 1) && (playing == 0))
+    {
+        playing = 1;
+        single = 0;
+        setpulse(2.0);
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        playing = 0;
+        SetPulse(0.0);
+    }
+    
+    if((GetSenderRef() == start_Single) && (playing == 0))
+    {
+        playing = 1;
+        single = 1;
+        SetPulse(2.0);
+    }
+    
+    if(GetSenderRef() == sec_Temp)
+    {
+        playing = 0;
+        single = 0;
+    }
+    
+	return;
+
+# ========================================================================================
+
+pulse:
+
+    if(single == 0)
+    {
+        PlaySoundThing(ambient0[RandBetween(0, 6)], soundPos0[RandBetween(0, 3)], 1.0, 15, 30, 0);
+        
+        randWolf = RandBetween(1, 5);
+    
+        if(randWolf == 10)
+        {
+            PlaySoundThing(snd_Wolf, soundPos0[RandBetween(0, 7)], 0.5, 15, 30, 0);
+        }
+    
+        if(GetPerformanceLevel() >= 2)
+        {
+            CreateThing(tpl_Snow, soundPos0);		
+        	CreateThing(tpl_Snow, soundPos1);		
+        	CreateThing(tpl_Snow, soundPos2);		
+        	CreateThing(tpl_Snow, soundPos3);
+        }
+    }
+    
+    else
+    {
+        Print("AmbPatchShack: singlePos");
+        
+        randNum = RandBetween(1, 3);
+        
+        if(randNum == 1)
+        {
+            PlaySoundThing(ambient0[RandBetween(0, 6)], singlePos, 1.0, 5, 20, 0);
+        }
+        
+        if(GetPerformanceLevel() >= 2)
+        {
+            CreateThing(tpl_Tim, singlePos);
+        }
+    }		
+    
+    return;
+
+# ========================================================================================
+
+end

@@ -1,0 +1,85 @@
+# Jones 3D Cog Script
+#
+# Gen_Lavafield2.cog
+#
+# control the lava field in the lavatrap area
+#
+# [CMG]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+# ................... MESSAGES ...................
+    message	user0		
+    message	user1		
+    message	timer		
+    
+
+# ................... COGS .....................	
+	cog		trapCOG
+	
+	cog		lavafx0			nolink
+	cog		lavafx1         nolink
+	cog		lavafx2         nolink
+	cog		lavafx3         nolink
+	cog		lavafx4         nolink
+	cog		lavafx5         nolink
+	cog		lavafx6         nolink
+	cog		lavafx7         nolink
+	cog		lavafx8         nolink
+	cog		lavafx9         nolink
+	cog		lavafx10        nolink
+	cog		lavafx11        nolink
+	cog		lavafx12        nolink
+	cog		lavafx13        nolink
+	cog		lavafx14        nolink
+	cog		lavafx15        nolink
+	cog		lavafx16        nolink
+	
+
+# .................. VARIABLES .....................
+	int		pulsetime=1		local	
+	int		fxcog			local	
+	int		flow=0			local	
+ 
+
+end
+
+# ==============================================================================
+code
+
+user0:
+
+If (GetSenderRef() != trapCOG) return;
+
+	SetTimer(1.0);
+	flow = 1;
+	return;
+
+# ==============================================================================
+user1:
+
+If (GetSenderRef() != trapCOG) return;
+
+	SetTimer(0.0);
+	flow = 0;
+	return;
+
+# ==============================================================================
+timer:
+
+if (flow == 0) return;
+
+fxcog=RandBetween(0,16);
+SendMessage(lavafx0[fxcog], user0);
+pulsetime=RandBetween(1, 2);
+SetTimer(pulsetime);
+return;
+
+# ..............................................................................
+end
+
+
+

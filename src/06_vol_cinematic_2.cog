@@ -1,0 +1,620 @@
+# Jones 3D Cog Script
+#
+# 06_VOL_Cinematic_2.cog
+#
+# Sophia helps Indy & is captured by Russians.
+#
+# [CM & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+# ................................. MESSAGES ...................................
+
+	message		startup
+	## message		crossed
+	message		entered
+
+# ................................ KEYFRAMES ...................................
+
+	keyframe	in_pushHat=0in_figithat_4_4.key			local
+	keyframe	in_rtarmup=0in_armsout_1_1.key			local
+	keyframe	in_ltarmup=0in_leftarm_1_1.key			local
+    
+	keyframe	in_armsAREcrossed=0in_stand2.key		local
+	keyframe	in_handsONhips=0in_stand4.key			local
+	keyframe	in_DOcrossarms=0in_stand1_bd_2.key	   	local
+	keyframe	in_handsTOhips=0in_stand1_bd_4.key	   	local
+
+	keyframe	so_handsONhips=0so_stand1.key			local
+	keyframe	so_handsTOhips=0so_stand2_bd_1.key		local
+	keyframe	so_hiwave=0so_waveleft_1_1.key			local
+	keyframe	so_WaveRT=0so_waveright_1_1.key 		local
+
+	keyframe	so_headshake=0so_headshake_2_2.key		local
+	keyframe	so_psychic=0so_psychicpowers_2_2.key	local
+	keyframe	so_odd=0so_somethingstrange_2_2.key		local
+	keyframe	so_kickladder=0so_kickladder_1_2.key	local
+
+	
+	keyframe	so_captured=0so_socapture.key			local
+	keyframe	cm_grab=01h_socapture.key				local
+	
+
+	keyframe	unroll=vol_ladr_rope.key				local
+	
+# .................................. SOUNDS ....................................
+    
+	sound		in_commies=inxj064.wav					local	# commies here first...
+	sound		in_sophia=At04j01.wav					local	# sophia?
+	sound		so_welcome=VL03S01.WAV					local	# welcome...
+	sound		in_whatdoing=VL03J02.WAV				local	# what doing here...
+	sound		so_sameasyou=VL03S03.WAV				local	# found door...
+	sound		in_nopartner=VL03J04.WAV				local	# wait! no partner...
+	sound		so_whosaid=VL03S05.WAV					local	# who said partner...
+
+	sound		so_danger=VL03S06.WAV					local	# be careful, danger...
+	sound		in_believeall=VL03J07.WAV				local	# believe anything...
+	sound		so_strange=VL03S08.WAV					local	# something strange...
+	sound		so_indee=VL03S09.WAV					local	# indeeee
+
+	sound		cm_restricted=Inxh1015.wav				local	# restricted area (Russki)
+	
+	sound		russ_cue=mus_gen_russremin3.wav			local	# russian music cue
+	sound		russ_bold=mus_gen_russbold_shrt2.wav	local	# sophia abduction cue
+	sound		sophia_cue=mus_vol_sophia1.wav			local	# sophia reintroduction cue	placeholder
+	sound		ladderunroll=vol_ropeladder_throw.wav	local	# ladder sound effect
+	
+# ................................ ENGINE REFS .................................
+
+	template	tpl_sophia=sophia						local
+	template	tpl_ladder=SophiaVOL					local	# odd, huh?
+
+# .................................. THINGS ....................................
+
+	thing		player									local
+
+	thing		indy
+	thing		sophia
+	thing		commie1									nolink
+	thing		commie2
+
+	thing		grndcrate0								
+	thing		grndcrate1								
+	thing		grndcrate2								
+
+	thing		door									nolink
+	thing		ladder									nolink
+	thing		worklite_2								nolink
+	thing		worklite_3								nolink
+
+	thing		cam_1									nolink
+	thing		cam_2									nolink
+	thing		cam_3									nolink
+	thing		cam_4									nolink
+	thing		cam_5									nolink
+	thing		cam_6									nolink
+	thing		cam_7
+
+	thing		ct_1									nolink
+	thing		ct_2									nolink
+	thing		ct_3a									nolink
+	thing		ct_3b									nolink
+	thing		ct_4									nolink
+	thing		ct_5									nolink
+	thing		ct_6a									nolink
+	thing		ct_6b									nolink
+
+	thing		in_mk_1									nolink
+	thing		in_mk_2									nolink
+	thing		in_mk_3									nolink
+	thing		in_mk_4									nolink
+	thing		in_mkcomEND								nolink
+
+	thing		so_mk_1									nolink
+	thing		so_mk_2									nolink
+	thing		so_mk_3									nolink
+	thing		so_mk_4									nolink
+
+	thing		cm_mk_1									nolink
+	thing		cm_mk_2									nolink
+
+	thing		note_cam_1								nolink
+	thing		note_ct_1								nolink
+	thing		note_mk_1								nolink
+
+	thing		headThing								local # thingRef var
+	thing		headLookThing							local # thingRef var
+	thing		camPosThing								local # thingRef var
+	thing		sophasset								local
+	thing		laddasset								local
+
+# ............................ ENGINE REFERENCES ...............................
+
+	sector		commiesector
+
+	surface		sophface
+
+	surface		dismountface
+						
+	surface		ladderface_1							
+	surface		ladderface_2
+	surface		ladderface_3
+	
+	surface		startpushface							mask=0x080 # listens for crate
+	surface		endpushface								mask=0x080 # listens for crate
+
+# ................................. ROUTINES ...................................
+
+	flex		backtoplay								local
+	flex		OpenDoor								local
+	flex		scene									local
+	
+# ................................. VARIABLES ..................................
+			
+	vector		camPos									local
+	
+	flex		in_rotRate								local
+	flex		so_rotRate								local
+
+	flex		duration=1.77							local # define per Derek
+
+	int			curWeapon								local
+	int			lighterweapon=13						local # define
+	
+	int			curcam									local
+	int			cursound1								local
+	int			cursound2								local
+	int			cursound3								local
+
+	int			in_keyTrack1							local
+	int			so_keyTrack1							local
+	int			cm_keyTrack1							local
+	int			ld_keyTrack1							local
+
+	int			in_colltype								local
+	int			liteCollType							local
+
+	int			commietalk=0							local
+	int			doneclimbing=0							local
+	
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player = GetLocalPlayerThing();
+    
+	# no pushing the ground crates
+	ClearThingFlags(grndcrate0, 0x40000000);
+	ClearThingFlags(grndcrate1, 0x40000000);
+	ClearThingFlags(grndcrate2, 0x40000000);
+	
+	# Prep actors...
+	SetThingFlags(indy, 0x80000);
+	SetThingFlags(sophia, 0x80000);
+	SetThingFlags(commie1, 0x80000);
+	SetThingFlags(commie2, 0x80000);
+#	AISetMode(commie2, 0x2000);
+	AISetCutSceneMode(commie1);
+	
+	in_rotRate = GetThingMaxRotVel(indy);
+	so_rotRate = GetThingMaxRotVel(sophia);
+
+	# Prep the set...	
+	ClearSurfaceFlags(ladderface_1, 0x2000);
+	ClearSurfaceFlags(ladderface_2, 0x2000);
+	liteCollType = GetCollideType(worklite_2);
+	in_colltype = GetCollideType(indy);
+	
+	SetCollideType(ladder, 3); # must collide
+	AISetCutSceneMode(indy);
+	AISetCutSceneMode(sophia);
+
+	return;
+
+# ..............................................................................
+
+entered:
+
+	# NOTE: encounter Sophia, part 1
+	
+	If (GetSenderRef() == commiesector && commietalk == 0)
+	{
+		MakeMeStop();
+		StartCutScene(1);
+		commietalk = 1; # once only
+	
+		# music cue alludes to russian presence
+        cursound3 = PlaySoundLocal(russ_cue, 1.0, 1, 0x0, 0);
+
+		TeleportThing(player, note_mk_1);
+	
+		# Cut to shot of room...
+		curcam = GetCurrentCamera();
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraInterpSpeed(2, 2.0);
+		SetCameraFocus(2, note_cam_1);
+		SetCameraSecondaryFocus(2, note_ct_1);
+		SetCurrentCamera(2);
+		SetCameraFOV(50, 0, 0.0);
+		Sleep(0.01);
+		SetCameraFOV(90, 1, 2.0);
+	
+		# Handle the right props...
+		curWeapon = GetCurWeapon(player);
+		if (curWeapon != lighterweapon)
+		{
+			SelectWeapon(player, lighterweapon);
+		}
+				
+		# Indy: "Whoa.  Looks like the commies got here first."
+		PlayVoice(player, in_commies, 1.0, 1); # 2.7s
+
+		# Wrestle assets...
+		ClearThingFlags(sophia, 0x80000);
+		Sleep(1.0);
+		
+		# Restore player-chosen props...
+		if (curWeapon == 0)
+		{
+			DeselectWeaponWait(player);
+		}
+		else if (curWeapon != lighterweapon)
+		{
+			SelectWeapon(player, curWeapon);
+		}
+		Sleep(0.3);
+
+		# Mood music!
+		PlaySoundLocal(sophia_cue, 1.0, 1, 0x0, 0); 
+			
+		# Cut to up-angle on Sophia...
+		SetCameraFocus(2, cam_2);
+		SetCameraSecondaryFocus(2, ct_2);
+		SetCameraFOV(65, 0, 0.0);
+		Sleep(0.01);
+		SetCameraFOV(30, 1, 1.7);
+		
+		# walk Sophia into shot...
+		AISetMoveSpeed(sophia, 1.0);
+		AISetLookThing(sophia, so_mk_1);
+		AISetMoveThing(sophia, so_mk_1, 0);
+
+		# Sophia takes a stand...
+		AIWaitForStop(sophia);
+		so_keyTrack1 = PlayKey(sophia, so_handsONhips, 2, 0x10, 0);
+		PlayKey(sophia, so_handsTOhips, 4, 0x12, 0);
+
+		# Switch actor Indy for player...
+		SetThingFlags(player, 0x80000); # hide player
+		ClearThingFlags(indy, 0x80000); # reveal actor
+		CopyPlayerHolsters(player, indy); # match props	
+		TeleportThing(indy, player);	
+
+		# Sophia: "Hi, Indy.  Welcome to my little hothouse..."
+		cursound1 = PlayVoice(sophia, so_welcome, 1.0, 0);
+		PlayKey(sophia, so_hiwave, 4, 0x12, 0); # this anim has delayed start
+
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		Sleep(1.0); # finish 1st sentence on this shot
+		
+		# move actor and player to final shot pos
+		TeleportThing(indy, in_mkcomEND);
+		TeleportThing(player, in_mkcomEND);
+		WaitForSound(cursound1);   
+
+		# She drops the ladder...
+		StopKey(sophia, so_keyTrack1, 0.0);
+		Sleep(0.5);
+		
+		# ladder unrolls...
+		PlayKey(sophia, so_kickladder, 4, 0x12, 0);
+		PlayKey(ladder, unroll, 4, 0x14, 0);
+		PlaySoundLocal(ladderunroll, 1, 0, 0x0, 0);
+		Sleep(0.5);
+
+ 		# Indy watches...
+		AIEnableHeadTracking(indy, ct_2);	
+		AISetLookThing(indy, ct_2);
+		MoveToFrame(ct_2, 1, 2.5); # num is rate
+		SetCameraFOV(60, 1, 2.3); # slightly different num is time
+		Sleep(2.0);
+
+		# Indy: "Sophia..."
+		AIEnableHeadTracking(indy, sophia);	
+		PlayVoice(indy, in_sophia, 1.0, 0);
+		Sleep(0.5);
+		AIDisableHeadTracking(indy);
+		Sleep(1.0);
+
+		# Make the ladder climbable...
+		SetSurfaceFlags(ladderface_1, 0x2000);
+		SetSurfaceFlags(ladderface_2, 0x2000);
+		SetSurfaceFlags(ladderface_3, 0x2000);
+
+		# Move Sophia back from edge...
+		CopyOrientAndPos(so_mk_2, sophia);
+
+		# no collide ladder
+		SetCollideType(ladder, 0);
+
+		# Clean up...
+		camPosThing = cam_2;
+		call backtoplay;
+	}
+
+	# NOTE: encounter Sophia, part 2
+
+	If (GetSenderRef() == sophface && doneclimbing == 0)
+	{
+		# Prep for cutscene...
+		SetActorFlags(player, 0x200000);
+		StartCutscene(1);
+		curcam = GetCurrentCamera();
+		doneclimbing = 1; # do this scene once only
+   
+		# Prep actor...
+		ClearThingFlags(indy, 0x80000); # summon actor
+		SetThingFlags(indy, 0x10); # but keep him invisible
+		SetCollideType(indy, 0);
+		TeleportThing(indy, in_mk_1);
+		AISetLookThing(indy, sophia);
+		
+		# Switch actor Indy for player...
+		MakeMeStop();
+		Sleep(0.01);	
+		TeleportThing(indy, player);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indy, 0x10); # now show actor
+		CopyPlayerHolsters(player, indy);
+		AISetLookThing(sophia, indy);
+		Sleep(0.1);
+
+		# Cut to Indy after standup...
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, cam_3);
+		SetCameraSecondaryFocus(2, ct_3a);
+		SetCurrentCamera(2);
+		SetCameraFOV(50, 0, 0.0);
+		Sleep(0.01);
+		
+		# Track Indy over to Sophia...
+		SetCameraLookInterp(2, 1); # enable pan & tilt
+		SetCameraInterpSpeed(2, 2.0);
+		AISetMoveSpeed(indy, 1.0);
+		Sleep(0.01);
+		AISetLookThing(indy, sophia);
+		AISetMoveThing(indy, in_mk_2, 0);
+		Sleep(0.5);
+
+		SetCameraSecondaryFocus(2, ct_3b);
+		Sleep(0.5);
+		AISetMoveSpeed(indy, 0.7);
+		MoveToFrame(cam_3, 1, 0.75);
+		SetCameraFOV(40, 1, 1.0);
+		Sleep(1.0);
+		AISetLookThing(sophia, indy);
+
+		#Indy: "Sophia, what are you doing here?"
+		PlayKey(indy, in_ltarmup, 4, 0x12, 0);
+		cursound1 = PlayVoice(indy, in_whatdoing, 1.0, 0); # play early
+		Sleep(0.1);
+		so_keyTrack1 = PlayKey(sophia, so_handsONhips, 2, 0x10, 0);
+		PlayKey(sophia, so_handsTOhips, 4, 0x12, 1);
+		WaitForSound(cursound1);
+
+		# Sophia: "Same thing you are.  I found the door.  Let's go."
+		cursound1 = PlayVoice(sophia, so_sameasyou, 1.0, 0);
+		Sleep(0.5);
+		PlayKey(sophia, so_WaveRT, 4, 0x12, 0);
+		WaitForSound(cursound1);
+
+		# Cut to reverse on Indy over Sophia's shoulder...
+		SetThingFlags(worklite_2, 0x10); # get it out of my sight
+		SetCameraLookInterp(2, 0); # kill interp
+		SetCameraFocus(2, cam_4);
+		SetCameraSecondaryFocus(2, ct_4);
+		SetCameraFOV(40, 0, 0.0);
+
+		# Indy: "Wait!  I'm not looking for a partner..."
+		cursound1 = PlayVoice(indy, in_nopartner, 1.0, 0);
+		PlayKey(indy, in_rtarmup, 4, 0x12, 1);
+		in_keyTrack1 = PlayKey(indy, in_armsAREcrossed, 2, 0x10, 0);
+		PlayKey(indy, in_DOcrossarms, 4, 0x12, 1);
+		WaitForSound(cursound1);
+
+		# Cut back to Sophia...
+		ClearThingFlags(worklite_2, 0x10); # now I like it again
+		SetCameraFocus(2, cam_3);
+		SetCameraSecondaryFocus(2, ct_3b);
+
+		SetCameraFOV(40, 0, 0.0);
+
+		# Sophia: "Who said we're partners..."
+		cursound1 = PlayVoice(sophia, so_whosaid, 1.0, 0);
+		Sleep(1.5);
+
+		# Cut to close-up of Sophia as she completes line, "...don't tell you everything."
+		SetCameraFocus(2, cam_5);
+		SetCameraSecondaryFocus(2, ct_5);
+		SetCameraFOV(25, 0, 0.0);
+		StopKey(sophia, so_keyTrack1, 0.5);
+		StopKey(indy, in_keyTrack1, 0.0); # indy relaxes offscreen
+
+		# TO DO: headshake gesture here
+		Sleep(2.0);
+		PlayKey(sophia, so_headshake, 4, 0x12, 0);
+		WaitForSound(cursound1);
+
+		# Camera follows Sophia to door...
+		SetCameraLookInterp(2, 1); # enable pan & tilt
+		SetCameraPosInterp(2, 1); # enable dolly
+		SetCameraInterpSpeed(2, 3.0);
+		SetCollideType(worklite_2, 0); # cam shouldn't bump lites
+		SetCollideType(worklite_3, 0);	
+		Sleep(0.01);
+		SetThingMaxRotVel(sophia, 250.0);
+		AISetLookThing(sophia, door);
+		AISetMoveSpeed(sophia, 1.0);
+		AISetMoveThing(sophia, so_mk_3, 0);
+		Sleep(0.1);
+		SetCameraFocus(2, cam_6); # dolly past worklites
+		SetCameraSecondaryFocus(2, ct_6a);
+		SetCameraFOV(40, 1, 2.5);
+		Sleep(1.0);
+		
+		# Indy follows...
+		SetThingMaxRotVel(indy, 125.0);
+		AISetLookThing(indy, in_mk_3);
+		AISetMoveSpeed(indy, 1.0);
+		AISetMoveThing(indy, in_mk_3, 0);	
+		AIWaitForStop(sophia);
+
+		# She turns back toward Indy...
+		AISetLookThing(sophia, so_mk_4); # use this mark to align her capture anim
+		Sleep(0.5);
+
+		# Sophia: "Be careful here...I sense danger."
+		cursound1 = PlayVoice(sophia, so_danger, 1.0, 0);
+
+		# TO DO: 'psychic powers' gesture here
+		PlayKey(sophia, so_psychic, 4, 0x12, 0);
+
+		AISetLookThing(indy, sophia);
+		Sleep(0.5);
+		# AIWaitForStop(indy);
+		AISetLookThing(sophia, so_mk_4);
+		WaitForSound(cursound1);
+		
+		# Indy: "I've been around...believe in almost anything...even...you."
+		cursound1 = PlayVoice(indy, in_believeall, 1.0, 0);
+		in_keyTrack1 = PlayKey(indy, in_handsONhips, 2, 0x10, 0);
+		PlayKey(indy, in_handsTOhips, 4, 0x12, 1);
+		Sleep(2.5);
+		PlayKey(indy, in_pushHat, 4, 0x12, 1);
+		WaitForSound(cursound1);
+		StopKey(indy, in_keyTrack1, 0.5);
+
+		# Sophia: "No, not them...something...strange."
+		cursound1 = PlayVoice(sophia, so_strange, 1.0, 0);
+		PlayKey(sophia, so_odd, 4, 0x12, 0);
+		MoveToFrame(cam_6, 1, 0.28);
+		SetCameraInterpSpeed(2, 4.0);
+		Sleep(0.01);
+		SetCameraSecondaryFocus(2, ct_6b);
+		SetCAmeraFOV(35, 1, 4.0);
+		# gestures here
+		WaitForSound(cursound1);
+
+		# Sophia opens the door and is CAPTURED!
+		SetCollideType(commie1, 0);
+		SetCollideType(sophia, 0);
+		ClearThingFlags(commie1, 0x80000);
+		AISetCutsceneMode(commie1);
+		Sleep(0.01);
+		MoveToFrame(ct_6b, 1, 0.35);
+		SetCAmeraFOV(32, 1, 1.0);
+		
+		# music cue for sophia's abduction
+		PlaySoundLocal(russ_bold, 1.0, 1, 0x0, 0);
+
+		so_keyTrack1 = PlayKey(sophia, so_captured, 4, 0x12, 0);
+		cm_keyTrack1 = PlayKey(commie1, cm_grab, 4, 0x12, 0);
+		Sleep(0.47); # 14 nominal anim frames
+		call OpenDoor;
+		Sleep(2.8); # 84 nominal anim frames
+		PlayVoice(sophia, so_indee, 1.0, 0);
+		Sleep(2.5); # wait til sophia & captor are out of view
+
+		# Sophia has disappeared...
+		StopKey(sophia, so_keyTrack1, 0.0);
+		StopKey(commie2, cm_keytrack1, 0.0);
+		SetThingFlags(sophia, 0x80000);
+		SetThingFlags(commie1, 0x80000);
+		DestroyThing(sophia);
+		DestroyThing(commie1);
+
+		# 2nd Soviet steps forward to confront Indy...
+		CopyOrientAndPos(in_mk_4, indy); # final mark
+		ClearThingFlags(commie2, 0x80000);
+		AISetCutsceneMode(commie2);
+		AISetMoveSpeed(commie2, 1.3);
+		AISetLookThing(commie2, indy);
+		AISetMoveThing(commie2, cm_mk_1, 0);
+
+		# Cam retreats to frame both...
+		SetCameraInterpSpeed(2, 2.0);
+		Sleep(0.5);
+		SetCameraFocus(2, cam_7);
+		SetCameraSecondaryFocus(2, commie2); # rare instance using actor as tgt
+		SetCameraFOV(65, 1, 2.0);
+
+		# Soldier: "This is a restricted area!"
+		PlayVoice(commie2, cm_restricted, 1.0, 0);
+		AISetLookThing(commie2, indy);
+		AISetMoveThing(commie2, cm_mk_2, 0);
+		Sleep(2.0);		
+
+		SetCollideType(worklite_2, liteCollType); # back to normal
+		SetCollideType(worklite_3, liteCollType);
+		CopyOrientAndPos(indy, player); # move player to actor's spot
+	#	AIClearMode(commie2, 0x2000); # start bad guy AI
+		AIClearCutSceneMode(commie2);	
+		camPosThing = cam_7;
+
+		call backtoplay;
+	}
+
+	return;
+
+# ...................................................................
+
+OpenDoor:
+
+	Rotate(door, 90, 1, duration);
+
+	# TO DO: set any needed sector visibility changes here
+
+	#PlaySoundThing(dr_open, door, 1, 5, 10, 0);
+
+	return;
+
+# ...................................................................
+
+backtoplay:
+
+	SetThingMaxRotVel(indy, in_rotRate);
+	#SetThingMaxRotVel(sophia, so_rotRate);
+	AIClearCutSceneMode(indy);
+	#AIClearCutSceneMode(sophia);
+	camPos = GetThingPOS(camPosThing); 
+	SetCameraPosition(1, camPos); # prep to swing back to follow-cam
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	Sleep(0.01);
+	SetThingFlags(indy, 0x80000); # hide actor	
+	ClearThingFlags(player, 0x80000); # show player
+	ClearActorFlags(player, 0x200000); # player in control
+	SetCurrentCamera(curcam);
+	ResetCameraFOV(0, 0.0);
+
+	EndCutscene();
+
+	return;
+
+# ...................................................................
+
+end
+
+

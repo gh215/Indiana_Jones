@@ -1,0 +1,92 @@
+# Jones 3D Cog Script
+#
+# gen_SetThingMesh.cog
+#
+# This COG is meant to be used as template only.  Requires a tagged
+# keyframe file to trigger the callback message.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		activated
+message     callback
+message     timer
+
+keyframe	use=in_useitem.key				local
+
+model		sourceModel=hand_in_oilcan.3do	local
+	
+thing      	player							local
+thing      	indy_actor						nolink
+thing      	trigger
+					
+int         handMesh						local
+int         swapRef							local
+
+int			itemNum=81						local
+
+int			bSet=0							local
+		
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	handMesh = GetMeshByName(player, "inrhand");
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+    if (GetCurItem(player) == itemNum)
+	{
+		# Disable player controls and stuff
+		if (MakeMeStop() == -1)
+			return;
+		DeselectWeaponWait(player);
+
+        # Capture thing so we get the callback message
+		CaptureThing(player);
+
+		# Play the tagged keyframe
+		PlayKey(player, use, 5, 0x12, 0);
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+    # Setting
+	if (!bSet)
+	{
+		swapRef = SetThingMesh(player, handMesh, sourceModel, 0);
+    }
+    # Restoring
+	else
+	{
+		RestoreThingMesh(player, swapRef);
+
+		ReleaseThing(player);
+        ClearActorFlags(player, 0x200000);
+	}
+		
+	bSet = 1 - bSet;
+	return;
+
+end
+
+
+

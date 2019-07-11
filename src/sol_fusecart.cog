@@ -1,0 +1,273 @@
+# Jones 3D Cog Script
+#
+# SOL_FuseCart.cog
+#
+# Hey, there's a fuse in there!
+# fuse = 77
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    message     exited
+    message     activated
+    message     pulse
+    
+    thing       player      local
+    thing       fuse        local
+    thing       indy        local
+    thing       door
+    thing       fuse1
+    thing       ghost
+    thing       interpCam
+    
+    surface     standHere
+    surface     orHere
+    
+    template    tplfuse=fusemove            local
+    template    tpl_Indy=indy_sh_actor      local
+    
+    sound       inOpened=inxj103.wav                    local   # ...it opened
+    sound       inSee=inxj001.wav                       local   # This looks interesting
+    sound       snd_Fuse=Inxj191.wav                    local   # a fifty amp fuse.
+    sound       snd_Open=sol_boxfuse_open.wav           local   # temp door open sound
+    #sound       snd_Land=sol_minecar_head_bonk_c.wav    local # temp fuse landing sound
+    
+    cog         talkCog             local
+    cog         hintCog
+    
+    int         done=0              local
+    int         saidIt=0            local
+    int         onIt=0              local
+    int         gotIt=0             local
+    
+    float       playery=0           local
+    float       playerx=0           local
+    
+    vector      camPos              local
+    vector      playerVec           local
+    
+    # ** subroutines **
+    flex        getFuse             local
+    flex        openDoor            local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+    
+    player = GetLocalPlayerThing();
+    
+    if(done == 1) return;
+    
+    # if he's standing in the right orientation; do this
+    else if((GetSenderRef() == standHere) || (GetSenderRef() == orHere))
+    {
+        onIt = 1;
+        SetPulse(0.25);
+    }
+        
+    return;
+
+# ========================================================================================
+
+exited:
+
+    player = GetLocalPlayerThing();
+    
+    if(done == 1) return;
+    
+    else if(GetSourceRef() == player)
+    {
+        if((GetSenderRef() == standHere) || (GetSenderRef() == orHere))
+        {
+            onIt = 0;
+            SetPulse(0.0);
+        }
+    }
+        
+    return;
+
+# ========================================================================================
+
+activated:
+    
+    player = GetLocalPlayerThing();
+    
+    if((GetSenderRef() == door) && (IsGhostVisible(player, door, 30.0)) && (done == 0) && (onIt == 1))
+    {
+        done = 1;
+        Call openDoor;
+    }
+    
+    else if((GetSenderRef() == fuse) && (gotIt == 0))
+    {
+        gotIt = 1;
+        Call getFuse;
+    }
+        
+    return;
+
+# ========================================================================================
+
+openDoor:
+
+    # shut down pulse if player activated from side
+    saidIt = 1;
+    SetPulse(0.0);
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # move ext cam up and around player
+    SetExtCamOffsetToThing(interpCam);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # create indy actor
+    indy = CreateThing(tpl_Indy, player);
+    CaptureThing(indy);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # hide player show indy
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # make indy look at the door
+    AISetLookThing(indy, door);
+    
+    # activate door
+    PlayMode(indy, 60, 0);
+    Sleep(0.3);
+    
+    # open door and drop the fuse
+    MoveToFrame(door, 1, 1.0);
+    PlaySoundThing(snd_Open, door, 1.0, 5, 10, 0);
+    Sleep(0.2);
+    PlayVoice(player, inOpened, 1.0, 0);
+    MoveToFrame(fuse1, 1, 2.5);
+    MoveToFrame(fuse1, 2, 2.5);
+    MoveToFrame(fuse1, 3, 2.5);
+    WaitForStop(fuse1);
+    #PlaySoundThing(snd_Land, fuse1, 0.25, 5, 10, 0);
+    Sleep(0.01);
+    DestroyThing(fuse1);
+    
+    # create item fuse
+    fuse = CreateThing(tplFuse, ghost);
+    CaptureThing(fuse);
+    
+    # take away door collision -- bug
+    SetCollideType(door, 0);
+    
+    # stop any unfinished animations
+    ResetThing(player);
+    
+    Sleep(1.0);
+    
+    # Get the player into position
+    CopyOrientAndPos(indy, player);
+    
+    # hide actor show player
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # restore camera
+    RestoreExtCam();
+    
+    # restore controls to player
+    ClearActorFlags(player, 0x200000);
+    
+    EndCutscene();
+    
+    return;
+
+# ========================================================================================
+
+getFuse:
+
+    # solve hint3
+    SendMessage(hintCog, user0);
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # offset camera
+    SetExtCamOffsetToThing(interpCam);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    Sleep(0.5);
+    
+    # pickup the fuse
+    PlayMode(player, 24, 0);
+    Sleep(0.4);
+    DestroyThing(fuse);
+    
+    # Call the Pickup Lines cog
+    talkCog = GetCogByIndex(0);
+    SendMessage(talkCog, 27);
+    
+    # sleep to wait for talkCog
+    Sleep(1.3);
+    
+    # add fuse to inventory
+    SetInvAvailable(player, 77, 1);
+    ChangeInv(player, 77, 1.0);
+    JonesInvItemChanged(77);
+        
+    # Johnny, tell the player what he's picked up
+    PlayVoice(player, snd_Fuse, 1.0, 1);
+    
+    #Sleep(1.0);
+    
+    # restore camera
+    RestoreExtCam();
+    
+    # restore player contrls
+    ClearActorFlags(player, 0x200000);
+    
+    EndCutscene();
+    
+    # restore door collision -- bug
+    SetCollideType(door, 3);
+    
+    return;
+    
+# ========================================================================================
+
+pulse:
+
+    playerVec = GetThingLVec(player);
+    playery = VectorY(playerVec);
+    playerx = VectorX(playerVec);
+
+    if((saidIt == 0) && (onIt == 1))
+    {
+        if((playerx > 0) && ((playery > -0.7) && (playery < 0.7)))
+        {
+           saidIt = 1;
+           SetPulse(0.0);
+           PlayVoice(player, inSee, 1.0, 0);
+        }
+    }
+        
+    return;
+
+# ========================================================================================
+
+end
+

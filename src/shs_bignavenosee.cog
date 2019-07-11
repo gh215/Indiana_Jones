@@ -1,0 +1,112 @@
+# Jones 3D Cog Script
+#
+# SHS_BigNaveNoSee.cog   Isolates Big Nave sectors for framerate.
+# 
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+
+symbols
+	
+    message	startup
+    message crossed
+    
+   	surface FromBigNaveOn 			# heading towards the CT  
+	surface FromBigNaveOn1 			# from CT roof in case player goes out the big doors
+	surface FromBigNaveOff		    # leaving Clock tower   
+    surface FromCTOn 				# trigger sector from Clock to Big Nave
+    surface FromCTOff	
+    surface FromTRoomOn				# area under statue
+	surface FromTRoomOff
+	surface FromWaterOn				# by the waterfall
+
+
+    sector  FromBigNaveSec
+    sector  FromCTSec0
+  	sector	FromCTSec1
+	sector	FromTRoomSec
+
+	int 	player		local
+
+   
+    
+end
+
+code
+
+startup:
+	
+	player=GetLocalPlayerThing();
+	SetSectorAdjoins(FromCTSec0, 0);
+	SetSectorAdjoins(FromCTSec1, 0);
+	return;
+
+crossed:
+	
+
+	# make sure Indy player is sending message
+	If (GetSourceRef() != player) return;
+
+	# draw sector
+	If (GetSenderRef() == FromCTOn)
+    {
+        Print("draw sector");
+		SetSectorAdjoins(FromCTSec0, 1);
+		SetSectorAdjoins(FromCTSec1, 1);
+    }    
+    
+    If (GetSenderRef() == FromBigNaveOn)
+    {
+        Print("draw sector");
+		SetSectorAdjoins(FromBigNaveSec, 1);
+    }
+    
+	If (GetSenderRef() == FromBigNaveOn1)
+    {
+        Print("draw sector");
+		SetSectorAdjoins(FromBigNaveSec, 1);
+    }
+	
+    
+    If (GetSenderRef() == FromTRoomOn)
+    {
+        Print("draw sector");
+		SetSectorAdjoins(FromTRoomSec, 1);
+	}    
+	
+    If (GetSenderRef() == FromWaterOn)
+    {
+        Print("draw sector");
+		SetSectorAdjoins(FromTRoomSec, 1);
+	}
+
+
+	# don't draw sector 
+	If (GetSenderRef() == FromCTOff )
+    {
+        Print("draw off");
+		SetSectorAdjoins(FromCTSec0, 0);
+		SetSectorAdjoins(FromCTSec1, 0);
+	}
+    
+	If (GetSenderRef() == FromBigNaveOff )
+    {
+        Print("draw off");
+		SetSectorAdjoins(FromBigNaveSec, 0);
+	}
+	
+	If (GetSenderRef() == FromTRoomOff)
+	{
+	   Print("draw off");
+	   SetSectorAdjoins(FromTRoomSec, 0);
+	}    
+	
+	
+
+	return;
+	
+
+
+end
+

@@ -1,0 +1,91 @@
+# Jones 3D Cog Script
+#
+# pyr_pitfall.cog
+#
+# Kills Indy if he falls into the pit while the machine is off.
+#
+# [GGJ] + [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message entered
+message	user1
+
+# surfaces near the dirtmover
+surface	floorSurf1		linkid=1
+surface	floorSurf2		linkid=1
+surface	floorSurf3		linkid=1
+surface	floorSurf4		linkid=1
+surface	floorsurf5		linkid=1
+
+surface	safeTrigger		linkid=1
+
+# sector in front of dirtmover
+sector	unsafeTrigger
+
+# sectors containing the dirtmover
+sector	nearsector1	nolink
+sector	nearsector2	nolink
+
+# sectors far away from the dirtmover
+sector	farsector2	nolink
+sector	farsector3	nolink
+sector	farsector4	nolink
+
+# world things
+thing	minecar		linkid=1
+thing	shovel		linkid=1
+thing	player		local
+
+# variables
+int		deadly=1	local
+end
+
+code
+user1:
+# ---> dirtmover control cog
+
+	# machine on makes floors non-deadly
+	deadly = 0;
+	
+	ClearSectorFlags(nearsector1, 0x40);
+	ClearSectorFlags(nearsector2, 0x40);
+
+	return;
+
+entered:
+# ---> various surfaces and things
+
+	player = GetLocalPlayerThing();
+
+	# if indy gets near horner area by walking, horner area isn't automatically deadly
+	if (GetSenderRef() == safetrigger)
+	{
+		# note: farsector1 removed from cog
+		ClearSectorFlags(farsector2, 0x40);
+		ClearSectorFlags(farsector3, 0x40);
+		ClearSectorFlags(farsector4, 0x40);
+	}
+
+	# if indy gets out of pit, horner area is deadly again
+	if (GetSenderRef() == unsafetrigger)
+	{
+		SetSectorFlags(farsector2, 0x40);
+		SetSectorFlags(farsector3, 0x40);
+		SetSectorFlags(farsector4, 0x40);
+		return;
+	}
+	
+	# if indy is in jeep, kill him
+	if (global2 == 1)
+	{
+		DamageThing(player, 1000, 1, player);
+		return;
+	}
+	
+	return;
+
+end
+

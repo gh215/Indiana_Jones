@@ -1,0 +1,70 @@
+# Jones 3D Cog Script
+#
+# shw_river_thrust.cog
+#
+# River Thrusting Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+        message user0
+        
+        sector  sect0
+        sector  sect1
+        sector  sect2
+        sector  sect3
+        sector  sect4
+        sector  sect5
+        sector  sect6
+        sector  sect7
+        sector  sect8
+        sector  sect9
+        sector  sect10
+        sector  sect11
+        sector  sect12
+        
+        vector  vec0
+        vector  vec1
+        vector  vec2
+        vector  vec3
+        vector  vec4
+        vector  vec5
+        vector  vec6
+        vector  vec7
+        vector  vec8
+        vector  vec9
+
+        
+end
+        
+
+# ========================================================================================
+code
+
+user0:
+        
+        print("river0 user0 received");
+		Setsectorthrust(sect0, vec0, 2);
+        Setsectorthrust(sect1, vec1, 2);
+        Setsectorthrust(sect2, vec2, 2);
+        Setsectorthrust(sect3, vec2, 2);
+        Setsectorthrust(sect4, vec3, 2);
+        Setsectorthrust(sect5, vec4, 2);
+        Setsectorthrust(sect6, vec4, 2);
+        
+        #sluice sector
+        Setsectorthrust(sect7, vec5, 2);
+        
+        Setsectorthrust(sect8, vec6, 2);
+        Setsectorthrust(sect9, vec7, 2);
+        Setsectorthrust(sect10, vec8, 2);
+        Setsectorthrust(sect11, vec9, 2);
+        
+        
+return;
+
+end
+        

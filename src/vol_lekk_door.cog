@@ -1,0 +1,376 @@
+# Jones 3D Cog Script
+#
+# VOL_Lekk_Door.cog
+#
+# This cog will open a door upon whipping the Lekk arm.
+#
+# [CM & RT & HB]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+#.......................... MESSAGES .....................
+	message		startup
+	message		damaged
+	message		callback
+	message		pulse
+	message		entered
+
+#.......................... ACTORS .......................
+	thing		player								local
+	thing		indyActor							
+
+#.......................... ACTOR MARKS ..................
+	thing		endscene_mv							nolink
+
+#.......................... PROPS ........................
+	thing		Lekkanimarm
+	thing		Lekkstrut
+	thing		Lekk                    			nolink
+	thing		door								nolink
+	thing		indy
+	thing		doorSector							local
+	surface		doorfloorSURF						
+
+#.......................... CAMERAS ......................
+	thing		cam1								nolink
+	thing		cam2								nolink
+	thing		cam3								nolink
+	
+	thing		spotCam								nolink	# camera for indy spotting the arm for the first time
+	
+	thing		camrestorepos						nolink
+
+	thing		cam1spot							local
+
+#.......................... CAMERA TARGETS ...............
+	thing		camtarget1							nolink
+	thing		camtarget2							nolink
+	thing		camtarget3							nolink
+
+	thing		spotTarg							local
+	thing		cam1look							local
+
+#.......................... TRIGGERS .....................
+	surface		whipSurf							nolink
+	
+	sector		spotSECT0							linkID=2
+	sector		spotSECT1                           linkID=2
+	sector		spotSECT2                           linkID=2
+
+#.......................... KEYFRAMES ....................
+	keyframe	in_whipit=in_whip_outprobe.key		local
+	keyframe	wh_whipit=WH_whip_outprobe.key		local
+	keyframe	armswing=vol_whip_arm.key			local
+	
+	keyframe	in_hat=0in_figithat_4_4.key			local
+	keyframe	in_brush=0in_stand1_bd_4.key		local
+	keyframe	in_stand4=0in_stand4.key			local
+
+#.......................... MODELS .......................
+	model		whipHand=weap_whip.3do				local
+
+#.......................... SOUNDS .......................
+	sound		arm_start=nub_stonedoor_start_c.wav	local
+	sound		arm_move=nub_2mstep_move_c.wav		local
+	sound		arm_stop=nub_sarc_jewel_turn_c.wav	local
+	
+	sound		statue_move=nub_bull_move1_c.wav	local
+	sound		statue_stop=nub_3mledge_stop_c.wav	local
+	sound		success_cue=mus_shw_meltice.wav		local
+	
+	sound		in_spotarm=INXJ001.wav				local	# "huh. ...interesting..."
+
+	sound		strike=gen_whip_fire.wav			local	# whip crack sound
+
+#.......................... TEMPLATES ....................
+	template	whipTpl=+whip_actor					local
+	template	ghostTpl=ghost						local
+
+#.......................... VARIABLES ....................
+	thing		whipThing							local
+
+	sector		camsector							local
+
+	vector		v_camspot							local
+
+	flex		rotref								local
+
+	int			open=0								local
+	int			curCam								local
+	int			curSound							local
+	int			indyAnim							local
+	int			whipAnim							local
+	int			clue=0								local
+	int			track								local
+
+end
+
+# ==============================================================================
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	
+	doorSector = GetThingSector(door);
+	SetSectorAdjoins(doorSector, 0);
+
+	# hide the animating arm for cutscene
+	SetThingFlags(Lekkanimarm, 0x80000);
+
+    # doorfloorSURF is a move adjoin
+	SetAdjoinFlags(doorfloorSURF, 2);
+	SetAdjoinFlags(GetSurfaceAdjoin(doorfloorSURF), 2);
+
+	return;
+
+# ==============================================================================
+damaged:	# If player hits the arm
+
+	if (open != 0) return;
+
+	if (GetSenderRef() == Lekkstrut)
+	{
+		open = 1;
+		
+		# prep the indy actor
+		ResetCameraFOV(0, 0);
+		curCam = GetCurrentCamera();
+		SetActorFlags(player, 0x200000);
+		StopThing(player);
+
+		# prep the camera
+		#SetExtCamOffsetToThing(cam1);
+		#SetExtCamLookOffsetToThing(camtarget1);
+		#Sleep(2.0);
+
+		# play music
+		PlaySoundLocal(success_cue, 1.0, 0.0, 0x0, 0);
+
+		SetCameraSecondaryFocus(2, camtarget1);
+		SetCameraFocus(2, cam1);
+		SetCameraLookInterp(2, 0);
+		Sleep(0.01);
+		SetCurrentCamera(2);
+		SetCameraFOV(100, 0, 0);
+		Sleep(0.01);
+		SetCameraFOV(80, 1, 2.0);
+
+		# prep indy 
+		#CopyOrientAndPos(player, indy);
+        CopyPlayerHolsters(player, indy); # make sure actor has matching props
+		ClearThingFlags(indy, 0x80000);
+		SetThingFlags(player, 0x80000);
+		AISetLookThing(indy, Lekkstrut); 
+
+		StartCutScene(1);
+
+		# Prep whip
+		whipThing = AttachThingToThingMesh(indy, whipTpl, 15);
+		SetThingMesh(indy, 15, whipHand, 0);
+
+		# Do that whip swing thang...
+		indyAnim = PlayKey(indy, in_whipit, 5, 0x14, 0);		# Indy anim...
+		whipAnim = PlayKey(whipThing, wh_whipit, 5, 0x14, 0);	# Whip anim...
+
+		# clear collision on the door
+		SetCollideType(door, 0);
+	}
+	return;
+
+# ==============================================================================
+callback:
+
+	if (GetSenderRef() != indy) return;
+
+	if (GetParam(1) == 23)
+    {
+        PlaySoundLocal(strike, 1.0, 0.0, 0x0, 0);
+		
+		# Stop animations
+		StopKey(indy, indyAnim, 0);
+		StopKey(whipThing, whipAnim, 0);
+
+
+		# Close shot of the arm...
+		SetCameraSecondaryFocus(2, camtarget2);
+		SetCameraFocus(2, cam2);
+		
+		# hide indy actor
+        SetThingFlags(indy, 0x80000);
+		
+        # swap in correct arm model	 and animate it
+		SetThingFlags(Lekkstrut, 0x10);
+		ClearThingFlags(Lekkanimarm, 0x80000);
+		SetPulse(0.1);	# some screenshake
+		
+		ResetCameraFOV(0, 0);
+		Sleep(0.01);
+		SetCameraFOV(80, 1, 2.0);
+
+		# Restore the whip
+		DetachThingMesh(whipThing);
+		SetWeaponModel(indy, 2);
+        
+		PlayKey(Lekkanimarm, armswing, 4, 0x14, 0);
+		# arm move sounds
+		PlaySoundLocal(arm_start, 1, 0, 0x0,0);
+		curSound = PlaySoundLocal(arm_move, 1, 0, 0x1,0);
+
+		# stop the arm sfx
+		Sleep(1.5);
+		StopSound(curSound, 0.0);
+		SetPulse(0);
+		PlaySoundlocal(arm_stop, 1, 0, 0x0,0);
+		Sleep(1.5);
+										    
+		# hide  lekkanimarm
+		SetThingFlags(Lekkanimarm, 0x80000);
+		ClearThingFlags(Lekkstrut, 0x10);
+		
+		# new camera looks from rotating statue down to opening door
+		SetCameraSecondaryFocus(2, camtarget3);
+		SetCameraFocus(2, cam3);
+		ResetCameraFOV(0, 0);
+		SetCameraFOV(80, 1, 2.0);
+		#SetPulse(0.1);
+		SetSectorAdjoins(doorSector, 1);
+		
+		# open door, move camtarget, move camera
+		MoveToFrame(door, 1, 1.5);
+		SetPulse(0.1);
+
+		# actor watches
+		AISetLookThing(indy, door);
+		WaitForStop(door);
+		SetPulse(0);
+
+        # doorfloorSURF becomes no move adjoin
+		ClearAdjoinFlags(doorfloorSURF, 2);
+		ClearAdjoinFlags(GetSurfaceAdjoin(doorfloorSURF), 2);
+		
+			Sleep(1.0);
+		SetThingFlags(indy, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		
+		# restore the camera
+		TeleportThing(player, endscene_mv);
+		JumpToFrame(Lekkstrut, 1, GetThingSector(Lekkstrut));
+
+		SetCameraPosition(1, GetThingPos(camrestorepos));
+		SetCurrentCamera(1);
+		SetCameraFOV(90, 0, 0);
+
+		# Clear whip surface flags -- no more aiming
+		ClearSurfaceFlags(whipSurf, 0x10000000);
+		
+        # Clear Whipable flags from lekkstrut
+		ClearThingFlags(Lekkstrut, 0x80000000);
+		ClearThingFlags(Lekkstrut, 0x8);
+
+		# Set AF_NOTARGET flag
+		SetActorFlags(Lekkstrut, 0x100000);
+		
+		ClearActorFlags(player, 0x200000);
+        ClearThingFlags(player, 0x80000);
+        EndCutScene();
+	}
+	return;
+
+# ==============================================================================
+pulse:
+
+	SetPOVShake('0.0 0.0 0.005', '0.0 0.0 0.005', 80.0, 0.80);
+	return;
+
+# ==============================================================================
+entered:
+
+	If ((GetSenderID() != 2) && (GetSourceRef() != player)) return;
+	If (clue != 0) return;
+	
+	clue = 1;
+
+    # Prep...
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutScene(1);
+	CopyPlayerHolsters(player, indyActor);
+	TeleportThing(indyactor, player);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyActor, 0x80000);
+	AISetCutSceneMode(indyActor);
+
+    # set rotvel and actor look at statue
+	rotref=(GetThingMaxRotVel(indyActor));
+	SetThingMaxRotVel(indyActor, 150);
+	AISetLookThing(indyActor, Lekk);
+
+	# Make target...
+	v_camspot = VectorAdd(VectorTransformToOrient(player, '0.0 0.03 0.0'), GetThingPos(player));
+	camsector = FindNewSectorFromThing(player, v_camspot);
+	spotTarg = CreateThingAtPos(ghostTpl, camsector, v_camspot, '0 0 0');
+	CaptureThing(spotTarg);
+
+	# Slew cam aside...
+	cam1spot = CreateThing(ghostTpl, player);
+	CaptureThing(cam1spot);
+	cam1look = CreateThing(ghostTpl, player);
+	CaptureThing(cam1look);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 1.0);
+	Sleep(0.01);
+
+	SetCameraFocus(2, spotCam);
+	SetCameraSecondaryFocus(2, spotTarg);
+	SetCameraFOV(60, 1, 1.0);
+
+	# play indy's anims and voice line
+	track = PlayKey(indyActor, in_Stand4, 2, 0x0, 0);
+	PlayKey(indyActor, in_brush, 4, 0x12, 1); # 26x
+
+	PlayVoice(indyActor, in_spotarm, 1.0, 0);
+	PlayKey(indyActor, in_hat, 4, 0x12, 0);
+    Sleep(1.0);
+
+	# move camera focus object up to strut
+	SetCameraInterpSpeed(2, 3.5);
+	Sleep(0.1);
+	
+	SetCameraSecondaryFocus(2, Lekkstrut);
+    SetCameraFOV(25, 1, 3.5);
+	Sleep(4.5);
+
+    # put the player at actors' position, clear actor, show player
+	TeleportThing(player, indyactor);
+	AIClearCutSceneMode(indyActor);
+	ClearThingFlags(player, 0x80000);
+	StopKey(indyActor, track, 0);
+	SetThingFlags(indyActor, 0x80000);
+
+	# Restore the cam, end the scene
+	SetCameraPosition(curCam, GetThingPos(spotCam));
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+
+return;
+	
+end
+
+
+

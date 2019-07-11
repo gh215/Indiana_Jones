@@ -1,0 +1,194 @@
+# Jones 3D Cog Script
+#
+# weap_AILaser.cog
+#
+# Generic Weapon Class Cog for AI Laser fire. Individual AI's
+# can set a customized version of this in their weapon template.
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		touched
+message		removed
+
+# ************************* SUBROUTINES *************************
+flex	GetBulletAndLaserRef							local
+flex	CreateImpactGlow								local
+
+# ************************* TEMPLATES ***************************
+template	tpl_laserGlow=redflash						local
+template	tpl_laserHit=+robot_blast					local
+material	mat_beam=gen_a4sfx_rbbeam_b.mat				local
+material	mat_hit=gen_a4sprite_rbblast.mat			local
+
+# ************************* CUSTOM PARAMETERS *******************
+vector		vec_glowStartSize							local
+vector		vec_glowEndSize								local
+
+# ************************* MISC LOCAL VARS *********************
+thing		t_shooter									local
+thing		t_victim									local
+thing		t_bullet									local
+thing		t_LaserGlow									local
+thing		t_beam										local
+flex		f_beamSize									local
+flex		f_beamTime									local
+
+thing		t_glowImpact								local
+int			b_hitThing									local
+vector		vec_pos										local
+vector		vec_dir										local
+
+end
+
+
+# ===================================================================
+code
+
+# ...................................................................
+startup:
+
+	vec_glowStartSize	= VectorSet(0.2, 0.2, 0.4);
+	vec_glowEndSize		= VectorSet(0.5, 0.5, 0.8);
+	b_hitThing			= 0;
+
+	return;
+
+
+# ...................................................................
+fire:
+
+	t_shooter	= GetSourceRef();
+	t_bullet	= GetSenderRef();
+
+	if ( t_bullet < 0 ) return;											# Bad bullet?  Bail...
+
+	f_beamTime	= GetLifeleft(t_bullet);								# Beam lifetime is lifetime of bullet
+	f_beamSize	= GetThingMoveSize(t_bullet);							# Beam size is 5 * size of bullet
+	f_beamSize	= 5 * f_beamSize;
+
+	vec_pos		= VectorAdd( GetThingPos(t_shooter), VectorTransformToOrient(t_shooter, GetThingFireoffset(t_shooter)) );
+
+	t_LaserGlow	= CreateThingAtPos(tpl_laserGlow, FindNewSectorFromThing(t_shooter, vec_pos), vec_pos, '0 0 0');
+	if ( t_LaserGlow > -1 )
+	{
+		SetLifeLeft(t_LaserGlow, f_beamTime);
+		AnimateSpriteSize(t_LaserGlow, vec_glowStartSize, vec_glowEndSize, f_beamTime);
+	}
+
+	t_beam = CreatePolylineThing(t_bullet, t_LaserGlow, '0 0 0', mat_beam, f_beamSize, f_beamSize, f_beamTime);
+	if ( t_beam > -1 )
+	{
+		SetThingUserData(t_bullet, t_beam);								# Save off beam handle
+		AttachThingToThingEx(t_beam, t_bullet, 0x08);
+
+		PlaySoundClass(t_bullet, 106);									# Play a SITHSOUNDCLASS_FIRE1 sound on bullet
+	}
+
+	return;
+
+
+# ...................................................................
+touched:
+
+	t_victim = GetSourceRef();
+
+	call GetBulletAndLaserRef;
+
+	if ( t_beam > -1 )														# Attach beam to victim
+	{
+		vec_pos = VectorSet( 0, 0, VectorZ(GetThingEyeOffset(t_victim))/2 );
+		vec_pos = VectorAdd(GetThingPos(t_victim), vec_pos);
+
+		SetThingPosEX(t_beam, vec_pos, GetThingSector(t_victim));
+		AttachThingToThingEx(t_beam, t_victim, 0x08);
+	}
+
+	SetThingUserData(t_bullet, 0);											# bullet forgets beam handle
+
+	b_hitThing = 1;
+	call CreateImpactGlow;
+
+	return;
+
+
+# ...................................................................
+removed:
+
+	call GetBulletAndLaserRef;
+
+	if ( (t_bullet > -1) && (t_beam > -1) )									# Extend beam to final bullet pos
+	{
+		SetThingPosEX(t_beam, GetThingPos(t_bullet), GetThingSector(t_bullet));
+		call CreateImpactGlow;
+	}
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+GetBulletAndLaserRef:
+
+	t_bullet = GetSenderRef();
+	if ( (t_bullet > -1) && (GetThingType(t_bullet) == 3) )					# Check for SITH_THING_WEAPON
+	{
+		t_beam = GetThingUserData(t_bullet);
+		if ( (t_beam > 0) && (GetThingType(t_beam) == 14) )					# Check for SITH_THING_POLYLINE
+		{
+			return;
+		}
+	}
+	
+	t_beam = -1;
+
+	return;
+
+
+# ...................................................................
+# t_bullet and possibly t_victim & vec_pos must be initialized!
+# ...................................................................
+CreateImpactGlow:
+
+	if ( b_hitThing == 1 )
+	{
+		t_glowImpact = CreateThingAtPos(tpl_laserHit, GetThingSector(t_victim), vec_pos, '0 0 0');
+	}
+	else
+	{
+		t_glowImpact = CreateThingAtPos(tpl_laserHit, GetThingSector(t_bullet), GetThingPos(t_bullet), '0 0 0');
+	}
+
+	if ( t_glowImpact > -1 )
+	{
+#		f_beamTime = GetLifeLeft(t_bullet);
+#		SetLifeLeft(t_glowImpact, f_beamTime);
+#		MaterialAnim(mat_hit, 10, 1);
+
+#		vec_dir = VectorSet( VectorX(vec_glowStartSize)* 0.5, VectorY(vec_glowStartSize) * 0.5, VectorZ(vec_glowStartSize) );
+#		vec_pos = VectorSet( VectorX(vec_glowEndSize)* 0.5, VectorY(vec_glowEndSize) * 0.5, VectorZ(vec_glowEndSize) );
+#		AnimateSpriteSize(t_glowImpact, vec_dir, vec_pos, f_beamTime);
+
+		if ( b_hitThing == 1 )
+		{
+			AttachThingToThingEx(t_glowImpact, t_victim, 0x08);
+		}
+	}
+
+	b_hitThing = 0;
+
+	return;
+
+
+# ===================================================================
+end

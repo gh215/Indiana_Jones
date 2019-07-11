@@ -1,0 +1,31 @@
+# Jones 3D Cog Script
+#
+# actor_Monkey.cog
+#
+# [PKM]
+#
+# Make the monkey absorb all damage except explosions.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		damaged
+
+end
+
+# ===================================================================
+
+code
+
+damaged:
+
+	if (GetParam(1) != 4)
+	{
+		ReturnEx(0);
+	}
+	return;
+end
+

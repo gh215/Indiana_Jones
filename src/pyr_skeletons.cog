@@ -1,0 +1,70 @@
+# Jones 3D Cog Script
+#
+# pyr_skeletons.cog
+#
+# light up the skeletons in a given area
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ==============================================================================
+
+symbols
+message	startup
+
+thing	skeleton0	nolink
+thing	skeleton1	nolink
+thing	skeleton2	nolink
+thing	skeleton3	nolink
+thing	skeleton4	nolink
+thing	skeleton5	nolink
+thing	skeleton6	nolink
+thing	skeleton7	nolink
+thing	skeleton8	nolink
+thing	skeleton9	nolink
+thing	skeleton10	nolink
+thing	skeleton11	nolink
+thing	skeleton12	nolink
+thing	skeleton13	nolink
+thing	skeleton14	nolink
+thing	skeleton15	nolink
+thing	skeleton16	nolink
+thing	skeleton17	nolink
+thing	skeleton18	nolink
+thing	skeleton19	nolink
+
+flex	arr=0.0
+flex	gee=0.0
+flex	bee=0.0
+end
+
+# ========================================================================================
+
+code
+startup:
+#	sleep(120);	
+	sleep(1);	
+
+	SetThingLight(skeleton0, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton1, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton2, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton3, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton4, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton5, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton6, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton7, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton8, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton9, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton10, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton11, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton12, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton13, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton14, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton15, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton16, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton17, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton18, VectorSet(arr, gee, bee), .001, .01);
+	SetThingLight(skeleton19, VectorSet(arr, gee, bee), .001, .01);
+	return;
+end
+

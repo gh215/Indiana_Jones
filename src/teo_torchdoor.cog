@@ -1,0 +1,83 @@
+# Jones 3D Cog Script
+#
+# gen_torchlight.cog
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message     activate
+message     startup
+
+thing       torchobj0       linkid=2
+thing       torchobj1       linkid=2
+thing       door0
+thing       campos0
+thing       camera0                         local
+thing       player                          local
+
+int         lit0=0                          local
+int         lit1=0                          local
+int         count=0                         local
+int         doorloop                        local
+
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    player = GetLocalPlayerThing();
+	return;
+
+# ........................................................................................
+activate:
+    if ((GetSenderRef() == torchobj0) && (GetCurWeapon(player) == 13) && (lit0 == 0))
+	{
+        print("lit torch0");
+	    lit0=1;
+        count=count + 1;
+	}
+    
+    if ((GetSenderRef() == torchobj1) && (GetCurWeapon(player) == 13) && (lit1 == 0))
+	{
+        print("lit torch1");
+	    lit1=1;
+        count=count + 1;
+	}
+    
+    if (count == 2)
+    {
+        Sleep(1);
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        StartCutscene(1);
+        SetCameraFocus(0, campos0);
+        SetCurrentCamera(0);
+        MoveToFrame(campos0, 1, 1);
+        MoveToFrame(door0, 1, 1);
+        WaitForStop(door0);
+        Sleep(1);
+        SetCurrentCamera(1);
+        ClearActorFlags(player, 0x200000);
+        EndCutscene(); 
+        
+    }
+	return;
+        
+# ........................................................................................
+        
+end
+
+
+
+
+
+
+

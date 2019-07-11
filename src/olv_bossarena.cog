@@ -1,0 +1,196 @@
+# Jones 3D Cog Script
+#
+# olv_bassarena.cog
+#
+# Cog to lower snake idol into boss arena.
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+	message	startup
+	message	activated
+	message	entered
+	message	pulse
+	
+	thing		totem1
+	thing		fallingpos						nolink
+	thing		idol
+	thing		campos						nolink
+	thing		lookit						nolink
+	thing		actorlook						nolink
+	thing		player						local
+	int		stepped=0 						local
+	int		curcam						local
+	int		sndplay						local
+	int		vibe							local
+	int		mus1_played=0					local
+	int		mus1							local
+	sound		stepsnd=inxj007.wav				local	#whoa!
+	sound		stopsnd=inxj048.wav				local	#why am i getting this creepy feeling?
+	sound		totemsnd=olv_quetzdoor_move_c.wav		local
+	sound		totemstop=olv_quetzdoor_stop_c.wav		local
+	sound		foundSnd=INXJ151.wav				local
+	sound		ahaSnd=INXJ147.wav				local # Aha...
+	sound		music0=mus_gen_awesome2.wav			local
+#	sound		music0=mus_gen_danger1.wav			local
+	sound		music1=mus_aet_pocket_teo.wav			local
+	cog		hints
+	vector	posoffset						local
+	vector	angoffset						local
+	vector	v_targetpos						local
+
+	#---------- Hal's Actor stuff ---------
+	thing       indyactor      				      local
+	template    tpl_Indy=indy_sh_actor				local
+	sector	totem_top
+
+end
+
+# -------------------------------------------------------------------
+code
+
+startup:
+	player = GetLocalPlayerThing(); 
+	SetThingLight(totem1, '0.6 0.6 0.5', 0.01, 0.01);
+	return;
+
+entered:
+	if(GetSenderRef() == totem_top)
+	{
+	if(mus1_played == 1) return;
+	mus1_played=1;
+	mus1=PlaySoundLocal(music1, 1.0, 0.0, 0x0, 0);
+	}
+	return;
+
+activated:
+	if((getsenderref() == idol) && (stepped == 0))
+	{
+	stepped = 1;
+	curCam = GetCurrentCamera();
+	StartCutscene(1);
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+	DeselectWeaponWait(player);
+	PlayVoice(player, ahaSnd, 1.0, 0);
+
+	# ----- Set Cam Offset ---------
+    if (Rand() < 0.5)
+	{
+        SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+        SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 0.0');
+
+      PlayMode(player, 60, 1);
+	DestroyThing(idol);
+
+	# ----- Add Gold idol ---------
+	ChangeInv(player, 36, 100.0); # RT: Gold idol is worth 100
+	SetInvAvailable(player, 36, 1);
+	JonesInvItemChanged(35);
+	Sleep(1.0);
+	PlayVoice(player, foundSnd, 1.0, 0);
+
+	# ----- Reset Camera ----------
+	RestoreExtCam();
+
+	#--------------------------------------------------
+	#	Start descent into temple
+	#--------------------------------------------------
+	StopSound(mus1, 0.5);
+	SetPulse(0.1);
+	Sleep(1.0);
+	SendMessage(hints, user6);    # hint solved.
+		indyactor = CreateThing(tpl_Indy, player);
+		CaptureThing(indyactor);
+		CopyPlayerHolsters(player, indyactor);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indyactor, 0x80000);
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, lookit);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCurrentCamera(2);
+	SetCameraFOV(30, 0, 0);
+	SetCameraFOV(90, 1, 9);	
+		TeleportThing(indyactor, fallingpos);
+		AttachThingToThing(lookit, indyactor);
+		AISetLookThing(indyactor, actorlook);
+
+	MoveToFrame(campos, 1, 0.9);
+	Movetoframe(totem1, 1, 1);
+	sndplay = PlaySoundThing(totemsnd, totem1, 0.8, 20, 55, 1);
+	sleep(0.5);
+	SetPulse(0.0);
+		PlayVoice(indyactor, stepsnd, 1.0, 0);
+	WaitForStop(totem1);
+	StopSound(sndplay, 0.01);
+		TeleportThing(player, indyactor);
+
+	# Establish a camera position near Indy and prep follow-cam...			
+	v_targetpos =
+		VectorAdd(VectorTransformToOrient(player, '-0.25 -0.1 0.15'), GetThingPos(player));	
+	SetCameraPosition(1, v_targetpos);
+	sleep(0.01);
+
+	PlaySoundThing(totemstop, totem1, 0.8, 20, 55, 0);
+	ClearThingFlags(player, 0x80000);
+	DestroyThing(indyactor);
+	SetCurrentCamera(curcam);
+	sleep(1.5);
+	PlayVoice(player, stopsnd, 1.0, 1);
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	}
+	return;
+
+pulse:
+	vibe = RandBetween(1, 4);
+	if (vibe == 1)
+	{
+		posOffset = '-0.005 0.00 -0.001'; 
+		angOffset = '0.00 -0.001 0.001';
+	}
+	if (vibe == 2)
+	{
+		posOffset = '0.005 -0.002 0.001';
+		angOffset = '0.001 0.00 -0.001';
+	}
+	if (vibe == 3)
+	{
+		posOffset = '0.002 0.002 -0.002';
+		angOffset = '-0.001 0.002 -0.002';
+	}
+	if (vibe == 4)
+	{
+		posOffset = '-0.001 0.00 0.002';
+		angOffset = '0.00 0.00 0.001';
+	}
+	vibe = RandBetween(1, 3);
+	if (vibe == 1)
+	{
+		SetPulse(0.05);
+	}
+	if (vibe == 2)
+	{
+		SetPulse(0.1);
+	}
+	if (vibe == 3)
+	{
+		SetPulse(0.15);
+	}
+	SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+	return;
+
+
+end
+

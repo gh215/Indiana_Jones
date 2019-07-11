@@ -1,0 +1,111 @@
+# Jones 3D Cog Script
+#
+# gen_FallingDebris.cog
+#
+# debris = place a ghost object in the center of your room and put it near the ceiling.
+# clutter = place a ghost object in the center of the room at floor level.
+#
+# turn on this cog from another cog with SendMessage(cogname, user0);
+# turn off this cog from another cog with SendMessage(cogname, user1);
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     user0
+    message     user1
+    message     pulse
+    message     timer
+    
+    thing       debris              # the junk that falls
+    thing       clutter             # the junk left on the floor
+    
+    thing       rocks               local
+    thing       scraps              local
+    
+    sound       sndFalling=gen_falling_debris_c.wav     local   # falling rocks
+    
+    template    debris0=stnshrapa_nc_ns         local   # large debris
+    template    debris1=stnshrapbm_nc_ns        local   # medium debris
+    template    debris2=stnshrapcs_nc_ns        local   # small debris
+    template    clutter0=stnshrpa               local   # large clutter
+    template    clutter1=stnshrpbm              local   # medium clutter
+    template    clutter2=stnshrpcs              local   # small clutter
+    
+    vector      vecPos              local
+    vector      rocksVel            local
+    
+    int         deb                 local
+    int         clut                local
+    int         sound1              local
+    
+    int         numDebris           # how many falling particles to generate w/each pulse.
+    int         numClutter          # number of clutter scraps to leave lying on the floor
+                                    # set numClutter to 0 for none.
+    
+    flex        xVal                # x = width of room
+    flex        yVal                # y = length of room
+    flex        pulseTime=0.25      # duh
+    flex        minSndDist          # min distance for debris sfx
+    flex        maxSndDist          # max distance for debris sfx
+    flex        sndVol              # duh
+    
+end
+
+# ========================================================================================
+
+code
+
+user0:
+
+    SetPulse(pulseTime);
+    SetTimer(pulseTime+1.0);
+    sound1 = PlaySoundThing(sndFalling, debris, sndVol, minSndDist, maxSndDist, 0x81);
+    return;
+    
+# ========================================================================================
+
+user1:
+
+    SetPulse(0.0);
+    StopSound(sound1, 0.0);
+    return;
+
+# ========================================================================================
+
+pulse:
+    
+    SetPulse(0.0);
+    for(deb=0; deb<numDebris; deb=deb+1)                                                        	            
+    {                                                                                    	            
+        vecPos = VectorSet(rand()*xVal, rand()*yVal, 0.0);
+        rocks = CreateThingAtPos(debris0[RandBetween(0, 2)], GetThingSector(debris), VectorAdd(GetThingPos(debris), VectorAdd('-0.25 -0.25 0.0', vecPos)), '0 0 0');
+        rocksVel = VectorSet(0, 0, 0.01);
+        SetThingVel(rocks, VectorScale(rocksVel, 0.7));
+    }
+    SetPulse(pulseTime);
+    
+    return;
+
+# ========================================================================================
+
+timer:
+
+    if(numClutter == 0) return;
+    
+    for(clut=0; clut<numClutter; clut=clut+1)                                                        	            
+    {                                                                                    	            
+        vecPos = VectorSet(rand()*xVal, rand()*yVal, 0.0);
+        scraps = CreateThingAtPos(clutter0[RandBetween(0, 2)], GetThingSector(debris), VectorAdd(GetThingPos(clutter), VectorAdd('-0.25 -0.25 0.0', vecPos)), '0 0 0');
+        Sleep(rand()+0.5);
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

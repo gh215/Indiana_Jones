@@ -1,0 +1,87 @@
+# Jones 3D Cog Script
+#
+# PRU_exteriorambient.cog
+#
+# Plays random sounds at random locations
+#
+# [DS] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	pulse
+	message	startup
+	message	crossed
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+	thing		soundPos2		nolink
+	thing		soundPos3		nolink
+	thing		soundPos4		nolink
+	thing		soundPos5		nolink
+	thing		soundPos6		nolink
+	thing		soundPos7		nolink
+	thing		soundPos8		nolink
+	thing		soundPos9		nolink
+	thing		soundPos10		nolink
+	thing		soundPos11		nolink
+	thing		soundPos12		nolink
+	thing		soundPos13		nolink
+	thing		soundPos14		nolink
+	thing		soundPos15		nolink
+	thing		soundPos16		nolink
+	thing		soundPos17		nolink
+	thing		soundPos18		nolink
+	thing		soundPos19		nolink
+	thing		soundPos20		nolink
+	thing		soundPos21		nolink
+	thing		soundPos22		nolink
+
+	sound		wav0=olv_outside_a01.wav		local
+	sound		wav1=olv_outside_a02.wav		local
+	sound		wav2=olv_outside_a03.wav		local
+	sound		wav3=olv_outside_a04.wav		local
+	sound		wav4=olv_outside_a05.wav		local
+	sound		wav5=olv_outside_a06.wav		local
+	sound		wav6=olv_outside_a07.wav		local
+	sound		wav7=olv_outside_a08.wav		local
+	
+	surface		watertunnel
+	
+	float	minDist=5				local
+	float	maxDist=35				local
+	float	volume=0.8				local
+	int		sndnum 		 			local
+	int		numsounds=8				local
+	int		numlocl=23				local		
+	int		cnt						local
+
+end
+
+code
+
+# ........................................................................................
+
+startup:
+
+	setpulse(1.0);
+	return;
+
+# ........................................................................................
+
+pulse:
+	sndnum = rand()*numsounds;
+	cnt = rand()*numlocl;
+	PlaySoundThing(wav0[sndnum], soundPos0[cnt], volume, minDist, maxDist, 0);
+	return;
+# ........................................................................................
+crossed:
+if (GetSenderRef() == waterTunnel)
+{
+	SetPulse(0.0);
+}
+return;
+
+end
+

@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# vol_Light-All_sound.cog
+#
+# This runs the generator sound for the light-alls.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+#...................MESSAGES...................
+	message  	user3
+
+#...................COGS...................
+	cog			finalcog
+
+#...................SECTOR...................
+	sector		sndSECT0								
+								
+	
+#...................SOUNDS...................
+	sound		thesound			
+
+#...................VARIABLES...................
+	int			faderun							local
+
+
+end
+
+# ========================================================================================
+code
+
+
+user3:
+
+	If (GetSenderRef() != finalcog) return;
+
+		SectorSound(sndSECT0, thesound, 0.0);
+
+
+return;
+	
+# ========================================================================================
+
+
+end
+
+

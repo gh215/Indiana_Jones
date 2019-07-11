@@ -1,0 +1,29 @@
+# Jones 3D Cog Script
+#
+# pyr_hangcam.cog
+#	
+# Pull camera back when player hangs from a ledge
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	entered
+message	exited
+
+surface	hangface
+
+end
+
+code
+entered:
+	SetExtCamOffset('0.25 -0.25 -0.1');
+	SetCameraFOV(100, 1, 1);
+	return;
+
+exited:
+	SetCameraFOV(90, 1, 1);
+	RestoreExtCam();
+	return;

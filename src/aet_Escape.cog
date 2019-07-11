@@ -1,0 +1,537 @@
+# Jones 3D Cog Script
+#
+# aet_Escape.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+message     startup
+message		user0
+message		user1
+message 	pulse
+message		crossed
+message		entered
+message		timer
+
+thing		player								local			
+thing		por												# (temp)
+
+surface		trigger0										# Trigger adjoin for first colomn crash.
+surface		trigger1										# Trigger adjoin for right after the steps.
+surface		trigger2										# Trigger adjoin for first block.
+surface		trigger3										# Trigger for second block in first room.
+surface		trigger4										# Trigger for debris at stair jump.
+surface		trigger5										# Trigger for debris at begining of huge room.
+surface		trigger6										# Trigger for debris at middle of huge room.
+surface		trigger7										# Trigger for debris at second middle of huge room.
+surface		trigger8										# Trigger for debris at last set of steps.		
+
+surface		closeadjoin										# Adjoin to close off AET!
+
+sector		finalTrigger									# Trigger to stop music and cog.
+
+thing		stat_colmA										# Static colomn 3dos.
+thing		stat_colmB
+thing		stat_colmC
+
+thing		mov_colmA										# Moving colomns for crashing down first room.
+thing		mov_colmB
+thing		mov_colmC
+thing		mov_colmD										# Colomns for begining of huge room.
+thing		mov_colmE
+thing		mov_colmF										# Colomns for middle of huge room.
+thing		mov_colmG
+thing		mov_colmH
+thing		mov_colmI										# Colomns for third section of huge room.
+thing		mov_colmJ
+
+thing		blockA											# First regular block.
+thing		blockB											# Second regular block.
+
+cog			debrisCogA										# Tim's debris cog.
+cog			debrisCogB										# Debris by itself after steps.
+cog			debrisCogC										# Debris with first regular block.
+cog			debrisCogD										# Debris with second regular block.
+cog			debrisCogE										# Debris by itself at stair jump hole.
+cog			debrisCogF										# Debris begining of huge room.
+cog			debrisCogG										# Debris middle of huge room.
+cog			debrisCogH										# Debris second middle of huge room.
+cog			debrisCogI										# Debris third middle of huge room.
+cog			debrisCogJ										# Debris last set of steps.
+
+sound       sfx_Block=sol_block_crash_c.wav     local   	# Landing blocks sound.
+#sound		musicA=mus_enddemo.wav				local		# Looping music for escape.
+sound		musicB=mus_nub_annubisarm.wav		local		# Looping music for escape.
+sound       sndFalling=gen_falling_debris_c.wav local       # Falling rocks.
+
+int         vibe                				local		# Int for random number of shakes.
+int			shake								local		# Int for the amount of shake.
+int			goodToGo=0							local		# Makes sure that it is time to begin escape.
+int			timerGo=0							local
+int			rumbleChannel						local
+#int			musicChannelA						local		# Music channel for stoping it at end.
+
+flex		rumbleWait=5.0						local
+flex		rumbleStop=1.0						local
+
+vector      posOffset           				local		
+vector      angOffset           				local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+//SetThingFlags(por, 0x80000); # (temp)
+
+player = GetLocalPlayerThing();
+
+# Reset the adjoin to invisable.
+SetFaceGeoMode(closeadjoin,0);
+
+# Hide mov_colmX to prep for escape later.
+SetThingFlags(mov_colmA, 0x80000);
+SetThingFlags(mov_colmB, 0x80000);
+SetThingFlags(mov_colmC, 0x80000);
+
+# Give 3dos no collision.
+SetCollideType(mov_colmF, 0);
+SetCollideType(mov_colmG, 0);
+SetCollideType(mov_colmH, 0);
+SetCollideType(mov_colmI, 0);
+//SetCollideType(mov_colmJ, 0);
+
+# Light Colomns et al.
+SetThingLight(mov_colmA, '0.3 0.3 0.3', 0.01, 0.1);
+SetThingLight(mov_colmB, '0.3 0.3 0.3', 0.01, 0.1);
+SetThingLight(mov_colmC, '0.3 0.3 0.3', 0.01, 0.1);
+SetThingLight(mov_colmD, '0.3 0.3 0.3', 0.01, 0.1);
+SetThingLight(mov_colmE, '0.3 0.3 0.3', 0.01, 0.1);
+SetThingLight(mov_colmF, '0.3 0.3 0.3', 0.01, 0.1);
+SetThingLight(mov_colmG, '0.3 0.3 0.3', 0.01, 0.1);
+SetThingLight(mov_colmH, '0.3 0.3 0.3', 0.01, 0.1);
+SetThingLight(mov_colmI, '0.3 0.3 0.3', 0.01, 0.1);
+SetThingLight(mov_colmJ, '0.3 0.3 0.3', 0.01, 0.1);
+
+//call user0; # (temp)
+//call user1; # (temp)
+
+return;
+    
+# ........................................................................................
+crossed:
+
+# Make sure only player triggers this code.
+if (GetSourceRef() != player)
+	{
+	return;
+	}
+# Code for first colomn falling with debris.
+if ((GetSenderRef() == trigger0) && (goodToGo == 1))
+	{
+    goodToGo = 2;
+	# Start music.
+	//musicChannelA = PlaySoundLocal(musicA, 0.6, 0, 0x1, 0);
+	
+	# Turn electric whip off.
+    SetWhipElectric(0);
+
+	# Turn on falling debris.
+    SendMessage(debrisCogA, user0);
+    SetPulse(0.1);
+    
+    # Drop move blocks.
+    MoveToFrame(mov_colmA, 1, 8.0);
+    Sleep(0.25);
+    PlaySoundThing(sfx_Block, mov_colmA, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(mov_colmB, 1, 8.0);
+    Sleep(0.15);
+    
+    # Give 3dos collision back after they pass thru geometry.
+    //SetCollideType(mov_colmA, 3);
+    //SetCollideType(mov_colmB, 3);
+    //SetCollideType(mov_colmC, 3);
+    
+    # Turn off falling debris.
+    Sleep(4.0);
+    SendMessage(debrisCogA, user1);
+    SetPulse(0.0);
+	SetTimer(rumbleWait); # rumbleWait Code.
+	}
+# Code for falling debris right after steps and arch.
+if ((GetSenderRef() == trigger1) && (goodToGo == 2))
+	{
+    StopSound(rumbleChannel, 0); # rumbleWait Code.
+    SetPulse(0.0); # rumbleWait Code.
+	SetTimer(0); # rumbleWait Code.
+	goodToGo = 3;
+	
+	# Close off AET for good!
+	SetFaceGeoMode(closeadjoin,4);
+    ClearAdjoinFlags(closeadjoin, 2);
+
+	# Turn on falling debris.
+    SendMessage(debrisCogB, user0);
+    SetPulse(0.1);
+    
+    # Turn off falling debris.
+    Sleep(4.0);
+    SendMessage(debrisCogB, user1);
+    SetPulse(0.0);
+	SetTimer(rumbleWait, 0); # rumbleWait Code.
+	}
+# Code for first regular block and some debris after first turn.
+if ((GetSenderRef() == trigger2) && (goodToGo == 3))
+	{
+    StopSound(rumbleChannel, 0); # rumbleWait Code.
+    SetPulse(0.0); # rumbleWait Code.
+	SetTimer(0); # rumbleWait Code.
+    goodToGo = 4;
+	# Turn on falling debris.
+    SendMessage(debrisCogC, user0);
+    SetPulse(0.1);
+    
+    # Drop move blocks.
+    MoveToFrame(blockA, 1, 8.0);
+    Sleep(0.25);
+    PlaySoundThing(sfx_Block, blockA, 1.0, 5.0, 10.0, 0);
+    
+    # Give 3dos collision back after they pass thru geometry.
+    SetCollideType(blockA, 3);
+    
+	# Turn off falling debris.
+    Sleep(4.0);
+    SendMessage(debrisCogC, user1);
+    SetPulse(0.0);
+	SetTimer(rumbleWait); # rumbleWait Code.
+	}
+# Code for second regular block and some debris inside first big room.
+if ((GetSenderRef() == trigger3) && (goodToGo == 4))
+	{
+    StopSound(rumbleChannel, 0); # rumbleWait Code.
+    SetPulse(0.0); # rumbleWait Code.
+	SetTimer(0); # rumbleWait Code.
+    goodToGo = 5;
+	# Turn on falling debris.
+    SendMessage(debrisCogD, user0);
+    SetPulse(0.1);
+    
+    # Drop move blocks.
+    MoveToFrame(blockB, 1, 8.0);
+    Sleep(0.25);
+    PlaySoundThing(sfx_Block, blockB, 1.0, 5.0, 10.0, 0);
+    
+    # Give 3dos collision back after they pass thru geometry.
+    SetCollideType(blockB, 3);
+    
+	# Turn off falling debris.
+    Sleep(4.0);
+    SendMessage(debrisCogD, user1);
+    SetPulse(0.0);
+	SetTimer(rumbleWait); # rumbleWait Code.
+	}
+# Code for falling debris at stair jump.
+if ((GetSenderRef() == trigger4) && (goodToGo == 5))
+	{
+    StopSound(rumbleChannel, 0); # rumbleWait Code.
+    SetPulse(0.0); # rumbleWait Code.
+	SetTimer(0); # rumbleWait Code.
+    goodToGo = 6;
+	# Turn on falling debris.
+    SendMessage(debrisCogE, user0);
+    SetPulse(0.1);
+    
+    # Turn off falling debris.
+    Sleep(4.0);
+    SendMessage(debrisCogE, user1);
+    SetPulse(0.0);
+	SetTimer(rumbleWait); # rumbleWait Code.
+	}
+# Code for begining of huge room.
+if ((GetSenderRef() == trigger5) && (goodToGo == 6))
+	{
+    StopSound(rumbleChannel, 0); # rumbleWait Code.
+    SetPulse(0.0); # rumbleWait Code.
+	SetTimer(0); # rumbleWait Code.
+    goodToGo = 7;
+	# Turn on falling debris.
+    SendMessage(debrisCogF, user0);
+    SetPulse(0.1);
+    
+    # Drop move blocks.
+    MoveToFrame(mov_colmD, 1, 8.0);
+    Sleep(0.25);
+    PlaySoundThing(sfx_Block, mov_colmD, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(mov_colmE, 1, 8.0);
+    Sleep(0.15);
+    
+	# Turn off falling debris.
+    Sleep(4.0);
+    SendMessage(debrisCogF, user1);
+    SetPulse(0.0);
+	SetTimer(rumbleWait); # rumbleWait Code.
+	}
+# Code for falling debris at last set of stairs.
+if ((GetSenderRef() == trigger8) && (goodToGo == 9))
+	{
+    StopSound(rumbleChannel, 0); # rumbleWait Code.
+    SetPulse(0.0); # rumbleWait Code.
+	SetTimer(0); # rumbleWait Code.
+    goodToGo = 10;
+	# Turn on falling debris.
+    SendMessage(debrisCogJ, user0);
+    SetPulse(0.1);
+    
+    # Turn off falling debris.
+    Sleep(4.0);
+    SendMessage(debrisCogJ, user1);
+    SetPulse(0.0);
+    
+	Sleep(1.0);
+
+	PlaySoundLocal(musicB, 1.0, 0, 0x0, 0);
+    SetTimer(15.0); # rumbleWait Code.
+	}
+
+return;
+    
+# ........................................................................................
+entered:
+
+# Make sure only player triggers this code.
+if (GetSourceRef() != player)
+	{
+	return;
+	}
+# Code for middle of huge room.
+if ((GetSenderRef() == trigger6) && (goodToGo == 7))
+	{
+    StopSound(rumbleChannel, 0); # rumbleWait Code.
+    SetPulse(0.0); # rumbleWait Code.
+	SetTimer(0); # rumbleWait Code.
+    goodToGo = 8;
+	# Turn on falling debris.
+    SendMessage(debrisCogG, user0);
+    SetPulse(0.1);
+    
+    # Turn on I collide for a bit.
+    SetCollideType(mov_colmI, 3);
+
+    # Drop move blocks.
+    MoveToFrame(mov_colmF, 1, 8.0);
+    Sleep(0.25);
+    PlaySoundThing(sfx_Block, mov_colmF, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(mov_colmG, 1, 8.0);
+    Sleep(0.15);
+    
+    # Give 3dos collision back after they pass thru geometry.
+    SetCollideType(mov_colmF, 3);
+    SetCollideType(mov_colmG, 3);
+    
+	# Turn off falling debris.
+    Sleep(4.0);
+    SendMessage(debrisCogG, user1);
+    SetPulse(0.0);
+	SetTimer(rumbleWait); # rumbleWait Code.
+	}
+# Code for middle of huge room.
+if ((GetSenderRef() == trigger7) && (goodToGo == 8))
+	{
+    StopSound(rumbleChannel, 0); # rumbleWait Code.
+    SetPulse(0.0); # rumbleWait Code.
+	SetTimer(0); # rumbleWait Code.
+    goodToGo = 9;
+	# Turn on falling debris.
+    SendMessage(debrisCogH, user0);
+    SetPulse(0.1);
+
+    # Drop move blocks.
+    MoveToFrame(mov_colmH, 1, 8.0);
+    Sleep(0.25);
+    PlaySoundThing(sfx_Block, mov_colmH, 1.0, 5.0, 10.0, 0);
+    
+    # Give 3dos collision back after they pass thru geometry.
+    SetCollideType(mov_colmH, 3);
+    
+	# Turn off falling debris.
+    Sleep(2.5);
+    SendMessage(debrisCogH, user1);
+    SetPulse(0.0);
+	
+    # Turn off I collide for a bit.
+    SetCollideType(mov_colmI, 0);
+
+	Sleep(0.25);
+
+# Code for third section of huge room.
+	# Turn on falling debris.
+    //SendMessage(debrisCogI, user0);
+    SetPulse(0.1);
+    
+    # Drop move blocks.
+    MoveToFrame(mov_colmI, 1, 8.0);
+    Sleep(0.25);
+    PlaySoundThing(sfx_Block, mov_colmJ, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(mov_colmJ, 1, 8.0);
+    Sleep(0.15);
+    
+	# Give 3dos collision back after they pass thru geometry.
+    SetCollideType(mov_colmI, 3);
+    //SetCollideType(mov_colmJ, 3);
+    
+	# Turn off falling debris.
+    Sleep(4.0);
+    //SendMessage(debrisCogI, user1);
+    SetPulse(0.0);
+	SetTimer(rumbleWait); # rumbleWait Code.
+	}
+# Stop all.
+if (GetSenderRef() == finalTrigger)
+	{
+    StopSound(rumbleChannel, 0); # rumbleWait Code.
+	SetPulse(0.0); # rumbleWait Code.
+	SetTimer(0); # rumbleWait Code.
+	}
+
+return;
+    
+# ........................................................................................
+user0:
+
+goodToGo = 1;
+
+return;
+    
+# ........................................................................................
+user1:
+
+shake = 1;
+//SetPulse(1.0);
+
+SetThingFlags(stat_colmA, 0x80000);
+SetThingFlags(stat_colmB, 0x80000);
+SetThingFlags(stat_colmC, 0x80000);
+
+ClearThingFlags(mov_colmA, 0x80000);
+ClearThingFlags(mov_colmB, 0x80000);
+ClearThingFlags(mov_colmC, 0x80000);
+
+return;
+    
+# ........................................................................................
+timer:
+
+SetPulse(0.1);
+rumbleChannel = PlaySoundLocal(sndFalling, 1.0, 0, 0x1, 0);
+
+return;
+    
+# ........................................................................................
+pulse:
+
+if (shake == 3)
+	{
+	vibe = RandBetween(1, 3);
+	if (vibe == 3)
+		{
+		# Skip this time...
+		return;
+		}
+	}
+vibe = RandBetween(1, 4);
+if (vibe == 1)
+	{
+	if (shake == 1)
+		{
+		posOffset = '-0.008 0.00 -0.002'; #1 was .005x
+		angOffset = '0.00 -0.002 0.002';
+		}
+	if (shake == 2)
+		{
+		posOffset = '0.01 -0.01 0.005'; #2
+		angOffset = '0.005 0.00 -0.005';
+		}
+	if (shake == 3)
+		{
+		posOffset = '0.01 0.02 -0.02'; #3
+		angOffset = '-0.01 0.01 -0.01';
+		}
+	}
+if (vibe == 2)
+	{
+	if (shake == 1)
+		{
+		posOffset = '0.008 -0.005 0.002'; #2 was .005x
+		angOffset = '0.002 0.00 -0.002';
+		}
+	if (shake == 2)
+		{
+		posOffset = '0.005 0.01 -0.01'; #3
+		angOffset = '-0.005 0.005 -0.00';
+		}
+	if (shake == 3)
+		{
+		posOffset = '-0.02 0.00 0.02'; #4 was .01x
+		angOffset = '0.00 0.00 0.01';
+		}
+	}
+if (vibe == 3)
+	{
+	if (shake == 1)
+		{
+		posOffset = '0.005 0.005 -0.005'; #3 was .002x
+		angOffset = '-0.002 0.005 -0.005';
+		}
+	if (shake == 2)
+		{
+		posOffset = '-0.015 0.00 0.01'; #4 was .01x
+		angOffset = '0.00 0.00 0.01';
+		}
+	if (shake == 3)
+		{
+		posOffset = '-0.025 0.00 -0.01'; #1 was .02x
+		angOffset = '0.00 -0.01 0.01';
+		}
+	}
+if (vibe == 4)
+	{
+	if (shake == 1)
+		{
+		posOffset = '-0.002 0.00 0.005'; #4
+		angOffset = '0.00 0.00 0.002';
+		}
+	if (shake == 2)
+		{
+		posOffset = '-0.01 0.00 -0.005'; #1
+		angOffset = '0.00 -0.005 0.005';
+		}
+	if (shake == 3)
+		{
+		posOffset = '0.02 -0.02 0.01'; #2
+		angOffset = '0.01 0.00 -0.01';
+		}
+	}
+vibe = RandBetween(1, 3);
+if (vibe == 1)
+	{
+	SetPulse(0.05);
+	}
+if (vibe == 2)
+	{
+	SetPulse(0.1);
+	}
+if (vibe == 3)
+	{
+	SetPulse(0.15);
+	}
+SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+
+return;
+
+# ........................................................................................
+end

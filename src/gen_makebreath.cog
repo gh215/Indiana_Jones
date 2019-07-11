@@ -1,0 +1,53 @@
+# Jones 3D Cog Script
+#
+# gen_MakeBreath.cog
+#
+# [RT]
+#
+# Make Indy breath.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		startup
+	message		pulse
+
+	thing		indy		local
+
+	template	tpl_Breath=+breath	local
+
+	int			moveStatus			local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	indy = GetLocalPlayerThing();
+	SetPulse(3.0);
+	return;
+
+# -------------------------------------------------------------------
+
+pulse:
+
+	# 0 = SITHPLAYERMOVE_STILL
+	# 1 = SITHPLAYERMOVE_WALKING
+	# 2 = SITHPLAYERMOVE_RUNNING
+	
+	moveStatus = GetMoveStatus(indy);
+	if ((moveStatus == 0) || (moveStatus == 1))
+	{
+		CreateThing(tpl_Breath, indy);
+	}
+
+	return;
+
+end
+

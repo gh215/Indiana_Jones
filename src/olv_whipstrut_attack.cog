@@ -1,0 +1,163 @@
+
+# Jones 3D Cog Script
+#
+# OLV_Commie_Grid.cog
+# 
+# Cog to control the AI and patrol behavior of the commies in the Olmec Valley
+# 
+#
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+
+message         startup 
+message         entered
+message         arrivedwpnt
+message         killed
+
+# ================================== SUBROUTINES =========================================
+
+flex            StartAttack         local
+
+# =============================== WORLD REFERENCES =======================================
+
+surface         Start               
+surface         BackTrack              
+
+# ============================= MISC LOCAL VARIABLES =====================================
+
+int             counter             local
+int             HasBegunCheck=0     local
+int             GuardsAwake=0       local
+
+int             DeathFromAboveCheck=0   local
+
+int             Currentwpnt         local
+
+# =================================== CONSTANTS ==========================================
+
+int             NUMBER_OF_COMMIES_TOTAL=4   local
+int             NUMBER_OF_GUARDS=2          local
+
+# ==================================== COMMIES ===========================================
+
+AI              AI_Sniper=com_2Hsniper.ai   local
+
+thing           TempCommie                  local
+
+#thing           SniperBackup
+#thing           GrenadeChucker
+
+thing           SniperOne
+
+thing           GunnerOne
+
+thing           Guard00
+thing           Guard01
+
+# ===================================== SOUNDS ===========================================
+
+thing           SoundGhost  
+
+sound           Chatter00=inxh3016.wav      local
+sound           Chatter01=inxh4004.wav      local
+sound           Chatter02=inxh3002.wav      local
+
+# ========================================================================================
+end
+# ========================================================================================
+# ==================================== CODE ==============================================
+# ========================================================================================
+code
+# ========================================================================================
+startup:
+
+    for(counter = 0; counter < NUMBER_OF_COMMIES_TOTAL; counter = counter + 1)
+    {
+        SetThingFlags(SniperOne[counter], 0x80000);
+        AISetCutsceneMode(SniperOne[counter]);
+    }                  
+        
+    return;
+    
+# ========================================================================================
+entered:
+
+    if(GetSenderRef() == Start && HasBegunCheck == 0)
+    {                                     
+        HasBegunCheck = 1;
+        Call StartAttack;
+    }                     
+    
+    else if(GetSenderRef() == BackTrack && HasBegunCheck == 1 && GuardsAwake == 0)
+    {
+        GuardsAwake = 1;
+        AIClearCutsceneMode(Guard00);
+        AIClearCutsceneMode(Guard01);
+    }
+    
+    return;
+    
+# ========================================================================================
+arrivedwpnt:              
+        
+    if(GetSenderRef() == GunnerOne)  
+    {
+        if(GetParam(0) == 43)
+        {
+            AIClearCutsceneMode(GunnerOne);
+        }
+    }
+    
+    else if(GetSenderRef() == SniperOne) 
+    {                 
+        if(GetParam(0) == 42)
+        {
+            AISetClass(SniperOne, AI_sniper);
+            AIClearCutsceneMode(SniperOne);
+        }
+    }
+
+    return;
+
+    
+# ========================================================================================
+killed:
+
+    TempCommie = GetSenderRef();
+    
+    if(TempCommie == SniperOne) SniperOne = -1;
+    if(TempCommie == GunnerOne) GunnerOne = -1;
+
+    return;
+    
+# =============================== SUBROUTINES ============================================
+StartAttack:
+
+    PlaySoundThing(Chatter00, SoundGhost, 1.0, 5, 25, 0);
+    sleep(1.5);
+    PlaySoundThing(Chatter01, SoundGhost, 1.0, 8, 25, 0);
+    
+    ClearThingFlags(SniperOne, 0x80000);
+    ClearThingFlags(GunnerOne, 0x80000);
+    ClearThingFlags(Guard00, 0x80000);
+    ClearThingFlags(Guard01, 0x80000);
+    
+    AITraverseWpnts(GunnerOne, 43, 2.0, 20.0, 0);
+        
+    sleep(1.5);                                           
+    PlaySoundThing(Chatter02, SoundGhost, 1.0, 12, 30, 0);
+    #sleep(1.5);
+    
+    AITraverseWpnts(SniperOne, 41, 2.0, 20.0, 0);
+                        
+    return;
+    
+# ========================================================================================
+end
+

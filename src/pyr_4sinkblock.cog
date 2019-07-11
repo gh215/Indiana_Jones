@@ -1,0 +1,35 @@
+# Jones 3D Cog Script
+#
+# pyr_4sinkblock.cog
+#	
+# Pyramid 4 blocks sink down under Indy's weight
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message		startup
+message 	entered
+message		exited
+
+thing		sinkblock
+
+end
+
+code
+startup:
+	SetThingLight(sinkblock, '.3 .3 .6', .001, .01);
+	return;
+
+entered:
+	MoveToFrame(sinkblock, 1, 1.5);
+	return;
+
+exited:
+	sleep(.2);
+	MoveToFrame(sinkblock, 0, 1);
+	return;
+
+end

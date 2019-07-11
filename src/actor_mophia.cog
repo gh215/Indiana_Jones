@@ -1,0 +1,730 @@
+# Jones 3D Cog Script
+#
+# actor_Mophia.cog
+#
+# [MDR]
+#
+#	#####  Notes  #####
+#	The following functionality can be accessed with USER msgs sent to this COG
+#
+#	USER0 - (En\Dis)able a custom mode
+#	USER1 - Return current custom mode to caller
+#	USER2 - Cancel any VFX, do necessary cleanup.
+#	USER3 - Reset Mophia to neutral state.
+#	USER4 - Get current Mophia size (3=largest 0=smallest).
+#	USER5 - Set Mophia's current alpha as a percent.
+#	USER6 - Flash Mophia's eyes.
+#
+#	n_AICstmMode usuage:
+#		0x01 - Boss is angry
+#		0x02 - Use claw attack mode
+#		0x04 - Use bomb attack mode
+#		0x08 - Need to rest
+#		0x10 - Start perching
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		created
+message		removed
+message		aievent
+message		damaged
+message		callback
+message		timer
+message		user0
+message		user1
+message		user2
+message		user3
+message		user4
+message		user5
+message		user6
+
+# ************************** SUBROUTINES ***********************
+flex		StartHealAnim							local
+flex		StopHealAnim							local
+flex		BossHurtFX								local
+flex		BossHurtExpl							local
+
+# ************************** TEMPLATES *************************
+template	tpl_wpnClaw=+mophiaHit					local
+template	tpl_wpnLaser=+mophiaBeam				local
+template	tpl_wpnBomb=+mophiaBomb					local
+
+template	tpl_glow=mophiaGlow						local
+template	tpl_glowSm=mophiaGlowSm					local
+template	tpl_glowXSm=mophiaGlowXSm				local
+
+template	tpl_sparks=mophiaSparks					local
+template	tpl_sparksSm=mophiaSparksSm				local
+template	tpl_sparksClaw=mardukCharge				local
+
+template	tpl_HurtExp=mophiaHurtExp				local
+template	tpl_Hurting=mophiaHurting				local
+
+template	tpl_sprite0=mophiaBombEmit				local		# forces inclusion
+template	tpl_sprite1=mophiaBombSpr				local		# forces inclusion
+
+template	tpl_which								local
+
+material	mat_glow=nub_a4sfx_rboss_hit.mat		local
+
+model		mdl_large=aet_sm.3do					local
+model		mdl_med=aet_sm_70.3do					local
+model		mdl_sml=aet_sm_45.3do					local
+model		mdl_xsml=aet_sm_25.3do					local
+
+# ************************** MOPHIA SIZE VARS ******************
+int			n_size									local
+vector		vec_fireOffset							local
+vector		vec_lobfireOffset						local
+
+# ************************** SPECIAL FX ************************
+int			n_joint00								local
+int			n_joint01								local
+int			n_joint02								local
+int			n_joint03								local
+int			n_joint04								local
+int			n_joint05								local
+
+int			TIMERID_HURTINGFX=1						local
+int			TIMERID_DEATHFX=2						local
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_boss									local
+thing		t_player								local
+thing		t_sender								local
+
+int			n_MophiaSize=0							local
+int			n_fireFlags								local
+
+thing		t_glow=-1								local
+int			n_animHeal=-1							local
+flex		f_pulseHeal								local
+flex		f_minAlpha								local
+
+int			n_AICstmMode							local
+int			CMODE_SUFFERING=1						local
+int			CMODE_NEEDREST=2						local
+int			CMODE_BOMBATTACK=4						local
+int			CMODE_SWOOPATTACK=8						local
+int			CMODE_PERCH=16							local
+int			CMODE_HEAL=32							local
+int			CMODE_NORANGED=64						local
+int			CMODE_SWOOPFLIGHT=128					local
+
+int			n_damageAmount							local
+int			n_damageType							local
+int			n_armedMode								local
+
+int			n_idx									local
+int			n_param									local
+int			n_eventType								local
+
+int			b_modeSet								local
+int			n_modeVal								local
+
+sector		sec_atPos								local
+vector		vec_rot									local
+vector		vec_dir									local
+vector		vec_pos									local
+vector		vec_healStartSize						local
+vector		vec_healEndSize							local
+flex		f_val									local
+
+end
+
+
+# ===================================================================
+code
+
+# ...................................................................
+startup:
+
+	MaterialAnim(mat_glow, 15, 1);
+
+	return;
+
+
+# ...................................................................
+created:
+
+	t_boss		= GetSenderRef();							# Set constants
+	t_player	= GetLocalPlayerThing();
+
+	SetActorFlags(t_boss, 0x20000);							# Set AF_DELAYFIRE
+#	SetActorFlags(t_boss, 0x10000000);						# Set AF_FLYERMOVE
+#	AISetSubMode(t_boss, 0xA0000);							# Set SUBMODE_(SEMICONTINUOUSMOTION|SLOWMODEFADE)
+	AISetSubMode(t_boss, 0x80000);							# Set SUBMODE_SLOWMODEFADE
+	SetThingAirDrag(t_boss, 4.5);
+
+	n_joint00 = GetNodeByName(t_boss, "smlhand");
+	n_joint01 = GetNodeByName(t_boss, "smrhand");
+	n_joint02 = GetNodeByName(t_boss, "smtorso");
+	n_joint03 = GetNodeByName(t_boss, "smhip");
+	n_joint04 = GetNodeByName(t_boss, "smlclaw");
+	n_joint05 = GetNodeByName(t_boss, "smrclaw");
+
+
+	f_pulseHeal		= 3.0;
+	f_minAlpha		= 0.40;
+	n_AICstmMode	= 0;
+
+	#***  Get current Mophia size and set model dependant values  ***#
+	n_size = GetThingModel(t_boss);
+
+	if ( n_size == mdl_large )
+	{
+#		DEBUGPRINT("actor_Mophia:: Created large mophia");
+		n_MophiaSize		= 3;
+
+		vec_fireOffset		= VectorSet(0.0, 0.056, 0.220);
+		vec_lobfireOffset	= VectorSet(0.0, 0.35, 0.08);
+		t_glow				= AttachThingToThingMesh(t_boss, tpl_glow, n_joint02);
+	}
+	else if( n_size == mdl_med )
+	{
+#		DEBUGPRINT("actor_Mophia:: Created medium mophia");
+		n_MophiaSize		= 2;
+
+		vec_fireOffset		= VectorSet(0.0, 0.042, 0.155);
+		vec_lobfireOffset	= VectorSet(0.0, 0.25, 0.155);
+		t_glow				= AttachThingToThingMesh(t_boss, tpl_glow, n_joint02);
+	}
+	else if( n_size == mdl_sml )
+	{
+#		DEBUGPRINT("actor_Mophia:: Created small mophia");
+		n_MophiaSize		= 1;
+
+		vec_fireOffset		= VectorSet(0.0, 0.03, 0.10);
+		vec_lobfireOffset	= VectorSet(0.0, 0.18, 0.10);
+		t_glow				= AttachThingToThingMesh(t_boss, tpl_glowSm, n_joint02);
+	}
+	else
+	{
+#		DEBUGPRINT("actor_Mophia:: Created xsmall mophia");
+		n_MophiaSize		= 0;
+
+		vec_fireOffset		= VectorSet(0.0, 0.03, 0.05);
+		t_glow				= AttachThingToThingMesh(t_boss, tpl_glowXSm, n_joint02);
+	}
+
+	AIEnableInstinct(t_boss, "lobfire", 0);
+	SetThingFireoffset(t_boss, vec_fireOffset);
+
+	return;
+
+
+# ...................................................................
+removed:
+
+	# Perform cleanup of VFX
+	call USER2;
+
+	return;
+
+
+# ...................................................................
+aievent:
+
+	if ( GetSenderRef() != t_boss ) return;
+
+	n_eventType	= GetParam(0);
+	n_param		= GetParam(2);								# Value depends on n_eventType
+
+	if (n_eventType == 0x10000)								#---- EVENT_PREFIRE ----
+	{
+		n_armedMode = AIGetArmedMode(t_boss);
+		n_fireFlags = n_param;
+
+		if ( BITTEST(n_fireFlags, 0x0002) )						#-- SITHAIUTIL_FIRE_LOB
+		{
+			if ( n_armedMode != 1 )
+			{
+				SetActorWeapon(t_boss, -1);						# No lob attack in these armed modes
+				return;
+			}
+			if ( BITTEST(n_AICstmMode, CMODE_NEEDREST | CMODE_NORANGED) )
+			{
+				SetActorWeapon(t_boss, -1);						# No alt attack in this mode
+				return;
+			}
+			if ( !BITTEST(n_AICstmMode, CMODE_BOMBATTACK) )
+			{
+				SetActorWeapon(t_boss, -1);						# No alt attack in this mode
+				return;
+			}
+
+			SetThingFireoffset(t_boss, vec_lobfireOffset);
+			SetActorWeapon(t_boss, tpl_wpnBomb);				# Set bomb weapon
+		}
+		else if ( BITTEST(n_fireFlags, 0x0020) )				#-- SITHAIUTIL_FIRE_ALT
+		{
+			if ( (n_armedMode == 0) || (n_armedMode == 3) )
+			{
+				SetActorWeapon(t_boss, -1);						# No alt attack in these armed modes
+				return;
+			}
+			if ( BITTEST(n_AICstmMode, CMODE_NEEDREST | CMODE_SWOOPATTACK | CMODE_NORANGED) )
+			{
+				SetActorWeapon(t_boss, -1);						# No alt attack in these cust modes
+				return;
+			}
+
+			SetActorWeapon(t_boss, tpl_wpnLaser);
+		}
+	}
+	else if (n_eventType == 0x4000)							#---- EVENT_FIRE ----
+	{
+		if ( BITTEST(n_fireFlags, 0x22) )						# Ranged attack?
+		{
+			StopThing(t_boss);
+			AISetLookPos(t_boss, GetThingPos(t_player));
+			PlaySoundClass(t_boss, 125);						# play 'charge up' sound
+		}
+	}
+	else if (n_eventType == 0x20000)						#---- EVENT_POSTFIRE ----
+	{
+		n_fireFlags = 0;
+		SetThingFireoffset(t_boss, vec_fireOffset);
+		SetActorWeapon(t_boss, tpl_wpnClaw);					# Reset to primary weapon
+	}
+
+	return;
+
+
+# ...................................................................
+callback:
+
+	t_sender = GetSenderRef();
+    n_param  = GetParam(1);
+	if ( t_sender != t_boss )
+		return;
+
+	if (n_param == 16)										#---- Wing sparks
+	{
+		if ( BITTEST(n_AICstmMode, CMODE_SUFFERING) )			# skip additional sparks when suffering
+			return;
+
+		if ( n_MophiaSize==3 || n_MophiaSize==2 )
+		{
+			tpl_which = tpl_sparks;
+		}
+		else
+		{
+			tpl_which = tpl_sparksSm;
+		}
+
+		vec_pos = GetThingJointPos(t_boss, n_joint03);			# sparks from hip
+		CreateThingAtPos(tpl_which, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+
+		if ( Rand() < 0.30 && n_MophiaSize > 1 )				# sparks from wing tips
+		{
+			vec_pos = GetThingJointPos(t_boss, n_joint00);
+			CreateThingAtPos(tpl_which, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+
+			vec_pos = GetThingJointPos(t_boss, n_joint01);
+			CreateThingAtPos(tpl_which, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+		}
+	}
+	if (n_param == 21)										#---- Wing flap
+	{
+		PlaySoundClass(t_boss, 46);								# play 'lwalkaet'
+	}
+	if (n_param == 22)										#---- Right claw sparks
+	{
+		vec_pos = GetThingJointPos(t_boss, n_joint05);
+		CreateThingAtPos(tpl_sparksClaw, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+	}
+	if (n_param == 23)										#---- Left claw sparks
+	{
+		vec_pos = GetThingJointPos(t_boss, n_joint04);
+		CreateThingAtPos(tpl_sparksClaw, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+	}
+
+	return;
+
+
+# ...................................................................
+timer:
+
+	if ( GetSenderID() == TIMERID_HURTINGFX )
+	{
+		n_AICstmMode = BITCLEAR(n_AICstmMode, CMODE_SUFFERING);
+
+		n_idx = GetParam(0);
+		if ( n_idx > 1 )
+		{
+			n_AICstmMode = BITSET(n_AICstmMode, CMODE_SUFFERING);		# keep on suffering
+			call BossHurtFX;
+
+			n_idx = n_idx - 1;
+			SetTimerEx(0.1, TIMERID_HURTINGFX, n_idx, 0);
+		}
+	}
+
+	if ( GetSenderID() == TIMERID_DEATHFX )
+	{
+		n_idx = GetParam(0);
+		if ( n_idx > 1 )
+		{
+			n_AICstmMode = BITSET(n_AICstmMode, CMODE_SUFFERING);		# keep on suffering
+			call BossHurtExpl;
+
+			n_idx = n_idx - 1;
+			SetTimerEx(1.5, TIMERID_DEATHFX, n_idx, 0);
+		}
+	}
+
+	return;
+
+
+# ...................................................................
+damaged:
+
+	n_damageAmount	= GetParam(0);
+	n_damageType	= GetParam(1);
+
+	if ( BITTEST(n_damageType, 0x800) )								#---- SITH_DAMAGE_ELECTROWHIP?
+	{
+		#***  Play hurt VFX when in xsml size  ***#
+		if ( n_MophiaSize == 0 )
+		{
+			n_AICstmMode = BITSET(n_AICstmMode, CMODE_SUFFERING);
+
+			SetTimerEx(1.0, TIMERID_HURTINGFX, 20, 0);
+			call BossHurtExpl;
+		}
+
+		PlayMode(t_boss, 75, 0);									# Play 'hit' anim manually
+		PlaySoundClass(t_boss, 92);									# Play 'hurt' sound manually
+	}
+
+	ReturnEx(0);													# Take no damage
+
+	return;
+
+
+# ...................................................................
+# (En\Dis)able a custom mode
+# ...................................................................
+user0:
+
+	b_modeSet	= GetParam(0);
+	n_modeVal	= GetParam(1);
+
+	if ( b_modeSet > 0 )
+	{
+		if ( BITTEST(n_AICstmMode, n_modeVal) )								# Dont re-set values
+			return;
+
+		n_AICstmMode = BITSET(n_AICstmMode, n_modeVal);
+	}
+	else
+	{
+		if ( !BITTEST(n_AICstmMode, n_modeVal) )							# Dont re-clear values
+			return;
+
+		n_AICstmMode = BITCLEAR(n_AICstmMode, n_modeVal);
+	}
+
+	#***  Perform any necessary special handling  ***#
+	if ( b_modeSet )
+	{
+		if ( BITTEST(n_modeVal, CMODE_SUFFERING) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Setting suffer mode");
+		}
+		if ( BITTEST(n_modeVal, CMODE_BOMBATTACK) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Setting bomb attack mode");
+			AIEnableInstinct(t_boss, "lobfire", 1);
+		}
+		if ( BITTEST(n_modeVal, CMODE_SWOOPATTACK) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Setting swoop attack mode");
+		}
+		if ( BITTEST(n_modeVal, CMODE_SWOOPFLIGHT) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Setting swoop flight mode");
+			ResetThing(t_boss);
+			SetArmedMode(t_boss, 0);										# Switch to swoop armed mode (0)
+			PlayMode(t_boss, 1, 0);											# Play PUPPETSUBMODE_STAND
+		}
+		if ( BITTEST(n_modeVal, CMODE_NEEDREST) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Setting rest mode");
+#			ThingFadeAnim(t_boss, 1.0, f_minAlpha, 3.0, 0);
+#			SetCollideType(t_boss, 0);
+		}
+		if ( BITTEST(n_modeVal, CMODE_NORANGED) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Setting no ranged mode");
+		}
+
+
+		if ( BITTEST(n_modeVal, CMODE_PERCH) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Setting perch mode");
+			ResetThing(t_boss);
+			SetArmedMode(t_boss, 3);										# Switch to perch armed mode (3)
+			PlayMode(t_boss, 70, 1);										# Play PUPPETADDIN_WALK2STAND (3)
+			PlayMode(t_boss, 1, 0);											# Play PUPPETSUBMODE_STAND
+
+			SetActorFlags(t_boss, 0x40000);									# Set AF_IMMOBILE
+		}
+		if ( BITTEST(n_modeVal, CMODE_HEAL) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Setting heal mode");
+			call StartHealAnim;
+		}
+	}
+	else if ( !b_modeSet )
+	{
+		if ( BITTEST(n_modeVal, CMODE_SUFFERING) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Clearing suffer mode");
+		}
+		if ( BITTEST(n_modeVal, CMODE_BOMBATTACK) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Clearing bomb attack mode");
+			AIEnableInstinct(t_boss, "lobfire", 0);
+		}
+		if ( BITTEST(n_modeVal, CMODE_SWOOPATTACK) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Clearing swoop attack mode");
+		}
+		if ( BITTEST(n_modeVal, CMODE_SWOOPFLIGHT) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Clearing swoop flight mode");
+			ResetThing(t_boss);
+			SetArmedMode(t_boss, 1);										# Return to flying armed mode (1)
+			PlayMode(t_boss, 1, 0);											# Play PUPPETSUBMODE_STAND
+		}
+		if ( BITTEST(n_modeVal, CMODE_NEEDREST) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Clearing rest mode");
+#			SetCollideType(t_boss, 3);
+#			SetThingAlpha(t_boss, 1.0);
+		}
+		if ( BITTEST(n_modeVal, CMODE_NORANGED) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Clearing no ranged mode");
+		}
+
+
+		if ( BITTEST(n_modeVal, CMODE_PERCH) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Clearing perch mode");
+			ClearActorFlags(t_boss, 0x40000);								# Clear AF_IMMOBILE
+
+			PlayMode(t_boss, 69, 1);										# Play PUPPETADDIN_STAND2WALK, (3)
+			PlayMode(t_boss, 17, 1);										# Play PUPPETSUBMODE_JUMPFWD, (3)
+
+			ResetThing(t_boss);
+			SetArmedMode(t_boss, 1);										# Return to flying armed mode (1)
+			PlayMode(t_boss, 1, 0);											# Play PUPPETSUBMODE_STAND
+		}
+		if ( BITTEST(n_modeVal, CMODE_HEAL) )
+		{
+#			DEBUGPRINT("actor_Mophia:: Clearing heal mode");
+			call StopHealAnim;
+		}
+	}
+
+	ReturnEx(n_AICstmMode);
+
+	return;
+
+
+# ...................................................................
+# Return current custom mode to caller
+# ...................................................................
+user1:
+
+	ReturnEx(n_AICstmMode);
+	return;
+
+
+# ...................................................................
+# Perform VFX cleanup
+# ...................................................................
+user2:
+
+	if ( t_glow > -1 )
+	{
+#		DEBUGPRINT("actor_Mophia:: Removing all Mophia VFX");
+
+		if ( GetThingType(t_glow) == 13 )					# Check for SITH_THING_SPRITE
+		{
+			DestroyThing(t_glow);
+			t_glow = -1;
+		}
+	}
+
+#	call StopHealAnim;
+
+	return;
+
+
+# ...................................................................
+# Reset Mophia to neutral state
+# ...................................................................
+user3:
+
+#	DEBUGPRINT("actor_Mophia:: Resetting Mophia");
+	if ( BITTEST(n_AICstmMode, CMODE_BOMBATTACK) )
+	{
+		n_AICstmMode = CMODE_BOMBATTACK;
+	}
+	else
+	{
+		n_AICstmMode = 0;
+	}
+
+	ResetThing(t_boss);
+	SetArmedMode(t_boss, 1);										# Return to flying armed mode (1)
+	PlayMode(t_boss, 1, 0);											# Play PUPPETSUBMODE_STAND
+
+	SetCollideType(t_boss, 3);
+	SetThingAlpha(t_boss, 1.0);
+
+	ClearActorFlags(t_boss, 0x40000);								# Clear AF_IMMOBILE
+
+	call StopHealAnim;
+
+	return;
+
+
+# ...................................................................
+# Return current Mophia size
+# ...................................................................
+user4:
+
+#	DEBUGFLEX(n_MophiaSize, "actor_Mophia:: Returning current Mophia size");
+	ReturnEx(n_MophiaSize);
+
+	return;
+
+
+# ...................................................................
+# Set Mophia's alpha as a percent (param0) above allowed minimum
+# ...................................................................
+user5:
+
+	f_val = GetParam(0) / 100;
+	f_val = ((100 - f_minAlpha) * f_val) + f_minAlpha;
+
+	SetThingAlpha(t_boss, f_val);
+
+#	DEBUGFLEX(f_val, "actor_Mophia:: Setting Mophia alpha at");
+
+	return;
+
+
+# ...................................................................
+# Various Mophia VFX
+# ...................................................................
+user6:
+
+	n_param = GetParam(0);
+
+#	DEBUGFLEX(n_param, "actor_Mophia:: Got USER6, param(0) =");
+
+	if ( n_param == 0 )												#---- Flash eyes
+	{
+		t_sender = CreateThing(tpl_wpnLaser, t_boss);
+
+		if ( t_sender > -1 )
+		{
+			SendMessageEx(GetThingClassCog(t_sender), USER0, t_boss, 0, 0, 0);
+			DestroyThing(t_sender);
+		}
+	}
+	else if ( n_param == 1 )										#---- Hurt cloud
+	{
+		call BossHurtFX;
+	}
+	else if ( n_param == 2 )										#---- Hurt explosion
+	{
+		call BossHurtExpl;
+	}
+	else if ( n_param == 3 )										#---- Begin Death VFX
+	{
+		n_AICstmMode = BITSET(n_AICstmMode, CMODE_SUFFERING);
+
+		SetTimerEx(1.0, TIMERID_DEATHFX, 10, 0);
+	}
+	else if ( n_param == 4 )										#---- End Death VFX
+	{
+		KillTimerEx(TIMERID_HURTINGFX);
+		KillTimerEx(TIMERID_DEATHFX);
+	}
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+StartHealAnim:
+
+	if ( n_animHeal == -1 )
+	{
+#		DEBUGPRINT("actor_Mophia:: Starting heal pulse");
+		n_animHeal = ThingFadeAnim(t_boss, f_minAlpha, 1.0, f_pulseHeal, 1);
+	}
+
+	return;
+
+
+# ...................................................................
+StopHealAnim:
+
+	if ( n_animHeal > -1 )
+	{
+#		DEBUGPRINT("actor_Mophia:: Stopping heal pulse");
+		StopAnim(n_animHeal);
+		n_animHeal = -1;
+	}
+
+	SetThingAlpha(t_boss, 1.0);
+
+	return;
+
+
+# ...................................................................
+BossHurtFX:
+
+	vec_pos		= GetThingJointPos(t_boss, n_joint02);			#---- Emit hurt sparks from torso
+	sec_atPos	= FindNewSectorFromThing(t_boss, vec_pos);
+	CreateThingAtPos(tpl_Hurting, sec_atPos, vec_pos, '0 0 0');
+
+	return;
+
+
+# ...................................................................
+BossHurtExpl:
+
+	vec_pos		= GetThingJointPos(t_boss, n_joint02);			#---- Large sparks from torso
+	sec_atPos	= FindNewSectorFromThing(t_boss, vec_pos);
+	vec_dir		= GetThingLVecPYR(t_boss);
+
+	n_param = VectorZ(vec_dir);
+	for (n_idx = 0; n_idx < 6; n_idx = n_idx + 1)
+	{
+		n_param = n_param + 60;
+		vec_dir	= VectorSet(VectorX(vec_dir), VectorY(vec_dir), n_param);
+		CreateThingAtPos(tpl_HurtExp, sec_atPos, vec_pos, vec_dir);
+	}
+
+	return;
+
+
+# ===================================================================
+end

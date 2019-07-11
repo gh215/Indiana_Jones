@@ -1,0 +1,290 @@
+# Jones 3D Cog Script
+#
+# TEM_FallingBridge.cog
+#
+# Cut the broken bridge with the Machete and watch it fall.
+# Then go around to the other side and climb down into the cave.
+#
+# Also added a modified version of [SXC]'s TEO_Drops.cog so it
+# can play ambient "creaking" sounds when it's in tact, then stop
+# playing them when it's broken.
+#
+# Callback section courtesy of [RT].
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+        
+    message     startup
+    message     entered
+    message     exited
+    message     damaged
+    message     pulse
+    message     callback
+        
+    # ** local things **
+    thing       player          local
+    thing       dustThing0      local
+    thing       dustThing1      local
+    thing       fallingBridge   local
+    
+    # ** bridge parts **
+    thing       staticBridge    mask=0x8        # slash this
+    thing       ghostBridge
+    thing       ghostRopes
+    
+    # ** misc things **
+    thing       ghostCamPos
+    thing       camTarget
+    thing       spot3           #3do spot
+    thing       dustPos0
+    thing       dustPos1
+
+    # ** templates **
+    template    animBridge=10manimbridge    local
+    template    fallenRopes=10mbridge       local
+    template	dust=dustcloud              local
+    
+    # ** materials **
+    material    mat0=tem_4bridge_rock.mat           local
+    material	dustMat=gen_a4sfx_dustcloud.mat	    local
+        
+    keyframe    bridgeAnim=tem_bridge_10manim.key       local
+        
+    #surface     surf0
+    #surface     surf1
+    #surface     surf2
+    
+    surface     spot0
+    surface     spot1
+    
+    sector      sec_MusicCue
+        
+    # ** bridge falling sounds **
+    sound       sndRopecut=tem_machete_bridge_c.wav     local
+    sound       sndFall=tem_10manimbridge_fall_c.wav    local
+    sound       sndHit1=fol_in_hithard.wav              local
+    sound       sndHit2=fol_in_hithard.wav              local
+    
+    # ** bridge creak sounds **
+    sound       sndBridge0=tem_bridge_b.wav             local 
+    sound       sndBridge1=tem_bridge_c.wav             local
+    
+    # ** music **
+    sound       mus_Success=mus_gen_indyrelief.wav      local
+    sound       mus_T2Cue=mus_tem_tiki2.wav             local
+    
+    cog         cog_Hint
+            
+    vector      dustStart       local
+    vector      dustEnd         local
+    
+    flex        vol=1.0
+    flex        minDist=-1
+    flex        maxDist=-1
+            
+    int         i=0             local
+    int         done=0          local
+    int         sndFalling      local
+    int         spot=0          local
+    int         sender          local
+    int         playedCue=0     local
+    int         playing=0       local
+    
+end
+
+
+# ========================================================================================
+
+code
+
+startup:
+
+    # set 3dos non-mountable
+    ClearThingFlags(staticBridge, 0x40000000);
+    
+    # no draw
+    #SetFaceGeoMode(surf1, 0);
+    #SetFaceGeoMode(surf2, 0);
+    #SetFaceGeoMode(surf3, 0);
+    #SetFaceGeoMode(surf4, 0);
+    
+    # bridge squeak
+    SetPulse(2.0);
+        
+    return;
+
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    sender = GetSenderRef();
+
+    if((sender == spot0) || (sender == spot1) || (sender == spot3))
+    {
+        spot = 1;
+    }
+    
+    if((sender == sec_MusicCue) && (playedCue == 0))
+    {
+        playedCue = 1;
+        playing = 1;
+        PlaySoundLocal(mus_T2Cue, 1.0, 0.0, 0x0, 1);
+        playing = 0;
+    }
+        
+        
+    return;
+
+# ========================================================================================
+
+exited:
+
+    player = GetLocalPlayerThing();
+    sender = GetSenderRef();
+    
+    if(GetSourceRef() == player)
+    {
+        if((sender == spot0) || (sender == spot1) || (sender == spot3)) 
+        {
+            spot = 0;
+        }
+    }
+        
+    return;
+    
+# ========================================================================================
+
+damaged:
+
+    if((GetParam(1) == 0x20) && (spot == 1) && (done == 0))
+    {
+        done = 1;
+
+        # play slash sound
+        PlaySoundLocal(sndRopecut, 1.0, 0.0, 0x0, 0);
+        
+        # solve hint20
+        SendMessage(cog_Hint, user0);
+        
+        # do cutscene stuff
+        MakeMeStop();
+        StartCutscene(2);
+        
+        # shut down creaking sfx
+        SetPulse(0.0);
+        
+        Sleep(0.5);
+        
+        # play music cue
+        if(playing == 0) PlaySoundLocal(mus_Success, 1.0, 0.0, 0x0, 0);
+
+        # switch to external camera
+        SetCurrentCamera(2);
+        SetCameraFocus(2, ghostCamPos);
+        SetCameraSecondaryFocus(2, camTarget);
+        SetCameraFOV(90, 0, 0.0);
+        
+        # move camera in
+        MoveToFrame(ghostCamPos, 1, 1.0);
+                    
+        # make the bridge fall
+        DestroyThing(staticBridge);
+        fallingBridge = CreateThing(animBridge, ghostBridge);
+        CaptureThing(fallingBridge);
+        PlayKey(fallingBridge, bridgeAnim, 5, 0x14, 0);
+        
+        Sleep(0.5);
+        
+        # create dust cloud
+        dustStart = VectorSet(0.2, 0.2, 0.5);
+        dustEnd	= VectorSet(1.2, 1.2, 0.0);
+        dustThing0 = CreateThing(dust, dustPos0);
+        CaptureThing(dustThing0);
+        dustThing1 = CreateThing(dust, dustPos1);
+        CaptureThing(dustThing1);
+        
+        # animate dust cloud
+        SetMaterialCel(dustMat, 0);
+        MaterialAnim(dustMat, 5.0, 0);
+        AnimateSpriteSize(dustThing0, dustStart, dustEnd, 4.0);
+        AnimateSpriteSize(dustThing1, dustStart, dustEnd, 4.0);
+        
+        Sleep(2.0);
+        
+        # return camera to player
+        SetCurrentCamera(1);    
+        
+        # swap bridges
+        DestroyThing(fallingBridge);
+        CreateThing(fallenRopes, ghostRopes);
+            
+        # change surface attributes
+        #SetFaceGeoMode(surf1,4);                # draw textured faces
+        #SetFaceGeoMode(surf2,4);
+        #SetFaceGeoMode(surf3,4);
+        #SetFaceGeoMode(surf4,4);
+        
+        #SetAdjoinFlags(surf1, 0x0010);          # set face no move
+        #SetAdjoinFlags(surf2, 0x0010);
+        #SetAdjoinFlags(surf1, 0x00002000);      # set face climbable
+        #SetAdjoinFlags(surf2, 0x00002000);
+            
+        # retexture the bridge faces
+        #for (i=0;i<3;i=i+1)
+        #{
+        #    SetSurfaceMat(surf0[i], mat0);
+        #}
+            
+        # return control to player
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+    }
+                
+    return;
+           
+# ========================================================================================
+
+pulse:
+
+    PlaySoundThing(sndBridge0[RandBetween(0, 1)], staticBridge, vol, minDist, maxDist, 0x0);
+    return;
+    
+# ========================================================================================
+
+callback:
+
+    if (sndFalling == 0)
+    {
+        PlaySoundThing(sndFall, fallingBridge, 1.0, -1, -1, 0x0);
+        PlaySoundThing(sndBridge1, fallingBridge, 1.0, -1, -1, 0x0); 
+        sndFalling = 1;
+    }
+        
+	else if  (sndFalling == 1)
+    {
+        PlaySoundThing(sndHit1, fallingBridge, 1.0, -1, -1, 0x0);
+        sndFalling = 2;
+    }
+        
+	else if  (sndFalling == 2)
+    {
+        PlaySoundThing(sndHit2, fallingBridge, 0.5, -1, -1, 0x0);
+        sndFalling = 3;
+    }
+        
+	else
+    {
+        PlaySoundThing(sndBridge0, fallingBridge, 1.0, -1, -1, 0x0);
+    }
+
+	return;
+
+# ========================================================================================
+
+end
+

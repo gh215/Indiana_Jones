@@ -1,0 +1,109 @@
+# Jones 3D Cog Script
+#
+# gen_Door.cog
+#
+# Generic Door Script
+#
+# [IS]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup		
+    message	    activate	
+    message	    arrived		
+    message     timer		
+    message	    blocked		
+
+    thing       door0       linkid=0    mask=0x405
+    thing       block0      linkid=1    mask=0x405
+    thing       block1      linkid=1    mask=0x405
+    thing       player      local
+
+	float		moveSpeed=8.0
+	float		sleepTime=2.0
+
+	vector      vecLightValue           local
+
+	sector      doorSector              
+        
+    int         screen=0                local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+	doorSector = GetThingSector(door0);
+	SetSectorAdjoins(doorSector, 0);
+    
+return;
+
+# ........................................................................................
+
+activate:
+
+    if ((GetSenderID() == 1) && (GetCurFrame(door0) == 0) && (screen == 0))
+    {
+        screen=1;
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        StartCutscene(1);
+        PlayMode(player, 60, 0);
+        Sleep(0.5);	
+	    SetSectorAdjoins(doorSector, 1);
+	    MoveToFrame(door0, 1, moveSpeed);
+        MoveToFrame(block0, 1,  (moveSpeed * 2));
+        MoveToFrame(block1, 1,  (moveSpeed * 2));
+        WaitForStop(block0);
+        Sleep(0.5);
+        EndCutscene(0);
+        ClearActorFlags(player, 0x200000);
+        screen=0;
+	}
+    
+return;
+
+# ........................................................................................
+
+arrived:
+
+	if ((GetCurFrame(door0) == 1) && (GetSenderID() == 0))
+	{
+		SetTimer(sleepTime);
+	}
+	else
+	{
+		SetSectorAdjoins(doorSector, 1);
+	}
+    
+return;
+
+# ........................................................................................
+
+blocked:
+
+	MoveToFrame(door0, 1, moveSpeed);
+    
+return;
+
+# ........................................................................................
+
+timer:
+
+    MoveToFrame(door0, 0, moveSpeed);
+    MoveToFrame(block0, 0,  (moveSpeed * 2));
+    MoveToFrame(block1, 0,  (moveSpeed * 2));
+    
+return;
+
+# ........................................................................................
+
+end
+

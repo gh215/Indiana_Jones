@@ -1,0 +1,95 @@
+# Jones 3D Cog Script
+#
+# TEM_BossCut.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+    message		startup
+    message		entered
+    
+    thing       player              local
+    thing		t_Boss				local
+    thing       indy                local
+    thing		t_BossGhost
+    thing       cam1
+    thing       target1     #walk player to this
+    
+    sector		sec_TriggerBoss
+    
+    cog			cog_boss
+    
+    sound       inSay1=Tm04j01.wav      local
+    
+    template    tplActor=indy_sh_actor              local
+    
+    int			n_BossCreated=0		local
+
+end
+
+
+# ===================================================================
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+
+	return;
+
+
+# ===================================================================
+entered:
+
+	if (GetSenderRef() == sec_TriggerBoss && !n_BossCreated)
+	{
+		print("sent create boss");
+		n_BossCreated = 1;
+
+		# Send User0 msg == special 'Create' Boss msg
+		t_Boss = SendMessageEx(cog_Boss, 27, t_BossGhost, 0, 0, 0);		# (cogRef, User0, Location-Thing, 0, 0, 0)
+
+        # Cut to cam1
+        SetCameraFocus(2, cam1);
+        SetCameraSecondaryFocus(2, t_BossGhost);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        # hide player and create actor
+        SetThingFlags(player, 0x80000);
+        indy = CreateThing(tplActor, player);
+        CaptureThing(indy);
+        CopyPlayerHolsters(player, indy);
+        ClearThingFlags(indy, 0x80000);
+        
+        # walk actor to target1
+        AISetMoveSpeed(indy, 1.2);
+        AISetLookThing(indy, target1);
+        AISetMoveThing(indy, target1, 1);
+        
+        Sleep(0.5);
+        PlayVoice(player, inSay1, 1.0, 1);
+        Sleep(0.5);
+        
+        # Get the player into position
+        CopyOrientAndPos(indy, player);
+        SetThingFlags(indy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        #ClearActorFlags(player, 0x200000);
+        
+        # Reset the camera
+        Sleep(0.5);
+        SetCurrentCamera(1);
+	}
+
+	return;
+
+# ===================================================================
+
+end
+

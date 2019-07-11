@@ -1,0 +1,110 @@
+# Jones 3D Cog Script
+#
+# TEO_IrisDoor.cog
+#
+# Door Script
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message     startup
+    message     activate
+    
+    thing       idolkey
+    thing       idolstand
+    
+    thing       camera0
+    thing       target0
+    thing       camera1
+    thing       target1
+
+	thing		door0           linkid=0 mask=0x405
+	thing		door1           linkid=0 mask=0x405
+	thing		door2           linkid=0 mask=0x405
+	thing		door3			linkid=0 mask=0x405
+	thing		door4			linkid=0 mask=0x405
+	thing		door5			linkid=0 mask=0x405
+	thing		door6			linkid=0 mask=0x405
+	thing		door7			linkid=0 mask=0x405
+    
+	sector      doorsector      local
+	thing       player          local
+
+	flex		moveSpeed=0.5
+    flex        waittime
+    
+    sound       slidesound=teo_spike_block_c.wav        local
+    sound       stopit=gen_stone_stop_c.wav             local
+    
+    sound       indyline0=inxj001.wav                   local
+    sound       indyline1=inxj005.wav                   local
+    sound       indyline2=inxj151.wav                   local
+    sound       indyline3=inxj150.wav                   local
+        
+    int         itemnum
+	int		    doorcount		local
+    int         bnosound0=0     local
+    int         bnosound1=0     local
+    int         soundchan0      local
+    int         linechannel     local
+    int         takecheck=0     local
+end
+
+# ========================================================================================
+
+code
+
+# ........................................................................................
+startup:
+	doorsector=GetThingSector(door0);
+	SectorAdjoins(doorsector, 0);
+	player = GetLocalPlayerThing();
+	return;
+
+# ........................................................................................
+activate:
+    //print("object taken");
+	if ((GetSenderRef() == idolkey) && (takecheck == 0))
+	{
+        takecheck = 1;
+        StartCutScene(1);
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        PlayMode(player, 61, 0);
+        SetExtCamOffsetToThing(camera0);
+        SetExtCamLookOffsetToThing(target0);
+        linechannel = PlayVoice(player, indyline0[(RandBetween(0,3))], 1, 0);
+        Sleep(0.35);
+        DestroyThing(idolkey);
+        ChangeInv(player, itemnum, 1);
+        SetInvAvailable(player, itemnum, 1);
+        JonesInvItemChanged(itemnum);
+        WaitForSound(linechannel);
+        Sleep(1);
+	    SectorAdjoins(doorsector, 1);
+        SetCameraFocus(2, camera1);
+        SetCameraSecondaryFocus(2, target1);
+        SetCurrentCamera(2);
+        MoveToFrame(target1, 1, 2);
+        WaitForStop(target1);
+        soundchan0 = PlaySoundThing(slidesound, door0, 1, 10, 20, 0x1);
+        for (doorcount=0; doorcount<=7; doorcount=doorcount+1)
+		{
+		    MoveToFrame(door0[doorcount], 1, moveSpeed);
+		}
+        WaitForStop(door0);
+        StopSound(soundchan0, 0.5);
+        PlaySoundThing(stopit, door0, 1, 10, 20, 0x00);
+        Sleep(2);
+        SetCurrentCamera(1);
+        RestoreExtCam();
+        EndCutScene();
+        ClearActorFlags(player, 0x200000);
+	}
+	return;
+
+end
+

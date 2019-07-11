@@ -1,0 +1,70 @@
+
+# Jones 3D Cog Script
+#
+# PRU_voicelineCan'tWhip.cog    Plays a voice line when Indy sees something.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	entered
+message sighted
+message	user0
+
+cog		hint
+
+sector	trigger
+
+sector	neartrigger0
+sector	neartrigger1
+
+sound	dialogue=pu03j01.wav		local
+
+int		once=0	local
+int		close=0	local
+int		turnoff=0	local
+thing	player		local
+
+flex	dialogueLength
+
+end
+# ========================================================================================
+code
+
+entered:
+if ((GetThingSector(GetLocalPlayerThing()) == nearTrigger0) || (GetThingSector(GetLocalPlayerThing()) == nearTrigger1))
+{
+	Print("making unseen");
+	player = GetLocalPlayerThing();
+	#Reset the sector so that it "hasn't been seen yet," just in case it has.
+	ClearSectorFlags(trigger, 0x4000);
+	close = 1;
+}
+return;
+
+
+sighted:
+if (((GetThingSector(GetLocalPlayerThing()) == nearTrigger0)) || ((GetThingSector(GetLocalPlayerThing()) == nearTrigger0)))
+{
+	if ((GetSenderRef() == trigger) && (once == 0) && (close == 1) && (turnoff == 0))
+	{
+		once = 1;
+		Print("sighted");
+		PlayVoice(player, dialogue, 1, 0);
+        sleep(dialogueLength);
+		SendMessage(hint, user0);							 
+	}
+}
+return;
+
+user0:
+turnoff=1;
+return;
+
+end
+# .................................................................................
+
+

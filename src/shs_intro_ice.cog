@@ -1,0 +1,136 @@
+# Jones 3D Cog Script
+#
+# shs_Intro_Ice.cog   Intro the ice chickens.  
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message 	startup
+message 	entered
+
+sector		music
+
+sound 		music0=mus_gen_eerie1.wav				local
+sound		in_whatname=Ss08j01.wav					local
+
+surface 	trigger
+
+thing   	in_mk1   
+thing		player			local
+thing   	IceCam
+thing		IceCam_t1
+thing		IceCam_t2
+thing 		dummycam 
+thing		icechicken
+
+cog			chickenCutsceneCog
+
+int			curCam			local
+int			filter=0		local
+int			played=0		local
+int			in_track0		local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+      	
+	player = GetLocalPlayerThing();
+    return;
+
+	
+entered:
+	
+	if ((GetSenderRef() == trigger) && (filter == 0)) 
+	{
+		Print("Entered");
+    	        
+		MakeMeStop();
+		StartCutscene(1);
+     	
+		# Prep camera & cut...
+    	curCam = GetCurrentCamera();   
+		SetCameraLookInterp(2, 0); # no pan & tilt
+    	SetCameraPosInterp(2, 0); # no dolly
+    	SetCameraFocus(2, IceCam);
+    	SetCameraSecondaryFocus(2, IceCam_t1);
+    	SetCurrentCamera(2);
+    	ResetCameraFOV(0, 0.0);
+        Sleep(0.01);
+		SetCameraFOV(60, 1, 2.0);
+    	
+		# Puts away lighter
+    	If ((GetCurWeapon(player) > 12) || (GetCurItem(player) != 0))
+		{
+			DeselectWeapon(player);
+        }
+        Sleep(0.5);							
+		filter=1; 	# play only once
+		
+		AttachThingToThing(icecam_t1, icechicken);
+		SendMessage(chickenCutsceneCog, user0);		// Make the ice chicken detach and fall.
+       
+		Sleep(2.0);									// Wait a bit to give the player a chance to see this weirdo.
+		DetachThing(icecam_t1);
+		SendMessage(chickenCutsceneCog, user1);		// Make the Ice chicken roll away.
+	   	TeleportThing(player, in_mk1); 
+
+		# Swing back to indy
+		SetCameraLookInterp(2, 1); # pan & tilt
+		SetCameraInterpSpeed(2, 2.0);
+		Sleep(0.01);
+		SetCameraSecondaryFocus(2, IceCam_t2);
+        sleep(2.0);	# allow	camera to get to indy
+
+		# Indy draws weapon
+		
+		If(GetCurWeapon(player) > 0)
+		{
+			SelectWeapon(player, GetCurWeapon(player));
+		}
+		else
+		{
+			SelectWeapon(player, 3);	# temp
+			#SelectWeapon(player, GetLastWeapon());
+		}
+		
+		# "What in the name..."
+		PlayVoice(player, in_whatname, 1.0, 1);
+        
+		
+		# Return control
+		SetCameraPosition(1, GetThingPos(dummycam)); # prep to swing back to follow-cam
+    	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+    	SetCameraPosInterp(2, 0); # kill dolly mode
+    	sleep(.01);
+		ResetCameraFOV(0, 0.0);
+		SetCurrentCamera(curCam);                          
+    	ClearActorFlags(player, 0x200000); # player in control
+        EndCutscene();
+	}
+	# Some eerie music...
+	
+	if ((GetSenderRef() == music) && (played == 0))
+	{
+		played=1;
+        PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+    }
+
+return;
+     
+  
+
+end
+
+
+
+

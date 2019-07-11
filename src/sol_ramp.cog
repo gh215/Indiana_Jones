@@ -1,0 +1,344 @@
+# Jones 3D Cog Script
+#
+# SOL_Ramp.cog
+#
+# Like, Boom!
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     entered
+    message     arrived
+    message     timer
+    
+    thing       car     local
+    
+    # Destroy these
+    thing       trackA0
+    thing       trackA1
+    thing       trackA2
+    thing       trackA3
+    
+    # Create these
+    thing       trackB1
+    thing       trackB2
+    thing       trackB3
+    thing       trackB4
+    thing       trackB5
+    
+    thing       explosion1
+    thing       explosion2
+    thing       explosion3
+    thing       pillar
+    thing       blueLight
+    
+    thing       rock1
+    thing       rock2
+    thing       rock3
+    thing       rock4
+    
+    surface     waterSurf
+    
+    surface     rampTop0
+    surface     rampTop1    
+    surface     rampTop2
+    
+    surface     rampSide0
+    surface     rampSide1
+    surface     rampSide2
+    surface     rampSide3
+    surface     rampSide4
+    surface     rampSide5
+    surface     rampSide6
+    surface     rampSide7
+    surface     rampSide8
+    
+    surface     air0
+    surface     air1
+    surface     air2
+    surface     air3
+    surface     air4
+    
+    surface     hole0
+    surface     hole1
+    surface     hole2
+    surface     hole3
+    surface     hole4
+    
+    surface     burnt0
+    surface     burnt1
+    surface     burnt2
+    surface     burnt3
+    surface     burnt4
+    surface     burnt5
+    surface     burnt6
+    surface     burnt7
+    surface     burnt8
+    surface     burnt9
+    surface     burnt10
+    surface     burnt11
+    surface     burnt12
+    surface     burnt13
+    
+    # jump face triggers
+    surface     jumpOn
+    surface     jumpOff
+    surface     trig_BlownUp
+    
+    template    tplTrack1=1m_tracks         local
+    template    tplTrack2=hlfm_tracks       local
+    template    tplTrack3=1hlfm_tracks      local
+    template    tplTrack4=bentTrack         local
+    template    tplRock1=stnshrpa           local
+    template    tplRock2=stnshrpb           local
+    #template    tplExp=+gen_exp_stone_nc    local
+    template    tplExp=+bazooka_exp         local
+    
+    material    mat1=lag_wall_cave.mat                  local
+    material    mat2=gen_a4_water_stillc.mat            local
+    material    mat3=sol_floor_mural_plain_burn.mat     local
+    
+    sound		sndExpload=gen_grenade_explode.wav	    local
+    
+    cog         speedO
+    
+    vector      color           local
+    
+    int         done=0          local
+    int         tim=0           local
+    
+    int         top=0           local
+    int         side=0          local
+    int         air=0           local
+    int         hole=0          local
+    int         ta=0            local
+    int         tb=0            local
+    int         burnt=0         local
+    int         blownUp=0       local
+    int         firstTime=0     local
+    int         ready=0         local
+                                
+    int         numTA=4         local
+    int         numTB=4         local
+    int         numTops=3       local
+    int         numSides=9      local
+    int         numAir=5        local
+    int         numHole=5       local
+    int         numBurnt=14     local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    # Turn off the ramp faces
+    for (top=0; top<numTops; top=top+1)
+    {
+        SetFaceGeoMode(rampTop0[top], 0);
+        #SetAdjoinFlags(rampTop0[top], 2);     # move
+    }
+        
+    for (side=0; side<numSides; side=side+1)
+    {
+        SetFaceGeoMode(rampSide0[side], 0);
+    }
+    
+    # Don't render past hole
+    for (hole=0; hole<numHole; hole=hole+1)
+    {
+        ClearAdjoinFlags(hole0[hole], 1);     # no see
+    }
+    
+    # put opaque texture on waterSurf
+    SetSurfaceMat(waterSurf, mat1);
+                    
+    return;
+
+# ========================================================================================
+
+user0:
+            
+    #Print("ramp: message received");
+    # BANG!!!
+    CreateThing(tplExp, explosion1);
+    #CreateThing(tplExp, explosion2);
+    CreateThing(tplExp, explosion3);
+    
+    SetTimer(0.55);
+    
+    # Turn on ramp faces
+    for (top=0; top<numTops; top=top+1)
+    {
+        SetFaceGeoMode(rampTop0[top], 4);           # draw
+        ClearAdjoinFlags(rampTop0[top], 2);         # no move
+    }
+        
+    for (side=0; side<numSides; side=side+1)
+    {
+        SetFaceGeoMode(rampSide0[side], 4);
+        ClearAdjoinFlags(rampSide0[side], 2);
+    }
+        
+    # Turn off hole
+    for (hole=0; hole<numHole; hole=hole+1)
+    {
+        SetFaceGeoMode(hole0[hole], 0);     # no draw
+        SetAdjoinFlags(hole0[hole], 2);     # move
+        SetAdjoinFlags(hole0[hole], 1);     # see
+    }
+        
+    # Burn the clean faces
+    for (burnt=0; burnt<numBurnt; burnt=burnt+1)
+    {
+        SetSurfaceMat(burnt0[burnt], mat3);
+    }
+        
+    # Make air no move
+    for (air=0; air<numAir; air=air+1)
+    {
+        ClearAdjoinFlags(air0[air], 2);
+        SetSurfaceFlags(air0[air], 0x4000);  # Mine car track
+    }
+        
+    # Destroy trackA
+    for (ta=0; ta<numTA; ta=ta+1)
+    {
+        DestroyThing(trackA0[ta]);
+    }
+        
+    # Create trackB
+    CreateThing(tplTrack1, trackB1);
+    CreateThing(tplTrack2, trackB2);
+    CreateThing(tplTrack3, trackB3);
+    CreateThing(tplTrack4, trackB4);
+    CreateThing(tplTrack4, trackB5);
+    
+    # scatter some debris around
+    #CreateThing(tplRock1, rock1);
+    #CreateThing(tplRock1, rock2);
+    #CreateThing(tplRock1, rock3);
+    #CreateThing(tplRock2, rock4);
+    
+    # do some pillar stuff
+    SetCollideType(pillar, 0);
+    Rotate(pillar, -30, 2, 0.3);
+    
+    # change bottom water face and make it move
+    SetSurfaceMat(waterSurf, mat2);
+    SetAdjoinFlags(waterSurf, 2);     # move
+    
+    # add some blue light around open hole
+    color = VectorSet(1.0, 0.1, 0.1);
+    SetThingLight(blueLight, color, 20.0, 0.1);
+    
+    # turn on speedO cog
+    SendMessage(speedO, user0);
+    
+    ready = 1;
+    
+    return;   
+    
+# ========================================================================================
+
+entered:
+
+    car = GetSourceRef();
+
+    if(BitTest(GetPhysicsFlags(car), 0x01000000))
+    {
+        if((blownUp == 0) && (ready == 1))
+        {
+            if(GetSenderRef() == trig_BlownUp)
+            {
+                #Print("blownUp = 1");
+                blownUp = 1;
+                
+                for (air=0; air<numAir; air=air+1)
+                {
+                    #SetAdjoinFlags(air0[air], 2);           # can move thru air
+                    SetSurfaceFlags(air0[air], 0x4000);     # turn on track
+                }
+                
+                ClearAdjoinFlags(air0, 2);
+                ClearAdjoinFlags(air1, 2);
+                SetAdjoinFlags(air2, 2);
+                SetAdjoinFlags(air3, 2);
+                ClearSurfaceFlags(air0, 0x40000);
+                ClearSurfaceFlags(air1, 0x40000);
+            }
+        }    
+        
+        if(blownUp == 1)
+        {
+            if(GetSenderRef() == jumpOn)
+            {
+                # Make air no move
+                #Print("jump on");
+                for (air=0; air<numAir; air=air+1)
+                {
+                    ClearAdjoinFlags(air0[air], 2);         # no move air
+                    SetSurfaceFlags(air0[air], 0x4000);     # turn on track
+                }
+                
+                SetSurfaceFlags(air0, 0x40000);
+                SetSurfaceFlags(air1, 0x40000);
+            }
+            
+            else if(GetSenderRef() == jumpOff)
+            {
+                # turn off air hole
+                #Print("jump off");
+                for (air=0; air<numAir; air=air+1)
+                {
+                    #SetAdjoinFlags(air0[air], 2);           # can move thru air
+                    ClearSurfaceFlags(air0[air], 0x4000);   # shut off track
+                }
+                ClearAdjoinFlags(air0, 2);
+                ClearAdjoinFlags(air1, 2);
+                SetAdjoinFlags(air2, 2);
+                SetAdjoinFlags(air3, 2);
+                ClearSurfaceFlags(air0, 0x40000);
+                ClearSurfaceFlags(air1, 0x40000);
+            }
+        }
+    }
+
+    return;
+    
+# ========================================================================================
+
+arrived:
+
+    if(GetSenderRef() == pillar)
+    {
+        if(tim == 1) return;
+        #Print("arrived");
+        MoveToFrame(pillar, 1, 10.0);
+        tim = 1;
+        WaitForStop(pillar);
+        SetCollideType(pillar, 3);
+    }
+        
+    return;
+
+# ========================================================================================
+
+timer:
+
+    color = VectorSet(0.0, 0.0, 0.0);
+    SetThingLight(blueLight, color, 20.0, 2.0);
+    return;
+        
+# ========================================================================================
+
+end
+

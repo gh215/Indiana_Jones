@@ -1,0 +1,464 @@
+# Jones 3D Cog Script
+#
+# aet_EndDialator.cog
+#
+# [TL & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+symbols
+    
+message     startup
+## message		activated #### REMOVE BEFORE FLIGHT!
+message     damaged
+message 	pulse
+message		user0
+
+# Dilation section.
+# ------------------------------------------------------------------------------
+surface     mem0								mask=0x8	# No move adjoins
+surface     mem1								mask=0x8
+surface     mem2								mask=0x8
+
+thing		player								local
+thing		mem3do0										# Single poly 3do membranes
+thing		mem3do1
+thing		mem3do2
+
+sound		fade=aet_por_open.wav				local
+
+int			done0=0								local	# Flag to set when done and opened
+int			done1=0								local
+int			done2=0								local
+int			sender								local
+
+# Reality Leak section.
+# ------------------------------------------------------------------------------
+# Green door things...
+thing		babfloorA0							nolink	# Single poly floor 3dos for reality leak
+thing		babfloorA1							nolink
+thing		babfloorA2							nolink
+thing		babfloorA3							nolink					
+thing		babfloorA4							nolink
+thing		babfloorA5							nolink
+thing		babfloorA6							nolink									
+thing		babfloorA7							nolink
+thing		babfloorA8							nolink
+thing		babfloorA14							nolink	# correct!
+thing		babfloorA9							nolink			
+thing		babfloorA10							nolink
+thing		babfloorA11							nolink
+thing		babfloorA12							nolink					
+thing		babfloorA13							nolink
+thing		babfloorA15 						nolink		
+thing		babfloorA16 						nolink			
+thing		gravdisc_A	 						nolink			
+										
+# Blue door things...
+thing		babfloorB0							nolink	# Single poly floor 3dos for reality leak
+thing		babfloorB1							nolink
+thing		babfloorB2							nolink
+thing		babfloorB3							nolink		
+thing		babfloorB4							nolink
+thing		babfloorB5							nolink
+thing		babfloorB6							nolink		
+thing		babfloorB7							nolink
+thing		babfloorB8							nolink
+thing		babfloorB14							nolink
+thing		babfloorB9							nolink		
+thing		babfloorB10							nolink
+thing		babfloorB11							nolink
+thing		babfloorB12							nolink		
+thing		babfloorB13							nolink
+thing		babfloorB15							nolink		
+thing		babfloorB16							nolink 									
+thing		gravdisc_B							nolink 									
+										
+# Red door things...
+thing		babfloorC0							nolink	# Single poly floor 3dos for reality leak
+thing		babfloorC1							nolink
+thing		babfloorC2							nolink
+thing		babfloorC3							nolink		
+thing		babfloorC4							nolink
+thing		babfloorC5							nolink
+thing		babfloorC6							nolink		
+thing		babfloorC7							nolink
+thing		babfloorC8							nolink
+thing		babfloorC14							nolink
+thing		babfloorC9							nolink		
+thing		babfloorC10							nolink
+thing		babfloorC11							nolink
+thing		babfloorC12							nolink		
+thing		babfloorC13							nolink
+thing		babfloorC15							nolink			
+thing		babfloorC16 						nolink												
+thing		gravdisc_C	 						nolink												
+  			
+thing		por											# Last POR ball that must be hid
+
+sector		aetsecA0									# Aetherium sectors to turn off
+sector		aetsecA1
+sector		aetsecA2
+sector		aetsecA3
+sector		aetsecA4
+
+sector		aetsecB0
+sector		aetsecB1
+sector		aetsecB2
+sector		aetsecB3
+sector		aetsecB4
+
+sector		aetsecC0
+sector		aetsecC1
+sector		aetsecC2
+sector		aetsecC3
+sector		aetsecC4
+
+sector		litSectorA1									# Lit sectors
+sector		litSectorA2									# Lit sectors
+sector		litSectorA3									# Lit sectors
+sector		litSectorB1									# Lit sectors
+sector		litSectorB2									# Lit sectors
+sector		litSectorB3									# Lit sectors
+sector		litSectorC1									# Lit sectors
+sector		litSectorC2									# Lit sectors
+sector		litSectorC3									# Lit sectors
+
+int			countA=0							local	# Int for counting up for pulse A		
+int			countB=0							local	# Int for counting up for pulse B
+int			countC=0							local	# Int for counting up for pulse C
+int			isA=0								local	# Int for section A pulse
+int			isB=0								local	# Int for section B pulse
+int			isC=0								local	# Int for section C pulse
+
+int			countInt=17							local	# Value of the max number of fade things
+flex		pulsetime=0.25						local	# Value of time for pulse between fades
+flex		fadetime=0.20						local	# Value of time for things to fade
+                                                        # *must be less than* the pulsetime	
+int			sectorDarkA=0						local	# Done flag for turning off hall lights
+int			sectorDarkB=0						local	# Done flag for turning off hall lights
+int			sectorDarkC=0						local	# Done flag for turning off hall lights
+int			index								local
+
+# Tube fade section.
+# ------------------------------------------------------------------------------
+thing		tube0
+thing		tube1
+thing		tube2
+thing		tube3
+thing		tube4
+thing		tube5
+
+thing		rubbleB0
+thing		rubbleB1
+thing		rubbleB2
+
+thing		rubbleA0
+thing		rubbleA1
+
+# End escape section.
+# ------------------------------------------------------------------------------
+cog			rotatecog									# My cog for Mophia cutscene							
+cog			escapeCog									# Escape cog go code
+cog			hint_cog
+
+#### REMOVE BEFORE FLIGHT!
+
+int			whichmem=0							local
+int			didmem0=0							local
+int			didmem1=0							local
+int			didmem2=0							local
+
+####
+
+end
+
+# ==============================================================================
+# ==============================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+
+	## SetPulse(0.01);
+
+	for (index = 0; index < 17; index = index + 1)
+	{
+		SetThingAlpha(babfloorA0[index], 0.0);
+		SetThingAlpha(babfloorB0[index], 0.0);
+		SetThingAlpha(babfloorC0[index], 0.0);
+		SetCollideType(babfloorA0[index], 0);
+		SetCollideType(babfloorB0[index], 0);
+		SetCollideType(babfloorC0[index], 0);
+	}
+	isA = 1;
+	isB = 1;
+	isC = 1;
+
+    SetThingFlags(rubbleA0, 0x80000);
+	SetThingFlags(rubbleA1, 0x80000);
+    
+	SetThingFlags(rubbleB0, 0x80000);
+	SetThingFlags(rubbleB1, 0x80000);
+	SetThingFlags(rubbleB2, 0x80000);
+	
+	return;
+    
+# ..............................................................................
+
+#### REMOVE BEFORE FLIGHT!
+## activated:
+
+	sender = GetSenderRef();
+
+	if (GetSourceRef() != player)
+	{
+		return;
+	}
+
+	if ((sender == mem0) && (didmem0 == 0))
+	{
+		whichmem = 0;
+		didmem0 = 1;
+		goto damaged;
+	}
+
+	if ((sender == mem1) && (didmem1 == 0))
+	{
+		whichmem = 1;
+		didmem1 = 1;
+		goto damaged;
+	}
+
+	if ((sender == mem2) && (didmem2 == 0))
+	{
+		whichmem = 2;
+		didmem2 = 1;
+		goto damaged;
+	}
+
+	return;
+####
+
+# ..............................................................................
+
+damaged:
+
+# Dilation section of the three BAB P.O.R.s.
+# ------------------------------------------------------------------------------
+
+	if ((GetParam(1) == 0x5000) && (done0 == 0) && (GetSenderRef() == mem0))
+	#### if (whichmem == 0)
+	{
+		done0 = 1;
+		isA = 2;
+		SendMessageEx(rotatecog, user1, 1, 0, 0, 0);
+		SendMessage(hint_cog, user3);
+		PlaySoundLocal(fade, 1.0, 0, 0x0000, 0);
+		ThingFadeAnim(mem3do0, 1, 0, 3.0, 0);
+		Sleep(3.0);
+		DestroyThing(mem3do0);
+		SetAdjoinFlags(mem0, 2);
+		# Fade in floor things one at a time for one section.
+		SetPulse(pulsetime);
+	}
+	if ((GetParam(1) == 0x5000) && (done1 == 0) && (GetSenderRef() == mem1))
+	#### if (whichmem == 1)
+	{
+		done1 = 1;
+		isB = 2;
+		SendMessageEx(rotatecog, user1, 0, 1, 0, 0);
+		SendMessage(hint_cog, user4);
+		PlaySoundLocal(fade, 1.0, 0, 0x0000, 0);
+		ThingFadeAnim(mem3do1, 1, 0, 3.0, 0);
+		Sleep(3.0);
+		DestroyThing(mem3do1);
+		SetAdjoinFlags(mem1, 2);
+		# Fade in floor things one at a time for one section.
+		SetPulse(pulsetime);
+	}
+	if ((GetParam(1) == 0x5000) && (done2 == 0) && (GetSenderRef() == mem2))
+	#### if (whichmem == 2)
+	{
+		done2 = 1;
+		isC = 2;
+		SendMessageEx(rotatecog, user1, 0, 0, 1, 0);
+		SendMessage(hint_cog, user5);
+		PlaySoundLocal(fade, 1.0, 0, 0x0000, 0);
+		ThingFadeAnim(mem3do2, 1, 0, 3.0, 0);
+		Sleep(3.0);
+		DestroyThing(mem3do2);
+		SetAdjoinFlags(mem2, 2);
+		# Fade in floor things one at a time for one section.
+		SetPulse(pulsetime);
+	}
+		
+	return;
+
+# ..............................................................................
+
+pulse:
+
+	if (isA == 2)
+	{
+		if (countA == countInt) 
+		{
+			# Stop fadeing things...
+			SetPulse(0);
+			isA = 3;
+			SendMessage(rotatecog, user3); # done here
+
+			if ((isA == 3) && (isB == 3) && (isC == 3))
+			{
+				//SendMessage(rotatecog, user2);
+			}
+			return;
+		}
+		# Fade things in code...
+		# Fade out gravdisc A.
+		if (countA == 11)
+			{
+			ThingFadeAnim(gravdisc_a, 1.0, 0.0, 3.0, 0);
+			}
+		# Code for single poly floors amd stages...
+        ThingFadeAnim(babfloorA0[countA], 0.0, 1.0, fadetime, 0);
+		SetThingLight(babfloorA0[countA], '0.5 0.5 0.5', 0.001, fadetime);
+		SetCollideType(babfloorA0[countA], 3);
+		countA = countA + 1;
+		# Code for turning off sector light in hall...
+		if (sectorDarkA == 0)
+		{
+			sectorDarkA = 1;
+			SetSectorLight(litSectorA1, '0 0 0', fadetime);
+			SetSectorLight(litSectorA2, '0 0 0', fadetime);
+			SetSectorLight(litSectorA3, '0 0 0', fadetime);
+		}
+		return;
+	}
+
+	if (isB == 2)
+	{
+		if (countB == countInt) 
+		{
+			# Stop fadeing things...
+			SetPulse(0);
+			isB = 3;
+			SendMessage(rotatecog, user3); # done here
+			if ((isA == 3) && (isB == 3) && (isC == 3))
+			{
+				//SendMessage(rotatecog, user2);
+			}
+			return;
+		}
+		# Fade things in code...
+		# Fade out gravdisc B.
+		if (countB == 11)
+			{
+			ThingFadeAnim(gravdisc_b, 1.0, 0.0, 3.0, 0);
+			}
+		# Code for single poly floors amd stages...
+		ThingFadeAnim(babfloorB0[countB], 0.0, 1.0, fadetime, 0);
+		SetThingLight(babfloorB0[countB], '0.5 0.5 0.5', 0.001, fadetime);
+		SetCollideType(babfloorB0[countB], 3);
+		countB = countB + 1;					  
+		# Code for turning off sector light in hall.
+		if (sectorDarkB == 0)
+		{
+			sectorDarkB = 1;
+			SetSectorLight(litSectorB1, '0 0 0', fadetime);
+			SetSectorLight(litSectorB2, '0 0 0', fadetime);
+			SetSectorLight(litSectorB3, '0 0 0', fadetime);
+		}
+		return;
+	}
+
+	if (isC == 2)
+	{
+		if (countC == countInt) 
+		{
+			# Stop fadeing things...
+			SetPulse(0);
+			isC = 3;
+			SendMessage(rotatecog, user3); # done here
+			if ((isA == 3) && (isB == 3) && (isC == 3))
+			{
+				//SendMessage(rotatecog, user2);
+			}
+			return;
+		}
+		# Fade things in code...
+		# Fade out gravdisc C.
+		if (countC == 11)
+			{
+			ThingFadeAnim(gravdisc_c, 1.0, 0.0, 3.0, 0);
+			}
+		# Code for single poly floors amd stages...
+		ThingFadeAnim(babfloorC0[countC], 0.0, 1.0, fadetime, 0);
+		SetThingLight(babfloorC0[countC], '0.5 0.5 0.5', 0.001, fadetime);
+		SetCollideType(babfloorC0[countC], 3);
+		countC = countC + 1;					  
+		# Code for turning off sector light in hall...
+		if (sectorDarkC == 0)
+		{
+			sectorDarkC = 1;
+			SetSectorLight(litSectorC1, '0 0 0', fadetime);
+			SetSectorLight(litSectorC2, '0 0 0', fadetime);
+			SetSectorLight(litSectorC3, '0 0 0', fadetime);
+		}
+		return;
+	}
+
+	return;
+
+# ..............................................................................
+
+user0:
+
+	# Code for turning off the Aetherium sectors when the PORs are opened...
+	ClearSectorFlags(aetsecA0, 0x0100);
+	ClearSectorFlags(aetsecA1, 0x0100);
+	ClearSectorFlags(aetsecA2, 0x0100);
+	ClearSectorFlags(aetsecA3, 0x0100);
+	ClearSectorFlags(aetsecA4, 0x0100);
+
+	ClearSectorFlags(aetsecB0, 0x0100);
+	ClearSectorFlags(aetsecB1, 0x0100);
+	ClearSectorFlags(aetsecB2, 0x0100);
+	ClearSectorFlags(aetsecB3, 0x0100);
+	ClearSectorFlags(aetsecB4, 0x0100);
+
+	ClearSectorFlags(aetsecC0, 0x0100);
+	ClearSectorFlags(aetsecC1, 0x0100);
+	ClearSectorFlags(aetsecC2, 0x0100);
+	ClearSectorFlags(aetsecC3, 0x0100);
+	ClearSectorFlags(aetsecC4, 0x0100);
+	# Code for turning off 3do Aet tubes.
+	ThingFadeAnim(tube0, 0.7, 0, 1.0, 0);
+	ThingFadeAnim(tube1, 0.7, 0, 1.0, 0);
+	ThingFadeAnim(tube2, 0.7, 0, 1.0, 0);
+	ThingFadeAnim(tube3, 0.7, 0, 1.0, 0);
+	ThingFadeAnim(tube4, 0.7, 0, 1.0, 0);
+	ThingFadeAnim(tube5, 0.7, 0, 1.0, 0);
+
+    ClearAdjoinFlags(mem0, 2);
+    ClearAdjoinFlags(mem2, 2);
+    
+	ClearThingFlags(rubbleA0, 0x80000);
+	ClearThingFlags(rubbleA1, 0x80000);
+
+    ClearThingFlags(rubbleB0, 0x80000);
+	ClearThingFlags(rubbleB1, 0x80000);
+	ClearThingFlags(rubbleB2, 0x80000);
+
+	# Code to hide the last POR ball.
+	SetThingFlags(por, 0x80000);
+	# Send message to escape cog.
+	SendMessage(escapeCog, user0);
+	SendMessage(escapeCog, user1);
+
+	return;
+
+end
+

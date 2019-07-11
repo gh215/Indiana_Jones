@@ -1,0 +1,60 @@
+# Jones 3D Cog Script
+#
+# shw_fogswitch.cog
+#
+# The Fog Cog, heh
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+        message startup
+        message crossed
+        
+        thing   player  local
+        
+        surface   onsurf0        linkID=2
+        surface   onsurf1        linkID=2
+        surface   onsurf2        linkID=2
+        surface   onsurf3        linkID=2
+        
+        surface   offsurf0       linkID=3
+        surface   offsurf1       linkID=3
+        surface   offsurf2       linkID=3
+        surface   offsurf3       linkID=3
+                
+        
+        
+end
+
+# ========================================================================================
+code
+
+startup:
+        player = GetLocalPlayerThing(); 
+        #regular = VectorSet(10.0, 20.0, 40.0);
+        return;
+        
+# ========================================================================================
+crossed:
+        
+        If ((GetSenderID() == 3) && (GetSourceRef() == player))
+                {
+                SetFog(0, '0.0 0.0 0.0', 20, 250);
+                }
+                
+        If ((GetSenderID() == 2) && (GetSourceRef() == player))
+                {
+                SetFog(1, '0.1 0.2 0.4', 20, 150);
+                }
+                
+return;
+        
+
+# ========================================================================================
+end
+
+        

@@ -1,0 +1,144 @@
+# Jones 3D Cog Script
+#
+# pyr_hideruins.cog
+#	
+# Hide the ruins and such when Indy isn't nearby
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	entered
+message	exited
+
+# ruins stuff to hide
+thing	ruins1		nolink
+thing	ruins2		nolink
+thing	ruins3		nolink
+thing	ruins4		nolink
+thing	ruins5		nolink
+thing	ruins6		nolink
+thing	ruins7		nolink
+thing	ruins8		nolink
+thing	ruins9		nolink
+thing	ruins10		nolink
+thing	block1		nolink
+thing	block2		nolink
+thing	block3		nolink
+thing	monojackal4	nolink
+
+# columny things to hide
+thing	pushblock	nolink
+thing	column1		nolink
+thing	column2		nolink
+thing	column3		nolink
+thing	column4		nolink
+
+# these hide the ruins 3dos
+sector	ruinstrigger1	linkid=1
+sector	ruinstrigger2	linkid=1
+sector	ruinstrigger3	linkid=1
+sector	ruinstrigger4	linkid=1
+sector	ruinstrigger5	linkid=1
+sector	ruinstrigger6	linkid=1
+sector	ruinstrigger7	linkid=1
+sector	ruinstrigger8	linkid=1
+
+# these hide the column stuff in front of pyramid 2
+sector	columntrigger1	linkid=2
+sector	columntrigger2	linkid=2
+sector	columntrigger3	linkid=2
+sector	columntrigger4	linkid=2
+sector	columntrigger5	linkid=2
+sector	columntrigger6	linkid=2
+sector	columntrigger7	linkid=2
+sector	columntrigger8	linkid=2
+
+end
+
+code
+startup:
+	sleep(.01);
+	SetThingFlags(column1, 0x10);
+	SetThingFlags(column2, 0x10);
+	SetThingFlags(column3, 0x10);
+	SetThingFlags(pushblock, 0x10);
+
+	sleep(50);
+	
+	# when opening cutscene is done, show the stuff again
+	ClearThingFlags(column1, 0x10);
+	ClearThingFlags(column2, 0x10);
+	ClearThingFlags(column3, 0x10);
+	ClearThingFlags(pushblock, 0x10);
+
+	return;
+
+entered:
+# ---> various trigger sectors
+	if (GetSenderID() == 1)
+	{
+		if (GetThingFlags(ruins1) & 0x10) return;
+
+		SetThingFlags(ruins1, 0x10);
+		SetThingFlags(ruins2, 0x10);
+		SetThingFlags(ruins3, 0x10);
+		SetThingFlags(ruins4, 0x10);
+		SetThingFlags(ruins5, 0x10);
+		SetThingFlags(ruins6, 0x10);
+		SetThingFlags(ruins7, 0x10);
+		SetThingFlags(ruins8, 0x10);
+		SetThingFlags(ruins9, 0x10);
+		SetThingFlags(ruins10, 0x10);
+		SetThingFlags(block1, 0x10);
+		SetThingFlags(block2, 0x10);
+		SetThingFlags(block3, 0x10);
+		SetThingFlags(monojackal4, 0x10);
+	}
+	
+	if (GetSenderID() == 2)
+	{
+		if (GetThingFlags(column1) & 0x10) return;
+
+		SetThingFlags(column1, 0x10);
+		SetThingFlags(column2, 0x10);
+		SetThingFlags(column3, 0x10);
+		SetThingFlags(pushblock, 0x10);
+	}
+
+	return;
+
+exited:
+# ---> trigger sectors	
+	if (GetSenderID() == 1)
+	{
+		ClearThingFlags(ruins1, 0x10);
+		ClearThingFlags(ruins2, 0x10);
+		ClearThingFlags(ruins3, 0x10);
+		ClearThingFlags(ruins4, 0x10);
+		ClearThingFlags(ruins5, 0x10);
+		ClearThingFlags(ruins6, 0x10);
+		ClearThingFlags(ruins7, 0x10);
+		ClearThingFlags(ruins8, 0x10);
+		ClearThingFlags(ruins9, 0x10);
+		ClearThingFlags(ruins10, 0x10);
+		ClearThingFlags(block1, 0x10);
+		ClearThingFlags(block2, 0x10);
+		ClearThingFlags(block3, 0x10);
+		ClearThingFlags(monojackal4, 0x10);
+	}
+	
+	if (GetSenderID() == 2)
+	{
+		ClearThingFlags(column1, 0x10);
+		ClearThingFlags(column2, 0x10);
+		ClearThingFlags(column3, 0x10);
+		ClearThingFlags(pushblock, 0x10);
+	}
+	
+	return;
+
+end

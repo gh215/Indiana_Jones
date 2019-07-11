@@ -1,0 +1,63 @@
+# Jones 3D Cog Script
+#
+# aet_TestCog.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+    
+message     startup
+#message		entered
+
+thing		player						local
+
+thing		POR
+#thing		ghost
+#thing		door
+
+#sector		localsec
+#sector		thingsec
+#sector		classsec
+
+#sound		wave=aet_gemdoor_start.wav	local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+StartCutScene(0);
+Sleep(0.01);
+EndCutScene();
+
+SetThingFlags(POR, 0x80000);
+
+return;
+
+# ........................................................................................
+//entered:
+
+//if (GetSenderRef() == localsec)
+//	{
+//    PlaySoundLocal(wave, 1, 0, 0x0, 0);	
+//	}
+//if (GetSenderRef() == thingsec)
+//	{
+//	PlaySoundThing(wave, ghost, 1, 10, 10, 0x0);
+//	}
+//if (GetSenderRef() == classsec)
+//	{
+//	MoveToFrame(door, 1, 1.0);
+//	}
+
+//return;
+
+# ........................................................................................
+end
+

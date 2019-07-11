@@ -1,0 +1,45 @@
+# Jones 3D Cog Script
+#
+# actor_Centipede.cog
+#
+# [PKM]
+#
+# Kills off the centipedes when Indy collides with them.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		touched
+
+	thing		sender		local
+	thing		source		local
+
+end
+
+# ===================================================================
+code
+
+touched:
+
+	sender = GetSenderRef();
+	source = GetSourceRef();
+
+	if (source == GetLocalPlayerThing())
+	{
+		# Ignore touch if Indy's standing still...
+		if ( VectorLen(GetThingVel(source)) == 0 )
+			return;
+
+		# Indy Stepped on us!  Maybe we should give him a little payback...
+		if (Rand() < 0.5)
+			DamageThing(source, 1.0, 0x100, sender);
+
+		# Unfortunately, it's gonna cost us too... time to die!
+		DamageThing(sender, GetHealth(sender), 0x80, source);
+	}
+	return;
+
+end

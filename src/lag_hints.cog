@@ -1,0 +1,323 @@
+# Jones 3D Cog Script
+#
+# lag_hints.cog
+#
+# level hints    
+#
+# [DS]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+	message		startup
+	message		removed
+	message		entered
+	message		taken
+	message		user1
+	message		user2
+	message		user3
+	message		user4
+	message		user5
+	message		user6
+	message		user7
+        
+	thing			player		local
+	thing			hint1
+	thing			hint2
+	thing			hint3
+	thing			hint4
+	thing			hint5
+	thing			hint6
+	thing			hint7
+	thing			hint8
+	thing			hint9
+	thing			hint10	
+	thing			hint11	
+	thing			hint12	
+	thing			hint13	
+	thing			hint14	
+	thing			hint15
+
+	thing			hint16
+	thing			hint17	
+	thing			hint18	
+	thing			hint19	
+	thing			hint20	
+	thing			hint21	
+	thing			hint22
+	thing			hint23	
+	thing			hint24	
+	thing			hint25	
+	thing			hint26	
+	thing			hint27	
+	thing			hint28
+	thing			hint29	
+	thing			hint30	
+
+	thing			hint40
+
+	int		got_shovel=0				local
+	int		dug=0						local
+	int		returning=0					local
+	int		proptaken=0					local
+	int		exit_opened=0				local
+	thing		machette
+	thing		shovel
+	thing		armdevice
+	thing		hammer
+	thing		key
+	thing		crank
+	thing		prop
+	sector	exit
+	sector	spider_cave1
+	sector	zero_lagoon
+		sector	island_beach0
+		sector	island_water0
+	sector	island_nitch
+	 	sector	spider_cave2
+		sector	left_path0
+		sector	right_path0
+		sector	left_path1
+	sector	ship_site
+	sector	ship_deck
+	sector	ship_inside0   
+	sector	ship_inside1       
+	sector	ship_inside2       
+	sector	ship_inside3
+	sector	inner_lag0       
+	sector	ruin_entry
+	sector	ruin_exit
+
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+removed:
+	if(getsenderref() == prop)			# prop removal.
+	{
+	SetHintSolved(hint23);
+	proptaken=1;
+	return;
+	}
+	if(GetSenderRef() == armdevice)
+	{
+	SetHintSolved(hint10);
+	return;
+	}
+	if(GetSenderRef() == crank)
+	{
+	SetHintSolved(hint20);
+	}
+	return;
+        
+entered:
+	if(getsenderref() == spider_cave1)		# spider cave1. 
+	{
+	SetHintSolved(hint2);
+	return;
+	}
+	if(getsenderref() == zero_lagoon)		# zero lagoon area. 
+	{
+	if(got_shovel == 0) return;
+	SetHintSolved(hint4);
+	return;
+	}
+	if((getsenderref() == island_beach0) || (getsenderref() == island_water0))# beach at center island. 
+	{
+	if(got_shovel == 0) return;
+	SetHintSolved(hint5);
+	return;
+	}
+	if(getsenderref() == island_nitch)		# nitch in beach at center island. 
+	{
+	if(got_shovel == 0) return;
+#=========== Take The Player Back To The Lagoon =================
+	if(returning == 1)	
+		{
+		SetHintSolved(hint6);
+		SetHintUnsolved(hint5);
+		return;
+		}
+#================================================================
+	SetHintSolved(hint6);
+	return;
+	}
+	if(getsenderref() == spider_cave2)		# island beach spider cave. 
+	{
+	if(got_shovel == 0) return;
+#=========== Take The Player Back To The Lagoon =================
+	if(returning == 1)	
+		{
+		SetHintSolved(hint7);
+		SetHintUnsolved(hint6);
+		return;                    
+		}
+#================================================================
+	SetHintSolved(hint7);
+	return;
+	}
+	if(getsenderref() == ship_site)		# ship sighted. 
+	{
+	if(got_shovel == 0) return;
+	SetHintSolved(hint8);
+	return;
+	}
+	if(getsenderref() == ship_deck)		# on deck of ship. 
+	{
+	if(got_shovel == 0) return;
+	SetHintSolved(hint9);
+	return;
+	}
+	if(getsenderref() == ship_inside0)		# inside ship area0. 
+	{
+	SetHintSolved(hint13);
+	return;
+	}
+	if(getsenderref() == ship_inside1)		# inside ship area1. 
+	{
+	SetHintSolved(hint14);
+	return;
+	}
+	if(getsenderref() == ship_inside2)		# inside ship area2. 
+	{
+	SetHintSolved(hint15);
+	return;
+	}
+	if(getsenderref() == ship_inside3)		# inside ship area3. 
+	{
+	SetHintSolved(hint16);
+	return;
+	}
+#=========== Take The Player Back To The Lagoon =================
+	if((getsenderref() == left_path0) || (getsenderref() == right_path0)) # player going around island. 
+	{
+	if(returning != 1) return;
+	SetHintSolved(hint7);
+	SetHintSolved(hint6);
+	SetHintUnsolved(hint5);
+	return;                    
+	}
+	if(getsenderref() == left_path1)
+	{
+	if(returning != 1) return;
+	if(proptaken == 1)
+		{
+		SetHintSolved(hint24);
+		}
+	SetHintSolved(hint5);
+	return;
+	}
+#================================================================
+	if(getsenderref() == inner_lag0)
+	{
+	SetHintSolved(hint27);
+	return;       
+	}
+	if(getsenderref() == ruin_entry)
+	{
+	SetHintSolved(hint28);
+	return;       
+	}
+	if(getsenderref() == ruin_exit)
+	{
+	SetHintSolved(hint29);
+		if(exit_opened == 1)
+		{
+		SetHintUnsolved(hint28);
+		}
+	return;       
+	}
+	if(getsenderref() == exit)			# exit level. 
+	{
+	SetHintSolved(hint40);
+	}
+	return;       
+
+taken:
+	if(GetSenderRef() == machette)
+	{
+	SetHintSolved(hint1);
+	return;
+	}       
+	if(GetSenderRef() == shovel)
+	{
+	SetHintSolved(hint3);
+	SetHintUnsolved(hint2);
+	got_shovel=1;
+	return;
+	}
+	if(GetSenderRef() == hammer)
+	{
+	SetHintSolved(hint12);
+	return;
+	}
+	if(GetSenderRef() == key)
+	{
+	SetHintSolved(hint18);
+	return;
+	}
+	return;
+
+user1:							# torpedo.
+	SetHintSolved(hint11);
+	return;
+
+user2:							# hatch cover.
+	SetHintSolved(hint17);
+	return;
+
+user3:							# door lock.
+	SetHintSolved(hint19);
+	return;
+
+user4:
+	if(getparam(0) == 1)				# boom rotated.
+	{
+	SetHintSolved(hint21);
+	return;
+	}
+	if(getparam(0) == 0)				# boom reset.
+	{
+	if(dug == 1) return;
+	SetHintUnsolved(hint21);
+	}
+	return;
+
+user5:							# slumpsand switch.
+	SetHintSolved(hint22);
+	dug=1;
+#=========== Take The Player Back To The Lagoon =================
+	returning=1;
+	SetHintUnsolved(hint7);
+	return;
+
+user6:							# underwater temple.
+	if(getparam(0) == 1)
+	{
+	SetHintSolved(hint26);
+	return;
+	}
+	else
+	{
+	SetHintSolved(hint25);
+	}
+	return;
+
+user7:							# totem switch.
+	SetHintSolved(hint30);
+#=========== Time to go ============================
+	exit_opened=1;
+	SetHintUnsolved(hint29);
+	return;
+
+end
+

@@ -1,0 +1,66 @@
+# Jones 3D Cog Script
+#
+# RIV_AmbElevBase.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message	    entered
+    message     pulse
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+    thing		soundPos2		nolink
+    thing		soundPos3		nolink
+    
+    sector      start_Amb1      linkID=1
+    sector      start_Amb2      linkID=1
+    sector      start_Amb3      linkID=1
+    
+    sector      stop_Amb1       linkID=0
+    sector      stop_Amb2       linkID=0
+    
+	sound		ambient0=teo_drops1_c.wav   local
+	sound		ambient1=teo_drops2_c.wav   local
+	sound		ambient2=teo_drops3_c.wav   local
+	sound		ambient3=teo_drops4_c.wav   local
+    
+    int         playing=0               local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	if((GetSenderID() == 1) && (playing == 0))
+    {
+        playing = 1;
+        setpulse(2.0);
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        playing = 0;
+        SetPulse(0.0);
+    }
+    
+	return;
+
+# ========================================================================================
+
+pulse:
+
+    PlaySoundThing(ambient0[RandBetween(0, 3)], soundPos0[RandBetween(0, 3)], 1.0, 15, 30, 0);
+    
+    return;
+
+# ========================================================================================
+
+end

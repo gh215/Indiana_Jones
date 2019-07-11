@@ -1,0 +1,57 @@
+# Jones 3D Cog Script
+#
+# olv_gonefar.cog
+#
+# Cog to to let player they may want to go back a little.
+#
+# [DS]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+	message	startup
+	message	entered
+	message	timer
+
+	sector	toofar
+	sector	stoptalk
+	thing		player			local
+	sound		talky=inxj264.wav		local		// ...Maybe gone too far.
+	int		solved=0			local
+
+end
+
+#----------------------------------------------------------------------------------------
+
+code
+startup:
+	player=GetLocalPlayerThing(); 
+	return;
+
+entered:
+	if(solved == 1) return;
+	if(getsenderref() == toofar)
+	{
+	if(solved == 2) return;
+	PlayVoice(player, talky, 1.0, 0);
+solved=1;
+#	solved=2;
+#	settimer(15);
+	return;
+	}
+	if(getsenderref() == stoptalk)
+	{
+	solved=1;
+	return;
+	}
+
+timer:
+	if(solved == 1) return;
+	solved=0;
+	return;
+
+end
+
+ 

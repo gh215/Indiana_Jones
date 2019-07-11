@@ -1,0 +1,85 @@
+# Jones 3D Cog Script
+#
+# actor_quetzalcoatl.cog
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+#	#####  Notes  #####
+#
+# ===================================================================
+
+symbols
+
+message		created
+message		aievent
+message		timer
+message     killed
+message		touched
+message		damaged
+
+thing		t_Indy						local
+thing		t_Boss						local
+sound		ricochet=gen_ricochet_boss.wav	local
+
+end
+
+# ===================================================================
+
+code
+
+# ...................................................................
+created:
+	t_Indy	= GetLocalPlayerThing();
+	t_Boss		= GetSenderRef();
+
+	return;
+
+# ...................................................................
+aievent:
+
+	return;
+
+
+# ...................................................................
+timer:
+
+
+# ...................................................................
+touched:
+
+	return;
+
+# ...................................................................
+damaged:
+	// Quetz only gets damaged by spikes
+	// Using razor rock damage
+	if (GetParam(1) != 0x400000)
+	{
+		// Projectiles ricochet off the boss
+		if (BITTEST(GetParam(1), 0x1))
+		{
+			PlaySoundThing(ricochet, t_Boss, 1.0, 0.0, 40.0, 0x880);
+		}
+		ReturnEx(0);
+	}
+
+	return;
+
+
+# ...................................................................
+killed:
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+
+
+end
+

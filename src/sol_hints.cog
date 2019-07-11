@@ -1,0 +1,853 @@
+# Jones 3D Cog Script
+#
+# SOL_Hints.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols		
+	
+    message     user0
+    message     user1
+    message     user2
+    message     entered
+    message     activated
+    message     boarded
+    message     removed
+    
+    # ** local stuff **
+    thing       player      local
+    thing       car         local
+    
+    # ** misc things **
+    thing       mineCar
+    thing       minePlayer
+    thing       fuseBox
+    thing       pyrKey
+    thing       oilKey
+    #thing       blueGem
+    thing       redGem
+    thing       greenGem
+    
+    thing       lever1
+    thing       lever2
+    thing       lever3
+    
+    # ** hint stuff **
+    thing       hint1       # Level 13-SOL. Hint 1: jump x: Indy opens control room door for the first time.
+    thing       hint2       # Level 13-SOL. Hint 2: jump 11: Indy visits fuse box for the first time.
+    thing       hint3       # Level 13-SOL. Hint 3: jump x: Get back into the mine car at control room.
+    thing       hint4       # Level 13-SOL. Hint 4: jump 5: Get out of the mine car, get fuse from fuse cart.
+    thing       hint5       # Level 13-SOL. Hint 5: jump 5: Get back into the mine car at exit complex.
+    thing       hint6       # Level 13-SOL. Hint 6: jump 11: Get out of the mine car, put fuse in fuse box.
+    thing       hint7       # Level 13-SOL. Hint 7: jump 11: lever1, lever3, drive to east end.
+    
+    thing       hint8       # Level 13-SOL. Hint 9: jump x: Drive mine car just past track merge, then back down siding until you trigger Horus Room mine safety doors to open.
+    thing       hint9       # Level 13-SOL. Hint 10: jump x: Whip swing thru waterfall and pick up Eye of Horus.
+    thing       hint10      # Level 13-SOL. Hint 11: jump x: Get back into mine car and drive back to Control Room.
+    thing       hint11      # Level 13-SOL. Hint 12: jump x: Pull lever 2 to solve.
+    thing       hint12      # Level 13-SOL. Hint 13: jump x: Get back in mine car, chase comCar (after chaseLower cutscene).
+    thing       hint13      # Level 13-SOL. Hint 14: jump x: Hint appears on comCar -- chase comCar until blowIt is triggered.
+    thing       hint14      # Level 13-SOL. Hint 15: jump x: Get out of the mine car and get the oil key from the open room.
+    thing       hint15      # Level 13-SOL. Hint 16: jump x: Get back into the mine car and drive to oil shed room. 
+    thing       hint16      # Level 13-SOL. Hint 17: jump x: Get out of the mine car and get the oil can from the oil shed. 
+    thing       hint17      # Level 13-SOL. Hint 18: jump x: Get back in the mine car and drive to switch4. 
+    thing       hint18      # Level 13-SOL. Hint 19: jump x: Get out of the mine car and oil switch4 with the oil can. 
+    thing       hint19      # Level 13-SOL. Hint 20: jump x: Get back into the mine car and drive to the control room. 
+    thing       hint20      # Level 13-SOL. Hint 21: jump x: Get out of mine car, go in control room and pull lever4 to solve.
+    thing       hint21      # Level 13-SOL. Hint 22: jump x: Get back in mine car and drive to swith5 room.
+    thing       hint22      # Level 13-SOL. Hint 23: jump x: Get out of mine car and walk up hill towards comFalls.
+    thing       hint23      # Level 13-SOL. Hint 24: jump x: Whip swing across broken track and smash wall with IMP1. 
+    thing       hint24      # Level 13-SOL. Hint 25: jump x: Pick up the blue gem. 
+    thing       hint25      # Level 13-SOL. Hint 26: jump x: Walk back to the mine car and get in. 
+    thing       hint26      # Level 13-SOL. Hint 27: jump x: 
+    thing       hint27      # Level 13-SOL. Hint 28: jump x: 
+    thing       hint28      # Level 13-SOL. Hint 29: jump x: 
+    thing       hint29      # Level 13-SOL. Hint 30: jump x: 
+    thing       hint30      # Level 13-SOL. Hint 30: jump x: 
+    thing       hint31      # Level 13-SOL. Hint 30: jump x: 
+    thing       hint32      # Level 13-SOL. Hint 30: jump x: 
+    thing       hint33      # Level 13-SOL. Hint 30: jump x: 
+    thing       hint34      # Level 13-SOL. Hint 30: jump x: 
+    
+    # ** sectors **
+    sector      sec_ExitComp1
+    sector      sec_CtrlRoom
+    sector      sec_Switch5
+    sector      sec_RedGem
+    sector      sec_EastEnd
+    sector      sec_OilShed
+    sector      sec_Switch4
+    sector      sec_Switch5
+    sector      sec_Switch5_2
+    sector      sec_Reflec
+    sector      sec_ExitComp2
+    sector      sec_ExitComp3
+    
+    # ** switch surfaces **
+    surface     switch1
+    surface     switch2
+    surface     switch3
+    surface     switch4
+    surface     switch5
+    
+    # ** surfaces **
+    surface     surf_HorusOpen
+    
+    cog         cog_FuseBox
+    cog         cog_FuseCart
+    cog         cog_CtrlDoor
+    cog         cog_OilShed
+    cog         cog_lever4
+    cog         cog_comFalls
+    cog         cog_ExpDebris   # imp wall
+    cog         cog_BlueGem
+    cog         cog_GemWall     # crate wall
+    cog         cog_ChaseLower
+    cog         cog_Ambush
+    
+    # ** hint is attached to mine car **
+    int         hint3_Attached=0    local
+    int         hint5_Attached=0    local
+    int         hint7_Attached=0    local   #new
+    int         hint10_Attached=0   local
+    int         hint12_Attached=0   local   #new
+    int         hint14_Attached=0   local
+    int         hint16_Attached=0   local   #new
+    int         hint18_Attached=0   local
+    int         hint22_Attached=0   local
+    int         hint25_Attached=0   local
+    int         hint26_Attached=0   local   #new
+    int         hint27_Attached=0   local   #new
+    
+    # ** hint ready for trigger ints **
+    int         ready_Hint3=0       local
+    int         ready_Hint5=0       local
+    int         ready_Hint7=0       local   #new
+    int         ready_Hint8=0       local
+    int         ready_Hint13=0      local   #new
+    int         ready_Hint15=0      local   #new
+    int         ready_Hint17=0      local
+    int         ready_Hint18=0      local
+    int         ready_Hint19=0      local
+    int         ready_Hint23=0      local
+    int         ready_Hint26=0      local   #new
+    int         ready_Hint27=0      local   #new
+    int         ready_Hint28=0      local   #new
+    
+    # ** hints are ready to be attached **
+    int         attach_Hint3=0      local   #new
+    int         attach_Hint5=0      local
+    int         attach_Hint7=0      local   #new
+    int         attach_Hint10=0     local   #new
+    int         attach_Hint12=0     local   #new
+    int         attach_Hint14=0     local   #new
+    int         attach_Hint16=0     local
+    int         attach_Hint18=0     local
+    int         attach_Hint22=0     local
+    int         attach_Hint25=0     local   #new
+    int         attach_Hint26=0     local   #new
+    int         attach_Hint27=0     local   #new
+    
+    # ** found items **
+    int         got_Fuse=0          local
+    int         got_OilKey=0        local
+    int         got_OilCan=0        local
+    int         got_Horus=0         local
+    int         got_BlueGem=0       local
+    int         got_GreenGem=0      local
+    int         got_RedGem=0        local
+    
+    # ** misc ints **
+    int         ready_Boarded=0     local
+    int         blown_Ambush=0      local
+    int         hint7_Solved=0      local
+    int         hint26_Solved=0     local
+    
+end
+
+# ========================================================================================
+
+code
+
+user0:
+
+    if((GetSenderRef() == minecar)  || (GetSenderRef() == minePlayer)) return;
+
+    Print("Hints: user0");
+    
+    # activates control room door (message sent by sol_CtrlRmDoor)
+    if((GetSenderRef() == cog_CtrlDoor) && (GetHintSolved(hint1) == 0))
+    {
+        SetHintSolved(hint1);
+    }
+    
+    # picks up fuse from fuse cart (message sent by fuseCart)
+    else if((GetSenderRef() == cog_FuseCart) && (GetHintSolved(hint4) == 0))
+    {
+        got_Fuse = 1;
+        CopyOrientandPos(mineCar, hint5);
+        SetHintSolved(hint4);
+        ready_Boarded = 1;
+        ready_Hint5 = 1; # hint5 is ready for trigger
+        attach_Hint5 = 1; # hint5 is ready to be attached
+        # hint5 appears at mine car
+    }
+    
+    # put the fuse in the fuse box (message sent by fuseBox)
+    else if((GetSenderRef() == cog_FuseBox) && (GetHintSolved(hint6) == 0))
+    {
+        # if they never checked the fuse box the first time
+        if((GetHintSolved(hint2) == 0) && (got_Fuse == 1))
+        {
+            Print("solved: hint2 thru hint5");
+            if(GetHintSolved(hint2) == 0) SetHintSolved(hint2);
+            if(GetHintSolved(hint3) == 0) SetHintSolved(hint3);
+            if(GetHintSolved(hint4) == 0)
+            {
+                SetHintSolved(hint4);
+                DestroyThing(hint4);
+            }
+            #if(GetHintSolved(hint5) == 0) SetHintSolved(hint5);
+        }
+        
+        CopyOrientandPos(lever1, hint7); # move hint7 to lever1
+        SetHintSolved(hint6);
+        # hint 7 appears at lever1
+    }
+    
+    # chaseLower cutscene ends, hint appears on brass key (message sent by chaseLower)
+    else if(GetSenderRef() == cog_ChaseLower)
+    {   
+        SetHintSolved(hint10);
+        DestroyThing(hint10);
+        # hint11 appears on brass key
+    }
+    
+    # player picks up oil can (message sent by oilShed)
+    else if(GetSenderRef() == cog_OilShed)
+    {
+        if((GetHintSolved(hint12) == 0) && (hint12 != -1)) SetHintSolved(hint12);
+        
+        got_OilCan = 1;
+        CopyOrientandPos(mineCar, hint14);
+        SetHintSolved(hint13);
+        ready_Boarded = 1;
+        attach_Hint14 = 1; # hint14 ready to be attached 
+        # hint14 appears at minecar
+    }
+        
+    # player oils switch4 (message sent by ctrlLever4)
+    else if(GetSenderRef() == cog_lever4)
+    {   
+        if((GetHintSolved(hint14) == 0) && (hint14 != -1)) SetHintSolved(hint14);
+        
+        Print("hint15 solved!");
+        CopyOrientandPos(mineCar, hint16);
+        SetHintSolved(hint15);
+        ready_Boarded = 1;
+        attach_Hint16 = 1; # hint16 ready to be attached
+        # hint16 appears at mine car
+    }
+    
+    # player pulls switch4 to send commies over edge (message sent by comfalls)
+    else if((GetSenderRef() == cog_comFalls) && (GetHintSolved(hint17) == 0))
+    {
+        if((GetHintSolved(hint16) == 0) && (hint16 != -1)) SetHintSolved(hint16);
+        
+        SetHintSolved(hint17);
+        CopyOrientandPos(mineCar, hint18);
+        ready_Boarded = 1;
+        attach_Hint18 = 1; # hint18 ready to be attached
+        ready_Hint18 = 1; # hint18 ready for trigger
+        # hint 18 appears at mine car
+    }
+    
+    # player smashes down imp1 wall (message sent by explodingDebris)
+    else if((GetSenderRef() == cog_ExpDebris) && (GetHintSolved(hint20) == 0))
+    {   
+        SetHintSolved(hint20);
+        # hint appears on blue gem
+    }
+    
+    # player pickes up blueGem
+    if((GetSenderRef() == cog_BlueGem) && (GetHintSolved(hint21) == 0))
+    {
+        if((GetHintSolved(hint18) == 0) && (hint18 != -1)) SetHintSolved(hint18);
+        if(GetHintSolved(hint19) == 0) SetHintSolved(hint19);
+        if(GetHintSolved(hint20) == 0) SetHintSolved(hint20);
+        
+        got_BlueGem = 1;
+        CopyOrientandPos(mineCar, hint22);
+        SetHintSolved(hint21);
+        ready_Boarded = 1;
+        attach_Hint22 = 1; # hint22 ready to be attached
+        # hint22 appears at mine car
+        
+        # player has already put in pyrKey
+        if(GetHintSolved(hint29) == 1)
+        {
+            if((GetHintSolved(hint27) == 0) && (hint27 != -1)) SetHintSolved(hint27);
+            if(GetHintSolved(hint28) == 0) SetHintSolved(hint28);
+        }
+        
+        if((got_RedGem == 1) && (got_GreenGem == 1) && (got_BlueGem == 1) && (got_Horus == 1))
+        {
+            ready_Hint27 = 1;
+        }
+    }
+    
+    # player blows up wall behind crate
+    else if((GetSenderRef() == cog_GemWall) && (GetHintSolved(hint23) == 0))
+    {   
+        if((GetHintSolved(hint22) == 0) && (attach_Hint22 == 1))
+        {
+            attach_Hint22 = 0;
+            SetHintSolved(hint22);
+        }
+        
+        SetHintSolved(hint23);
+        # hint24 appears on red gem
+    }
+    
+    # triggers ambush cutscene
+    else if((GetSenderRef() == cog_Ambush) && (ready_Hint26 == 1) && (blown_Ambush == 0))
+    {
+        ready_Hint26 = 0;
+        CopyOrientandPos(greenGem, hint26); # move hint26 to greenGem
+    }
+    
+    return;
+
+# ========================================================================================
+
+user1:
+
+    if((GetSenderRef() == minecar)  || (GetSenderRef() == minePlayer)) return;
+    if((hint7_Solved == 1) && (hint26_Solved == 1)) return;
+    
+    Print("Hints: user1");
+    
+    if(hint7_Solved == 0)
+    {
+        if(BitTest(GetThingAttachFlags(hint7), 0x08))
+        {
+            ClearThingAttachFlags(hint7, 0x08);
+            DetachThing(hint7);
+        }
+    }
+    
+    else
+    {
+        if(BitTest(GetThingAttachFlags(hint26), 0x08))
+        {
+            ClearThingAttachFlags(hint26, 0x08);
+            DetachThing(hint26);
+        }
+    }
+
+    # correct position
+    if((GetWallCel(switch1) == 2) && (GetWallCel(switch2) == 1) && (GetWallCel(switch3) == 2))
+    {
+        if(hint7_Solved == 0)
+        {
+            Print("move hint7 to minecar");
+            CopyOrientandPos(mineCar, hint7); # move hint7 to minecar
+            ready_Boarded = 1;
+            ready_Hint7 = 1; # hint7 is ready for trigger
+            attach_Hint7 = 1; # hint7 is ready to be attached
+            # hint7 appears at mine car
+        }
+        
+        else
+        {
+            Print("move hint26 to minecar");
+            CopyOrientandPos(mineCar, hint26); # move hint26 to minecar
+            ready_Boarded = 1;
+            ready_Hint26 = 1; # hint26 is ready for trigger
+            attach_Hint26 = 1; # hint26 is ready to be attached
+            # hint7 appears at mine car
+        }
+    }
+    
+    else if((GetWallCel(switch1) == 1) && (GetWallCel(switch2) == 1) && (GetWallCel(switch3) == 1))
+    {
+        if(hint7_Solved == 0)
+        {
+            CopyOrientandPos(lever1, hint7); # move hint7 to lever1
+        }
+        
+        else
+        {
+            CopyOrientandPos(lever1, hint26); # move hint26 to lever1
+        }
+    }
+    
+    else if((GetWallCel(switch1) == 1) && (GetWallCel(switch2) == 2) && (GetWallCel(switch3) == 1))
+    {
+        if(hint7_Solved == 0)
+        {
+            CopyOrientandPos(lever1, hint7); # move hint7 to lever1
+        }
+        
+        else
+        {
+            CopyOrientandPos(lever1, hint26); # move hint26 to lever1
+        }
+    }
+    
+    else if((GetWallCel(switch1) == 1) && (GetWallCel(switch2) == 1) && (GetWallCel(switch3) == 2))
+    {
+        if(hint7_Solved == 0)
+        {
+            CopyOrientandPos(lever1, hint7); # move hint7 to lever1
+        }
+        
+        else
+        {
+            CopyOrientandPos(lever1, hint26); # move hint26 to lever1
+        }
+    }
+    
+    else if((GetWallCel(switch1) == 2) && (GetWallCel(switch2) == 1) && (GetWallCel(switch3) == 1))
+    {
+        if(hint7_Solved == 0)
+        {
+            CopyOrientandPos(lever3, hint7); # move hint7 to lever3
+        }
+        
+        else
+        {
+            CopyOrientandPos(lever3, hint26); # move hint26 to lever3
+        }
+    }
+    
+    else if((GetWallCel(switch1) == 2) && (GetWallCel(switch2) == 2) && (GetWallCel(switch3) == 1))
+    {
+        if(hint7_Solved == 0)
+        {
+            CopyOrientandPos(lever2, hint7); # move hint7 to lever2
+        }
+        
+        else
+        {
+            CopyOrientandPos(lever2, hint26); # move hint26 to lever2
+        }
+    }
+    
+    else if((GetWallCel(switch1) == 2) && (GetWallCel(switch2) == 2) && (GetWallCel(switch3) == 2))
+    {
+        if(hint7_Solved == 0)
+        {
+            CopyOrientandPos(lever2, hint7); # move hint7 to lever2
+        }
+        
+        else
+        {
+            CopyOrientandPos(lever2, hint26); # move hint26 to lever2
+        }
+    }    
+    
+    return;
+    
+# ========================================================================================
+
+user2:
+
+    if(GetSenderRef() == cog_Ambush)
+    {
+        blown_Ambush = 1;
+    }
+
+    return;
+
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    car = GetSourceRef();
+    
+    Print("hints: entered");
+
+    if(BitTest(GetPhysicsFlags(car), 0x01000000))
+    {
+        # enters exit complex
+        if((GetSenderRef() == sec_ExitComp1) && (ready_Hint3 == 1))
+        {
+            ready_Hint3 = 0;
+            SetHintSolved(hint3);
+            DestroyThing(hint3); # remove hint3 from minecar
+            # hint4 appears at fuse cart
+        }
+        
+        # enters control room area
+        else if((GetSenderRef() == sec_CtrlRoom) && (ready_Hint5 == 1))
+        {
+            ready_Hint5 = 0;
+            SetHintSolved(hint5);
+            DestroyThing(hint5);
+            # hint6 appears at fuse box
+        }
+        
+        # enters east end
+        else if((GetSenderRef() == sec_EastEnd) && (ready_Hint7 == 1))
+        {
+            ready_Hint7 = 0;
+            hint7_Solved = 1;
+            SetHintSolved(hint7);
+            DestroyThing(hint7);
+            ready_Hint8 = 1; # ready hint8 for trigger
+            # hint9 appears at horus room pressure pad
+        }
+        
+        # mine car opens horus doors
+        else if((GetSenderRef() == surf_HorusOpen) && (ready_Hint8 == 1))
+        {
+            ready_Hint8 = 0;
+            SetHintSolved(hint8);
+            # hint9 appears at horus eye
+        }
+        
+        # enters oil shed area
+        else if((GetSenderRef() == sec_OilShed) && (ready_Hint13 == 1))
+        {
+            ready_Hint13 = 0;
+            SetHintSolved(hint12);
+            DestroyThing(hint12);
+            # hint13 appears at oil can
+        }
+        
+        # enters switch4 area
+        else if((GetSenderRef() == sec_Switch4) && (ready_Hint15 == 1))
+        {
+            Print("hint15 appears at switch4");
+            ready_Hint15 = 0;
+            SetHintSolved(hint14);
+            DestroyThing(hint14);
+            # hint15 appears at switch4
+        }
+        
+        # enters control room area
+        else if((GetSenderRef() == sec_CtrlRoom) && (ready_Hint17 == 1))
+        {
+            ready_Hint17 = 0;
+            SetHintSolved(hint16);
+            DestroyThing(hint16);
+            # hint17 appears at switch4
+        }
+        
+        ### switch5 enter was here
+        
+        # enters redGem room
+        else if((GetSenderRef() == sec_RedGem) && (ready_Hint23 == 1))
+        {
+            ready_Hint23 = 0;
+            SetHintSolved(hint22);
+            DestroyThing(hint22);
+            # hint23 appears behind expload wall
+        }
+        
+        # enters reflec room
+        else if((GetSenderRef() == sec_Reflec) && (ready_Hint26 == 1) && (blown_Ambush == 1) && (got_GreenGem == 0))
+        {
+            ready_Hint26 = 0;
+            SetHintSolved(hint25);
+            CopyOrientandPos(greenGem, hint26); # move hint26 to greenGem
+        }
+        
+        # enters control room area (second time)
+        else if((GetSenderRef() == sec_CtrlRoom) && (ready_Hint26 == 1) && (blown_Ambush == 0))
+        {
+            ready_Hint26 = 0;
+            SetHintSolved(hint25);
+            SendMessage(GetSelfCog(), user1);   # send hint26 to proper lever
+        }
+        
+        # enters exit complex
+        else if((GetSenderRef() == sec_ExitComp2) && (ready_Hint27 == 1))
+        {
+            ready_Hint27 = 0;
+            SetHintSolved(hint27);
+            DestroyThing(hint27);
+            
+            if(GetHintSolved(hint29) == 1)
+            {
+                SetHintSolved(hint28);
+                ready_Hint28 = 0;
+            }
+            
+            else ready_Hint28 = 1;   # hint28 is ready to be triggered
+        }
+    }
+    
+    #else if((GetSourceRef() == player) || (GetSenderRef() == minePlayer))
+    #{ 
+        # enters switch5 room
+        if((GetSenderRef() == sec_Switch5) && (ready_Hint18 == 1))
+        {
+            Print("ready_Hint19");
+            ready_Hint18 = 0;
+            SetHintSolved(hint18);
+            DestroyThing(hint18);
+            ready_Hint19 = 1; # ready hint19 for trigger
+            # hint19 appears near switch5
+        }
+        
+        # player reaches hint19 on foot
+        else if((GetSenderRef() == sec_Switch5_2) && (GetHintSolved(hint19) == 0) && (ready_Hint19 == 1))
+        {
+            ready_Hint19 = 0;
+            SetHintSolved(hint19);
+            # hint20 appears at IMP1 wall
+        }
+        
+        # player is on his way to final room on foot
+        else if((GetSenderRef() == sec_ExitComp3) && (GetHintSolved(hint28) == 0) && (ready_Hint28 == 1))
+        {
+            ready_Hint28 = 0;
+            SetHintSolved(hint28);
+            # hint29 appears at pyramid
+        }
+    #}
+    
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    # visits fuse box for the first time
+    if((GetSenderRef() == fuseBox) && (GetHintSolved(hint2) == 0) && (got_Fuse == 0))
+    {
+        CopyOrientandPos(mineCar, hint3); # move hint3 to minecar
+        SetHintSolved(hint2); # solve hint2
+        ready_Boarded = 1;
+        attach_Hint3 = 1; # hint3 is ready to be attached
+        ready_Hint3 = 1; # hint3 is ready for trigger
+        # hint3 appears at mine car
+    }
+    
+    if((GetSenderRef() == pyrKey) && (GetHintSolved(hint9) == 0))
+    {
+        if(GetHintSolved(hint7) == 0) SetHintSolved(hint7);
+        if(GetHintSolved(hint8) == 0) SetHintSolved(hint8);
+        
+        got_Horus = 1;
+        CopyOrientandPos(mineCar, hint10);
+        SetHintSolved(hint9);
+        ready_Boarded = 1;
+        attach_Hint10 = 1; # hint10 ready to be attached
+        # hint10 appears at mine car
+    }
+    
+    if((GetSenderRef() == oilKey) && (GetHintSolved(hint11) == 0))
+    {
+        if((GetHintSolved(hint10) == 0) && (hint10 != -1)) SetHintSolved(hint10);
+        
+        got_OilKey = 1;
+        CopyOrientandPos(mineCar, hint12);
+        SetHintSolved(hint11);
+        ready_Boarded = 1;
+        ready_Hint13 = 1; # hint13 is ready to be triggered
+        attach_Hint12 = 1; # hint12 ready to be attached
+        # hint12 appears at mine car
+        
+        # player has already put in pyrKey
+        if(GetHintSolved(hint29) == 1)
+        {
+            if((GetHintSolved(hint27) == 0) && (hint27 != -1)) SetHintSolved(hint27);
+            if(GetHintSolved(hint28) == 0) SetHintSolved(hint28);
+        }
+    }
+    
+    if((GetSenderRef() == redGem) && (GetHintSolved(hint24) == 0))
+    {
+        if(GetHintSolved(hint22) == 0) SetHintSolved(hint22);
+        if(GetHintSolved(hint23) == 0) SetHintSolved(hint23);
+        
+        got_RedGem = 1;
+        CopyOrientandPos(mineCar, hint25);
+        SetHintSolved(hint24);
+        ready_Boarded = 1;
+        attach_Hint25 = 1; # hint25ready to be attached
+        # hint25 appears at mine car
+        
+        # player has already put in pyrKey
+        if(GetHintSolved(hint29) == 1)
+        {
+            if((GetHintSolved(hint27) == 0) && (hint27 != -1)) SetHintSolved(hint27);
+            if(GetHintSolved(hint28) == 0) SetHintSolved(hint28);
+        }
+        
+        if((got_RedGem == 1) && (got_GreenGem == 1) && (got_BlueGem == 1) && (got_Horus == 1))
+        {
+            ready_Hint27 = 1;
+        }
+    }
+    
+    if((GetSenderRef() == greenGem) && (GetHintSolved(hint26) == 0))
+    {
+        if((GetHintSolved(hint25) == 0) && (hint25 != -1) && (got_RedGem == 1)) SetHintSolved(hint25);
+        
+        Print("got the greenGem");
+        got_GreenGem = 1;
+        CopyOrientandPos(mineCar, hint27);
+        SetHintSolved(hint26);
+        hint26_Solved = 1;
+        ready_Boarded = 1;
+        attach_Hint27 = 1; # hint27ready to be attached
+        # hint27 appears at mine car
+        
+        # player has already put in pyrKey
+        if(GetHintSolved(hint29) == 1)
+        {
+            if((GetHintSolved(hint27) == 0) && (hint27 != -1)) SetHintSolved(hint27);
+            if(GetHintSolved(hint28) == 0) SetHintSolved(hint28);
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+boarded:
+
+    Print("Hints: boarded");
+    
+    if(ready_Boarded == 1)
+    {
+        # get in after first visit to fuse box
+        if((GetSenderRef() == minePlayer) && (hint3_Attached == 0) && (attach_Hint3 == 1))
+        {
+            ready_Boarded = 0;
+            AttachThingToThingEx(hint3, minePlayer, 0x08);
+            hint3_Attached = 1;
+        }
+        
+        # get in after picking up fuse
+        else if((GetSenderRef() == minePlayer) && (hint5_Attached == 0) && (attach_Hint5 == 1))
+        {
+            ready_Boarded = 0;
+            AttachThingToThingEx(hint5, minePlayer, 0x08);
+            hint5_Attached = 1;
+        }
+        
+        # get in after setting levers correctly
+        else if((GetSenderRef() == minePlayer) && (hint7_Attached == 0) && (attach_Hint7 == 1))
+        {
+            ready_Boarded = 0;
+            AttachThingToThingEx(hint7, minePlayer, 0x08);
+            hint7_Attached = 1;
+        }
+        
+        # get in after getting horus key
+        else if((GetSenderRef() == minePlayer) && (hint10_Attached == 0) && (attach_Hint10 == 1))
+        {
+            ready_Boarded = 0;
+            AttachThingToThingEx(hint10, minePlayer, 0x08);
+            hint10_Attached = 1;
+        }
+        
+        # get in after getting oil key
+        else if((GetSenderRef() == minePlayer) && (hint12_Attached == 0) && (attach_Hint12 == 1))
+        {
+            ready_Boarded = 0;
+            AttachThingToThingEx(hint12, minePlayer, 0x08);
+            hint12_Attached = 1;
+        }
+        
+        # get in after getting oil can
+        else if((GetSenderRef() == minePlayer) && (hint14_Attached == 0) && (attach_Hint14 == 1))
+        {
+            Print("debugging ready_Hint15");
+            ready_Boarded = 0;
+            AttachThingToThingEx(hint14, minePlayer, 0x08);
+            hint14_Attached = 1;
+            ready_Hint15 = 1; # hint15 is ready to be triggered
+        }
+        
+        # get in after oiling switch4
+        else if((GetSenderRef() == minePlayer) && (hint16_Attached == 0) && (attach_Hint16 == 1))
+        {
+            ready_Boarded = 0;
+            AttachThingToThingEx(hint16, minePlayer, 0x08);
+            hint16_Attached = 1;
+            ready_Hint17 = 1; # hint17 is ready to be triggered
+        }
+        
+        # get in after pulling switch4
+        else if((GetSenderRef() == minePlayer) && (hint18_Attached == 0) && (attach_Hint18 == 1))
+        {
+            ready_Boarded = 0;
+            AttachThingToThingEx(hint18, minePlayer, 0x08);
+            hint18_Attached = 1;
+        }
+        
+        # get in after getting blueGem
+        else if((GetSenderRef() == minePlayer) && (hint22_Attached == 0) && (attach_Hint22 == 1))
+        {
+            ready_Boarded = 0;
+            AttachThingToThingEx(hint22, minePlayer, 0x08);
+            hint22_Attached = 1;
+            ready_Hint23 = 1; #hint23 ready to be triggered
+        }
+        
+        # get in after getting redGem
+        else if((GetSenderRef() == minePlayer) && (hint25_Attached == 0) && (attach_Hint25 == 1))
+        {
+            ready_Boarded = 0;
+            AttachThingToThingEx(hint25, minePlayer, 0x08);
+            hint25_Attached = 1;
+            ready_Hint26 = 1; # hint26 is ready to be triggered
+        }
+        
+        # get in after getting greenGem
+        else if((GetSenderRef() == minePlayer) && (hint27_Attached == 0) && (attach_Hint27 == 1))
+        {
+            Print("get in after getting greenGem");
+            ready_Boarded = 0;
+            AttachThingToThingEx(hint27, minePlayer, 0x08);
+            hint27_Attached = 1;
+            ready_Hint27 = 1; # hint27 is ready to be triggered
+        }
+        
+        # get in after properly setting up ambush (if didn't do it earlier)
+        else if((GetSenderRef() == minePlayer) && (hint26_Attached == 0) && (attach_Hint26 == 1))
+        {
+            if(hint26_Solved == 0)
+            {
+                Print("get in after properly setting up ambush");
+                ready_Boarded = 0;
+                AttachThingToThingEx(hint26, minePlayer, 0x08);
+                hint26_Attached = 1;
+                #ready_Hint26 = 1; # hint26 is ready to be triggered
+            }
+            
+            else Print("get the fuck out of here");
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+removed:
+
+    if(GetSenderRef() == hint10) hint10 = -1;
+    if(GetSenderRef() == hint12) hint12 = -1;
+    if(GetSenderRef() == hint14) hint14 = -1;
+    if(GetSenderRef() == hint16) hint16 = -1;
+    if(GetSenderRef() == hint18) hint18 = -1;
+    if(GetSenderRef() == hint22) hint22 = -1;
+    if(GetSenderRef() == hint25) hint25 = -1;
+    if(GetSenderRef() == hint27) hint27 = -1;
+    
+    return;
+    
+# ========================================================================================
+
+end
+

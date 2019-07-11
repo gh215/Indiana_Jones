@@ -1,0 +1,83 @@
+# Jones 3D Cog Script
+#
+# BAB_CourtyardCommmie.cog
+# This cog is based on the brilliant groundbreaking cog work pioneered by Reed Derleth
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     arrived
+    
+    thing       commie0
+    thing       tgt0
+    thing       tgt1
+    thing       tgt2
+    thing       tgt3
+        
+    int         done=0         local
+    int         curframe=0      local
+        
+end
+
+code
+
+# ========================================================================================
+startup:
+    AISetMoveSpeed(commie0, 1.5);
+    AISetCutsceneMode(commie0);
+    AISetLookThing(commie0, tgt1);
+    AISetMoveFrame(commie0, 1);
+    curframe = 1;
+    return;
+
+#----------------------------------------------------------------------------------------
+arrived:
+    //print("the ai has arrived");
+    if (curframe == 0)
+    {
+        //print("at frame 0");
+        AISetCutsceneMode(commie0);
+        AISetLookThing(commie0, tgt1);
+        Sleep(0.5);
+        AISetMoveFrame(commie0, 1);
+    }
+    
+    if (curframe == 1)
+    {
+        //print("at frame 1");
+        AISetLookThing(commie0, tgt2);
+        Sleep(0.5);
+        AISetMoveFrame(commie0, 2);
+    }
+    
+    if (curframe == 2)
+    {
+        //print("at frame 2");
+        AISetLookThing(commie0, tgt3);
+        Sleep(0.5);
+        AISetMoveFrame(commie0, 3);
+    }
+    
+    if (curframe == 3)
+    {
+        //print("at frame 3");
+        //AIClearCutsceneMode(commie0);
+        AISetLookThing(commie0, tgt0);
+        Sleep(0.5);
+        AISetMoveFrame(commie0, 0);
+    }
+    curframe = curframe + 1;
+    if (curframe == 4)
+    {
+        curframe = 0;
+        
+    }
+    
+    return;
+#----------------------------------------------------------------------------------------
+end

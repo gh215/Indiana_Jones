@@ -1,0 +1,53 @@
+# Jones 3D Cog Script
+#
+# SOL_AmbHorusWat.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message	    entered
+
+	thing		soundPos0		nolink
+    
+    sector      on_sec1         linkID=1
+    sector      on_sec2         linkID=1
+    sector      off_sec1        linkID=0
+    sector      off_sec2        linkID=0
+
+	sound		sfx_Water=gen_waterfall_a.wav   local
+
+    int         chnl_Water       local
+    int         playing=0   local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	# turn on waterfall sfx
+    if((GetSenderID() == 1) && (playing == 0))
+    {
+        playing = 1;
+        chnl_Water = PlaySoundThing(sfx_Water, soundPos0, 1.0, 18, 28, 0x0001);    # loop
+    }
+    
+    # turn off waterfall sfx
+    if((GetSenderID() == 0) && (playing == 1))
+    {
+        playing = 0;
+        StopSound(chnl_Water, 3.0);
+    }
+    
+	return;
+
+# ========================================================================================
+
+end
+

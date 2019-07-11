@@ -1,0 +1,50 @@
+# Jones 3D Cog Script
+#
+# sea_sink.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		activate	
+
+   	thing		sink
+	thing		player						local
+	sound		waterrun=pyr_waterspout_loop.wav		local
+	int		running						local
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	return;
+
+activate:
+
+	if ((Getsenderref() == sink) && (IsGhostVisible(player, sink, 30.0))) 
+	{
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(0);
+		PlayMode(player, 60, 0);
+		Sleep(0.5);
+		running = PlaySoundThing(waterrun, sink, 1, 10, 20, 1);
+		sleep(2.5);
+		PlayMode(player, 60, 0);
+		StopSound(running, 0.7);
+		sleep(1.0);	
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+	}
+	return;
+
+end
+

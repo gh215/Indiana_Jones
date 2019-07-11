@@ -1,0 +1,76 @@
+# Jones 3D Cog Script
+#
+# shs_Dlog_faith.cog   Say the line, Indy.  
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message 	startup
+message 	entered
+
+sound		in_faith=Ss06j01.wav   local
+
+surface 	trigger
+
+thing		player			local
+#thing		target
+#thing 		interpcam
+
+thing		body0
+thing		body1
+thing		body2
+thing		body3
+thing		body4
+
+
+int			spoken=0		local
+int			x				local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+      	
+	player = GetLocalPlayerThing();
+    for (x=0; x<=5; x=x+1)
+	{
+		SetThingLight(body0[x], '0.2 0.2 0.2', 0.01, 0.01);
+    }
+	return;
+	
+	
+entered:
+	
+	if ((GetSenderRef() == trigger) && (spoken == 0)) 
+	{
+		MakeMeStop();
+		StartCutscene(1);
+		spoken=1;
+		
+		# Camera stuff
+		#sleep(.5);
+
+		# "What happened here? Did the monks lose..."
+		PlayVoice(player, in_faith, 1.0, 0);
+        
+		#RestoreExtCam();
+		ClearActorFlags(player, 0x200000); # player in control
+        EndCutscene();
+    }
+	
+return;
+     
+  
+
+end
+
+

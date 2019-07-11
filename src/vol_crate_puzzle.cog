@@ -1,0 +1,128 @@
+# Jones 3D Cog Script
+#
+# VOL_Crate_Puzzle.cog
+#
+# This elevator will come down to frame one, sleep, then return to frame 0.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+    
+#...............MESSAGES..............
+	message  startup
+	message  entered
+    message  activated
+    
+
+#...............ACTORS..............
+	thing	player											local
+
+#...............TRIGGERS..............
+	surface	freesurf										mask=0x80 		
+	sector	cuesect0										linkID=2	 		
+	sector	cuesect1	 		                            linkID=2
+	
+
+
+#...............PROPS..............
+	thing	lid 		
+	thing	crate1			
+	thing	container			
+    thing	block_tack			
+    thing	cam1			
+    thing	curCam											local			
+    thing	ActivatePlate													
+
+    
+#...............SOUNDS..............
+	sound   swing=nub_sarc_close_c.wav						local
+	sound   in_whathavewe=INXJ002.wav						local
+	sound   in_spare=INXJ170.WAV							local
+	sound   com_cue=mus_gen_russremin1.wav					local
+
+
+#...............VARIABLES..............
+	int		supriseline=0									local		
+	int		lidflip=0										local		
+	int		cueplayed=0										local		
+
+end
+
+# ========================================================================================
+code
+startup:
+
+	player=GetLocalPlayerThing();
+return;
+
+# ========================================================================================
+entered:
+
+    If ((GetSenderRef() == container) && (supriseline == 0))
+		{
+        If (lidflip == 0) return;
+		PlayVoice(player, in_whathavewe, 1.0, 0);
+        supriseline = 1;
+        }
+
+    
+	If (GetSenderRef() == freesurf) 
+		{
+        If (GetSourceRef() != crate1) return;
+		SetActorFlags(player, 0x200000);
+		StartCutscene(1);
+		Sleep(0.25);
+        curCam = GetCurrentCamera();
+		SetCameraSecondaryFocus(2, block_tack);
+		SetCameraFocus(2, cam1);
+		SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0);
+		SetCameraFOV(70, 1, 1.0);
+		Sleep(.25);
+		Rotate(lid, 90, 0, .75);
+		PlaySoundThing(swing, lid, 1.0, 15, 20, 0x0);
+		Sleep(1.0);
+		lidflip = 1;
+			
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+		SetCurrentCamera(curCam);
+        SetCameraFOV(90, 0, 0);
+        }
+
+	
+	If ((GetSenderID() == 2) && (cueplayed == 0))
+		{
+		cueplayed = 1;
+        PlaySoundLocal(com_cue, 1.0, 0.0, 0x0, 0);
+        }
+	
+	
+return;
+
+# ========================================================================================
+activated:
+
+	If (GetSenderRef() == ActivatePlate)
+	{
+        SetActorFlags(player, 0x200000);
+		PlayMode(player, 60, 0);
+		Sleep(0.5);
+		DestroyThing(block_tack);
+        DestroyThing(ActivatePlate);
+		# ADD AN ANIMATION HERE
+		PlayVoice(player, in_spare, 1.0, 0);
+        ChangeInv(player, 107, 1);
+        JonesInvItemChanged(107);
+		ClearActorFlags(player, 0x200000);
+    }
+return;
+
+# ========================================================================================
+end
+
+

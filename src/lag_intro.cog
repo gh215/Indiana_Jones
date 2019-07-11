@@ -1,0 +1,151 @@
+# Jones 3D Cog Script
+#
+# lag_Intro.cog
+#
+#	[DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message     startup
+	message     user0
+    
+	keyframe	in_look=0in_figithat_4_4.key	local
+	keyframe	in_think=0in_thinking_4_4.key	local
+	keyframe	in_1to4=0in_stand1_bd_4.key		local
+	keyframe	in_stand4=0in_stand4.key		local
+
+	sound		music0=mus_lag_intro.wav		local
+	sound       indyline=lg01j01a.wav			local
+
+	thing		player							local
+	thing		campos
+	thing		indyactor
+	thing		fader								  # gen_fadeplat thing
+	thing		indyCamTarget					local # var	
+
+	vector		v_targetpos						local
+
+	int         track							local
+	int         snd								local
+
+	int			bSeen=0							local
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+    SetThingAlpha(fader, 1.0);
+
+    # Start on black...
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, player);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCurrentCamera(2);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+#   if you're going to switch the camera to start your level cutscene, do it first before anything else!
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, player);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCurrentCamera(2);
+
+#   cutscene camera is set up and set as current, now sleep for 0.01 to let the engine generate a frame
+	sleep(0.01);
+
+#	then you can do the rest of the stuff you need to start your cutscene.
+#   IMPORTANT! -- don't do a StartCutscene() until after the new camera is set and has had a chance
+#   to render a frame!
+	player = GetLocalPlayerThing();
+	SetThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	ClearThingFlags(indyactor, 0x80000);
+	CopyPlayerHolsters(player, indyactor);
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+	StartCutscene(2);
+	AttachThingToThing(fader, campos);
+	ThingFadeAnim(fader, 1.0, 0.0, 0.5, 0);
+	SetCameraFOV(90, 0, 0);	
+	MoveToFrame(campos, 1, 12.0);
+	Sleep(0.01);
+	SetCameraFOV(45, 1, 11);
+	Sleep(0.5);
+	DestroyThing(fader);
+	Sleep(7.5);
+	AISetMoveSpeed(indyactor, 1.0);
+	AISetMoveThing(indyactor, player, 0);
+	Sleep(1.3);
+	MoveToFrame(campos, 1, 10.0);
+	Sleep(0.2);
+	MoveToFrame(campos, 1, 9.0);
+	Sleep(0.2);
+	MoveToFrame(campos, 1, 8.0);
+	Sleep(0.2);
+	MoveToFrame(campos, 1, 7.5);
+	Sleep(0.3);
+	MoveToFrame(campos, 1, 7.2);
+	Sleep(0.4);
+	MoveToFrame(campos, 1, 6.9);
+	Sleep(0.5);
+	MoveToFrame(campos, 1, 6.6);
+	Sleep(0.5);
+	MoveToFrame(campos, 1, 6.3);
+	Sleep(0.5);
+	MoveToFrame(campos, 1, 6.0);
+	Sleep(0.6);
+	MoveToFrame(campos, 1, 5.5);
+	Sleep(0.6);
+	MoveToFrame(campos, 1, 5.0);
+	Sleep(0.6);
+	MoveToFrame(campos, 1, 4.5);
+	Sleep(0.6);
+	MoveToFrame(campos, 1, 4.0);
+	Sleep(0.6);
+	AIWaitForStop(indyactor);
+	track = PlayKey(indyactor, in_Stand4, 2, 0x0, 0);
+	PlayKey(indyactor, in_1to4, 4, 0x12, 1);
+	snd = PlayVoice(indyactor, indyline, 1.0, 0);
+	Sleep(0.3);
+	PlayKey(indyactor, in_look, 4, 0x12, 1);
+	Sleep(0.7);
+	PlayKey(indyactor, in_think, 4, 0x12, 1);
+	WaitForSound(snd);
+	StopKey(indyactor, track, 0.5);
+	SetThingFlags(indyactor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+
+	# Establish a camera position near Indy and prep follow-cam...			
+	ResetCameraFOV(0, 0.0);
+	v_targetpos = VectorAdd(VectorTransformToOrient(player, '0.25 -0.1 0.0'), GetThingPos(player));	
+	SetCameraPosition(1, v_targetpos);
+
+	# Drop into follow-cam mode...
+	SetCurrentCamera(1);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+end
+

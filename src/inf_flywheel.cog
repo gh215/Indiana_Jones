@@ -1,0 +1,352 @@
+# Jones 3D Cog Script
+#
+# INF_FlyWheel.cog
+# Controls the Spinning spoke puzzle wheels
+# The correct part is the power part 17 the wrong part is the rumbler 14
+# Controls the robot sector thing
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     blocked
+    message     crossed
+    message     pulse
+    
+    message     user0       # right imp part inserted
+    message     user1       # wrong part inserted
+    message     user2       # no part inserted
+    
+    sound       crumble=nub_3mledge_move_c.wav              local
+    sound       gearmusic=mus_inf_gearpower.wav             local
+    sound       gearspin=inf_piston_2.wav                   local
+    sound       gearhits=nub_croc_stop_c.wav                local
+    
+    cog         lightningcog
+    
+    cog         elevcog0
+    cog         elevcog1
+    cog         elevcog2
+    cog         elevcog3
+    cog         elevcog4
+    cog         elevcog5
+    cog         elevcog6
+    cog         elevcog7
+    cog         elevcog8
+    
+    thing       cam0_pos0
+    thing       cam0_tgt1
+    
+    thing       cam1_pos0
+    thing       cam1_tgt0
+    
+    thing       player                                      local
+    thing       actorindy
+    
+    thing       spoke0
+    thing       spoke1
+    thing       spoke2
+    thing       spoke3
+    thing       spoke4
+    thing       spoke5
+    
+    surface     low_entersurf0                              linkid=2
+    surface     low_exitsurf1                               linkid=3
+    
+    surface     hi_entersurf0                               linkid=2
+    surface     hi_exitsurf1                                linkid=3
+    
+    surface     room_entersurf                              linkid=2
+    surface     room_exitsurf                               linkid=3
+    
+    int         solved=0                                    local
+    int         num                                         local
+    int         toughness_time=1                            local
+    int         vibe                                        local
+    int         rumblechan                                  local
+    
+    vector      posOffset                                   local      
+    vector      angOffset                                   local
+    
+
+end
+
+code
+#........................................................................................
+startup:
+    
+    player = GetLocalPlayerThing();
+    //inital conditions
+    rotate(spoke0, 30, 2, 1);
+    rotate(spoke1, 30, 2, 1);
+    rotate(spoke2, 30, 2, 1);
+    rotate(spoke3, 60, 2, 1);
+    rotate(spoke4, 60, 2, 1);
+    rotate(spoke5, 60, 2, 1);
+    
+return;
+
+#........................................................................................
+//entering area
+crossed:
+    
+    if ((GetSenderID() == 2) && (solved == 0))
+    {
+        SetPulse(0.1);
+        rumblechan = PlaySoundLocal(crumble, 0.5, 0, 1, 0);
+    }
+    
+    //stop camera shake
+    if ((GetSenderID() == 3) && (solved == 0))
+    {
+        SetPulse(0);
+        StopSound(rumblechan, 1);
+    }
+    
+return;
+
+#........................................................................................
+
+//blocked
+blocked:
+    //kill indy
+    //print("indy is blocking the spokes");
+return;
+
+#........................................................................................
+
+//right part
+user0:
+
+    //print("The right part has been inserted");
+    solved = 1;
+    SetPulse(0);
+    
+    //Start the Cutscene
+    StartCutscene(1);
+    SendMessage(lightningcog, user0);
+    
+    SetActorFlags(player, 0x200000);
+    StopThing(player);
+    SetCameraFocus(2, cam0_pos0);
+    SetCameraSecondaryFocus(2, cam0_tgt1);
+    SetCurrentCamera(2);
+    SetCameraFOV(100, 0, 0);
+    
+	PlaySoundLocal(gearmusic, 1, 0, 0x0, 0);
+    
+    //zero out the gears
+    PlaySoundThing(gearspin, spoke0, 1, 10, 20, 0x80);
+    for(num=0; num<=3; num=num+1)
+    {
+        Rotate(spoke0[num], -30, 2, 2);
+    }
+    
+    for(num=3; num<=5; num=num+1)
+    {
+        Rotate(spoke0[num], 30, 2, 2);
+    }
+    
+    WaitForStop(spoke5);
+    Sleep(2);
+    
+#Turning on Camera interps        
+    SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+    SetCameraInterpSpeed(2, 4);
+    Sleep(0.001);
+    
+    SetCameraFocus(2, cam1_pos0);
+    SetCameraSecondaryFocus(2, cam1_tgt0);
+        
+    //start the rhythmic turning
+    if (solved == 1)
+    {
+        Rotate(spoke5, 90, 2, 2);
+        PlaySoundThing(gearspin, spoke5, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearhits, spoke5, 1, 10, 20, 0x80);
+        if (solved == 0) return;
+        
+        Rotate(spoke2, -90, 2, 2);
+        PlaySoundThing(gearspin, spoke2, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearhits, spoke2, 1, 10, 20, 0x80);
+        if (solved == 0) return;
+        
+        Rotate(spoke4, 90, 2, 2);
+        PlaySoundThing(gearspin, spoke4, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearhits, spoke4, 1, 10, 20, 0x80);
+        if (solved == 0) return;
+        
+        Rotate(spoke1, -90, 2, 2);
+        PlaySoundThing(gearspin, spoke1, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearspin, spoke1, 1, 2, 10, 0x80);
+        if (solved == 0) return;
+        
+        Rotate(spoke3, 90, 2, 2);
+        PlaySoundThing(gearspin, spoke3, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearspin, spoke3, 1, 2, 10, 0x80);
+        if (solved == 0) return;
+        
+        Rotate(spoke0, -90, 2, 2);
+        PlaySoundThing(gearspin, spoke0, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearspin, spoke0, 1, 2, 10, 0x80);
+        if (solved == 0) return;
+    }
+    
+    Sleep(1);
+    
+// Shut off Camera Interps
+    SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+    SetCameraInterpSpeed(2, 0);
+    Sleep(0.01);
+            
+    CopyOrientAndPos(actorindy, player);
+    SetThingFlags(actorindy, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    ClearThingFlags(player, 0x10);
+    ClearThingFlags(player, 0x80000);
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0);
+    EndCutscene();
+    
+    //print("IMP3 has been placed");
+    SendMessage(elevcog0, user0);
+    SendMessage(elevcog1, user0);
+    SendMessage(elevcog2, user0);
+    SendMessage(elevcog3, user0);
+    SendMessage(elevcog4, user0);
+    SendMessage(elevcog5, user0);
+    SendMessage(elevcog6, user0);
+    SendMessage(elevcog7, user0);
+    SendMessage(elevcog8, user0);
+    
+    While (solved == 1)
+    {
+        Rotate(spoke5, 90, 2, 2);
+        PlaySoundThing(gearspin, spoke5, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearhits, spoke5, 1, 10, 20, 0x80);
+        if (solved == 0) return;
+        
+        Rotate(spoke2, -90, 2, 2);
+        PlaySoundThing(gearspin, spoke2, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearhits, spoke2, 1, 10, 20, 0x80);
+        if (solved == 0) return;
+        
+        Rotate(spoke4, 90, 2, 2);
+        PlaySoundThing(gearspin, spoke4, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearhits, spoke4, 1, 10, 20, 0x80);
+        if (solved == 0) return;
+        
+        Rotate(spoke1, -90, 2, 2);
+        PlaySoundThing(gearspin, spoke1, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearspin, spoke1, 1, 2, 10, 0x80);
+        if (solved == 0) return;
+        
+        Rotate(spoke3, 90, 2, 2);
+        PlaySoundThing(gearspin, spoke3, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearspin, spoke3, 1, 2, 10, 0x80);
+        if (solved == 0) return;
+        
+        Rotate(spoke0, -90, 2, 2);
+        PlaySoundThing(gearspin, spoke0, 1, 2, 10, 0x80);
+        Sleep(toughness_time);
+        PlaySoundThing(gearspin, spoke0, 1, 2, 10, 0x80);
+        if (solved == 0) return;
+    }
+    
+    
+
+return;
+
+#........................................................................................
+//wrong part
+user1:
+
+    StartCutscene(1);
+    SetActorFlags(player, 0x200000);
+    StopThing(player);
+    SetCameraFocus(2, cam0_pos0);
+    SetCameraSecondaryFocus(2, cam0_tgt1);
+    SetCurrentCamera(2);
+    SetCameraFOV(100, 0, 0);
+    
+    solved = 0;
+    SetPulse(0.1);
+    rumblechan = PlaySoundLocal(crumble, 0.5, 0, 1, 0);
+    Sleep(3);
+    
+    CopyOrientAndPos(actorindy, player);
+    SetThingFlags(actorindy, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    ClearThingFlags(player, 0x10);
+    ClearThingFlags(player, 0x80000);
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0);
+    EndCutscene();
+
+return;
+
+#........................................................................................
+//no part
+user2:
+
+    //print("part has been removed");
+    solved = 2;
+    
+    //stop the screen shake
+    SetPulse(0);
+    StopSound(rumblechan, 1);
+    
+return;
+
+#........................................................................................
+//screen shake
+pulse:
+
+	vibe = RandBetween(1, 4);
+	if (vibe == 1)
+	{
+		posOffset = '-0.00125 0.00 -0.0005';
+		angOffset = '0.00 -0.001 0.001';
+	}
+	if (vibe == 2)
+	{
+		posOffset = '0.00125 -0.00125 0.0005';
+		angOffset = '0.001 0.00 -0.001';
+	}
+	if (vibe == 3)
+	{
+		posOffset = '0.0005 0.00125 -0.00125';
+		angOffset = '-0.001 0.001 -0.001';
+	}
+	if (vibe == 4)
+	{
+		posOffset = '-0.001 0.00 0.00125';
+		angOffset = '0.00 0.00 0.0005';
+	}
+
+	SetPOVShake(posOffSet, angOffSet, 50.0, 50.0);
+
+return;
+
+#........................................................................................
+
+end
+
+

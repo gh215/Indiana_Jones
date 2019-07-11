@@ -1,0 +1,37 @@
+# ===================================================================
+# Jones 3D Cog Script
+#
+# actor_AIVehicle.cog
+#
+# [RandyT]
+#
+# Actor script for truck and minecar commie with a submachine gun.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ===================================================================
+
+symbols
+
+message		created
+
+thing		bandito			local
+
+int			weaponNum=23	local
+
+end
+
+# ===================================================================
+code
+
+# -------------------------------------------------------------------
+created:
+
+	bandito = GetSenderRef();
+
+	SetWeaponModel(bandito, weaponNum);
+	SelectWeapon(bandito, weaponNum);
+
+	return;
+
+end
+

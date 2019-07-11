@@ -1,0 +1,195 @@
+# Jones 3D Cog Script
+#
+# jep_enemytruck.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message     startup
+message     entered
+message		blocked
+message		aievent
+message		timer
+
+thing		truck
+sector	startsec
+thing		player						local
+sound		music0=mus_gen_russbold_shrt3.wav		local
+
+int			n_OldAIMode				local
+int			n_CrntAIMode			local
+int			n_eventType				local
+int			e_Mode				local
+int			n_TimerID				local
+
+vector		v_TruckThrust			local
+vector		v_TruckPos				local
+vector		v_TruckLook				local
+vector		v_IndyPos				local
+vector		v_ToIndy				local
+flex		f_dot					local
+
+
+# ************************** CONSTANTS *******************
+
+int			PARKED_MODE=0			local # Not moving. Initial state or may be stopped to shoot at Indy
+int			FORWARD_MODE=1			local # Driving forwards
+int			BACKWARD_MODE=2 			local # Driving backwards
+
+flex		TRUCK_FORWARD_THRUST=3.5	local
+flex		TRUCK_BACKWARD_THRUST=-1.5	local
+
+int			TIMER_ID_GO_FORWARD=0		local
+int			TIMER_ID_GO_BACKWARD=1		local
+
+# amount of time to drive backwards after getting blocked
+flex 		BACKWARD_TIME=15.0			local 
+flex		BLOCKED_TIME=1.0			local
+
+
+int		beenthere				local
+#------------ Subroutines --------------------
+flex		goforward				local
+flex		stoptruck				local
+flex		gobackward				local
+
+
+end
+
+# ========================================================================================
+code
+
+startup:
+	ClearThingFlags(truck, 0x80000);
+	e_MODE = PARKED_MODE;
+	return;
+
+aievent:
+	if ( GetSenderRef() != truck )
+	{ 
+		return;
+	}
+
+	// Always get because Indy can be getting in and out of the jeep
+	player = GetLocalPlayerThing();
+
+	n_eventType		= GetParam(0);
+	n_CrntAIMode	= GetParam(1);
+	n_OldAIMode		= GetParam(2);	// only valid for certain n_eventType values
+
+	if (n_eventType == 0x100)		// SITHAI_EVENTMODECHANGED
+	{
+		// Set PATROL mode if Truck switched to search mode (SITHAI_MODESEARCHING)
+		if ( !BITTEST(n_OldAIMode, 0x4) && BITTEST(n_CrntAIMode, 0x4) )
+		{
+#			DEBUGPRINT("AIEVENT:: Lost target");
+			if (e_Mode == PARKED_MODE)
+			{
+				call GoForward;
+			}
+		}
+	}
+	// Firing?
+	if (n_eventType == 0x4000)
+	{
+#		DEBUGPRINT("AIEVENT: Truck fired on Indy");
+		v_IndyPos = GetThingPos(player);
+		v_TruckPos = GetThingPos(truck);
+		v_ToIndy = VectorSub(v_IndyPos, v_TruckPos);
+		v_ToIndy = VectorNorm(v_ToIndy);
+		v_TruckLook = GetThingLVec(truck);
+		f_Dot = VectorDot(v_ToIndy, v_TruckLook);
+
+#		DEBUGFLEX(f_Dot,"AIEVENT: Dot to Indy");
+ 		// If Indy is behind us then stop
+		if ( (f_Dot < 0.0)
+			 && (e_Mode != PARKED_MODE)
+			 )
+		{
+			call StopTruck;
+		}
+		// If Indy is in front of truck and it is stopped then move forward
+		else if ( (f_Dot >= 0.0)
+			 && (e_Mode == PARKED_MODE)
+			 )
+		{
+			call GoForward;
+		}
+	}
+
+	return;
+
+
+
+entered:
+	if (GetSenderRef() != startsec) return;
+	if(beenthere == 1) return;
+	beenthere=1;
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+#	print("truck-a-movn'");
+	call GoForward;
+	return;
+
+blocked:
+#	print("truck blocked");
+#	DEBUGPRINT("BLOCKED:");
+	StopThing(truck);
+	if (e_Mode == FORWARD_MODE)
+	{
+		SetTimerEx(BLOCKED_TIME, TIMER_ID_GO_BACKWARD, 0, 0 );
+		SetTimerEx(BACKWARD_TIME + BLOCKED_TIME, TIMER_ID_GO_FORWARD, 0, 0 );
+	}
+	else if (e_Mode == BACKWARD_MODE)
+	{
+		SetTimerEx(BLOCKED_TIME, TIMER_ID_GO_FORWARD, 0, 0 );
+	}
+
+
+	return;
+
+
+timer:
+	n_TimerID = GetSenderID();
+	if (n_TimerID == TIMER_ID_GO_FORWARD)
+	{
+		call GoForward;
+	}
+	else if (n_TimerID == TIMER_ID_GO_BACKWARD)
+	{
+		call GoBackward;
+	}
+
+	return;
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+GoForward:
+#	DEBUGPRINT("GoForward:");
+	v_TruckThrust = VectorSet(0.0, TRUCK_FORWARD_THRUST, 0.0);
+	SetThingThrust(truck, v_TruckThrust);
+	e_Mode = FORWARD_MODE;
+
+	return;
+
+GoBackward:
+#	DEBUGPRINT("GoBackward:");
+	v_TruckThrust = VectorSet(0.0, TRUCK_BACKWARD_THRUST, 0.0);
+	SetThingThrust(truck, v_TruckThrust);
+	e_Mode = BACKWARD_MODE;
+
+	return;
+
+StopTruck:
+#	DEBUGPRINT("Stop:");
+	SetThingThrust(truck, '0.0 0.0 0.0');
+	e_Mode = PARKED_MODE;
+	return;
+
+end
+

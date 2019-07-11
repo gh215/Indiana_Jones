@@ -1,0 +1,117 @@
+# Jones 3D Cog Script
+#
+# gen_radio_chatter.cog
+#
+# Generic Door Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+    #..................MESSAGES................
+    message		startup	
+    message		entered	
+    message		timer	
+    
+	
+	#..................PROPS................
+	thing		ring_obj00
+	thing		ring_obj01
+	thing		ring_obj02
+	thing		ring_obj03
+	thing		ring_obj04
+
+	#..................ACTORS................
+	thing		player          						local
+    
+        
+	#..................TRIGGERS................
+    sector		startSECT0								linkID=2     
+    sector		startSECT1								linkID=2     
+
+    sector		endSECT0								linkID=3     
+    sector		endSECT1								linkID=3     
+
+
+	#..................VECTORS................
+	vector		ringstart								local
+	vector		ringend									local
+
+	
+	#..................TEMPLATES..........
+    template	ring=+ripples							local
+    template	mist=TitanicH2Ofx						local
+	
+	#..................VARIABLES................
+    int			running=0      						    			# whether or not it's running at start
+    int			i										local		# int for ring
+    int			i2										local		# int for ring
+    int			ring00									local		# int for ring
+
+    
+    
+end
+
+# ========================================================================================
+
+code
+startup:
+
+    player = GetLocalPlayerThing();
+	ringstart	= VectorSet(0.1, 0.1, 1.0);
+	ringend	= VectorSet(0.4, 0.4, 0.0);
+
+	if (running == 1) 
+	{
+		SetTimer(0.3);
+		SetPulse(0.25);
+	}
+
+return;
+
+# ........................................................................................
+entered:
+
+if (GetSourceRef() != player) return;
+
+if (GetSenderID() == 2)	# start the rings
+
+	{
+    running = 1;
+	SetTimer(0.3);
+	SetPulse(0.25);
+	}
+
+if (GetSenderID() == 3)	# stop the rings
+
+	{
+    running = 0;
+	SetTimer(0.0);
+	}
+    
+return;        
+#========================================================
+timer:
+
+	# rings in 1 of 5 random locations
+	i=RandBetween(0,4);
+	ring00 = CreateThing(ring, ring_obj00[i]);
+	AnimateSpriteSize(ring00, ringstart, ringend, 2.0);
+	
+	# particles at 1 of 3 random locations near center
+	i2=RandBetween(1,3);
+    CreateThing(mist, ring_obj00[i2]);
+	if(running == 1)
+	{
+        SetTimer(Rand()/2);
+	}
+	
+
+return;
+
+#========================================================
+end
+

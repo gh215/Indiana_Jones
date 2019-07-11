@@ -1,0 +1,42 @@
+# Jones 3D Cog Script
+#
+# RIV_ElevMusic.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     entered
+
+    sector      sec_Cue0        linkID=1
+    sector      sec_Cue1        linkID=1
+    sector      sec_Cue2        linkID=1
+    
+    sound       mus_Cue=mus_pru_raidersclearing.wav     local
+    
+    int         playing=0      local
+
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    if((GetSenderID() == 1) && (playing == 0))
+    {
+        playing = 1;
+        PlaySoundLocal(mus_Cue, 1.0, 0.0, 0x0, 1);
+        playing = 0;
+    }
+    
+    return;
+           
+# ========================================================================================
+
+end

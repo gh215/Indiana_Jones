@@ -1,0 +1,443 @@
+# Jones 3D Cog Script
+#
+# PRU_stairpit.cog
+# 
+# Blocks will push you into the pit if you aren't careful.  They also form a stairway out. 
+# 
+# [GGJ] [PKM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message entered
+    message pulse
+	message	arrived
+	message	timer
+	message touched
+	message	exited
+	message	startup
+	message	blocked
+
+	thing   block0
+    thing   block1  		
+    thing   block2
+    thing   block3		mask=0x409
+	thing   block4		mask=0x409
+    thing   block5		mask=0x409
+    #thing   block6
+	
+	thing	fakeBlock0
+	thing	fakeBlock1
+	thing	fakeBlock2
+	thing	fakeBlock3
+	thing	fakeBlock4
+	thing	fakeBlock5
+	#thing	fakeBlock6
+	
+	thing	blockGhost0
+    thing	blockGhost1
+	thing	blockGhost2
+	thing	blockGhost3
+	thing	blockGhost4
+	thing	blockGhost5
+	#thing	blockGhost6
+	
+	thing	backGhost0
+	thing	backGhost1
+	thing	backGhost2
+	thing	backGhost3
+	thing	backGhost4
+	thing	backGhost5
+	#thing	backGhost6
+	
+	thing	player				local
+	
+	float   moveSpeed=4.0			// How long it takes to push out (was) how fast the blocks push out
+	float	retractSpeed=0.5 		//how fast they retrack if you jump back the way you came
+	float	autoRetractSpeed=3.0	//how fast they retrack automatically, after they're all out
+    float   pulseTime=3.0			//after a block starts pushing out, pause before next one starts
+    float	autoRetract=10.0		//delay before blocks start retracting automatically
+	    
+    int     counter=0        	local
+    int		retractCounter=5	local
+	int     crosscheck=0     	local
+	int		out=0				local
+	
+    
+	flex	f_XDist				local
+	flex	f_YDist				local
+	flex	f_ZDist				local
+    thing	invisiBox=-1		local  		mask=0x080
+    vector	v_modvec			local
+	vector	v_targetpos			local
+	sector	targetsector		local
+	
+	template	boxTpl		#currently set in Marcus to "1M oil drum c," will be changed to "1M aimable invisible cube."                             
+	
+	surface	hangR0		linkID=1	#with your back to the wall these hang ledges are to your right
+	surface	hangR1		linkID=1
+	surface	hangR2		linkID=1
+	surface	hangR3		linkID=1
+	surface	hangR4		linkID=1
+	
+	surface	hangL0		linkID=1	#with your back to the wall these hang ledges are to your left
+	surface	hangL1		linkID=1
+	surface	hangL2		linkID=1
+	surface	hangL3		linkID=1
+	surface	hangL4		linkID=1
+	surface	hangL5		linkID=1
+	
+	surface	hangE0		linkID=1
+    surface	hangE1		linkID=1
+	surface	hangE2		linkID=1
+	surface	hangE3		linkID=1
+	surface	hangE4		linkID=1
+	surface	hangE5		linkID=1
+	#surface	hangE6		linkID=1
+	
+	surface	musTrigger
+
+	flex hangDistR0=0.5			local
+	flex hangDistR1=0.4			local
+	flex hangDistR2=0.3			local
+	flex hangDistR3=0.2			local
+	flex hangDistR4=0.1			local
+
+	flex hangDistL0=-0.6		local
+	flex hangDistL1=-0.5		local
+	flex hangDistL2=-0.4		local
+	flex hangDistL3=-0.3		local
+	flex hangDistL4=-0.2		local
+	flex hangDistL5=-0.1		local
+
+    int currentBlock		local
+	int currentSurface		local
+	int	bSurfaceFound		local
+	int	hanging=0			local
+	
+    int	bBlockFound=0		local
+	int out0=0				local
+	int out1=0				local
+	int out2=0				local
+	int out3=0				local
+	int out4=0				local
+	int out5=0				local
+	int out6=0				local
+	int	musOnce=0			local
+	
+	surface triggerface     mask=0x405
+	surface	retractface		mask=0x405
+    
+	sound	blocksnd=olv_quetzdoor_move_c.wav	local		#fol_in_scrapehard_long.wav	  local
+	sound	musStairpit=mus_gen_awechord1.wav	local
+end
+# ========================================================================================
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+
+	# When the blocks are in the wall, they should be "fakeblocks" so that Indy can't hang from them.
+	for (currentBlock = 0; (currentBlock <= 5); currentBlock = currentBlock + 1)
+	{
+		SetThingFlags(block0[currentBlock], 0x80000);
+	}
+	#SetCollideType(block5, 3);
+	#SetCollideType(block4, 3);
+	#SetCollideType(block3, 3);
+
+
+	return;
+
+# ========================================================================================
+entered:
+
+	# We only care about entered messages from surfaces.
+	if (GetSenderType() != 6) return;
+
+	if ((GetSenderRef() == musTrigger) && (musOnce == 0))
+	{
+		musOnce = 1;
+		PlaySoundLocal(musStairpit, 1.0, 0.0, 0x0, 0);
+	}
+	
+	# Indy lands on the second platform.
+	if ((GetSenderRef() == triggerface) && (crosscheck == 0))
+	{
+		crosscheck = 1;
+
+		# Remove the fake block and add blocks you can hang from.
+		SetThingFlags(fakeBlock0[0], 0x80000);
+		ClearThingFlags(block0[0], 0x80000);
+
+		# The first block starts to move, and the pulse will trigger the rest.
+		MoveThingtoPos(block0, GetThingPos(blockGhost0), movespeed);
+		out0[0] = 0;
+		#PlaySoundThing(blocksnd, block0, 1.0, 7.5, 30.0, 0);
+		SetPulse(pulseTime);
+		return;
+	}
+		
+	# If Indy jumps back to the entrance
+	if ((GetSenderRef() == retractface) && (crosscheck == 1))
+	{
+		
+        Print("entered retract trigger-surface");
+		# Shut off the pulse.
+		SetPulse(0);
+		counter = 0;
+		crosscheck = 0;
+		retractCounter = 5;
+		
+		# Move the blocks back.
+		for (currentBlock = 0; (currentBlock <= 6); currentBlock = currentBlock + 1)
+		{
+			MoveThingToPos(block0[currentBlock], GetThingPos(backGhost0[currentBlock]), retractSpeed);
+			out0[currentBlock] = 1;
+		}
+		return;
+	}
+
+	# Code below checks to see if Indy is hanging from a platform at the base of one of the blocks.
+
+	f_YDist = 0.1; # plug in y value here
+	f_ZDist = 0.25; # plug in z value here			#changed from 3 for benefit of smallest block
+
+	bSurfaceFound = 0;
+
+	for (currentSurface = 0; (currentSurface < 5) && !bSurfaceFound; currentSurface = currentSurface + 1)
+	{
+		// Check to see if we're hanging off the left edge of our block surfaces.
+
+		if (GetSenderRef() == hangR0[currentSurface])
+		{
+			f_XDist = hangDistR0[currentSurface];
+			bSurfaceFound = 1;
+		}
+	}
+
+	if (!bSurfaceFound)
+	{
+		// We're not hanging off the right side - check for the left side.
+
+		for (currentSurface = 0; (currentSurface < 6) && !bSurfaceFound; currentSurface = currentSurface + 1)
+		{
+			if (GetSenderRef() == hangL0[currentSurface])
+			{
+				f_XDist = hangDistL0[currentSurface];
+				bSurfaceFound = 1;
+			}
+		}
+	}
+
+	# Establish a target near Indy at f_XDist, f_Ydist, f_ZDist
+	# Fill in offsets as needed.  0.1 = 1m
+	# Positive values are right (x) and forward (y) of thing center
+	# Z values are offset from thing center (itself offset from insert point)
+	# The mysterious zero vector parm in CreateThingAtPos() is for PYR
+	# xdist (defined above) is one half of block height, plus one
+
+	# Create an invisible box above Indy.  (used in "Touched" section)
+
+	if (bSurfaceFound)
+	{
+		v_modvec = VectorSet(f_XDist, f_YDist, f_ZDist);
+		v_targetpos = VectorAdd(VectorTransformToOrient(player, v_modvec), GetThingPos(player));	
+		targetsector = FindNewSectorFromThing(player, v_targetpos);
+		if (invisiBox != -1)
+		{
+			DetachThing(invisiBox);
+			DestroyThing(invisiBox);
+		}
+		invisiBox = CreateThingAtPos(boxTpl, targetsector, v_targetpos, '0 0 0');
+		CaptureThing(invisiBox); # no capture, no work
+		AttachThingToThing(invisiBox, player); # track his move
+	}
+
+	if ((GetSenderID() == 1)&& ((GetSenderRef() != triggerFace) || (GetSenderRef() != retractFace)))
+	{
+		hanging = 1;
+	}
+	return;
+
+# ========================================================================================
+exited:
+
+	# Destroy the invisible box created when Indy was hanging.
+
+	bSurfaceFound = 0;
+
+	for (currentSurface = 0; (currentSurface < 5) && !bSurfaceFound; currentSurface = currentSurface + 1)
+		if (GetSenderRef() == hangR0[currentSurface])
+			bSurfaceFound = 1;
+
+	if (!bSurfaceFound)
+		for (currentSurface = 0; (currentSurface < 6) && !bSurfaceFound; currentSurface = currentSurface + 1)
+			if (GetSenderRef() == hangL0[currentSurface])
+				bSurfaceFound = 1;
+
+	if (bSurfaceFound && invisiBox != -1)
+	{
+		DetachThing(invisiBox);
+		DestroyThing(invisiBox);
+		invisiBox = -1;
+	}
+
+	if ((GetSenderID() == 1) && (hanging == 1))
+	{
+		hanging=0;
+	}
+
+return;
+
+# ........................................................................................
+pulse:
+
+	# Move each block out
+	counter = counter + 1;
+	SetThingFlags(fakeBlock0[counter], 0x80000);
+	ClearThingFlags(block0[counter], 0x80000);
+	#PlaySoundThing(blocksnd, block0[counter], 1.0, 7.5, 30.0, 0);
+	MoveThingToPos(block0[counter], GetThingPos(blockGhost0[counter]), movespeed);
+	out0[counter] = 0;
+
+	if (counter == 5)
+	{
+		SetPulse(0);
+		counter = 0;
+		retractCounter = 5;
+	}
+	return;
+
+# ........................................................................................	
+arrived:
+
+	bBlockFound=0;
+
+	for (currentBlock = 0; (currentBlock <= 5) && !bBlockFound; currentBlock = currentBlock + 1)
+		if ((GetSenderRef() == Block0[currentBlock]))
+			bBlockFound = 1;
+
+	if (!bBlockFound)
+		return;
+
+	currentBlock = currentBlock - 1;
+
+	# "Out" is "0" when the blocks are moving out.
+	if (out0[currentBlock] == 0)
+	{
+		ClearSurfaceFlags(hangR0[currentBlock], 0x1000000);
+		ClearSurfaceFlags(hangL0[currentBlock], 0x1000000);
+		ClearSurfaceFlags(hangE0[currentBlock], 0x1000000);
+		out0[currentBlock] = 1;
+				
+		if (hanging == 1)
+		{
+			SetActorFlags(player, 0x200000);
+			DetachThing(player);
+		}
+
+		if (GetSenderRef() == Block5)
+		{
+			SetTimer(autoRetract);
+        }
+
+		return;
+	}
+	else
+	{
+		# "Out" is "1" when the blocks are moving back in.
+
+		#SetThingFlags(Block0[currentBlock], 0x80000);
+		#ClearThingFlags(FakeBlock0[currentBlock], 0x80000);
+
+		SetSurfaceFlags(hangR0[currentBlock], 0x1000000);
+		SetSurfaceFlags(hangL0[currentBlock], 0x1000000);
+		SetSurfaceFlags(hangE0[currentBlock], 0x1000000);
+		
+		out0[currentBlock] = 0;
+
+        if (GetSenderRef() == Block0)
+		{
+            crosscheck = 0;
+		}
+
+		return;
+	}
+
+
+    
+	#if ((hanging == 1) && (GetSenderRef() == block0[counter]))
+	#{
+	#	if (invisiBox != -1)
+	#	{
+	#		DetachThing(invisiBox);
+	#		DestroyThing(invisiBox);
+	#		invisiBox = -1;
+	#	}
+    #    SetActorFlags(player, 0x200000);
+	#	DetachThing(player);
+	#	ClearSurfaceFlags(hangR0, 0x1000000);
+	#	ClearSurfaceFlags(hangL0, 0x1000000);
+	#	ClearSurfaceFlags(hangE0, 0x1000000);
+	#}
+    
+	return;   
+# ........................................................................................
+timer:
+	# Retract all of the blocks
+
+	if (retractCounter >= 0)
+	{
+		#PlaySoundThing(blocksnd, block0[retractCounter], 1.0, 7.5, 30.0, 0);
+		#MoveToFrame(block0[retractCounter], 0, autoRetractSpeed);
+		MoveThingToPos(block0[retractCounter], GetThingPos(backGhost0[retractCounter]), autoretractSpeed);
+		out0[retractCounter] = 1;
+		retractCounter = retractCounter - 1;
+		SetTimer(5.0);
+	}
+	return;
+
+# ........................................................................................
+touched:	
+
+	if (GetSourceRef() == player)
+		return;
+
+	if (GetSenderRef() == invisiBox)
+	{
+		Print("Sender is invisiBox!");
+		SetActorFlags(player, 0x200000);
+		if (invisiBox != -1)
+		{
+			DetachThing(invisiBox);
+			DestroyThing(invisiBox);
+			invisiBox = -1;
+		}
+		DetachThing(player);
+	}
+
+	return;
+	
+# ........................................................................................
+blocked:
+Print("blocked");
+
+if (GetSenderRef() == block5)
+{
+	Sleep(0.5);
+	Print("inside blocked if statement");
+    MoveThingToPos(block5, GetThingPos(blockGhost5), movespeed);
+}
+if (GetSenderRef() == block4)
+{
+	Sleep(0.5);
+	Print("inside blocked if statement");
+    MoveThingToPos(block4, GetThingPos(blockGhost4), movespeed);
+}
+
+return;
+# ........................................................................................
+end

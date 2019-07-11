@@ -1,0 +1,57 @@
+# Jones 3D Cog Script
+#
+# shw_general_doors.cog
+#
+# Generic Door Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+		
+    message	user0		
+    message	user1		
+    message	arrived		
+
+	thing		gear		
+		
+    int			spin=0	local
+
+end
+
+# ========================================================================================
+
+code
+
+user0:
+If (spin == 0) #gear not spinning
+{
+	# spin the gear
+	Rotate(gear, -360, 2, 2);
+	spin = 1;
+}
+return;
+
+# ........................................................................................
+user1:
+If (spin == 1) #gear is spinning
+{
+	# stop the gear
+	spin = 0;
+	StopThing(gear);
+}
+return;
+# ........................................................................................
+arrived:
+
+If ((GetSenderRef() == gear) && (spin == 1))
+{
+    Rotate(gear, -360, 2, 2);
+}
+return;
+
+# ........................................................................................
+end
+

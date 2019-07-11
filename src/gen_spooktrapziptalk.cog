@@ -1,0 +1,281 @@
+# Jones 3D Cog Script
+#
+# gen_SpookTrapZipTalk.cog
+#
+# Indy is nervous when things get weird
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+# NOTE: This is a random verbal reaction to weirdness and darkness.
+# Glue it into your level and reach it from a calling cog like this:
+#
+# 1. Create a valid reference to this cog in your calling cog;
+#
+# 2. Use the following verb:
+#    SendMessageEx(thiscogREF, i_userMessage, f_parm0, f_parm1, f_parm2, f_parm3);
+#    (see each section below for details...)
+#
+# 3. Use global15 as a semaphore and return value where neeeded;
+#
+# The resulting chatter is pre-approved by HB...
+#
+# PRODUCT SUPPORT:  cogsrus x8371
+
+# ==============================================================================
+
+symbols
+
+# ................................. MESSAGES ...................................
+
+	message user0	# spooky lines
+	message user1	# trap lines
+	message user2	# need zippo lines
+
+# ................................. SAY LINES ..................................
+
+	# spooky lines...
+	sound	in_sayline=Inxj044.wav				local # Making me nervous-->in_sayline[0]
+	sound	in_creepy=Inxj048.wav				local # Why creepy feeling?
+	sound	in_jumpy=Inxj042.wav				local # Something wrong here.
+	sound	in_nofear=Inxj046.wav				local # Nothing to fear...scares me
+
+	# trap lines...
+	sound	in_wronghere=Inxj042.wav			local # Something wrong-->in_sayline[4]
+	sound	in_notfeelright=Inxj043.wav			local # This doesn't feel right.
+	sound	in_danger=Inxj045.wav				local # Danger!	
+	sound	in_sensetrap=inxj041a.wav   		local # Sense a trap. (JC - filename changed)
+
+	# zippo lines...
+	sound	in_darkhere=Inxj038.wav				local # Dark in here-->in_sayline[8]
+	sound	in_cantsee=Inxj039.wav				local # Can't see a thing.
+	sound	in_needlight=Inxj040.wav			local # Need some light here.
+
+# ............................... VARIABLES ....................................
+
+	flex	talkerREF							local
+	flex	forceTalk							local
+	flex	forceLine							local
+	
+	int		lineindex							local # indexes sound array
+	int		spookoffset=0						local # define
+	int		trapoffset=4						local # define
+	int		zipoffset=8							local # define
+
+	int		alreadyworking=0					local
+
+	int		s_newline=50						local # init outside actual range
+	int		s_oldline=50						local
+	int		t_newline=50						local
+	int		t_oldline=50						local
+	int		z_newline=50						local
+	int		z_oldline=50						local
+
+	int		dummy
+	
+# subroutines
+	flex	randspooklines=0.0					local
+	flex	randtraplines=0.0					local
+	flex	randzippolines=0.0					local
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+user0:
+
+	# NOTE: Indy worries about SPOOKY PLACES...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(negtalkcogREF, user0, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, the calling cog can use global15 as a semaphore
+	#
+	# Hey!  You can also force a line choice.  Here's how:
+	# 1. Note your intention by setting f_forceTalk parm to some non-zero value
+	# 2. Examine the available lines to find the one you want (counting from 0)
+	# 3. Pass that number in the forceLine parameter (parm2)
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	alreadyworking = 1; # stall multiple calls
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	if (forceTalk > 0)
+	{
+		s_newline = forceLine; # choose this line
+		s_oldline = 0;
+	}
+
+	call randspooklines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ........................................................................................
+
+user1:
+
+	# NOTE: Indy thinks a TRAP is nearby...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(negtalkcogREF, user1, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, you can force a line choice.
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	alreadyworking = 1; # stall multiple calls
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	if (forceTalk > 0)
+	{
+		t_newline = forceLine; # choose this line
+		t_oldline = 0;
+	}
+
+	call randtraplines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ........................................................................................
+
+user2:
+
+	# NOTE: Indy wishes he had some LIGHT (zippo clue)...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(negtalkcogREF, user2, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, you can force a line choice.
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	alreadyworking = 1; # stall multiple calls
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	if (forceTalk > 0)
+	{
+		z_newline = forceLine; # choose this line
+		z_oldline = 0;
+	}
+
+	call randzippolines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ..............................................................................
+
+randspooklines:
+
+	while (s_newline == s_oldline)
+	{		
+		s_newline = RandBetween(0, 11);
+		if (s_newline > 9)
+		{
+			s_newline = 3; # 1/6 chance for line 3
+		}
+		else
+		{	
+			s_newline = RandBetween(0, 2); # 1/4 chance for lines 0 thru 2
+		}
+	}
+	s_oldline = s_newline;	
+	lineindex = spookoffset + s_newline;
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+# ..............................................................................
+
+randtraplines:
+
+	while (t_newline == t_oldline)
+	{		
+		t_newline = RandBetween(0, 5);
+		if (t_newline > 3)
+		{
+			t_newline = 3; # 2/6 chance for 3
+		}
+		else
+		{
+			t_newline = RandBetween(0, 2); # 1/6 chance for 0 thru 2
+		}
+	}
+	t_oldline = t_newline;
+	lineindex = trapoffset + t_newline; # 1/4 chance
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+# ..............................................................................
+
+randzippolines:
+
+	while (z_newline == z_oldline)
+	{		
+		z_newline = RandBetween(0, 2);
+	}
+	z_oldline = z_newline;
+	lineindex = zipoffset + z_newline; # 1/3 chance
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+end
+

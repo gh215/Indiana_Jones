@@ -1,0 +1,40 @@
+# Jones 3D Cog Script
+#
+# olv_PlayAmbient.cog
+#
+# Plays a sound at a one or more locations
+#
+# [IS] Modified by DS.
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	timer
+	message	startup
+
+	thing		soundPos0		nolink
+
+	sound		wav0=gen_waterfall_a.wav			local
+	float		minDist=-1						local
+	float		maxDist=40						local
+	float		volume=0.7						local
+end
+
+code
+
+# ........................................................................................
+
+startup:
+
+	settimer(0.5);
+	return;
+
+# ........................................................................................
+
+timer:
+	PlaySoundThing(wav0, soundPos0, volume, minDist, maxDist, 0x045);
+	return;
+
+end
+

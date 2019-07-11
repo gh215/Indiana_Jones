@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# PRU_sharpBoulder_geometry.cog 
+#
+# Modified version of class_SharpBoulder.cog to allow tagging of faces for raft damage
+#
+# [MDR]	[GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message     touched
+
+surface		rock0
+surface		rock1		
+surface		rock2		
+surface		rock3		
+surface		rock4
+
+thing		player		local
+int			n_damage	local
+int			wait=0		local
+int			victim		local
+
+end
+# ===================================================================
+code
+
+touched:
+Print("touched");
+player = GetLocalPlayerThing();
+
+if ((GetSourceRef() == player) && (wait != 1))
+{
+    Print("inside if statement");
+	
+	n_damage = 10000; # 10000 is 10 percent of raft total
+
+	wait = 1;
+	
+	DamageThing(player, n_damage, 0x00400000, victim);
+	
+	Sleep(1.0); // so we don't damage him every frame
+	
+	wait = 0;
+}
+return;
+end

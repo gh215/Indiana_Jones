@@ -1,0 +1,136 @@
+# Jones 3D Cog Script
+#
+# vol_EndDoor.cog
+#
+# Door Script
+#
+# [cmg]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+	
+#...............MESSAGES....................
+	message		startup		
+	message		activated	
+
+#...............ACTORS....................
+	thing		player								local		
+	thing		indyActor					
+	
+#...............CAMERAS....................
+	thing		endcamPOS							nolink
+	thing		endcamPOS2							nolink
+
+#...............PROPS....................
+	thing		door0								linkID=2		
+	thing		door1								linkID=2
+	
+	thing		in_finalPOS							nolink
+	thing		fadeplate							nolink
+
+#...............VARS....................
+	int			open=0								local
+
+#...............SOUNDS..................
+	sound		endtheme=mus_gen_indyrelief.wav		local
+
+#...............TRIGGERS....................
+	sector		doorsector							local
+
+end
+# .................................................................................................
+code
+startup:
+    
+	
+	ThingFadeAnim(fadeplate, 1.0, 0.0, 0.1, 0);
+	player=GetLocalPlayerThing();
+
+	# no see adjoins for the door sector
+	doorsector = getthingsector(door0);
+    SetSectorAdjoins(doorsector, 0);
+
+return;
+
+# .................................................................................................
+
+activated:
+	
+	if (GetSenderID() != 2) return;
+	if (open != 0) return;
+	
+	open= 1;	# no extra activated messages
+    StartCutScene(1);
+	
+	# restore cam 2
+	SetCameraLookInterp(2,0);
+	SetCameraPosInterp(2,0);
+	Sleep(0.01);
+
+	# set up the actor
+	MakeMeStop();
+	CopyOrientAndPos(player, indyActor);
+	CopyPlayerHolsters(player, indyActor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyActor, 0x80000);
+    PlayMode(indyActor, 60, 1);
+	
+	# get camera2 to 3/4 shot 
+	SetCameraFocus(2, endcamPOS);
+	SetCameraSecondaryFocus(2, indyActor);
+	SetCurrentCamera(2);
+    
+	SetSectorAdjoins(doorsector, 1);
+	Rotate(door0, -90, 1, 2.0);
+    Rotate(door1, 90, 1, 2.0);
+
+	Sleep(2.5);
+	# move the actor into the hall
+	AISetLookThingEyeLevel(indyActor, in_finalPOS);
+    AISetMoveSpeed(indyActor, 1.1);
+    AISetMoveThing(indyActor, in_finalPOS, 0);
+
+	PlaySoundLocal(endtheme, 1.0, 0, 0x0, 0);
+
+	# move the camera back with pos interp
+	SetCameraPosInterp(2,1);
+	SetCameraInterpSpeed(2, 3);
+	Sleep(0.01);
+	SetCameraFocus(2, endcamPOS2);
+
+	Sleep(4.0);
+
+	# fade to black
+	ThingFadeAnim(fadeplate, 0.0, 1.0, 2.0, 0);
+
+	Sleep(3.0);
+
+	# clean up the camera
+	ResetCameraFOV();
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+
+	# end it
+    EndCutScene();
+	JonesEndLevel();
+
+return;
+
+# .................................................................................................
+
+
+    
+	
+
+
+
+
+
+
+
+# .................................................................................................
+end
+

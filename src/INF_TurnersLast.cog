@@ -1,0 +1,237 @@
+# Jones 3D Cog Script
+#
+# INF_TurnersLast.cog
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     crossed
+   
+    thing       player                                  local
+    thing       indyactor
+    
+    thing       turner
+    sound		pow=imp2_activate.wav		            local
+    
+    surface     croschek
+    
+    thing       intro_in_mk_1
+    thing       actor_sight1
+    thing       turner_mk_1
+    thing       turner_sight_1
+    thing       sophtarget
+    
+    thing       cut0_tgt0
+    thing       cut0_cam0
+    thing       cut0_tgt1
+    thing       cut0_cam1
+    thing       cut0_tgt2
+    thing       cut0_cam2
+    thing       cut1_tgt0
+    thing       cut1_cam0
+    thing       cut2_tgt0
+    thing       cut2_cam0
+    
+    sound       indyline0=im06j01.wav                   local
+    sound       turnerline0=im06t02.wav                 local
+    sound       indyline1=im06j03.wav                   local
+    sound       turnerline1=im06t04.wav                 local
+    sound       indyline2=im06j05.wav                   local
+    sound       turnerline2=im06t06.wav                 local
+    sound       sophialine=im03s21.wav                  local
+    
+	keyframe	in_ltarmup=0in_leftarm_1_1.key			local
+	keyframe	in_crossArms=0in_stand1_bd_2.key	   	local
+    keyframe	in_activate=in_activate_medium.key		local
+    keyframe	in_Smash=0in_smash_1_4.key				local
+	keyframe	in_handsONhips=0in_stand4.key			local
+    keyframe    in_sideTOhips=0in_stand1_bd_4.key       local
+    
+    keyframe	trn_handships=0tu_stand1.key			local
+	keyframe	tu_rthand_1_1=0tu_righthnd_1_1.key		local
+	keyframe	trn_fistshake=0tu_pointout_1_1.key		local
+    keyframe	trn_nothelp=0tu_nothelp_1_1.key			local
+	keyframe	trn_reach=0tu_reach_1_1.key				local
+    
+    flex		in_headRate							    local
+	flex		in_rotRate							    local
+    
+    int         curline                                 local
+    int         croschek=0                              local
+    int         tu_keyTrack1                            local
+    int         in_keyTrack1                            local
+    int         crosit=0                                local
+    
+    cog         huntcog
+    
+	model  		mod_tu_imp2=hand_tu_imp2_b.3do			local
+    
+end
+
+code
+
+# ========================================================================================
+startup:
+
+    player = GetLocalPlayerThing();
+    ClearThingFlags(turner, 0x80000);
+    ThingFadeAnim(turner, 1.0, 0.0, 0.1, 0);
+    AISetCutsceneMode(turner);
+    SetThingMesh(turner, 8, mod_tu_imp2, 0);
+    
+return;
+        
+#----------------------------------------------------------------------------------------
+
+crossed:
+
+    If ((GetSenderRef() == croschek) && (crosit == 1)) return;
+    //start cutscene
+    crosit=1;
+    MakeMeStop();
+    StartCutscene(1);
+    CopyPlayerHolsters(player, indyactor);
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indyactor, 0x80000);
+    
+    //Prep actor and move him to 1st mark...
+    AISetCutsceneMode(indyactor);
+    in_headRate = GetThingMaxHeadVel(player);
+	SetThingMaxHeadVel(indyactor, 200.0);
+	in_rotRate = GetThingMaxRotVel(player);
+	SetThingMaxRotVel(indyactor, 200.0);
+    AISetMoveSpeed(indyactor, 1.0);
+	AISetMoveThing(indyactor, intro_in_mk_1, 0);
+	AISetLookThing(indyactor, actor_sight1);
+    
+    //CUT to Wide shot of door watching indy walk in
+    SetCameraSecondaryFocus(2, cut0_tgt0);
+    SetCameraFocus(2, cut0_cam0);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0);
+    Sleep(1);
+	AIWaitForStop(indyactor);
+    
+    //PAN to the left and PAN focus to right
+    SetCameraLookInterp(2, 1);
+    SetCameraPosInterp(2, 1);
+    SetCameraInterpSpeed(2, 2);
+    Sleep(0.5);
+    SetCameraSecondaryFocus(2, cut0_tgt1);
+    AttachThingToThing(cut0_tgt1, turner);
+    SetCameraFocus(2, cut0_cam1);
+    SetCameraFOV(80, 1, 2);
+    
+    //start Turner fade in
+    ThingFadeAnim(turner, 0.0, 1.0, 1.0, 0);
+    AISetLookThing(indyactor, turner);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    PlaySoundThing(pow, turner, 1, 10, 20, 0);
+    Sleep(0.5);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    Sleep(0.5);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    Sleep(0.5);
+    
+    //INDY: "Turner you've got the part I need. Hand it over"
+    curline = PlayVoice(indyactor, indyline0, 1, 0);
+	PlayKey(indyactor, in_ltarmup, 4, 0x12, 1);
+	PlayKey(indyactor, in_activate, 4, 0x12, 1);
+    WaitForSound(curline);
+    
+    //TURNER: "Sorry I cant do that"
+    SetCameraFocus(2, cut0_cam2);
+    curline = PlayVoice(turner, turnerline0, 1, 0);
+    AISetMoveSpeed(turner, 2.0);
+	AISetMoveThing(turner, turner_mk_1, 1);
+	AISetLookThing(turner, turner_sight_1);
+    AIWaitForStop(turner);
+    tu_keyTrack1 = PlayKey(turner, trn_handships, 2, 0x10, 0);
+    PlayKey(turner, tu_rthand_1_1, 4, 0x12, 0);
+    WaitForSound(curline);
+    
+    //INDY: "Come on it's our only chance to save Sophia"
+    curline = PlayVoice(sophtarget, sophialine, 1, 0);
+    SetCameraSecondaryFocus(2, cut0_tgt2);
+    SetCameraFOV(70, 1, 2);
+    WaitForSound(curline);
+    PlayVoice(indyactor, indyline1, 1, 1);
+    
+    //TURNER: "You dont fool me Jones..."
+    in_keyTrack1 = PlayKey(indyactor, in_handsONhips, 2, 0x10, 0);
+    PlayKey(indyactor, in_sideTOhips, 4, 0x12, 0);
+    SetCameraLookInterp(2, 0);
+    SetCameraPosInterp(2, 0);
+    SetCameraInterpSpeed(2, 0);
+    Sleep(0.25);
+    curline = PlayVoice(turner, turnerline1, 1, 0);
+    SetCameraSecondaryFocus(2, cut1_tgt0);
+    SetCameraFocus(2, cut1_cam0);
+    SetCurrentCamera(2);
+    SetCameraFOV(40, 1, 6);
+    PlayKey(turner, trn_nothelp, 4, 0x12, 1);
+    PlayKey(turner, trn_reach, 4, 0x12, 1);
+    Sleep(1.5);
+    PlayKey(turner, trn_fistshake, 4, 0x12, 1);
+    WaitForSound(curline);
+    
+    //INDY: "The world's seen enough dictators..."
+    curline = PlayVoice(indyactor, indyline2, 1, 0);
+    SetCameraSecondaryFocus(2, cut2_tgt0);
+    SetCameraFocus(2, cut2_cam0);
+    SetCurrentCamera(2);
+    PlayKey(indyactor, in_Smash, 4, 0x12, 0);
+    SetCameraFOV(70, 0, 0);
+    SetCameraFOV(45, 1, 2);
+    WaitForSound(curline);
+    StopKey(indyactor, in_keyTrack1, 0.5);
+    
+    
+    //TURNER: "You'll never get away with it..."
+    curline = PlayVoice(turner, turnerline2, 1, 0);
+    SetCameraSecondaryFocus(2, cut1_tgt0);
+    SetCameraFocus(2, cut1_cam0);
+    SetCameraFOV(70, 0, 0);
+    SetCameraFOV(90, 1, 2);
+    ThingFadeAnim(turner, 1.0, 0.0, 1.0, 0);
+    StopKey(turner, tu_keyTrack1, 0.5);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    PlaySoundThing(pow, turner, 1, 10, 20, 0);
+    Sleep(0.5);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    Sleep(0.5);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    WaitForSound(curline);
+    Sleep(1);
+    DestroyThing(turner);
+    
+    //Restore Everything
+    CopyOrientAndPos(indyactor, player);
+    SetCameraLookInterp(2, 0);
+    SetCameraPosInterp(2, 0);
+    SetCameraInterpSpeed(2, 0);
+    Sleep(0.01);
+    ClearThingFlags(player, 0x80000);
+    SetThingMaxHeadVel(indyactor, in_headRate);
+	SetThingMaxRotVel(indyactor, in_rotRate);
+	SetThingFlags(indyactor, 0x80000);
+    SetCameraPosition(1, GetThingPos(cut0_cam1));
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0);
+    Sleep(0.01);
+    EndCutscene();
+    ClearActorFlags(player, 0x200000);
+    
+    //SendMessage to TurnerHunt
+    SendMessage(huntcog, user0);
+    
+return;
+
+#----------------------------------------------------------------------------------------
+    
+end

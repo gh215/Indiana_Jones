@@ -1,0 +1,223 @@
+# Jones 3D Cog Script
+#
+# pyr_tombdoor.cog
+#
+# Push open the tomb doors in pyramid 2
+#
+# [RKD & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ==============================================================================
+
+symbols
+message	activated
+message	arrived
+message	startup
+message	pulse
+
+# world things
+thing	door
+thing	plunker		nolink
+thing	player		local
+
+# cameras and lookthings
+thing	goodcam		nolink
+thing	goodcamlook	nolink
+thing	badcam		nolink
+thing	cam1spot	local
+thing	cam1look	local
+
+# sector player should be in for a good shove
+sector	pushsector	nolink
+
+# keyframes
+keyframe	indypush=0in_passport_1_1.key	local
+
+# indy sayline
+sound	thisside=inxj102.wav		local
+sound	snakes=Inxj070.wav			local # Oh no! Snakes!
+
+# sound
+sound	crunch=pru_trapblock_stuck_c.wav	local
+
+# variables
+flex	speed=0.4 		local
+flex	distance=0		local
+int		locked=0		local
+int		counter=8		local
+int		direction=0
+
+# subroutines
+flex	opendoor=0.0	local
+end
+
+# ========================================================================================
+
+# Code Section
+code
+startup:
+	SetThingLight(door, '.2 .2 .1', .001, .01);
+	SetSectorAdjoins(GetThingSector(door), 0);
+	return;
+
+activated:
+# ---> door	
+
+	if (locked) return;
+	
+	player = GetLocalPlayerThing();
+	
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+	
+	SetSectorAdjoins(GetThingSector(door), 1);
+	
+	locked = 1;	
+	StartCutscene(0);
+	
+	#if player is inside the crypt, open the door
+	if (GetThingSector(player) == pushsector)
+	{
+		SetActorFlags(player, 0x200000);
+		
+		# setup offset camera
+		cam1spot = CreateThing(GetThingTemplate(goodcam), goodcam);
+		cam1look = CreateThing(GetThingTemplate(goodcam), goodcam);
+		MakeCamera2LikeCamera1(cam1spot, cam1look);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, cam1spot);
+		SetCameraSecondaryFocus(2, cam1look);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 0.7);
+		Sleep(0.01);
+		SetCameraFocus(2, goodcam);
+		SetCameraSecondaryFocus(2, goodcamlook);
+
+		sleep(.3);
+	
+		PlayMode(player, 61, 0);
+
+		sleep(.4);
+		
+		SetCollideType(door, 0);
+		call opendoor;
+	}
+	else
+	#otherwise, sayline
+	{
+		SetActorFlags(player, 0x200000);
+
+		# setup offset camera
+		cam1spot = CreateThing(GetThingTemplate(badcam), badcam);
+		cam1look = CreateThing(GetThingTemplate(badcam), badcam);
+		MakeCamera2LikeCamera1(cam1spot, cam1look);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, cam1spot);
+		SetCameraSecondaryFocus(2, cam1look);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 0.7);
+		Sleep(0.01);
+		SetCameraFocus(2, badcam);
+		SetCameraSecondaryFocus(2, door);
+
+		sleep(.3);
+		PlayMode(player, 61, 1);
+		PlayVoice(player, thisside, 1, 1);
+		Sleep(.5);
+
+		# restore camera and get rid of objects
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraPosition(1, GetThingPos(badcam));
+		SetCurrentCamera(1);
+		DestroyThing(cam1spot);
+		DestroyThing(cam1look);
+		
+		locked = 0;
+		
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+	}
+
+	return;
+
+arrived:
+# ---> door
+	
+	#door still falling, speed it up and increment distance
+	speed = speed * .5;
+	distance = distance + 10;
+	call opendoor;
+	return;
+	
+opendoor:
+	#if fully fallen, move the door out
+	if (distance > 100)
+	{
+		AttachThingToThing(door, plunker);
+		MoveToFrame(plunker, 1, 5);
+		PlaySoundThing(crunch, door, 1.0, -1, -1, 0);
+		SetPulse(.1);
+
+		sleep(1);
+		
+		# if it's the north-south crypt, play snake line
+		if (direction == 0)
+		{
+			PlayVoice(player, snakes, 1, 0);
+			sleep(1);
+			PlayKey(player, indypush, 4, 0x12, 0);
+			sleep(2);
+		}
+
+		sleep(.5);
+		
+		# restore camera and get rid of objects
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraPosition(1, GetThingPos(goodcam));
+		SetCurrentCamera(1);
+		DestroyThing(cam1spot);
+		DestroyThing(cam1look);
+		
+		SetCollideType(door, 3);
+
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+	}
+	else
+	#otherwise, keep turning it
+	{
+		Rotate(door, -10, direction, speed);
+	}
+	
+	return;
+
+pulse:
+	if (counter > 1)
+	{
+		counter = counter - 1;
+		
+		SetPOVShake(VectorScale(VectorSet(RandBetween(-1, 1), RandBetween(-1, 1), RandBetween(-1, 1)), .0002 * counter),
+					VectorScale(VectorSet(RandBetween(-2, 2), RandBetween(-2, 2), RandBetween(-2, 2)), .02 * counter),
+					10, 180);
+	}
+	else
+	{
+		SetPulse(0);
+	}
+
+	return;
+	
+
+end
+
+

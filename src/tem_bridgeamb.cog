@@ -1,0 +1,62 @@
+# Jones 3D Cog Script
+#
+# TEM_BridgeAmb.cog
+#
+# Produces random ambient bridge sounds when attatched to a bridge.
+# Based on code from TEO_Drops.cog by SXC.
+#
+# [TRM & SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     pulse
+    
+    thing       bridge
+        
+    sound       sndBridge0=tem_bridge_b.wav    local
+    sound       sndBridge1=tem_bridge_c.wav    local
+        
+    float       dropFreq        local
+    
+    flex        pulseTime=2.0
+    flex        vol=1.0
+    flex        minDist=-1
+    flex        maxDist=-1
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetPulse(pulseTime);
+    
+    return;
+    
+# ========================================================================================
+
+pulse:
+    
+    dropFreq = Rand();
+
+    if (dropFreq < 0.35)
+        {
+            PlaySoundThing(sndBridge0, bridge, vol, minDist, maxDist, 0x0);
+        }
+        
+    if ((dropFreq > 0.35) && (dropFreq < 0.75))
+        {
+            PlaySoundThing(sndBridge1, bridge, vol, minDist, maxDist, 0x0);
+        }
+        
+    return;
+    
+# ========================================================================================
+        
+end

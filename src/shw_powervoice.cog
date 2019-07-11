@@ -1,0 +1,149 @@
+# Jones 3D Cog Script
+#
+# SHW_PowerVoice.cog
+#
+# Say line control for the first area in SHW
+#
+# [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols		
+	
+    # MESSAGES
+	message     startup
+    message     crossed
+    
+    # ACTORS
+	thing       player      local
+	thing       indyActor   
+    
+	# CAMAERA TARGETS
+	thing	camtarg
+
+	# CAMERA OBJECTS
+    thing       lCampos     
+    thing       rCampos
+    thing 		curCam    local
+
+    # TRIGGERS
+    surface     triggersurf     linkID=1
+    surface     triggersurf1    linkID=2
+    
+	# SAYLINES
+    sound       inwheelspot=sw01j03.wav      local       # a water wheel and...
+    
+    # CONTROL VARS
+	int wheelspotted=0    local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+    
+# ========================================================================================
+
+crossed:
+
+    if (wheelspotted == 1) return;
+
+	StartCutscene(1);
+	StopThing(player);
+
+	curCam = GetCurrentCamera();
+	SetCameraLookInterp(2, 1);
+	SetCameraInterpSpeed(2, 3);
+    
+	if ((GetSenderID() == 1) && (GetSourceRef() == player))	#player comes up left ramp
+        {    
+            #Sleep(0.25);
+			# Swing Cam to the lCampos
+			SetExtCamOffsetToThing(lCampos);
+			
+			# Hide and disable player, show indyActor
+			TeleportThing(indyActor, player);
+			ClearThingFlags(indyActor, 0x80000);
+			SetThingFlags(player, 0x80000);
+			
+			# indyActor looks at the wheel
+			AISetLookThing(indyActor, camtarg);
+			
+			# "hmmm...a waterwheel and 4..."
+            PlayVoice(player, inwheelspot, 1.0, 0);
+			
+			Sleep(1.5);
+
+			# put camera 2 at the curCam
+			SetCameraFocus(2, lCampos);
+			SetCameraSecondaryFocus(2, indyActor);
+			
+			SetCurrentCamera(2);
+			# camera pans over to the wheel
+            SetCameraLookInterp(2, 1);
+			SetCameraInterpSpeed(2, 3);
+			SetCameraSecondaryFocus(2, camtarg);
+            
+            sleep(1.0);
+			SetCameraPosition(1, GetThingPos(lCampos));
+			SetCurrentCamera(1);
+			RestoreExtCam();
+        }
+
+
+        if ((GetSenderID() == 2) && (GetSourceRef() == player))	# player comes upo right ramp
+        {    
+            #Sleep(0.25);
+			# Swing Cam to the rCampos
+			SetExtCamOffsetToThing(rCampos);
+			
+			# Hide and disable player, show indyActor
+            TeleportThing(indyActor, player);
+			SetThingFlags(player, 0x80000);
+			ClearThingFlags(indyActor, 0x80000);
+			
+			# indyActor looks at the wheel
+			AISetLookThing(indyActor, camtarg);
+			
+			# "hmmm...a waterwheel and 4..."
+			PlayVoice(player, inwheelspot, 1.0, 0);
+			
+			Sleep(1.5);
+
+            # put camera 2 at the curCam
+			SetCameraFocus(2, rCampos);
+			SetCameraSecondaryFocus(2, indyActor);
+			SetCurrentCamera(2);
+			
+			# camera pans over to the wheel
+			SetCameraLookInterp(2, 1);
+			SetCameraInterpSpeed(2, 3);
+			SetCameraSecondaryFocus(2, camtarg);
+			
+			
+            
+            sleep(1.0);
+			SetCameraPosition(1, GetThingPos(rCampos));
+            SetCurrentCamera(1);
+			RestoreExtCam();
+        }
+    # Return player
+	TeleportThing(player, indyActor);
+	ClearThingFlags(player, 0x80000);
+	SetThingFlags(indyActor, 0x80000);
+	wheelspotted = 1;
+    SetCurrentCamera(1);
+    SetCameraLookInterp(2, 0);
+	EndCutscene();
+    return;
+
+# ========================================================================================
+    
+end
+

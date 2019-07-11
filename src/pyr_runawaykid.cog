@@ -1,0 +1,288 @@
+# Jones 3D Cog Script
+#
+# pyr_runawaykid.cog
+#	
+# Make kid disappear into hole when threatened
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message	startup
+message	entered
+message	exited
+message	damaged
+message	timer
+message arrived
+message blocked
+message user1
+
+thing	t_Kid			mask=0x409
+
+thing	kidmarkout	nolink
+thing	kidmarkin	nolink
+
+sector	s_Trigger		mask=0x40D
+# =============================== Misc Stuff =================================================
+
+int		b_IndyNearEntrance=0	   	local
+int		b_HyenasOutside=0			local
+flex	f_InsideTime				local
+thing	t_Thing						local
+
+# =============================== Kid's Stuff =================================================
+int		n_KidStatus						local
+
+int	KID_STATUS_NO_LONGER_IN_HOLE=-1		local
+int	KID_STATUS_INSIDE=0					local
+int	KID_STATUS_HEADING_INSIDE=1			local
+int	KID_STATUS_OUTSIDE=2				local
+int	KID_STATUS_HEADING_OUTSIDE=3		local
+int	KID_STATUS_BLOCKED=4				local
+
+int STAY_INSIDE_AFTER_THIS_MANY_HYENAS_DIE=8 local
+
+int	MAX_NUM_HYENAS=11					local
+
+# ============================= Timer Stuff =================================================
+int	TIMER_ID_SEND_KID_OUT=0				local
+int TIMER_ID_UPDATE_TRACKING=1			local
+
+flex TRACKING_UPDATE_TIME=5.0			local
+
+flex MIN_INSIDE_TIME=20.0				local
+flex VARIABLE_INSIDE_TIME=20.0			local
+
+int	 n_TimerID							local
+
+# ============================== Subroutines ==========================================================
+flex	SendKidInside			local
+flex	SendKidOutside			local
+flex 	SendKidOutsideDelayed 	local
+flex	CheckForHyenasOutside 	local
+
+end
+
+code
+
+# ========================================================================================
+startup:
+	n_KidStatus = KID_STATUS_INSIDE;
+	sleep(.01);
+	
+	# RKD: delaying kid to help framerate at beginning
+	SetTimerEx(45.0, TIMER_ID_SEND_KID_OUT, 0, 0);
+	Sleep(40);
+	ClearThingFlags(t_Kid, 0x80000);
+	AISetCutSceneMode(t_Kid);
+	return;
+	
+# ========================================================================================
+damaged:
+	// If kid takes damage he must flee inside	
+
+	if (GetSenderRef() != t_Kid)
+	{
+		return;
+	}
+
+	call SendKidInside;
+
+	return;
+
+# ========================================================================================
+entered:
+	// If Indy, an AI or a weapon enters sector in front of hole then send kid back inside
+	if (GetSenderRef() == s_Trigger)
+	{
+		if (GetSourceRef() == GetLocalPlayerThing())
+		{
+			call SendKidInside;
+			b_IndyNearEntrance = 1;
+		}
+		else if(GetThingType(GetSourceRef()) == 2) // Actor
+		{
+			if (IsThingModelName(GetSourceRef(), "gen_hy.3do"))
+			{
+				call SendKidInside;
+			}
+		}
+		else if (GetThingType(GetSourceRef()) == 3) // Weapon
+		{
+			call SendKidInside;
+		}
+	}
+
+	return;
+
+# ========================================================================================
+exited:
+	// Once Indy leaves area in front of hole. Attempt to send kid back out
+	if ( (GetSourceRef() == GetLocalPlayerThing())
+		  && (GetSenderRef() == s_Trigger)
+		  )
+	{
+		b_IndyNearEntrance = 0;
+	}
+
+	return;
+
+# ========================================================================================
+timer:
+	n_TimerID = GetSenderID();
+
+	if (n_TimerID == TIMER_ID_SEND_KID_OUT)
+	{
+		call SendKidOutside;
+	}
+	else if (n_TimerID == TIMER_ID_UPDATE_TRACKING)
+	{
+		if (n_KidStatus == KID_STATUS_OUTSIDE)
+		{
+			AIEnableHeadTracking(t_Kid, GetLocalPlayerThing());
+			AIEnableBodyTracking(t_Kid, GetLocalPlayerThing());
+			SetTimerEx(TRACKING_UPDATE_TIME, TIMER_ID_UPDATE_TRACKING, 0, 0);
+		}
+	}
+
+	return;
+
+# ========================================================================================
+blocked:
+	if (n_KidStatus != KID_STATUS_NO_LONGER_IN_HOLE)
+	{
+		n_KidStatus = KID_STATUS_BLOCKED;
+		call SendKidInside;
+	}
+	return;
+
+
+# ========================================================================================
+arrived:
+	if (n_KidStatus == KID_STATUS_HEADING_INSIDE)
+	{
+
+		// Hide the boy
+		n_KidStatus = KID_STATUS_INSIDE;
+		SetThingFlags(t_Kid, 0x10);	
+		SetThingFlags(t_Kid, 0x80000);
+		call SendKidOutsideDelayed;
+	}
+	else if (n_KidStatus == KID_STATUS_HEADING_OUTSIDE)
+	{
+		n_KidStatus = KID_STATUS_OUTSIDE;
+		SetTimerEx(0.1, TIMER_ID_UPDATE_TRACKING, 0, 0);
+	}
+#	else
+#	{
+#		DebugFlex(n_KidStatus, "PYR_runawaykid.cog: Bad Kid Status on Arrived Message");
+#	}
+	
+	return;
+
+# ========================================================================================
+// User1 means that a Hyena has died
+User1:
+	if (global8 >= STAY_INSIDE_AFTER_THIS_MANY_HYENAS_DIE)
+	{
+		call SendKidInside;
+	}
+
+	if (global8 >= MAX_NUM_HYENAS)
+	{
+		n_KidStatus = KID_STATUS_NO_LONGER_IN_HOLE;
+	}
+
+	return;
+
+# ========================================================================================
+SendKidInside:
+
+	if ( (n_KidStatus == KID_STATUS_OUTSIDE)
+		 || (n_KidStatus == KID_STATUS_HEADING_OUTSIDE)
+		 || (n_KidStatus == KID_STATUS_BLOCKED)
+		 )
+	{
+		n_KidStatus = KID_STATUS_HEADING_INSIDE;
+
+		AIDisableHeadTracking(t_Kid);
+		AIDisableBodyTracking(t_Kid);
+	
+		AISetMoveSpeed(t_Kid, 6);
+		AISetLookThing(t_Kid, kidmarkin);
+		AISetMoveThing(t_Kid, kidmarkin, 0);
+	}
+
+	return;
+
+# ========================================================================================
+SendKidOutside:
+	
+	# Once most of hyenas are dead the kid no longer comes outside.
+	# Supposedly to give him time to run to another part of level
+	if (global8 >= STAY_INSIDE_AFTER_THIS_MANY_HYENAS_DIE)
+	{
+		return;
+	}
+	
+	call CheckForHyenasOutside;
+
+	if ( (n_KidStatus == KID_STATUS_INSIDE)
+		 && !b_IndyNearEntrance
+		 && !b_HyenasOutside
+		 && (global3 != 4)	# kid is in mid-cutscene
+		 )
+	{
+		n_KidStatus = KID_STATUS_HEADING_OUTSIDE;
+
+		ClearThingFlags(t_Kid, 0x80000);
+		ClearThingFlags(t_Kid, 0x10);
+
+		AISetMoveSpeed(t_Kid, 1);
+		AISetLookThing(t_Kid, kidmarkout);
+		AISetMoveThing(t_Kid, kidmarkout, 0);
+	}
+	else if ( (n_KidStatus != KID_STATUS_OUTSIDE)
+			  && (n_KidStatus != KID_STATUS_HEADING_OUTSIDE)
+			  )
+	{
+		# Try again later
+		call SendKidOutsideDelayed;
+	}
+
+	return;
+
+
+# ========================================================================================
+SendKidOutsideDelayed:
+	f_InsideTime = MIN_INSIDE_TIME + (Rand() * VARIABLE_INSIDE_TIME);
+	SetTimerEx(f_InsideTime, TIMER_ID_SEND_KID_OUT, 0, 0);
+
+	return;
+
+
+# ========================================================================================
+CheckForHyenasOutside:
+	b_HyenasOutside = 0;
+
+	t_Thing = FirstThingInSector(s_Trigger);
+	while (t_Thing != -1)
+	{
+		if (GetThingType(t_Thing) == 2) // Actor?
+		{
+			if (IsThingModelName(t_Thing, "gen_hy.3do"))
+			{
+				b_HyenasOutside = 1;
+				return;
+			}
+		}
+
+		t_Thing = NextThingInSector(t_Thing);
+	}
+
+	return;
+
+end

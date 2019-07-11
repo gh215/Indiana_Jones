@@ -1,0 +1,187 @@
+# Jones 3D Cog Script
+#
+# aet_DoorMove2.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		arrived
+message		activated
+message		user0
+
+thing		player							local
+thing		indy0									# Indy actor 1.
+thing		door0									# Door.
+thing		button0																
+
+thing		cam0									# Camera 1.
+thing		cam0_target								# Camera 1 target.
+
+surface		deathAdjoin
+
+int			done0=0							local	# Flag for when door is done opening.
+int			done1=0							local	# Flag for when wrong whip is done being used.
+
+vector		v_camspot						local
+
+cog			doortalk		
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+MoveToFrame(button0, 1, 1.0);
+MoveToFrame(door0, 1, 1.0);
+
+SetAdjoinFlags(deathAdjoin, 0x2);
+
+return;
+
+# ........................................................................................
+activated:
+
+# Code for activating door with nothing or wrong thing.
+if (GetSenderRef() == door0)
+	{
+	#Small cutscene.
+    if (MakeMeStop() == -1)
+        return;
+    DeselectWeaponWait(player);	
+	StartCutscene(0);
+	PlayMode(player, 60, 1);
+	SendMessageEx(doorTalk, user4, player, 0, 0, 0);
+	while (global15 == 0)
+		{
+		#Wait for line to finish...
+		Sleep(0.01);
+		}
+	ClearActorFlags(player, 0x200000);
+
+	EndCutscene();   
+	}
+# Button activation code if it is in and door is up.    
+if ((GetSenderRef() == button0) && (GetCurFrame(button0) == 1))
+	{
+    if (done0 == 1) return;
+	done0 = 1;
+    
+	#Small cutscene.
+
+    if (MakeMeStop() == -1)
+        return;
+    DeselectWeaponWait(player);	
+	StartCutscene(0);
+	PlayMode(player, 60, 1);
+	SendMessageEx(doorTalk, user3, player, 0, 0, 0);
+	while (global15 == 0)
+		{
+		#Wait for line to finish...
+		Sleep(0.01);
+		}
+	ClearActorFlags(player, 0x200000);
+
+	done0 = 0;
+
+	EndCutScene();
+	
+	return;
+    }
+# Button activation code if it is out and door is down.    
+if ((GetSenderRef() == button0) && (GetCurFrame(button0) == 0))
+	{
+    if (done1 == 1) return;
+	done1 = 1;
+	
+    # Prep the indy actor.
+    if (MakeMeStop() == -1)
+        return;
+    DeselectWeaponWait(player);	
+	StartCutScene(0);
+	
+	# Prep indy. 
+	CopyPlayerHolsters(player, indy0); 
+	ClearThingFlags(indy0, 0x80000);
+	SetThingFlags(player, 0x80000);
+
+	# Set up camera.
+	ResetCameraFOV(0, 0);
+	SetCameraLookInterp(2, 0);
+    SetCameraPosInterp(2, 0);
+	SetCurrentCamera(2);
+	SetCameraFocus(2, cam0);
+	SetCameraSecondaryFocus(2, cam0_target);
+    
+	# Activate anim mode.
+	PlayMode(indy0, 60, 0);
+
+	MoveToFrame(door0, 1, 1.0);
+    MoveToFrame(button0, 1, 1.0);
+
+	AISetLookThing(indy0, door0);
+	}
+
+return;
+
+# ........................................................................................
+arrived:
+
+# Once the door is open...
+if ((GetSenderRef() == door0) && (GetCurFrame(door0) == 1) && (done1 == 1))
+	{
+	SendMessageEx(doorTalk, user1, player, 0, 0, 0);
+	while (global15 == 0)
+		{
+		# Wait for line to finish...
+		Sleep(0.01);
+		}
+
+    # Return to normal.
+	CopyOrientandPos(indy0, player);
+	
+	v_camspot = VectorAdd(VectorTransformToOrient(player, '0.2 -0.02 0.07'), GetThingPos(player));	
+	SetCameraPosition(1, v_camspot);
+	
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0);
+	SetThingFlags(indy0, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+    }
+if ((GetSenderRef() == door0) && (GetCurFrame(door0) == 0))
+	{
+	global11 = 1;
+	}
+
+return;
+
+# ........................................................................................
+user0:
+
+# Set up camera.
+ResetCameraFOV(0, 0);
+SetCameraLookInterp(2, 0);
+SetCameraPosInterp(2, 0);
+SetCameraFocus(2, cam0);
+SetCameraSecondaryFocus(2, cam0_target);
+
+MoveToFrame(door0, 0, 1.0);
+MoveToFrame(button0, 0, 1.0);
+ClearAdjoinFlags(deathAdjoin, 0x2);
+
+return;
+
+# ........................................................................................
+end
+

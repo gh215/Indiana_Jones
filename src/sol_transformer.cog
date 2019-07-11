@@ -1,0 +1,284 @@
+# Jones 3D Cog Script
+#
+# SOL_Transformer.cog
+#
+# [TRM] && [MDR]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     user0
+    message     entered
+    message     pulse
+    
+    thing       player          local
+    thing       tVictim         local
+    thing       deadIndy        local
+    thing       zapStart
+    thing       lampStart
+    thing       trackStart
+    
+    thing       ghostZap
+    thing       ghostLamp
+    thing       ghostTrack
+    
+    sector      powerOff
+    sector      powerOn
+    
+    sound       sfx_Shock=sol_trnsfrmr_zapb.wav     local       # long zap
+    sound       humm=sol_trnsfrmr_zap.wav           local       # short zap
+    sound       say_ow=inxj017g.wav                 local       # ow!
+    sound       say_Ugh=inxj018a.wav                local       # dead voice
+    
+    keyframe    inShocked=in_hit_shocked.key    local
+    keyframe    mc_shock_die=im_die.key         local
+    keyframe    mc_shock=im_hithead.key         local
+    keyframe    inDie=in_die_buckle.key         local
+    
+    template    tpl_Indy=indy_sh_actor          local
+    
+    vector      zapTarg         local
+    vector      lampTarg        local
+    vector      trackTarg       local
+    
+    int         zap             local
+    int         playing=0       local
+    int         randNum         local
+    int         zzzt            local
+    int         blownUp=0       local
+    
+end
+
+# ========================================================================================
+
+code
+
+user0:
+
+    blownUp = 1;
+    return;
+    
+# ========================================================================================
+
+entered:
+    
+    if(GetSenderRef() == powerOn)
+    {
+        # Start the zapper
+		SetPulse(0.5);
+    }
+        
+    else if(GetSenderRef() == powerOff)
+    {
+        # Kill the zapper
+		SetPulse(0.0);
+    }   
+        
+    return;
+
+# ========================================================================================
+
+pulse:
+    
+    player = GetLocalPlayerThing();
+    zapTarg = GetThingPOS(ghostZap);
+    lampTarg = GetThingPOS(ghostLamp);
+    trackTarg = GetThingPOS(ghostTrack);
+    
+    # easy difficutly
+    if(GetDifficulty() > 3)
+    {
+        randNum = RandBetween(1, 5);
+    }
+    
+    # medium difficulty
+    else if(GetDifficulty() == 3)
+    {
+        randNum = RandBetween(1, 2);
+    }
+    
+    # hard difficulty
+    else
+    {
+        randNum = 1;
+    }
+    
+    if((playing == 1) || (randNum > 1))
+    {
+        return;
+    }
+    
+    else if((blownUp == 0) && (randNum == 1))
+    {
+        playing = 1;
+        zzzt = PlaySoundThing(humm, zapStart, 1.0, 10.0, 20.0, 0);
+        CreateLightning(zapStart, '0 0 0', zapTarg, 0.005, 0.005, 0.5);   # 0.03
+        
+        Sleep(0.5);
+        #StopSound(zzzt, 0.2);
+        zzzt = PlaySoundThing(humm, zapStart, 1.0, 10.0, 20.0, 0);
+        CreateLightning(zapStart, '0 0 0', zapTarg, 0.005, 0.005, 0.1);
+        
+        Sleep(0.2);
+        #StopSound(zzzt, 0.2);
+        zzzt = PlaySoundThing(humm, zapStart, 1.0, 10.0, 20.0, 0);
+        CreateLightning(zapStart, '0 0 0', zapTarg, 0.005, 0.005, 0.3);
+        
+        Sleep(0.5);
+        #StopSound(zzzt, 0.2);
+        zzzt = PlaySoundThing(humm, zapStart, 1.0, 10.0, 20.0, 0);
+        CreateLightning(zapStart, '0 0 0', zapTarg, 0.005, 0.005, 0.1);
+        
+        Sleep(0.1);
+        #StopSound(zzzt, 0.2);
+        playing = 0;
+    }
+    
+    else if((blownUp == 1) && (randNum == 1))
+    {
+        playing = 1;
+        zzzt = PlaySoundThing(humm, ghostZap, 1.0, 10.0, 20.0, 0);
+        CreateLightning(zapStart, '0 0 0', zapTarg, 0.03, 0.03, 0.5);
+        
+        Sleep(0.2);
+        #StopSound(zzzt, 0.2);
+        
+        zzzt = PlaySoundThing(humm, ghostLamp, 1.0, 10.0, 20.0, 0);
+        CreateLightning(lampStart, '0 0 0', lampTarg, 0.03, 0.03, 0.5);
+        
+        Sleep(0.2);
+        #StopSound(zzzt, 0.2);
+        zzzt = PlaySoundThing(humm, ghostTrack, 1.0, 10.0, 20.0, 0);
+
+		# Is there anybody we can zap?
+		zap		= 0;
+		tVictim = FirstThingInSector(GetThingSector(ghostTrack));
+        
+		while ( tVictim != -1 && zap == 0 )
+		{
+			# zap player if close enough to trackTarg
+			if ( GetThingType(tVictim) == 10 )	# victim is the player
+			{
+				if (VectorDist(GetThingPos(player), trackTarg) < 0.15)   # 1.5m
+				{
+					zap	= 1;	# record a lightening strike
+
+					# player is in minecar
+					if(BitTest(GetPhysicsFlags(player), 0x01000000))
+					{
+						# player is ducking, don't damage him
+                        if((GetMoveStatus(player) >= 51) && (GetMoveStatus(player) <= 53))
+                        {
+                            # just hit default target
+                            CreateLightning(trackStart, '0 0 0', trackTarg, 0.03, 0.03, 0.5);
+                        }
+                        
+                        # player is not ducking, fry him!
+                        else
+                        {
+    						StopSound(zzzt, 0.2);
+                            PlaySoundThing(sfx_Shock, ghostTrack, 1.0, 10.0, 20.0, 0);
+                            
+                            CreateLightning(trackStart, '0 0 0', VectorAdd(GetThingPos(player), '0.0 0.0 0.05'), 0.03, 0.03, 0.5);
+                            
+                            # shock mine car player
+                            PlaySoundLocal(say_ow, 1.0, 0.0, 0x0, 0);
+                            PlayKey(player, mc_shock, 4, 0x12, 1);
+                            DamageThing(player, 100.0, 0x1, player);
+                            
+                            # player is dead, say so!
+                            if(GetThingHealth(player) <= 0)
+                            {
+                                PlaySoundLocal(say_Ugh, 1.0, 0.0, 0x0, 0);
+                            }
+                        }
+					}
+            
+					# player is on foot
+					else
+					{
+						StopSound(zzzt, 0.2);
+                        PlaySoundThing(sfx_Shock, ghostTrack, 1.0, 10.0, 20.0, 0);
+                            
+                        CreateLightning(trackStart, '0 0 0', VectorAdd(GetThingPos(player), '0.0 0.0 0.05'), 0.03, 0.03, 0.5);
+                
+						# player is dying or already dead
+                        if(BitTest(GetThingFlags(player), 0x202))
+                        {
+                            return;
+                        }
+                        
+                        # disable controls and make sure player is stopped before playing key
+						SetActorFlags(player, 0x200000);
+						StopThing(player);
+						PlayMode(player, 1, 0);
+                
+						# damage player
+						DamageThing(player, 100.0, 0x1, player);
+                        
+                        if((GetMoveStatus(player) != 3) && (GetMoveStatus(player) != 4) && (GetMoveStatus(player) != 5) && (GetMoveStatus(player) != 64) && (GetMoveStatus(player) != 65))
+                        {
+                            if(GetThingHealth(player) > 0)
+                            {
+                                PlayKey(player, inShocked, 4, 0x12, 1);
+                            }
+                        }
+                        
+                        # restore player control
+                        ClearActorFlags(player, 0x200000);
+                        
+                        # player is dead
+                        if(GetThingHealth(player) <= 0)
+                        {
+                            PlaySoundLocal(say_Ugh, 1.0, 0.0, 0x0, 0);
+                            
+                            # hide player
+                            SetThingFlags(player, 0x80000);
+                            
+                            deadIndy = CreateThing(tpl_Indy, player);
+                            CaptureThing(deadIndy);
+                            
+                            # Show actor Indy and play Keyframe
+                            ClearThingFlags(deadIndy, 0x80000);
+                            PlayKey(deadIndy, inDie, 4, 0x14, 0);
+                        }
+					}
+				}
+			}
+            
+			# zap actors who are close enough to trackTarg
+			else if ( GetThingType(tVictim) == 2 )	# victim is an actor
+			{
+				if (VectorDist(GetThingPos(tVictim), trackTarg) < 0.15)   # 1.5m
+				{
+					StopSound(zzzt, 0.2);
+                    PlaySoundThing(sfx_Shock, ghostTrack, 1.0, 10.0, 20.0, 0);
+                            
+                    zap	= 1;	# record a lightening strike
+					CreateLightning(trackStart, '0 0 0', VectorAdd(GetThingPos(tVictim), '0.0 0.0 0.05'), 0.03, 0.03, 0.5);
+					DamageThing(tVictim, 100.0, 0x1, tVictim);
+				}
+			}
+        
+			tVictim = NextThingInSector(tVictim);
+		}
+
+		# No victims, just hit default target
+		if ( zap == 0 )
+		{
+			CreateLightning(trackStart, '0 0 0', trackTarg, 0.03, 0.03, 0.5);
+		}
+
+        Sleep(0.1);
+        #StopSound(zzzt, 0.2);
+        playing = 0;
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

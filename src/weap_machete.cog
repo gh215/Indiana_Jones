@@ -1,0 +1,293 @@
+# Jones 3D Cog Script
+#
+# weap_Machete.cog
+#
+# This COG controls Indy's machette
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		activated
+message		deactivated
+message		selected
+message		deselected
+message		callback
+
+sound		schwing=gen_machete_fire.wav	local	# Autoloaded
+sound		gurgle=gen_machete_fire_uw.wav	local	# Autoloaded
+sound		kersplash=riv_splash_sm.wav		local	# Autoloaded
+sound		pull=gen_machete_pull.wav		local	# Autoloaded
+sound		put=gen_machete_put.wav			local	# Autoloaded
+sound		pullWet=gen_machete_pull_uw.wav	local	# Autoloaded
+sound		putWet=gen_machete_put_uw.wav	local	# Autoloaded
+
+template	projectile=+machete				local	# Autoloaded
+
+thing		player							local
+
+int			holsterMesh						local
+int			weaponNum=7						local
+int			fireMode						local
+int			fireSound						local
+int			pullMode						local
+int			putMode							local
+int			callNum							local
+
+int			bSwimming=0						local
+int			bUnderwater=0					local
+
+int			playerType=0					local	# 0 = Shirt Indy, 1 = Jacket Indy, 2 = Guybrush
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	holsterMesh = GetMeshByName(player, "intorso");
+
+	if (IsThingModelName(player, "gen_in_shirt.3do"))
+	{
+		LoadHolsterModel(weaponNum, "torso_shirt_machete.3do");
+		playerType = 0;
+	}
+	else if (IsThingModelName(player, "gen_in.3do"))
+	{
+		LoadHolsterModel(weaponNum, "torso_shirt_machete.3do");
+		playerType = 1;
+	}
+	else
+	{
+		LoadHolsterModel(weaponNum, "torso_guy_machete.3do");
+		playerType = 2;
+	}
+
+	if (GetLastRifle(player) == weaponNum)
+	{
+		SetHolsterModel(player, weaponNum, holsterMesh);
+	}
+    
+	if (GetSenderRef() == 9999) # Call is from Guybrush cheat...
+	{
+		if (GetCurWeapon(player) == weaponNum)
+		{
+			if (playerType == 0)
+			{
+				LoadHolsterModel(weaponNum, "torso_shirt_sheath.3do");
+			}
+			else if (playerType == 1)
+			{
+				LoadHolsterModel(weaponNum, "torso_in_sheath.3do");
+			}
+			else
+			{
+				LoadHolsterModel(weaponNum, "torso_guy_sheath.3do");
+			}
+			SetHolsterModel(player, weaponNum, holsterMesh);
+		}
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+fire:
+
+	# If the message is from the weapons system, play the animation
+	if (GetParam(0) != -1)
+	{
+		bSwimming = BitTest(GetThingFlags(player), 0x2000000);
+		bUnderwater = !BitTest(GetPhysicsFlags(player), 0x100000);
+
+		if (bSwimming)
+		{
+			if (bUnderwater)
+			{
+				fireMode = 68;
+				fireSound = gurgle;
+				SetFireWait(player, 1.73);
+			}
+			else
+			{
+				fireMode = 66;
+				fireSound = kersplash;
+				SetFireWait(player, 1.22);
+			}
+		}
+		else
+		{
+			if (Rand() > 0.35)
+				fireMode = 65;
+			else
+				fireMode = 66;
+
+			fireSound = schwing;
+			SetFireWait(player, 0.97);
+		}
+		
+		CaptureThing(player);
+		while (PlayMode(player, fireMode, 0) == -99)
+		{
+			Sleep(0.01);
+		}
+		
+		return;
+	}
+
+	# Actual firing takes place when we get the callback...
+	FireProjectile(player, projectile, -1, -1, GetThingPos(player), '0 0 0', 1.0, 0x0, 0.0, 0.0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+	ActivateWeapon(player, 0.01);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deactivated:
+
+	DeactivateWeapon(player);
+
+	return;
+
+# -------------------------------------------------------------------
+
+selected:
+
+	bSwimming = BitTest(GetThingFlags(player), 0x2000000);
+	bUnderwater = !BitTest(GetPhysicsFlags(player), 0x100000);
+
+	SetAimWait(player, 0.0);
+	if (bSwimming && bUnderwater)
+	{
+		SetMountWait(player, 1.067);
+		pullMode = 63;
+	}
+	else
+	{
+		SetMountWait(player, 0.8);
+		pullMode = 62;
+	}
+	
+	SetArmedMode(player, 7);
+	SetCurWeapon(player, weaponNum);
+	SetThingFireOffset(player, '0.0 0.0 0.0');
+
+	CaptureThing(player);
+	PlayMode(player, pullMode, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deselected:
+
+	bSwimming = BitTest(GetThingFlags(player), 0x2000000);
+	bUnderwater = !BitTest(GetPhysicsFlags(player), 0x100000);
+
+	if (bSwimming && bUnderwater)
+	{
+		SetMountWait(player, 1.2);
+		putMode = 65;
+	}
+	else
+	{
+		SetMountWait(player, 0.967);
+		putMode = 64;
+	}
+
+	StopMode(player, pullMode, 0);
+	CaptureThing(player);
+	PlayMode(player, putMode, 0);
+
+	SetArmedMode(player, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	callNum = GetParam(1);
+
+	if (callNum == 28)
+	{
+        ReleaseThing(player);
+
+		if (playerType == 0)
+		{
+			LoadHolsterModel(weaponNum, "torso_shirt_sheath.3do");
+		}
+		else if (playerType == 1)
+		{
+			LoadHolsterModel(weaponNum, "torso_in_sheath.3do");
+		}
+		else
+		{
+			LoadHolsterModel(weaponNum, "torso_guy_sheath.3do");
+		}
+
+        if (bSwimming && bUnderwater)
+		{
+			PlaySoundThing(pullWet, player, 1, -1, -1, 0x880);
+		}
+		else
+		{
+			PlaySoundThing(pull, player, 1, -1, -1, 0x880);
+		}
+		
+		SetHolsterModel(player, weaponNum, holsterMesh);
+		SetWeaponModel(player, weaponNum);
+	}
+	else if (callNum == 29)
+	{
+		ReleaseThing(player);
+
+		if (playerType == 0)
+		{
+			LoadHolsterModel(weaponNum, "torso_shirt_machete.3do");
+		}
+		else if (playerType == 1)
+		{
+			LoadHolsterModel(weaponNum, "torso_in_machete.3do");
+		}
+		else
+		{
+			LoadHolsterModel(weaponNum, "torso_guy_machete.3do");
+		}
+
+        if (bSwimming && bUnderwater)
+		{
+			PlaySoundThing(putWet, player, 1, -1, -1, 0x880);
+		}
+		else
+		{
+			PlaySoundThing(put, player, 1, -1, -1, 0x880);
+		}
+
+		SetHolsterModel(player, weaponNum, holsterMesh);
+		ResetWeaponModel(player);
+	}
+    else if (callNum == 30)
+	{
+		PlaySoundThing(fireSound, player, 1, -1, -1, 0x880);
+	}
+
+	return;
+
+end

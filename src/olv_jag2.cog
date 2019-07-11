@@ -1,0 +1,370 @@
+# Jones 3D Cog Script
+#
+# olv_jag2.cog   
+#
+# [SCHOLL]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message entered
+message	startup
+message	aievent
+message	arrivedwpnt
+message timer
+message user0
+message user1
+
+thing	t_Jag		
+thing	t_Indy		local
+
+int		b_Operational=1	local
+int		n_eventType		local
+int		n_CrntAIMode 	local
+int		n_OldAIMode 	local
+int		n_Waypoint		local
+int		n_Temp			local
+int		b_Temp			local
+flex	f_Temp			local
+flex	f_DistToIndy	local 
+int		n_TimerID		local 
+int		b_OKToStopFlee=0 local
+int		n_idx			local
+int		b_WpntsActive=0	local
+
+vector	v_IndyPos		local
+vector	v_JagPos		local
+vector	v_JagToIndy		local
+vector	v_IndyLook		local
+vector	v_Temp			local
+
+
+
+# ===========================FLEE WAYPOINTS================================================
+int			NUM_FLEE_WAYPOINTS=25			local
+thing		t_Waypoint00
+thing		t_Waypoint01
+thing		t_Waypoint02
+thing		t_Waypoint03
+thing		t_Waypoint04
+thing		t_Waypoint05
+thing		t_Waypoint06
+thing		t_Waypoint07
+thing		t_Waypoint08
+thing		t_Waypoint09
+thing		t_Waypoint10
+thing		t_Waypoint11
+thing		t_Waypoint12
+thing		t_Waypoint13
+thing		t_Waypoint14
+thing		t_Waypoint15
+thing		t_Waypoint16
+thing		t_Waypoint17
+thing		t_Waypoint18
+thing		t_Waypoint19
+thing		t_Waypoint20
+thing		t_Waypoint21
+thing		t_Waypoint22
+thing		t_Waypoint23
+thing		t_Waypoint24
+
+
+# ===========================SECTORS================================================
+
+int			NUM_AUTO_FLEE_SECTORS=7 	local
+sector		s_AutoFlee00			mask=0x5 # need entered messages from jag
+sector		s_AutoFlee01			mask=0x5 # need entered messages from jag
+sector		s_AutoFlee02			mask=0x5 # need entered messages from jag
+sector		s_AutoFlee03			mask=0x5 # need entered messages from jag
+sector		s_AutoFlee04			mask=0x5 # need entered messages from jag
+sector		s_AutoFlee05			mask=0x5 # need entered messages from jag
+sector		s_AutoFlee06			mask=0x5 # need entered messages from jag
+
+int			NUM_ACTIVATE_WPNT_SECTORS=7 local
+sector		s_ActivateWpnts00
+sector		s_ActivateWpnts01
+sector		s_ActivateWpnts02
+sector		s_ActivateWpnts03
+sector		s_ActivateWpnts04
+sector		s_ActivateWpnts05
+sector		s_ActivateWpnts06
+
+int			NUM_DEACTIVATE_WPNT_SECTORS=3 local
+sector		s_DeactivateWpnts00
+sector		s_DeactivateWpnts01
+sector		s_DeactivateWpnts02
+
+
+# ===========================MISC CONSTANTS================================================
+
+flex	MIN_FLEE_DISTANCE=2.0			local # distance jag wants to be from Indy before stopping fleeing
+flex	MAX_FLEEATTACK_DISTANCE=1.0			local # 
+flex	MIN_FLEE_TIME=4.0				local 
+flex	VARIABLE_FLEE_TIME=3.0			local
+
+int		TIMER_ID_OKAY_TO_STOP_FLEE=0	local
+int		TIMER_ID_START_FLEE=1			local
+
+
+	flex		activatewaypoints			local
+	flex		deactivatewaypoints		local
+	int		f_fleetime				local
+	flex		setdisttoindy			local
+
+
+end
+# ========================================================================================
+
+code
+startup:
+	t_Indy=GetLocalPlayerThing();
+
+	return;
+
+# ========================================================================================
+entered:
+	if (!b_Operational)
+	{
+		return;
+	}
+	
+	if (GetSourceRef() == t_Indy)
+	{
+		for (n_idx = 0; n_idx < NUM_ACTIVATE_WPNT_SECTORS; n_idx = n_idx + 1)
+		{
+			if (GetSenderRef() == s_ActivateWpnts00[n_idx])
+			{
+				call ActivateWaypoints;
+			}
+		}
+		for (n_idx = 0; n_idx < NUM_DEACTIVATE_WPNT_SECTORS; n_idx = n_idx + 1)
+		{
+			if (GetSenderRef() == s_DeactivateWpnts00[n_idx])
+			{
+				call DeactivateWaypoints;
+			}
+		}
+	}
+	else if (GetSourceRef() == t_Jag)
+	{
+		for (n_idx = 0; n_idx < NUM_AUTO_FLEE_SECTORS; n_idx = n_idx + 1)
+		{
+			if (GetSenderRef() == s_AutoFlee00[n_idx])
+			{
+				AIFlee(t_Jag, t_Indy);
+			}
+		}
+	}
+	return;
+
+# ========================================================================================
+aievent:
+	if (!b_Operational)
+	{
+		return;
+	}
+	
+	n_eventType		= GetParam(0);
+	n_CrntAIMode	= GetParam(1);
+	n_OldAIMode		= GetParam(2);	// only valid for certain n_eventType values
+
+	if (n_eventType == 0x100)		// SITHAI_EVENTMODECHANGED
+	{
+		// if changing to flee mode
+		// turn on waypoints
+		if ( !BITTEST(n_OldAIMode, 0x800) && BITTEST(n_CrntAIMode, 0x800) )
+		{
+			AISetSubMode(t_Jag, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+			f_FleeTime = (MIN_FLEE_TIME + (Rand() * VARIABLE_FLEE_TIME));
+			SetTimerEx(f_FleeTime , TIMER_ID_OKAY_TO_STOP_FLEE, 0, 0 );
+			b_OKToStopFlee = 0;
+		}
+		// if exiting flee mode
+		// turn off waypoints
+		else if ( BITTEST(n_OldAIMode, 0x800) && !BITTEST(n_CrntAIMode, 0x800) )
+		{
+			call SetDistToIndy;
+		
+			// Consider restarting fleeing if Indy to close, but jag hasn't chose to surprise attack
+			if ( (f_DistToIndy < MIN_FLEE_DISTANCE) && !BITTEST(AIGetMode(t_Jag), 0x2))
+			{
+				// Restart using timer to avoid nested mode changes
+				SetTimerEx(0.01 , TIMER_ID_START_FLEE, 0, 0 );
+			}
+			else
+			{
+				AIClearSubMode(t_Jag, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+			}
+		}
+	}
+
+return;
+
+# ========================================================================================
+timer:
+	if (!b_Operational)
+	{
+		return;
+	}
+
+	t_Indy = GetLocalPlayerThing();
+
+	n_TimerID = GetSenderID();
+	if (n_TimerID == TIMER_ID_OKAY_TO_STOP_FLEE)
+	{
+		b_OKToStopFlee = 1;
+	}
+	else if (n_TimerID == TIMER_ID_START_FLEE)
+	{
+		AIFlee(t_Jag, t_Indy);
+	}
+
+	return;
+
+
+# ========================================================================================
+arrivedwpnt:
+	if (!b_Operational)
+	{
+		return;
+	}
+
+	n_Waypoint = GetParam(0);
+
+	call SetDistToIndy;
+
+	if ( b_OKToStopFlee 
+		 && (f_DistToIndy > MIN_FLEE_DISTANCE)
+		 && BITTEST(AIGetMode(t_Jag), 0x800) // fleeing
+		 && (RandBetween(0,100) < 90)
+		 )
+	{
+		// StopThing before StopFlee so jaguar will turn to face indy
+		StopThing(t_Jag);
+		AIStopFlee(t_Jag);
+	}
+	else if ( b_OKToStopFlee 
+		 && (f_DistToIndy < MAX_FLEEATTACK_DISTANCE)
+		 && BITTEST(AIGetMode(t_Jag), 0x800) // fleeing
+		 && (RandBetween(0,100) < 30)
+		 )
+	{
+		AISetFireTarget(t_Jag, t_Indy);
+	}
+
+	return;
+
+# ========================================================================================
+user0:
+	b_Operational = 0;
+	SetThingFlags(t_Jag, 0x80000);
+	AISetMode(t_Jag, 0x2000);
+	return;
+
+# ========================================================================================
+user1:
+	if (!b_Operational)
+	{
+		return;
+	}
+	AIFlee(t_Jag, t_Indy);
+	return;
+
+# ========================================================================================
+
+
+
+SetDistToIndy:
+	v_IndyPos = GetThingPos(t_Indy);
+	v_JagPos = GetThingPos(t_Jag);
+
+	f_DistToIndy = VectorDist(v_IndyPos, v_JagPos);
+
+	return;
+
+# ========================================================================================
+ActivateWaypoints:
+	if (b_WpntsActive)
+	{
+		return;
+	}
+
+	b_WpntsActive = 1;
+	AISetInstinctWpntMode(t_Jag);
+
+	for ( n_idx = 0; n_idx < NUM_FLEE_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx);
+	}
+
+	AIConnectWpnts(0, 1);
+	AIConnectWpnts(0, 2);
+	AIConnectWpnts(0, 4);
+	AIConnectWpnts(1, 3);
+	AIConnectWpnts(1, 4);
+	AIConnectWpnts(2, 4);
+	AIConnectWpnts(2, 5);
+	AIConnectWpnts(2, 8);
+	AIConnectWpnts(3, 4);
+	AIConnectWpnts(3, 6);
+	AIConnectWpnts(3, 7);
+	AIConnectWpnts(4, 6);
+	AIConnectWpnts(4, 7);
+	AIConnectWpnts(5, 8);
+	AIConnectWpnts(5, 9);
+	AIConnectWpnts(6, 7);
+	AIConnectWpnts(6, 10);
+	AIConnectWpnts(6, 11);
+	AIConnectWpnts(7, 8);
+	AIConnectWpnts(7, 10);
+	AIConnectWpnts(7, 11);
+	AIConnectWpnts(8, 9);
+	AIConnectWpnts(8, 12);
+	AIConnectWpnts(8, 13);
+	AIConnectWpnts(9, 13);
+	AIConnectWpnts(10, 11);
+	AIConnectWpnts(10, 14);
+	AIConnectWpnts(11, 12);
+	AIConnectWpnts(11, 14);
+	AIConnectWpnts(12, 13);
+	AIConnectWpnts(12, 14);
+	AIConnectWpnts(14, 15);
+	AIConnectWpnts(15, 16);
+	AIConnectWpnts(16, 17);
+	AIConnectWpnts(17, 18);
+	AIConnectWpnts(17, 19);
+	AIConnectWpnts(18, 19);
+	AIConnectWpnts(18, 20);
+	AIConnectWpnts(18, 21);
+	AIConnectWpnts(18, 22);
+	AIConnectWpnts(19, 21);
+	AIConnectWpnts(19, 22);
+	AIConnectWpnts(20, 21);
+	AIConnectWpnts(20, 23);
+	AIConnectWpnts(21, 22);
+	AIConnectWpnts(21, 23);
+	AIConnectWpnts(21, 24);
+	AIConnectWpnts(22, 24);
+	AIConnectWpnts(23, 24);
+
+	return;
+
+# ========================================================================================
+DeactivateWaypoints:
+	if (!b_WpntsActive)
+	{
+		return;
+	}
+
+	b_WpntsActive = 0;
+	AIClearInstinctWpntMode(t_Jag);
+	StopThing(t_Jag);
+
+	return;
+
+
+
+end
+

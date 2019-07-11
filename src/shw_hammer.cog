@@ -1,0 +1,159 @@
+# Jones 3D Cog Script
+#
+# shw_hammer.cog
+#
+# The Hammer Cog, heh
+#
+# blocked handler added by [TRM] 8/10/99
+# hide hammers added by [TRM] 10/1/99
+#
+# [CMG]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+        message startup
+        message user1
+        message entered
+        message exited
+        message arrived
+        message blocked
+        
+        thing   player          local
+        thing   deadIndy        local
+        thing   hammer0
+        thing   bracket         # hide/show this
+        
+        sector  hideHammers
+        sector  showHammers0    linkID=1
+        sector  showHammers1    linkID=1
+        
+        surface spot0
+        
+        sound   sndDie=tem_temspikes_up_kill_c.wav      local
+        
+        sound   camtouch
+        sound   hit
+        
+        template    tpl_Indy=indy_actor         local
+
+        keyframe    inDie=in_die_buckle.key     local
+        
+        int     movespeed=2
+        int     on_Spot=0       local
+        int     deadMan=0       local
+        int     victim          local
+        int     canSee=1        local
+        int     dif_Level       local
+        
+end
+
+# ========================================================================================
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    SetCollideType(hammer0, 3);
+    return;
+
+# ========================================================================================
+
+user1:
+        playsoundthing(camtouch, hammer0, 0.5, 10.0, 30.0, 0);
+        movetoframe(hammer0, 1, movespeed);
+        return;
+        
+# ========================================================================================
+
+entered:
+
+    if(GetSenderRef() == spot0)
+    {
+        on_Spot = 1;
+    }
+    
+    if((GetSenderRef() == hideHammers) && (canSee == 1))
+    {
+        canSee = 0;
+        SetThingFlags(hammer0, 0x10);
+        SetThingFlags(bracket, 0x10);
+    }
+    
+    if((GetSenderID() == 1) && (canSee == 0))
+    {
+        canSee = 1;
+        ClearThingFlags(hammer0, 0x10);
+        ClearThingFlags(bracket, 0x10);
+    }
+
+    return;
+
+# ========================================================================================
+
+exited:
+
+    if((GetSenderRef() == spot0) && (GetSourceRef() == player))
+    {
+        on_Spot = 0;
+    }
+
+    return;
+
+# ========================================================================================
+arrived:
+
+    dif_Level = GetDifficulty();
+
+    If (GetSenderRef() == hammer0) 
+	{
+    	if (GetCurFrame(hammer0) == 0)
+        {
+            playsoundthing(hit, hammer0, 1.0, 10.0, 30.0, 0);
+        }
+    
+        if (GetCurFrame(hammer0) == 1)
+        {
+            if(dif_Level <= 2) Sleep(0.25);
+            Sleep(0.25);
+            movetoframe(hammer0, 0, 12);
+        }
+    }
+    
+    return;
+         
+# ========================================================================================
+
+blocked:
+
+    if((GetSenderRef() == hammer0) && (on_Spot == 1) && (deadMan == 0))
+    {
+        deadMan = 1;
+        
+        SetCollideType(hammer0, 0);
+        DamageThing(player, 1000.0, 0x1, victim);
+        PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+                            
+        # Disable and hide player
+        SetThingFlags(player, 0x80000);
+        
+        # create actor indy
+        deadIndy = CreateThing(tpl_Indy, player);
+        CaptureThing(deadIndy);
+                            
+        # Show actor Indy and play Keyframe
+        ClearThingFlags(deadIndy, 0x80000);
+        PlayKey(deadIndy, inDie, 4, 0x14, 0);
+        
+        # reset collide to hack bug
+        SetCollideType(hammer0, 3);
+    }
+    
+    return;
+    
+# ========================================================================================
+end
+
+        

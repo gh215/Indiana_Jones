@@ -1,0 +1,468 @@
+# Jones 3D Cog Script
+#
+# TEM_BoulderDash.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     pulse
+    
+    # ** local things **
+    thing       player                  local
+    thing       indy                    local
+    thing       victim                  local
+    thing       boulder_1               local
+    thing       boulder_2               local
+    thing       boulder_3               local
+    thing       boulder_4               local
+    thing       staticBoulder_1         local
+    thing       staticBoulder_2         local
+    thing       staticBoulder_3         local
+    
+    # ** boulder positions **
+    thing       boulder_ghost1
+    thing       boulder_ghost2
+    thing       boulder_ghost3
+    thing       boulder_ghost4
+    
+    # ** cameras **
+    thing       cam1
+    
+    # ** **
+    thing       lookTarg
+    thing       walkTarg
+    
+    # ** player surface triggers **
+    surface     trig_Ledge0
+    surface     trig_Ledge1
+    surface     trig_Ledge2
+    surface     trig_Ledge3
+    
+    # ** boulder surface triggers **
+    surface     trig_stopB1             mask=0x004
+    surface     trig_B2_1               mask=0x004      # make surf_Gap1 no move
+    surface     trig_B3_1               mask=0x004      # make surf_Gap2 no move
+    
+    # ** gap surfaces between jumps **
+    surface     surf_Gap0               mask=0x004
+    surface     surf_Gap1               mask=0x004
+    surface     surf_Gap2               mask=0x004
+    
+    # ** misc surfaces **
+    surface     doorway                 # make this no move
+    
+    # ** keyframes **
+    keyframe    key_Roll=gen_boulder.key        local
+    keyframe	in_Smashed=in_die_fall.key      local
+    keyframe	smashed=in_die_fall.key         local
+    
+    # ** templates **
+    template    staticBoulder=nicebould         local
+    template    rollingBoulder=boulder_mc       local
+    template    tpl_Explosion=+bazooka_exp      local
+    template    tpl_Indy=indy_sh_actor          local
+
+    # ** sound fx **
+    sound       sfxCrash=gen_grenade_explode.wav            local   # bang2
+    sound       sndQuake=pru_boulder_rolling_c.wav          local   # boulder roll
+    sound       sndBoulder=olv_rockhead_roll_c.wav          local   # boulder roll better
+    sound       sndStop=pru_boulder_crash_c.wav             local   # boulder stop
+    sound       sndDie=tem_temspikes_up_kill_c.wav          local   # squish
+    
+    # ** voice lines **
+    sound       in_WrongHere=Inxj042.wav                    local   # something's wrong here.
+    
+    # ** music **
+    sound       mus_Danger=mus_gen_danger3.wav          local
+    sound       mus_Relief=mus_gen_indyrelief.wav       local
+    
+    cog         cameraShake
+    
+    vector      b2_Distance         local
+    vector      b3_Distance         local
+    
+    flex        minDistance=0.2   local
+    
+    # ** ints **
+    int         b2_Rolling=0    local
+    int         b3_Rolling=0    local
+    int         doorBlocked=0   local
+    int         side=0          local
+    int         triggeredB2=0   local
+    int         triggeredB3=0   local
+    int         floorDrop0=0    local
+    int         b2=0            local
+    int         b3=0            local
+    int         done=0          local
+    
+    int         sound1          local
+    int         roll            local
+    int         numSides=4      local
+    int         dif_Level       local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    
+    # create static boulders
+    staticBoulder_1 = CreateThing(staticBoulder, boulder_ghost1);
+    CaptureThing(staticBoulder_1);
+    staticBoulder_2 = CreateThing(staticBoulder, boulder_ghost2);
+    CaptureThing(staticBoulder_2);
+    staticBoulder_3 = CreateThing(staticBoulder, boulder_ghost3);
+    CaptureThing(staticBoulder_3);
+    
+    SetThingLight(staticBoulder_1, '0.35 0.35 0.35', 0.001, 0.1);
+    SetThingLight(staticBoulder_2, '0.35 0.35 0.35', 0.001, 0.1);
+    SetThingLight(staticBoulder_3, '0.35 0.35 0.35', 0.001, 0.1);
+    
+    return;
+    
+# ========================================================================================
+
+entered:
+    
+    dif_Level = GetDifficulty();
+    
+# *********************
+# ** player triggers **
+# *********************
+    if((GetSenderRef() == trig_Ledge0) && (doorBlocked == 0))
+    {
+        doorBlocked = 1;
+        
+        # do cutscene stuff
+        MakeMeStop();
+        StartCutscene(0);
+        
+        # create indy actor
+        indy = CreateThing(tpl_Indy, player);
+        CaptureThing(indy);
+        
+        # outfit indy actor
+        CopyPlayerHolsters(player, indy);
+        
+        # hide player show indy
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(indy, 0x80000);
+        
+        # switch cam
+        SetCameraFocus(2, cam1);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        # walk actor to edge
+        AISetMoveSpeed(indy, 1.2);
+        AISetLookThing(indy, lookTarg);
+        AISetMoveThing(indy, walkTarg, 0);
+        
+        # play danger music cue
+        PlaySoundLocal(mus_Danger, 1.0, 0.0, 0x0, 0);
+        
+        # destroy static, create rolling
+        DestroyThing(staticBoulder_1);
+        boulder_1 = CreateThing(rollingBoulder, boulder_ghost1);
+        CaptureThing(boulder_1);
+        
+        SetThingLight(boulder_1, '0.35 0.35 0.35', 0.001, 0.1);
+        
+        # block the way back with boulder_1
+        SetThingThrust(boulder_1, '0.0 1.5 0.0');
+        roll = PlayKey(boulder_1, key_Roll, 4, 0x0, 0);
+        sound1 = PlaySoundThing(sndBoulder, boulder_1, 1.0, 15.0, 25.0, 0x81);
+        ClearAdjoinFlags(doorway, 2);         # no move
+    }
+    
+    # 4m jump to first ledge: roll boulder_2
+    else if((GetSenderRef() == trig_Ledge1) && (b2_Rolling == 0))
+    {
+        b2_Rolling = 1;
+        b2 = 1;
+        
+        SetExtCamOffset('0.0 -0.4 0.4');
+        
+        # start camera shake
+        #SendMessage(cameraShake, user0);
+        
+        # start proximity pulse
+        SetPulse(0.25);
+
+        # destroy static, create rolling
+        DestroyThing(staticBoulder_2);
+        boulder_2 = CreateThing(rollingBoulder, boulder_ghost2);
+        CaptureThing(boulder_2);
+        
+        #SetCollideType(boulder_2, 0);
+        
+        SetThingLight(boulder_2, '0.35 0.35 0.35', 0.001, 0.1);
+            
+        # get the ball rolling
+        SetThingThrust(boulder_2, '0.0 1.0 0.0');
+        roll = PlayKey(boulder_2, key_Roll, 4, 0x0, 0);
+        sound1 = PlaySoundThing(sndBoulder, boulder_2, 1.0, 10.0, 20.0, 0x81);
+        
+        Sleep(2.0);
+        
+        # stop camera shake
+        #SendMessage(cameraShake, user1);
+    }
+    
+    # 6m jump and grab to second ledge: roll boulder_3
+    else if((GetSenderRef() == trig_Ledge2) && (b3_Rolling == 0))
+    {
+        b3_Rolling = 1;
+        b3 = 1;
+        
+        SetExtCamOffset('0.0 -0.4 0.4');
+        
+        if(dif_Level < 3)
+        {
+            # give player time to climb up
+            Sleep(1.0);
+        }
+        
+        # start camera shake
+        #SendMessage(cameraShake, user0);
+        
+        # destroy static, create rolling
+        DestroyThing(staticBoulder_3);
+        boulder_3 = CreateThing(rollingBoulder, boulder_ghost3);
+        CaptureThing(boulder_3);
+        
+        #SetCollideType(boulder_3, 0);
+        
+        SetThingLight(boulder_3, '0.35 0.35 0.35', 0.001, 0.1);
+            
+        # get the ball rolling
+        SetThingThrust(boulder_3, '0.0 1.0 0.0');
+        roll = PlayKey(boulder_3, key_Roll, 4, 0x0, 0);
+        sound1 = PlaySoundThing(sndBoulder, boulder_3, 1.0, 10.0, 20.0, 0x81);
+        
+        # start proximity pulse
+        SetPulse(0.25);
+        
+        Sleep(2.0);
+        
+        # stop camera shake
+        #SendMessage(cameraShake, user1);
+    }
+    
+    # 6m jump and grab to safety ledge
+    else if((GetSenderRef() == trig_Ledge3) && (done == 0))
+    {
+        done = 1;
+        
+        restoreExtCam();
+        
+        UpdateDifficulty(dif_Level);
+        
+        # play relief music cue
+        PlaySoundLocal(mus_Relief, 1.0, 0.0, 0x0, 0);
+    }
+    
+# **********************
+# ** boulder triggers **
+# **********************
+    # stop boulder_1 and create static boulder to block doorway
+    else if(GetSenderRef() == trig_stopB1)
+    {
+        # stop the boulder
+        StopThing(boulder_1);
+        #StopKey(boulder_1, roll, 0.0);
+        
+        # deal with sfx stuff
+        PlaySoundThing(sndStop, boulder_1, 1.0, 15.0, 25.0, 0x0);
+        StopSound(sound1, 1.0);
+        
+        # destroy boulder_1 and create static boulder
+        DestroyThing(boulder_1);
+        boulder_4 = CreateThing(staticBoulder, boulder_ghost4);
+        CaptureThing(boulder_4);
+        
+        SetThingLight(boulder_4, '0.35 0.35 0.35', 0.001, 0.1);
+        
+        # indy looks at boulder
+        AISetLookThing(indy, boulder_ghost4);
+        
+        # say something's wrong here
+        Sleep(1.0);
+        PlayVoice(player, in_WrongHere, 1.0, 1);
+        
+        Sleep(0.5);
+        
+        # indy looks back at lookTarg
+        SetThingMaxRotVel(indy, 190.0);
+        AISetLookThing(indy, lookTarg);
+        
+        Sleep(1.0);
+        
+        # stop any unfinished animations
+        ResetThing(player);
+        
+        # Get the player into position
+        CopyOrientAndPos(indy, player);
+        
+        # hide actor show player
+        SetThingFlags(indy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+            
+        SetCurrentCamera(1);
+        
+        # restore player controls
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        
+        # recheck difficutly level
+        UpdateDifficulty();
+    }
+    
+    # make surf_Gap1 no move after player has gone across
+    else if((GetSenderRef() == trig_B2_1) && (triggeredB2 == 0))
+    {
+        #Print("trig_b2_1");
+        triggeredB2 = 1;
+        ClearAdjoinFlags(surf_Gap1, 2);         # no move
+        ClearAdjoinFlags(surf_Gap0, 2);         # no move
+        
+        Sleep(1.0);
+        
+        # alter track
+        ClearSurfaceFlags(surf_Gap1, 0x4000);       # no longer track
+        SetAdjoinFlags(surf_Gap1, 2);               # boulder can move thru
+        SetAdjoinFlags(surf_Gap0, 2);               # boulder can move thru
+        
+        # detach boulder_2 and stop rolling sound
+        DetachThing(boulder_2);
+        StopSound(sound1, 1.0);
+        
+        Sleep(1.5);
+        
+        # create explosion and destroy boulder_2
+        CreateThing(tpl_Explosion, boulder_2);
+        Sleep(0.01);
+        #StopKey(boulder_2, roll, 0.0);
+        DestroyThing(boulder_2);
+        
+        b2 = 0;
+        
+        # stop proximity pulse
+        #SetPulse(0.0);
+    }
+        
+    # make surf_Gap2 no move after player has gone across
+    else if((GetSenderRef() == trig_B3_1) && (triggeredB3 == 0))
+    {
+        #Print("trig_B3_1");
+        triggeredB3 = 1;
+        ClearAdjoinFlags(surf_Gap2, 2);         # no move
+        
+        Sleep(1.0);
+        
+        # alter track
+        ClearSurfaceFlags(surf_Gap2, 0x4000);       # no longer track
+        SetAdjoinFlags(surf_Gap2, 2);               # boulder can move thru
+        
+        # detach boulder_3 and stop rolling sound
+        DetachThing(boulder_3);
+        StopSound(sound1, 1.0);
+        
+        Sleep(1.0);
+        
+        # create explosion and destroy boulder_3
+        CreateThing(tpl_Explosion, boulder_3);
+        Sleep(0.01);
+        StopKey(boulder_3, roll, 0.0);
+        DestroyThing(boulder_3);
+        
+        b3 = 0;
+        
+        # stop proximity pulse
+        SetPulse(0.0);
+    }
+        
+    return;
+
+# ========================================================================================
+
+pulse:
+    
+    # get distance from player to center of boulder
+    b2_Distance = VectorDist(GetThingPos(player), GetThingPos(boulder_2));
+    b3_Distance = VectorDist(GetThingPos(player), GetThingPos(boulder_3));
+        
+	if(b2 == 1)
+    {
+        # if boulder center gets within minDistance of player, crush him!
+    	if(b2_Distance < 0.3)
+    	{
+            if(GetMoveStatus(player) != 15)
+            {
+                SetCollideType(boulder_2, 0);
+                
+                RestoreExtCam();
+                
+                # kill player and play keyframe
+                DamageThing(player, 1000.0, 0x1, victim);
+                Sleep(0.1);
+                
+                PlayKey(player, smashed, 10, 0x14, 0);
+                
+                # play squished sfx
+                PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+                
+                # stop proximity pulse
+                SetPulse(0.0);
+            }
+        }
+	}
+    
+    else if(b3 == 1)
+    {
+        # if boulder center gets within minDistance of player, crush him!
+    	if(b3_Distance < minDistance)
+    	{
+            if(GetMoveStatus(player) != 15)
+            {
+                SetCollideType(boulder_3, 0);
+                
+                RestoreExtCam();
+                
+                # kill player and play keyframe
+                DamageThing(player, 1000.0, 0x1, victim);
+                Sleep(0.1);
+                
+                PlayKey(player, smashed, 10, 0x14, 0);
+                
+                # play squished sfx
+                PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+                
+                # stop proximity pulse
+                SetPulse(0.0);
+            }
+        }
+    }
+
+	else
+	{
+		Print("safe distance");
+	}
+    
+    return;
+
+# ========================================================================================
+
+end
+

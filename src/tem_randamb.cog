@@ -1,0 +1,88 @@
+# Jones 3D Cog Script
+#
+# TEM_RandAmb.cog
+#
+# [TRM] && [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message     entered
+    message	    pulse
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+	thing		soundPos2		nolink
+	thing		soundPos3		nolink
+	thing		soundPos4		nolink
+	thing		soundPos5		nolink
+	thing		soundPos6		nolink
+	thing		soundPos7		nolink
+	thing		soundPos8		nolink
+	thing		soundPos9		nolink
+    
+    sector      startAmbients_a
+    sector      startAmbients_b
+    sector      stopAmbients_a
+    sector      stopAmbients_b
+
+	sound		wav0=gen_cave_a1.wav    local
+	sound		wav1=gen_cave_a2.wav    local
+	sound		wav2=gen_cave_a3.wav    local
+	sound		wav3=gen_cave_a4.wav    local
+	sound		wav4=gen_cave_a5.wav    local
+    sound		wav5=gen_cave_a6.wav    local
+
+	float		minDist=-1		local
+	float		maxDist=-1		local
+	float		volume=0.6		local
+    
+	int		    sndNum			local
+	int		    numPos=10		local
+	int		    count   		local
+
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	if((GetSenderRef() == startAmbients_a) || (GetSenderRef() == startAmbients_b))
+    {
+        setpulse(2.0);
+    }
+    
+    if((GetSenderRef() == stopAmbients_a) || (GetSenderRef() == stopAmbients_b))
+    {
+        setpulse(0.0);
+    }
+    
+	return;
+
+# ========================================================================================
+
+pulse:
+
+	SetPulse(0.0);
+    sndNum = RandBetween(0, 5);
+	
+    for (count = 0; count < numPos; count = count+1) 
+	{
+	    if (soundPos0[count] >= 0) 
+        {
+            PlaySoundThing(wav0[sndnum], soundPos0[count], volume, minDist, maxDist, 0);
+        }
+	}
+    
+    SetPulse(2.0);
+    
+	return;
+
+# ========================================================================================
+
+end
+

@@ -1,0 +1,191 @@
+# Jones 3D Cog Script
+#
+# weap_Grenade.cog
+#
+# This COG controls Indy's grenades.  Longer you hold down the fire
+# key, further they go.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		activated
+message		deactivated
+message		selected
+message		deselected
+message		blocked
+message		callback
+
+sound		pull=gen_grenade_pull.wav	local	# Autoloaded
+sound		put=gen_grenade_put.wav		local	# Autoloaded
+sound		throw=gen_grenade_fire.wav	local	# Autoloaded
+			
+template	projectile=+grenade			local	# Autoloaded
+			
+thing		player						local
+
+flex		holdDownTime				local
+			
+int			handNode					local
+int			weaponNum=11				local
+int			callNum						local
+
+int			bThrown=0					local
+int			bBlocked=0					local
+
+vector		firePos						local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	handNode = GetNodeByName(player, "inrhand");
+
+	return;
+
+# -------------------------------------------------------------------
+
+fire:
+
+	if (GetParam(0) != -1) return;
+
+	# Throw it already!
+	firePos = GetThingJointPos(player, handNode);
+
+	FireProjectile(player, projectile, -1, -1, firePos, '0 0 0', holdDownTime, 0x001, 0.0, 0.0);
+
+	# Lose a grenade...
+	ChangeInv(player, weaponNum, -1.0);
+	bThrown = 1;
+
+	DeselectWeapon(player);
+	ResetWeaponModel(player);
+
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+	PlayMode(player, 63, 0);
+	StopMode(player, 62, 0);
+
+	ActivateWeapon(player, 0.01);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deactivated:
+
+	SetFireWait(player, 1.4);
+
+	holdDownTime = DeactivateWeapon(player);
+
+	# Max scale is 2.0
+	if (holdDownTime > 2.0) holdDownTime = 2.0;
+
+	# Min scale is 0.25
+	else if (holdDownTime < 0.25) holdDownTime = 0.25;
+
+	if (!bBlocked)
+	{
+		# Play the throw anim...
+		CaptureThing(player);
+		PlayMode(player, 65, 0);
+		PlaySoundThing(throw, player, 1, -1, -1, 0x880);
+		StopMode(player, 63, 0.5);
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+selected:
+
+	bBlocked = 0;
+
+	SetAimWait(player, 0);
+	SetMountWait(player, 0.67);
+
+	SetArmedMode(player, 6);
+	SetCurWeapon(player, weaponNum);
+	SetThingFireOffset(player, '0.006 0.05 0.015'); 
+
+	CaptureThing(player);
+	PlayMode(player, 62, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deselected:
+
+	SetMountWait(player, 1.0);
+
+	StopMode(player, 63, 0.5);
+	StopMode(player, 62, 0.5);
+
+	# No "put" anim if Indy threw the grenade...
+	if (bThrown)
+	{
+		bThrown = 0;
+		SetArmedMode(player, 0);
+
+		# Make sure Indy's not out of ammo
+		if (GetInv(player, weaponNum) < 1)
+		{
+			PlayVoiceMode(player, 123);
+			SelectWeaponWait(player, 3);
+		}
+
+		return;
+	}
+
+	CaptureThing(player);
+	PlayMode(player, 64, 0);
+
+	SetArmedMode(player, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+blocked:
+
+	# Blocked = another cog deselected the weapon while fire key was still down
+	bBlocked = 1;
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	callNum = GetParam(1);
+	ReleaseThing(player);
+
+	if (callNum == 28)
+	{
+		PlaySoundThing(pull, player, 1, -1, -1, 0x880);
+		SetWeaponModel(player, weaponNum);
+	}
+	else if (callNum == 29)
+	{
+		PlaySoundThing(put, player, 1, -1, -1, 0x880);
+		ResetWeaponModel(player);	
+	}
+
+	return;
+
+end

@@ -1,0 +1,93 @@
+# Jones 3D Cog Script
+#
+# gen_fadewomantest.cog
+#
+# Sophia helps Indy through a critical gate
+#
+# [CMG]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+# ................... MESSAGES ...................
+
+    message	startup		
+    message	pulse		
+
+	
+# .................. OBJECTS .....................	
+
+	thing		woman
+	thing		particlespot	local
+	thing		ringspot		local
+
+# ................. TEMPLATES ....................
+	template	particlesystem	local
+    template	ring=+ripples_vert	local
+    template	orb=lensflarew		local
+    template	spotref=ghost		local
+
+# ................. VARS ....................
+	int			ringtrack		local
+	int			orbtrack		local
+
+# ................. VECTORS ....................
+	vector	ringstart			local  
+	vector	ringend				local
+
+	vector	orbstart			local	
+	vector	orbend				local
+	
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	ClearThingFlags(woman, 0x80000);
+	Sleep(3.0);
+    # set fx anim vectors
+	ringstart	= VectorSet(0.05, 0.05, 0.5);
+	ringend	= VectorSet(0.125, 0.2, 0.0);
+	orbstart	= VectorSet(0.05, 0.05, 0.0);
+	orbend	= VectorSet(0.2, 0.2, 1.0);
+
+	# find the fx position 1 meter from woman's feet
+    ringspot=CreateThingAtPos(spotref, GetThingSector(woman), VectorAdd(GetThingPos(woman), '0 0 0.025'), '0 0 0');
+    
+	# set pulse speed for rings 
+	SetPulse(0.25);
+	
+	# Create and animate the orb
+	orbtrack = CreateThing(orb, ringspot);
+	AnimateSpriteSize(orbtrack, orbstart, orbend, 0.5);
+    
+	# fade the woman
+	ThingFadeAnim(woman, 1, 0, 1.0, 0);
+	ClearThingFlags(woman, 0x4000);
+	
+	Sleep(1.0);
+    SetPulse(0);
+	
+	# diminish the orb
+	AnimateSpriteSize(orbtrack, orbend, orbstart, 0.5);
+
+return;
+# ..............................................................................
+pulse:
+
+    ringtrack = CreateThing(ring, ringspot);
+	AnimateSpriteSize(ringtrack, ringstart, ringend, 0.5);
+
+return;
+
+
+# ..............................................................................
+end
+
+
+

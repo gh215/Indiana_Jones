@@ -1,0 +1,245 @@
+# Jones 3D Cog Script
+#
+# actor_FloaterAET.cog
+#
+# Allows the Aetherium floater to do his thang...
+#
+# [PKM]
+#
+# [RT] 5/10/99: Added light ball...
+# [MDR] 8/13/99: Changed stuff... muwah ha ha
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		created
+	message		aievent
+	message		damaged
+	message		killed
+	message		callback
+	message		pulse
+	message		statechange
+
+# ************************** TEMPLATES *************************
+	template	blast=+ExpFloaterSpr		local		# MDR: Used by explosion -- don't remove!
+
+# *********************** MISC LOCAL VARS **********************
+	thing		t_sender					local
+
+	int			eventType					local
+	int			n_userData					local
+	int			projectile					local
+
+	flex		f_minCommitDist				local
+	flex		f_alphaRest					local
+	flex		f_alphaCrnt					local
+
+	int			FLAG_SETARMEDMODE			local
+	int			FLAG_FIRE					local
+
+end
+
+# ========================================================================================
+code
+
+# ........................................................................................
+startup:
+
+	FLAG_SETARMEDMODE	= 0x100;
+	FLAG_FIRE			= 0x200;
+	
+	f_alphaRest			= 0.20;
+	f_minCommitDist		= 0.90;
+
+	return;
+
+
+# ........................................................................................
+created:
+
+	t_sender = GetSenderRef();
+
+	SetActorFlags(t_sender, 0x100000);					# Set AF_NOTARGET
+	AISetMode(t_sender, 0x10000);						# Set MODE_WANTALLEVENTS
+	AISetMode(t_sender, 0x2000000);						# Set MODE_NOCHASING
+
+	SetArmedMode(t_sender, 7);							# Switch to non-active armed mode
+
+	SetThingUserData(t_sender, 0);
+	SetThingLight(t_sender, '0.1 0.4 0.45', 0.5, 0.9);
+	SetThingAlpha(t_sender, f_alphaRest);
+
+	SetThingPulse(t_sender, 1.0);
+
+	return;
+
+
+# ........................................................................................
+aievent:
+
+	t_sender	= GetSenderRef();
+	n_userData	= GetThingUserData(t_sender);
+	eventType	= GetParam(0);
+
+	if ( BITTEST(n_userData, FLAG_SETARMEDMODE) )		# If a armed mode change pending, bail
+		return;
+
+	if ( eventType == 0x40 )							#---- EVENT_MOVETARGETCHANGED
+	{
+		if ( AIGetArmedMode(t_sender) == 7 )				# Non-active armed mode?
+		{
+			if ( !BITTEST(AIGetMode(t_sender), 0x202) )
+				return;
+
+			PlaySoundClass(t_sender, 1);					# (Re)start 'looping' sound
+			PlayMode(t_sender, 69, 0);						# Play the stand to walk anim
+            SetThingStateChange(t_sender, 0, 0);			# Set a statechange to active armed mode
+
+			n_userData = BITSET(n_userData, FLAG_SETARMEDMODE);
+		}
+	}
+
+	if ( eventType == 0x800 )							#---- EVENT_GOALREACHED
+	{
+		if ( AIGetArmedMode(t_sender) == 0 )					# Active armed mode?
+		{
+			if ( !BITTEST(AIGetMode(t_sender), 0x202) )
+			{
+				n_userData = BITSET(n_userData, FLAG_SETARMEDMODE);
+				SetThingUserData(t_sender, n_userData);
+
+				StopThing(t_sender);
+				ResetThing(t_sender);
+				SetArmedMode(t_sender, 7);						# Switch to non-active armed mode
+				PlayMode(t_sender, 70, 0);						# Play the walk to stand anim
+
+				n_userData = BITCLEAR(n_userData, FLAG_SETARMEDMODE);
+			}
+		}
+	}
+
+	if ( eventType == 0x4000 )							#---- EVENT_FIRE
+	{
+		if ( GetThingAlpha(t_sender) == 1.0 )
+		{
+			n_userData = BITSET(n_userData, FLAG_FIRE);			# Set "shot pending" flag
+		}
+	}
+
+	SetThingUserData(t_sender, n_userData);					# Record flag settings
+
+	return;
+
+
+# ........................................................................................
+pulse:
+
+	t_sender = GetSenderRef();
+
+	if (VectorX(GetThingLight(t_sender)) > 0.1)
+	{
+		SetThingLight(t_sender, '0.1 0.4 0.45', 0.5, 0.9);
+	}
+	else
+	{
+		SetThingLight(t_sender, '0.3 0.6 0.65', 0.5, 0.9);
+	}
+
+	f_alphaCrnt = GetThingAlpha(t_sender);
+	if ( (f_alphaCrnt == f_alphaRest) || (f_alphaCrnt == 1.0) )
+	{
+		if ( VectorDist(GetThingPos(t_sender), GetThingPos(GetLocalPlayerThing())) > f_minCommitDist )
+		{
+			if ( f_alphaCrnt > f_alphaRest )
+			{
+				ThingFadeAnim(t_sender, f_alphaCrnt, f_alphaRest, 2, 0);		# Fade back out over 2 sec
+				SetActorFlags(t_sender, 0x100000);								# Set AF_NOTARGET
+			}
+		}
+		else
+		{
+			if ( f_alphaCrnt < 1.0 )
+			{
+				ThingFadeAnim(t_sender, f_alphaCrnt, 1.0, 2, 0);				# Fade in over 2 sec
+				ClearActorFlags(t_sender, 0x100000);							# Clear AF_NOTARGET
+			}
+		}
+	}
+
+	return;
+
+
+# ........................................................................................
+damaged:
+
+	# Floater always takes SITH_DAMAGE_CRUSH
+	if ( GetParam(1) == 0x80 )
+	{
+		return;
+	}
+
+	if ( GetThingAlpha(GetSenderRef()) < 1.0 )
+	{
+		ReturnEx(0);
+	}
+
+	return;
+
+
+# ........................................................................................
+killed:
+
+	SetThingPulse(GetSenderRef(), 0.0);
+	ClearThingFlags(GetSenderRef(), 0x1);
+
+	return;
+
+
+# ........................................................................................
+statechange:
+
+	t_sender	= GetSenderRef();
+	n_userData	= GetThingUserData(t_sender);
+
+	if ( GetParam(0) == 0 )
+	{
+		if ( GetParam(1) == 0 )
+		{
+#			DEBUGPRINT("Switch to armed mode 0");
+			PlayMode(t_sender, 1, 0);							# Play 'stand' anim
+
+			n_userData = BITCLEAR(n_userData, FLAG_SETARMEDMODE);
+		}
+	}
+
+	SetThingUserData(t_sender, n_userData);						# Record flag settings
+
+	return;
+
+
+# ........................................................................................
+callback:
+
+	t_sender	= GetSenderRef();
+	n_userData	= GetThingUserData(t_sender);
+
+	if ( BITTEST(n_userData, FLAG_FIRE) )
+	{
+		projectile = GetActorWeapon(t_sender);
+
+		FireProjectile(t_sender, projectile, -1, -1, '0 0 0', '0 0 0', 1.0, 0, 0, 0);
+		n_userData = BITCLEAR(n_userData, FLAG_FIRE);				# Clear "shot pending" flag
+	}
+
+	SetThingUserData(t_sender, n_userData);						# Record flag settings
+
+	return;
+
+# ........................................................................................
+
+end
+
+

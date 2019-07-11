@@ -1,0 +1,305 @@
+# Jones 3D Cog Script
+#
+# BAB_Hint.cog
+#
+# Solves hints    
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+        message         startup
+        message         activate
+        message         entered
+        message         crossed
+        message         user0
+        
+        thing           player                          local
+
+        thing           hint1
+        thing           hint2
+        sector          h2_entersector
+        thing           hint4
+        surface         h4_entersurface
+        thing           hint6
+        surface         h6_entersurface
+        thing           hint8
+        sector          h8_entersector
+        thing           hint10
+        sector          h10_entersector
+        thing           hint12
+        sector          h12_entersector
+        thing           hint14
+        surface         h14_entersurface
+        thing           hint16
+        surface         h16_entersurface
+        thing           hint18
+        sector          h18_entersector
+        thing           hint20
+        sector          h20_entersector
+        thing           hint22
+        sector          h22_entersector
+        thing           hint24
+        thing           h24_switch
+        thing           hint26
+        surface         h26_entersurface
+        thing           hint28
+        thing           babtruck
+        thing           hint30
+        thing           courttruck
+        thing           hint32
+        sector          h32_entersector
+        thing           hint34
+        sector          h34_entersector
+        thing           hint36
+        thing           h36_switch
+        thing           hint38
+        sector          h38_entersector
+        thing           hint40
+        sector          h40_entersector
+        thing           hint42
+        sector          h42_entersector
+        thing           hint44
+        sector          h44_entersector
+        thing           hint46
+        sector          h46_entersector
+        thing           hint48
+        sector          h48_entersector
+        thing           hint50
+        sector          h50_entersector
+        thing           hint51
+        surface         crossurf        mask=080
+        thing           block
+        thing           hint52
+        sector          h52_entersector
+        thing           hint53
+        sector          h53_entersector
+        thing           hint54
+        thing           h54_tablet1
+        thing           hint55
+        thing           h55_tablet2
+        thing           hint56
+        thing           h56_tablet3
+        thing           hint57
+        thing           h57_mardukidol
+        thing           hint58
+        thing           hint59
+        sector          h59_entersector
+        
+end
+
+
+# ========================================================================================
+code
+
+startup:
+    SetHintSolved(hint1);
+    player = GetLocalPlayerThing();
+return;
+
+# ========================================================================================
+activate:
+
+    if ((GetSenderRef() == h24_switch) && (GetHintSolved(hint24) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint24);
+    }
+    
+    if ((GetSenderRef() == h36_switch) && (GetHintSolved(hint36) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint36);
+    }
+    
+    if ((GetSenderRef() == h54_tablet1) && (GetHintSolved(hint54) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint54);
+    }
+    
+    if ((GetSenderRef() == h55_tablet2) && (GetHintSolved(hint55) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint55);
+    }
+    
+    if ((GetSenderRef() == h56_tablet3) && (GetHintSolved(hint56) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint56);
+    }
+    
+    if ((GetSenderRef() == h57_mardukidol) && (GetHintSolved(hint57) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint57);
+    }
+    
+return;        
+        
+# ========================================================================================
+entered:
+        
+    if ((GetSenderRef() == h2_entersector) && (GetHintSolved(hint2) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint2);
+    }
+    
+    if ((GetSenderRef() == h4_entersurface) && (GetHintSolved(hint4) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint4);
+    }
+    
+    if ((GetSenderRef() == h6_entersurface) && (GetHintSolved(hint6) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint6);
+    }
+    
+    if ((GetSenderRef() == h8_entersector) && (GetHintSolved(hint8) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint8);
+    }
+    
+    if ((GetSenderRef() == h10_entersector) && (GetHintSolved(hint10) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint10);
+    }
+    
+    if ((GetSenderRef() == h12_entersector) && (GetHintSolved(hint12) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint12);
+    }
+    
+    if ((GetSenderRef() == h14_entersurface) && (GetHintSolved(hint14) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint14);
+    }
+    
+    if ((GetSenderRef() == h16_entersurface) && (GetHintSolved(hint16) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint16);
+    }
+    
+    if ((GetSenderRef() == h18_entersector) && (GetHintSolved(hint18) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint18);
+        SetHintSolved(hint16);
+        SetHintSolved(hint14);
+        SetHintSolved(hint12);
+        SetHintSolved(hint10);
+        SetHintSolved(hint8);
+    }
+    
+    if ((GetSenderRef() == h20_entersector) && (GetHintSolved(hint20) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint20);
+        SetHintSolved(hint18);
+        SetHintSolved(hint16);
+        SetHintSolved(hint14);
+        SetHintSolved(hint12);
+        SetHintSolved(hint10);
+        SetHintSolved(hint8);
+   }
+    
+    if ((GetSenderRef() == h22_entersector) && (GetHintSolved(hint22) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint22);
+    }
+    
+    if ((GetSenderRef() == h26_entersurface) && (GetHintSolved(hint26) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint26);
+    }
+    
+    if ((GetSenderRef() == babtruck) && (GetHintSolved(hint28) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint28);
+    }
+    
+    if ((GetSenderRef() == courttruck) && (GetHintSolved(hint30) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint30);
+        SetHintSolved(hint28);
+    }
+    
+    if ((GetSenderRef() == h32_entersector) && (GetHintSolved(hint32) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint32);
+    }
+    
+    if ((GetSenderRef() == h34_entersector) && (GetHintSolved(hint34) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint34);
+    }
+    
+    if ((GetSenderRef() == h38_entersector) && (GetHintSolved(hint38) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint38);
+    }
+    
+    if ((GetSenderRef() == h40_entersector) && (GetHintSolved(hint40) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint40);
+    }
+    
+    if ((GetSenderRef() == h42_entersector) && (GetHintSolved(hint42) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint42);
+    }
+    
+    if ((GetSenderRef() == h44_entersector) && (GetHintSolved(hint44) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint44);
+    }
+    
+    if ((GetSenderRef() == h46_entersector) && (GetHintSolved(hint46) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint46);
+    }
+    
+    if ((GetSenderRef() == h48_entersector) && (GetHintSolved(hint48) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint48);
+    }
+    
+    if ((GetSenderRef() == h50_entersector) && (GetHintSolved(hint50) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint50);
+    }
+    
+    if ((GetSenderRef() == h52_entersector) && (GetHintSolved(hint52) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint52);
+    }
+    
+    if ((GetSenderRef() == h53_entersector) && (GetHintSolved(hint53) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint53);
+    }
+    
+    if ((GetSenderRef() == h59_entersector) && (GetHintSolved(hint59) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint59);
+    }
+    return;        
+
+# ========================================================================================
+crossed:
+
+    if ((GetSenderRef() == crossurf) && (GetHintSolved(hint51) == 0) && (GetSourceRef() == block))
+    {
+        print("..");
+        SetHintSolved(hint51);
+    }
+
+    return;
+
+# ========================================================================================
+user0:
+    //all tablets placed sendmessages from BAB_TABLET cog
+    if (GetHintSolved(hint58) == 0)
+    {
+        SetHintSolved(hint58);
+    }
+    return;
+    
+end
+

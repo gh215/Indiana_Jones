@@ -1,0 +1,527 @@
+# Jones 3D Cog Script
+#
+# Portcullis_wheel.cog
+#
+# Sluiceway Alternating Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+        		
+		message	startup	
+		message	activated	
+        message user0		
+        message user1
+        message pulse
+        
+	#	cogs
+		cog		camcog
+	
+	#	props
+        thing	wheel
+        thing	gate0
+        thing	gate1
+        thing	lever
+        thing	grill0
+        thing	grill1
+        thing	splashitem	local
+        thing	splashspot	
+        
+
+	#	water objects
+        thing	channelH2Opos	
+        thing	sluiceH2Opos	
+		thing	channelwateritem	
+        thing	sluicewateritem	
+    
+	#	actors    
+        thing	player		local
+        thing	indy		
+	
+	#	cameras
+        thing	camera	
+        thing	portculliscam2
+        thing	portculliscam3
+	
+	#	camera targets
+		thing	grilltarget0
+		thing	grilltarget1
+        thing	camtarget
+	
+	#	water sectors
+        sector  sluice0
+        sector  sluice1
+        sector  sluice2
+        
+        sector  wheelchan0
+        sector  wheelchan1
+        sector  wheelchan2
+        
+	#	water faces
+        surface sluicesurf0
+        surface sluicesurf1
+        surface sluicesurf2
+        surface sluicesurf3
+        surface sluicesurf4
+        surface sluicesurf5
+        surface sluicesurf6
+        surface sluicesurf7
+        surface sluicesurf8
+        surface sluicesurf9
+        
+        surface chansurf0
+        surface chansurf1
+        surface chansurf2
+        surface chansurf3
+        surface chansurf4
+        surface chansurf5
+        
+        vector  sect_light      local
+	
+	#	templates
+		template	splash=TitanicH2Ofx	local
+		
+	
+	#	keyframes
+        keyframe	in_pull=in_pull_lever_down.key	        local
+		keyframe	lever_down=gen_lever.key		local
+        keyframe	gate_close=shw_gate_pvta.key		local
+        keyframe	gate_open=shw_gate_pvtb.key		local
+        keyframe	wheel_run=shw_wheel_prtcls.key		local
+        
+        flex	FOV=90
+        int	 	curCam			local
+        int     thaw=0			local
+        int     spin		    local
+        int     index		    local
+        int     gate0_run		local
+        int     gate1_run		local
+        int     position=0		local
+        int     gatesup=0		local
+		int		gatetrack		local
+		int		rushtrack		local
+
+		sound   leverpull=nub_lever_pull_c.wav          local
+        sound   leverset=nub_lever_reset_c.wav          local
+		sound   gatestart=shw_sluice_start.wav          local
+        sound   gaterun=shw_sluice_move.wav          local
+        sound   gatestop=shw_sluice_stop.wav          local
+		sound   waterrush=nub_bull_move2_c.wav          local
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+        player = GetLocalPlayerThing();
+		SetThingFlags(channelwateritem, 0x10);
+		SetThingFlags(sluicewateritem, 0x10);
+        
+         //clearing channel
+    
+          sect_light = VectorSet(0.0, 0.0, 0.0);
+        for (index = 0; index < 3; index = index + 1)
+	        {
+		Setsectorlight(wheelchan0[index], sect_light, 3);
+                clearsectorflags(wheelchan0[index], 0x2);
+                }
+       
+        for (index = 0; index < 6; index = index + 1)
+	        {
+		Setfacegeomode(chansurf0[index], 0);
+                }
+        
+        //clearing sluice
+    
+        sect_light = VectorSet(0.0, 0.0, 0.0);
+        for (index = 0; index < 3; index = index + 1)
+		{
+                Setsectorlight(sluice0[index], sect_light, 3);
+		clearsectorflags(sluice0[index], 0x2);
+                }
+
+        for (index = 0; index < 10; index = index + 1)
+	        {
+		Setfacegeomode(sluicesurf0[index], 0);
+                }
+        return;
+
+
+# ........................................................................................
+
+activated:
+
+	if (position == 0)
+	{
+	
+        if (isMoving(gate0)) return;
+        if (GetSenderRef() == lever)
+               {
+                # Remember the current camera
+				curCam = GetCurrentCamera();
+                
+# Disable and hide player
+                SetThingFlags(player, 0x80000);
+
+# Cut to cutscene camera
+                SetCameraFocus(2, camera);
+                SetCamerasecondaryFocus(2, camtarget);
+                SendMessage(camcog, user0);
+				#SetCurrentCamera(2);
+                ClearThingFlags(indy, 0x80000);
+                position = 1;
+                
+# Play the Indy and lever animations and sounds
+                PlayKey(lever, lever_down, 4, 0x12, 0);
+                PlayKey(indy, in_pull, 4, 0x12, 0);
+				Sleep(1.0);
+                PlaySoundLocal(leverpull, 1.0, 0, 0x0, 0);
+				Sleep(1.25);
+				PlaySoundLocal(leverset, 0.75, 0, 0x0, 0);
+                Sleep(1.0);
+                
+# move camtarget and camera over the wheel
+                MovetoFrame(camera, 1, 1);
+                MovetoFrame(camtarget, 1, 2);
+                waitforstop(camera);
+                Sleep(.5);
+
+# sounds an animations for the gates closing
+				PlaySoundLocal(gatestart, 6, 0, 0x0, 0);
+# pulse for screenshake				
+				SetPulse(.1);
+                Sleep(.25);
+				gatetrack = PlaySoundThing(gaterun, gate0, 5.0, 0, 20, 1);
+				
+				# MOVE THE SLUICE GATES
+				Rotate(gate1, 60, 1, 1);
+				Rotate(gate0, -60, 1, 1);
+                Sleep(.25);
+
+                        If (thaw == 1)
+                                {
+                                rushtrack = PlaySoundThing(waterrush, wheel,  8.0, 0, 20, 1);
+                                call moses;
+                                }
+                
+				Sleep(1.0);
+				StopSound(gatetrack, 0.0);
+                PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+
+                Call spincheck;
+                Sleep(1.0);
+                
+                
+                #	return player control
+				SetThingFlags(indy, 0x80000);
+				ClearThingFlags(player, 0x80000);
+				#SetCurrentCamera(curCam);
+				SetPulse(0);
+				SendMessage(camcog, user1);
+                movetoframe(camera, 0, 50);
+                movetoframe(camtarget, 0, 50);
+                }
+	}
+
+if (position == 1)
+	{
+	
+        if (isMoving(gate0)) return;
+        if (GetSenderRef() == lever)
+               {
+                # Remember the current camera
+				curCam = GetCurrentCamera();
+                
+# Disable and hide player
+                SetThingFlags(player, 0x80000);
+
+# Cut to cutscene camera
+                SetCameraFocus(2, camera);
+                SetCamerasecondaryFocus(2, camtarget);
+                SendMessage(camcog, user0);
+				#SetCurrentCamera(2);
+                ClearThingFlags(indy, 0x80000);
+                position = 0;
+                
+# Play the Indy and lever animations and sounds
+                PlayKey(lever, lever_down, 4, 0x12, 0);
+                PlayKey(indy, in_pull, 4, 0x12, 0);
+				Sleep(1.0);
+                PlaySoundLocal(leverpull, 1.0, 0, 0x0, 0);
+				Sleep(1.25);
+				PlaySoundLocal(leverset, 0.75, 0, 0x0, 0);
+                Sleep(1.0);
+                
+# move camtarget and camera over the wheel
+                MovetoFrame(camera, 1, 1);
+                MovetoFrame(camtarget, 1, 2);
+                waitforstop(camera);
+                Sleep(.5);
+
+# sounds an animations for the gates closing
+				PlaySoundLocal(gatestart, 6, 0, 0x0, 0);
+# pulse for screenshake				
+				SetPulse(.1);
+                Sleep(.25);
+				gatetrack = PlaySoundThing(gaterun, gate0, 5.0, 0, 20, 1);
+				
+				# MOVE THE SLUICE GATES
+				Rotate(gate1, -60, 1, 1);
+				Rotate(gate0, 60, 1, 1);
+                Sleep(.25);
+
+                        If (thaw == 1)
+                                {
+                                rushtrack = PlaySoundThing(waterrush, wheel,  8.0, 0, 20, 1);
+                                call moses;
+                                }
+                
+				Sleep(1.0);
+				StopSound(gatetrack, 0.0);
+                PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+
+                Call spincheck;
+                Sleep(1.0);
+                
+                
+                #	return player control
+				SetThingFlags(indy, 0x80000);
+				ClearThingFlags(player, 0x80000);
+				#SetCurrentCamera(curCam);
+				SetPulse(0);
+				SendMessage(camcog, user1);
+                movetoframe(camera, 0, 50);
+                movetoframe(camtarget, 0, 50);
+                }
+	}
+                
+	return;
+
+# ........................................................................................
+
+blocked:
+	##print("Blocked");
+//	?????	
+	return;
+
+# ........................................................................................
+spincheck:
+        
+        If ((position == 1) && (thaw == 1))		# correct position with water
+                {
+                ###print("keyframe should be playing now...");
+                spin = PlayKey(wheel, wheel_run, 4, 0x0, 0);
+                ###print("aahh...power to the facility...");
+				Sleep(1.0);
+                SetPulse(0);
+				###print("the pulse is cut");
+                
+					If (gatesup == 0)
+					{
+                    #	Show the grills open
+					SetCamerasecondaryFocus(2, grilltarget0);
+					SetCameraFocus(2, portculliscam2);
+					SetCurrentCamera(2);
+					Movetoframe(grill0, 1, .75);
+					Movetoframe(grill1, 1, .75);
+					Sleep(2.0);
+					SetCamerasecondaryFocus(2, grilltarget1);
+					SetCameraFocus(2, portculliscam3);
+					WaitForStop(grill1);
+					gatesup = 1;
+					Sleep(1.0);
+                    #	return player control
+					SetThingFlags(indy, 0x80000);
+					ClearThingFlags(player, 0x80000);
+					SetCurrentCamera(curCam);
+                    return;
+					}
+
+
+				}
+                
+        else If ((position == 1) && (thaw == 0))		# correct position no water
+                {
+                ####print("I need water power...");
+                If (spin != -1)
+				{
+                    StopKey(spin);
+				}
+				If (rushtrack != -1)
+				{
+                    StopSound(rushtrack, 1.5);
+				}
+				SetPulse(0);
+                
+                }
+                
+        else If ((position == 0) && (thaw == 0))		# wrong position no water
+                {
+                ##print("I need water power...");
+                If (spin != -1)
+				{
+                    StopKey(spin);
+				}
+                If (rushtrack != -1)
+				{
+                    StopSound(rushtrack, 1.5);
+				}
+                SetPulse(0);
+                
+                }
+                
+return;
+
+# ........................................................................................
+moses:
+
+If (position == 0)
+   {
+    
+    # prepare the water objects for movement
+	#print("POSITION IS 0");
+	#print("sluiceitem down");
+	Rotate(sluicewateritem, 90, 2, 0.01);		   #exp angle
+	Sleep(.01);
+	ClearThingFlags(sluicewateritem, 0x10);
+	Rotate(sluicewateritem, -90, 2, 1.5);
+	#print("sluiceitem up");
+	 	
+	ClearThingFlags(channelwateritem, 0x10);
+	   
+	
+	   
+	//clearing channel
+    
+          sect_light = VectorSet(0.0, 0.0, 0.0);
+    for (index = 0; index < 3; index = index + 1)
+		{
+		Setsectorlight(wheelchan0[index], sect_light, 4);
+        clearsectorflags(wheelchan0[index], 0x2);
+        }
+       
+    for (index = 0; index < 6; index = index + 1)
+		{
+		Setfacegeomode(chansurf0[index], 0);
+        }
+
+	Rotate(channelwateritem, -90, 2, 1.5);
+	#print("channelitem down");
+
+	WaitForStop(sluicewateritem);
+    
+    
+    //setting sluice
+    
+        sect_light = VectorSet(0.0, 0.5, 1.0);
+    for (index = 0; index < 3; index = index + 1)
+		{
+		Setsectorlight(sluice0[index], sect_light, 4);
+		Setsectorflags(sluice0[index], 0x2);
+        }
+
+    for (index = 0; index < 10; index = index + 1)
+		{
+		Setfacegeomode(sluicesurf0[index], 4);
+        }
+   
+	    # reset sluicewateritem
+		SetThingFlags(sluicewateritem, 0x10);
+        CopyOrientAndPos(sluiceH2Opos, sluicewateritem); 
+        # reset channelwateritem
+        SetThingFlags(channelwateritem, 0x10);
+        CopyOrientAndPos(channelH2Opos, channelwateritem);
+   }
+
+
+        
+else If (position ==1)
+   {
+        
+	   
+	    # prepare the water objects for movement
+		Rotate(channelwateritem, -90, 2, 0.01);		   #exp angle
+		#print("POSITION IS 1");
+		#print("channelitem down");
+		Sleep(.01);
+		ClearThingFlags(channelwateritem, 0x10);
+		Rotate(channelwateritem, 90, 2, 1.0);
+		#print("channelitem up");
+	 	
+		ClearThingFlags(sluicewateritem, 0x10);
+        
+	    //clearing sluice
+    
+        sect_light = VectorSet(0.0, 0.0, 0.0);
+    
+		Setsectorlight(sluice1, sect_light, 4);
+		clearsectorflags(sluice1, 0x2);
+        Setfacegeomode(sluicesurf4, 0);
+        Setfacegeomode(sluicesurf5, 0);
+    
+		
+		
+        Rotate(sluicewateritem, 90, 2, 1.0);
+		#print("sluiceitem down");
+        
+		
+		WaitForStop(channelwateritem);
+
+           //setting channel
+    
+          sect_light = VectorSet(0.0, 0.5, 1.0);
+    for (index = 0; index < 3; index = index + 1)
+		{
+		Setsectorlight(wheelchan0[index], sect_light, 4);
+        setsectorflags(wheelchan0[index], 0x2);
+        }
+       
+    for (index = 0; index < 6; index = index + 1)
+		{
+		Setfacegeomode(chansurf0[index], 4);
+        }
+    
+    
+        # reset sluicewateritem
+		SetThingFlags(sluicewateritem, 0x10);
+        CopyOrientAndPos(sluiceH2Opos, sluicewateritem); 
+        # reset channelwateritem
+        SetThingFlags(channelwateritem, 0x10);
+        CopyOrientAndPos(channelH2Opos, channelwateritem);
+        
+   }
+return;
+
+# ........................................................................................
+
+user0:
+        thaw = 0;
+        call startup;
+        return;
+        
+user1:
+        thaw = 1;
+        call moses;
+        call spincheck;
+        return;
+        
+
+# ........................................................................................
+pulse:
+
+	SetPOVShake('0.0 0.0 0.015', '0.0 0.0 0.015', 0.80, 80.0);
+		If (thaw == 1)
+		{
+        splashitem = CreateThing(splash, splashspot);
+		}
+
+	return;
+# ........................................................................................
+end
+

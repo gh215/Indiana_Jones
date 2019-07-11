@@ -1,0 +1,42 @@
+# Jones 3D Cog Script
+#
+# PRU_boulderblock.cog
+#
+# Keeps you from seeing beyond the boulder when you're in the forest for framerate purposes.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message     startup
+message		crossed
+
+surface		nearlight        
+sector      bouldersector     	        nolink
+        
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	SectorAdjoins(bouldersector, 0);
+	return;
+# ========================================================================================        
+crossed:
+	If (GetSenderRef() == nearlight)
+	{
+	Print("crossed");
+    SectorAdjoins(bouldersector, 1);
+	}
+	return;
+	
+end
+
+
+

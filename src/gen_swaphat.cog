@@ -1,0 +1,64 @@
+# Jones 3D Cog Script
+#
+# gen_SwapHat.cog
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		startup
+
+	model		noHatHead=head_in_goodhair.3do		local
+
+	thing		indy
+	thing		player							local
+
+	int			headMesh						local
+	int			hatMesh							local
+	int			meshRef							local
+	int			headMeshRef						local
+	int			hatMeshRef						local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+
+	# Get the int that represents Indy's hat
+	headMesh = GetMeshByName(player, "inhead");
+	hatMesh = GetMeshByName(player, "inhat");
+
+	# Get rid of the hat -- remember the reference # we get back so
+	# it can be swapped back later
+	headMeshRef = SetThingMesh(indy, headMesh, noHatHead, 0);
+	hatMeshRef = SetThingMesh(indy, hatMesh, noHatHead, 1);
+
+    # Set up no-hat heads...
+	SetThingVoiceHeads(indy, "inhead", "head_in_goodhair.3do", "head_in_asound_gh.3do", "head_in_amsound_gh.3do", "head_in_osound_gh.3do");
+	
+	# Make the actor visible
+	ClearThingFlags(indy, 0x80000);
+
+	Sleep(5);
+
+	# Make the actor invisible
+	SetThingFlags(indy, 0x80000);
+
+	# Put the hat back on
+	RestoreThingMesh(indy, headMeshRef);
+	RestoreThingMesh(indy, hatMeshRef);
+
+	# Restore default heads...
+	SetThingVoiceHeads(indy, "inhead", "", "head_in_asound.3do", "head_in_amsound.3do", "head_in_osound.3do");
+	
+
+	return;
+
+end

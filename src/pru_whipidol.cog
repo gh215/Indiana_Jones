@@ -1,0 +1,76 @@
+# Jones 3D Cog Script
+#
+# PRU_whipIdol.cog
+#
+# Knock an idol from its perch
+#
+# [TL] [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ===================================================================
+symbols
+
+message		startup
+message		damaged
+message		entered
+
+thing		idol		mask=0x08
+thing		idolTarg	mask=0x08
+thing		splash0		local
+
+sector		water		mask=0x020
+
+sound		splashSnd=pru_idol_splash.wav	local
+
+material	mat1=gen_a4sfx_splash.mat	 	local
+material	mat2=gen_a4sfx_splash.mat		local
+
+template	splashTpl=splashenter		  	local
+
+int			hit=0		local
+
+end
+
+# ===================================================================
+code
+
+startup:
+
+	ClearThingFlags(idolTarg, 0x4); # Clear no weapon collide flag
+	return;
+
+# -------------------------------------------------------------------
+
+damaged:
+    
+	if (GetSenderRef() != idolTarg) return;
+
+    if (GetParam(1) == 0x10)
+	{
+		DestroyThing(idolTarg);
+		Sleep(0.01);
+		ApplyForce(idol, VectorScale('0.3 0.7 0.5', 0.05));
+
+		Sleep(1.0);
+		SetThingMass(idol, 200.0);
+
+		Sleep(3.0);
+		SetPhysicsFlags(idol, 0x400000);
+	}
+	return;
+
+# -------------------------------------------------------------------
+
+entered:
+
+	if ((GetSenderRef() == water) && (GetSourceRef() == idol))
+	{
+		splash0 = CreateThing(splashTpl, idol);
+		MaterialAnim(mat1, 16, 0x0);
+		MaterialAnim(mat2, 16, 0x0);
+		PlaySoundThing(splashSnd, splash0, 0.8, -1.0, -1.0, 0);
+		SetLifeLeft(splash0, 0.5);
+	}
+	return;
+
+end

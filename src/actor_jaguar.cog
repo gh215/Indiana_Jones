@@ -1,0 +1,111 @@
+# Jones 3D Cog Script
+#
+# actor_Jaguar.cog
+#
+# [MDR]
+#
+# Special behavior for jaguars.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		created
+	message		damaged
+    message		aievent
+	message		arrivedwpnt
+   
+# ************************** MISC LOCAL VARS *******************
+	int			n_eventType			local
+	int			n_crntAIMode		local
+	int			n_param				local
+
+end
+
+# ========================================================================================
+code
+
+# .................................................................................	
+created:
+
+#	AISetMode(GetSenderRef(), 0x40000);		# Add SITHAI_MODEINSTINCTUSEWPNTS to jaguar's AI mode 
+	AISetSubMode(GetSenderRef(), 0x100000);  // match velocity
+	AISetSubMode(GetSenderRef(), 0x20000);  // semi-continuous motion
+	return;
+
+# .................................................................................	
+damaged:
+	// Jag can only be killed by instantly fatal attacks, such as explosions
+	if (GetParam(0) < GetThingMaxHealth(GetSenderRef()))
+	{
+		// Heal Jag
+		SetHealth(GetSenderRef(), GetThingMaxHealth(GetSenderRef()));
+	
+		// Flee from Indy
+		AIFlee(GetSenderRef(), GetThingParent(GetSourceRef()));
+		
+		// Return minimal damage so that jag makes sounds.
+		ReturnEx(1);
+	}
+
+	return;
+
+# .................................................................................	
+aievent:
+
+	n_eventType		= GetParam(0);
+	n_crntAIMode	= GetParam(1);
+	n_param			= GetParam(2);		# Meaning varies according to n_eventType
+
+ 	// ** if SITHAI_EVENTMODECHANGED
+	if ( n_eventType == 0x100 )
+	{
+		// If entered mode SITHAI_MODEFLEEING
+		if ( BITTEST(n_crntAIMode, 0x800) && !BITTEST(n_param, 0x800) )
+		{
+			// Set flag SITH_AF_NOTARGET
+//			SetActorFlags(GetSenderRef(), 0x100000);
+		}
+		// If leaving mode SITHAI_MODEFLEEING
+		else if ( !BITTEST(n_crntAIMode, 0x800) && BITTEST(n_param, 0x800) )
+		{
+			// Clear flag SITH_AF_NOTARGET
+//			ClearActorFlags(GetSenderRef(), 0x100000);
+		}
+	}
+	// If reached goal in roam then
+	// stop him because he is semicontinuous he would otherwise move again immediately
+	else if (n_eventType == 0x800)
+	{
+		if ( BITTEST(AIGetMode(GetSenderRef()), 0x4) // searching
+			&& !BITTEST(AIGetMode(GetSenderRef()), 0x800000)) // not hunting
+		{
+			if (RandBetween(0,100) < 50)
+			{
+//				DebugPrint("Jaguar Stopped From Actor Cog");
+				StopThing(GetSenderRef());
+				ReturnEx(1); // keep any instinct from handling this event
+			}
+		}
+	}
+
+    return;
+
+arrivedwpnt:
+	if ( BITTEST(AIGetMode(GetSenderRef()), 0x4) // searching
+		&& !BITTEST(AIGetMode(GetSenderRef()), 0x800000)) // not hunting
+	{
+		if (RandBetween(0,100) < 50)
+		{
+//			DebugPrint("Jaguar Stopped From Actor Cog");
+			StopThing(GetSenderRef());
+			ReturnEx(1); // keep any other instinct from handling this event
+		}
+	}
+
+	return;
+
+end
+

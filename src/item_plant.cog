@@ -1,0 +1,115 @@
+# Jones 3D Cog Script
+#
+# item_Plant.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		activated
+message		callback
+
+cog			talkCog					local
+
+keyframe	get=in_reach_bulb.key	local
+
+model		budHand=hand_in_bud.3do	local
+
+sound		foundSnd=SS07J02.wav	local
+sound		clueSnd=SS07J08.wav		local
+
+thing		player					local
+thing		item=-1					local
+
+int			bin=105					local
+int			swapRef					local
+int			bSpoken=0				local
+
+end
+
+# ===================================================================
+
+code
+
+activated:
+
+	StartCutscene(0);
+
+	player = GetSourceRef();
+	item = GetSenderRef();
+
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+
+	talkCog = GetCogByIndex(0);
+	SendMessage(talkCog, 27);
+
+	# Wait a bit before starting animation
+	Sleep(0.33);
+    if (GetInv(player, bin) < GetInvMax(player, bin))
+	{
+		CaptureThing(player);
+		PlayKey(player, get, 5, 0x12, 0); 
+	}
+	else
+	{
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+		return;
+	}
+
+	SetExtCamOffset('0.15 -0.05 0.04');
+    SetExtCamLookOffset('0.0 0.02 0.0');
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	if (GetParam(1) == 21)
+	{
+        swapRef = SetThingMesh(player, 15, budHand, 0);
+
+		if (item != -1)
+		{
+			DestroyThing(item);
+			item = -1;
+		}
+	}
+	else
+	{
+		ReleaseThing(player);
+        RestoreThingMesh(player, swapRef);
+	
+		ChangeInv(player, bin, 1.0);
+		SetInvAvailable(player, bin, 1);
+		JonesInvItemChanged(bin);
+	
+		RestoreExtCam();
+	
+		Sleep(1.0);
+
+        if (!bSpoken)
+		{
+            bSpoken = 1;
+            Sleep(0.1);
+			PlayVoice(player, foundSnd, 1.0, 1);
+			PlayVoice(player, clueSnd, 1.0, 0);
+		}
+		else
+		{
+			PlayVoice(player, foundSnd, 1.0, 0);
+		}
+
+        ClearActorFlags(player, 0x200000);
+		EndCutscene();
+	}
+
+	return;
+
+end

@@ -1,0 +1,29 @@
+# Jones 3D Cog Script
+#
+# gen_DamageType.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		damaged
+
+	thing		target	mask=0x8
+	surface		surf	mask=0x8
+
+end
+
+# ========================================================================================
+
+code
+
+damaged:
+
+//	PrintHex(GetParam(1));
+	return;
+
+end

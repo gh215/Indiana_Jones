@@ -1,0 +1,95 @@
+# Jones 3D Cog Script
+#
+# pyr_fluesplash.cog
+#	
+# Splash and rings at the bottom of the flue
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+symbols
+message	startup
+message	timer
+message	crossed
+message	arrived
+message	pulse
+
+thing	ringghost
+thing	tempring	local
+thing	mistghost
+thing	whirler
+thing	flue
+
+surface	turniton
+surface	turnitoff
+
+material	wateranim=gen_a_water_well.mat			local
+material	fallsanim=spray_a4mth_loop.mat			local
+
+sound	fluepour=pyr_waterspout_loop.wav	local
+
+template	ring=+ripples		local
+template	mist=H2Ofluefx		local
+
+flex	cursound=0	local	
+end
+
+code
+startup:
+	sleep(.01);
+	
+	AttachThingToThing(mistghost, whirler);
+	
+	#animate pool and falls
+	materialanim(wateranim, 10, 1);
+	materialanim(fallsanim, 15, 1);
+
+	# fiddle with the flue
+	SetThingLight(flue, '.3 .3 .4', .001, .01);
+	SetCollideType(flue, 0);
+
+	cursound = PlaySoundThing(fluepour, whirler, .2, 1, 12, 0x1);
+
+	return;
+
+crossed:
+# ---> On/Off surfaces
+
+	if (GetSenderRef() == turniton)
+	{
+		#start turning particle generator
+		Rotate(whirler, 3600, 1, 5);
+		SetPulse(.1);
+		SetTimer(.3);
+		ChangeSoundVol(cursound, 1, 1);
+	}
+	else if (GetSenderRef() == turnitoff)
+	{
+		StopThing(whirler);
+		SetPulse(0);
+		SetTimer(0);
+		ChangeSoundVol(cursound, .2, 1);
+	}
+		
+	return;
+
+arrived:
+# ---> whirler
+
+	Rotate(whirler, 3600, 1, 4);
+	return;
+
+timer:
+	tempring = CreateThing(ring, ringghost);
+	AnimateSpriteSize(tempring, '0.1 0.1 1', '0.3 0.3 0', 2);
+	SetTimer(Rand()/2);
+	return;
+
+pulse:
+	CreateThing(mist, mistghost);
+	SetPulse(Rand()/5);
+	return;
+
+end
+

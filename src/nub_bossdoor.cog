@@ -1,0 +1,979 @@
+# Jones 3D Cog Script
+#
+# nub_BossDoor.cog
+#
+# [TL] [MDR] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message			startup
+message			activated
+message			arrived
+message			entered
+message			exited
+message			pulse
+message			damaged
+message			touched
+message			callback
+
+# ************************** SUBROUTINES ********************
+flex			BossDeadCutscene				local
+flex			ChargePadFx						local
+flex			DischargePadFx					local
+
+# ********************** MISC LINKED STUFF ******************
+thing			top
+thing			door0			
+thing			door1
+thing			elev0
+thing			sarcfull
+thing			sarcempty
+thing			invissarc
+thing			moveeye
+thing			boss
+thing			cam0
+thing			cam1
+thing			indy
+cog				cog_Boss
+cog				hint
+thing			riseGhost
+thing			risenGhost
+
+# ********************** MISC GEOM **************************
+surface			openface
+surface			dooradjoin
+
+# ********************** PADS O' DEATH **********************
+int				i_NumPads=4						local
+surface			pad0			mask=0x404					#northeast
+surface			pad1			mask=0x404					#southeast
+surface			pad2			mask=0x404					#southwest
+surface			pad3			mask=0x404					#northwest
+
+surface			ledge0
+surface			ledge1
+surface			ledge2
+surface			ledge3
+
+thing			charger0		mask=0x08
+thing			charger1		mask=0x08
+thing			charger2		mask=0x08
+thing			charger3		mask=0x08
+int				pad0charged=0					local
+int				pad1charged=0					local
+int				pad2charged=0					local
+int				pad3charged=0					local
+int				pad0track						local
+int				pad1track						local
+int				pad2track						local
+int				pad3track						local
+
+int         north=0             local
+int         east=1              local
+int         south=2             local
+int         west=3              local
+
+int			camspot				local
+vector		v_bosslvec			local
+vector		v_bossface			local
+flex		f_dot				local
+
+
+
+int				b_hitBoss=0						local
+int				b_hitPlayer=0					local
+int				n_BossPad=-1					local	# Current pad boss is on
+int				n_PlayerPad=-1					local	# Current pad player is on
+
+vector			vec_padCenter					local	# Track Boss' position on death pad
+
+# ********************** MISC LOCAL STUFF *******************
+int				n_sender						local
+thing			t_Player						local
+thing			t_RealBoss						local
+thing			sarcTarg0
+thing			sarcTarg1
+thing			sarcCam
+thing			camTarg
+thing			actor							local
+thing			actorGhost
+thing			sarcCharger		mask=0x08
+thing			invisibox0										#GGJ boxes for lid
+thing			kneelActor						local
+thing			topCam
+
+thing			deadCam0										#north
+thing			deadCam1										#east
+thing			deadCam2										#south
+thing			deadCam3										#west
+
+
+sector			sec_pos							local
+
+int				n_pad							local
+int				sarcdoneflag=0					local
+int				sarcopenflag=0					local
+int				unlocked=0						local
+int				tracknum0						local
+int				tracknum1						local
+int				n_idx							local
+int				bossOnce=0						local
+int				callbackOnce=0					local
+int				callbackNum						local
+int				CSShake=0						local
+int				vibe							local
+
+vector			vec_pos							local
+vector			vec_dir							local
+vector			v_targetpos						local
+flex			f_val							local
+flex			headturn						local
+
+vector			posOffset						local
+vector			angOffset						local
+
+
+# ************************** SPECIAL FX *********************
+template		tpl_sparks=rbossFntnLG					local
+template		tpl_glow=rbossElecGlow					local
+template		tpl_arcs=rbossElecArc					local
+
+int				n_snd									local
+int				kneeltrack								local
+int				bossSndTrack1							local
+int				bossSndTrack2							local
+
+
+# ************************** MISC TEMPLATES *****************
+template		actortpl=indy_sh_actor					local
+
+keyframe		sarcopen=nub_srcfgs_open.key			local
+keyframe		sarcclose=nub_srcfgs_close.key			local
+keyframe		openKey=0in_armsup_1_1.key				local		#indy
+keyframe		grabKey=0in_reach_jewel.key				local
+keyframe		kneel=0in_stand6.key			   		local
+keyframe		kneelDown=0in_stand1_bd_6.key	   	   	local
+keyframe		standUp=0in_stand6_bd_1.key		   		local
+keyframe		in_botharmsup=0in_armsup_1_1.key		local
+keyframe		in_ltarmup=0in_leftarm_1_1.key			local
+keyframe		key_inShock=in_hit_shocked.key			local
+
+sound			eyeplaced=nub_anubisarm_place_c.wav		local
+sound			nubVoice=NB07j01.wav					local
+sound			eyeVoice=NB07j02.wav					local
+sound			fits=INXJ109.WAV						local		#It fits!
+sound			socketVoice=NB08j01.wav					local
+sound			bossMus=mus_gen_awesome1.wav 			local
+sound			bossDieMus=mus_gen_indyrelief.wav		local
+sound			pyrMoveSnd=nub_pyr_top_move_c.wav		local
+sound			pyrStopSnd=shs_statue_stop.wav			local
+sound			sarcOpenSnd=nub_sarc_open_c.wav			local
+sound			sarcFlipSnd=nub_sarc_jewel_turn_c.wav	local
+sound			sarcCloseSnd=nub_sarc_close_c.wav		local
+sound			snd_chargerMove=sea_crane_start_c.wav	local
+sound			snd_padHum=nub_charged_pad_c.wav		local
+sound			bossRaiseSnd=nub_boss_raise_c.wav		local
+sound			bossComment=NB08J02.WAV					local
+sound			snd_shock=sol_trnsfrmr_zap.wav			local       # zzzap!
+sound			snd_ow=inxj017g.wav						local       # ow!
+
+flex			temp			local
+end
+
+# ========================================================================================
+code
+
+# ........................................................................................
+startup:
+
+	t_RealBoss = -1;
+
+	Sleep(0.01);
+    
+	SetSurfaceFlags(ledge0, 0x1000000);
+    SetSurfaceFlags(ledge1, 0x1000000);
+    SetSurfaceFlags(ledge2, 0x1000000);
+    SetSurfaceFlags(ledge3, 0x1000000);
+
+	t_Player = GetLocalPlayerThing();
+
+	AttachThingToThing(moveeye, elev0);
+	AttachThingToThing(boss, elev0);
+
+	SetCollideType(door0, 0);
+	SetCollideType(door1, 0);
+	SetThingFlags(sarcempty, 0x80000);
+	SetThingFlags(moveeye, 0x10);
+
+	SetThingLight(door0, '0.5 0.5 0.5', 0.1, 0.5);
+	SetThingLight(door1, '0.5 0.5 0.5', 0.1, 0.5);
+	SetThingLight(elev0, '0.5 0.5 0.5', 0.1, 0.5);
+	SetThingLight(boss, '0.5 0.5 0.5', 0.1, 0.5);
+
+	SetThingFlags(indy, 0x80000);
+
+    SetCollideType(invisibox0, 0);
+
+	#call temp;
+    
+	return;
+
+
+#........................................................................................
+entered:
+
+	if (GetSenderRef() == openface)
+	{
+		unlocked = 1;
+		print("...click...");
+	}
+
+	for (n_idx=0; n_idx<i_NumPads; n_idx=n_idx + 1)
+	{
+		if ( GetSenderRef() == pad0[n_idx] )
+		{
+#			DEBUGPRINT("Entered a pad");					#Shouldn't pulse be after pad is set?
+			SetPulse(0.05);
+
+			# Did BOSS step on a charged pad?
+			if ( GetSourceRef() == t_RealBoss )
+			{
+#				DEBUGFLEX(n_idx, "Boss entered pad");
+				n_BossPad		= n_idx;
+
+				return;
+			}
+
+			if ( GetSourceRef() == t_Player )
+			{
+#				DEBUGFLEX(n_idx, "Player entered pad");
+				n_PlayerPad		= n_idx;
+
+				return;
+			}
+		}
+	}
+
+	return;
+
+
+#........................................................................................
+exited:
+
+	if (GetSenderRef() == openface)
+	{
+		unlocked = 0;
+		print("...kachunk...");
+	}
+
+	for (n_idx=0; n_idx < i_NumPads; n_idx=n_idx + 1)
+	{
+		if ( GetSenderRef() == pad0[n_idx] )
+		{
+			# Boss stepping off one of the death pads?
+			if ( GetSourceRef() == t_RealBoss )
+			{
+#				DEBUGFLEX(n_idx, "Boss exited pad");
+				n_BossPad = -1;
+			}
+
+			if ( GetSourceRef() == t_Player )
+			{
+#				DEBUGFLEX(n_idx, "Player exited pad");
+				n_PlayerPad = -1;
+			}
+		}
+	}
+
+	return;
+
+
+#........................................................................................
+pulse:
+	if (CSShake == 1)
+	{
+		#rumbleVol = rumbleVol * 1.001;
+		#PrintFlex(rumblevol);
+		#ChangeSoundVol(rumbleTrack, rumbleVol, 0.1);
+		#PrintInt(rumbletrack);
+   
+		vibe = randBetween(1, 4);
+		
+		
+		if (vibe == 1)
+		{
+			posOffset = '-0.005 0.00 -0.002';
+			angOffset = '0.00 -0.002 0.002';
+		}
+		if (vibe == 2)
+		{
+			posOffset = '0.005 -0.005 0.002';
+			angOffset = '0.002 0.00 -0.002';
+		}
+		if (vibe == 3)
+		{
+			posOffset = '0.002 0.005 -0.005';
+			angOffset = '-0.002 0.002 -0.002';
+		}
+		if (vibe == 4)
+		{
+			posOffset = '-0.002 0.00 0.005';
+			angOffset = '0.00 0.00 0.002';
+		}
+
+		SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+
+		return;
+	}
+
+	if ( (n_BossPad > -1) && (b_hitBoss == 0) )				# Boss on a death pad?
+	{
+		if ( pad0charged[n_BossPad] == 1 )						# Pad is charged?
+		{
+			vec_pos	= GetThingPos(t_RealBoss);
+			vec_pos	= VectorSet(VectorX(vec_pos), VectorY(vec_pos), 0);
+
+			vec_padCenter	= GetSurfaceCenter(pad0[n_BossPad]);
+			vec_padCenter	= VectorSet(VectorX(vec_padCenter), VectorY(vec_padCenter), 0);
+#			DEBUGFLEX(VectorDist(vec_pos, vec_padCenter), "Boss dist to pad center =");
+
+			if ( VectorDist(vec_pos, vec_padCenter) < 0.12 )	# Is victim approx centered on pad?
+			{
+#				DEBUGFLEX(n_BossPad, "Boss discharging pad");
+				b_hitBoss = 1;
+
+				call DischargePadFx;
+
+				if ( GetHealth(t_RealBoss) <= 0 )
+				{
+					call BossDeadCutscene;
+				}
+			}
+		}
+	}
+
+	if ( (n_PlayerPad > -1) && (b_hitPlayer == 0) )			# Player on a death pad?
+	{
+		if ( pad0charged[n_PlayerPad] == 1 )					# Pad is charged?
+		{
+#			DEBUGFLEX(n_PlayerPad, "Player on charged pad");
+			vec_pos	= GetThingPos(t_Player);
+			vec_pos	= VectorSet(VectorX(vec_pos), VectorY(vec_pos), 0);
+
+			vec_padCenter	= GetSurfaceCenter(pad0[n_PlayerPad]);
+			vec_padCenter	= VectorSet(VectorX(vec_padCenter), VectorY(vec_padCenter), 0);
+#			DEBUGFLEX(VectorDist(vec_pos, vec_padCenter), "Player dist to pad center =");
+
+			if ( VectorDist(vec_pos, vec_padCenter) < 0.16 )	# Is player approx centered on pad?
+			{
+				b_hitPlayer = 1;
+
+				call DischargePadFx;
+
+				ClearActorFlags(t_Player, 0x200000);
+			}
+		}
+	}
+
+	if ( (CSShake == 0) && (n_BossPad == -1) && (n_PlayerPad == -1) )
+	{
+		SetPulse(0);
+	}
+
+	return;
+
+
+#........................................................................................
+activated:
+if (GetCurWeapon(t_player) != 0) return;
+
+	if ((GetSenderRef() == invissarc) && (unlocked == 1))
+	{
+		if ( sarcopenflag == 0 )
+		{
+			sarcopenflag = 1;
+			
+			SetThingFlags(t_Player, 0x80000);
+			if ( MakeMeStop() == -1 )
+				return;
+			DeSelectWeaponWait(t_Player);
+            StartCutscene(1);
+			
+			actor = CreateThing(actorTpl, actorGhost);
+			CaptureThing(actor);
+			
+			CopyPlayerHolsters(t_Player, actor);
+			ClearThingFlags(actor, 0x80000);
+			
+			SetCameraLookInterp(2, 0); # no p & t
+			SetCameraPosInterp(2, 0); # no dolly
+			SetCameraFocus(2, sarcCam);
+			SetCameraSecondaryFocus(2, sarcTarg0);
+			SetCurrentCamera(2);
+			SetCameraFOV(90, 0, 0.0);
+			MoveThingToPos(sarcCam, GetThingPos(camTarg), 6.5);
+			MoveThingToPos(sarcTarg0, GetThingPos(sarcTarg1), 6.5);
+			Sleep(1.0);
+            
+			PlayKey(actor, openKey, 2, 0x12, 0);
+			Sleep(0.5);
+			PlaySoundThing(sarcOpenSnd, sarcFull, 1.0, -1.0, -1.0, 0x0);
+			tracknum0=PlayKey(sarcfull, sarcopen, 4, 0x4, 0);
+			SetCollideType(invisibox0, 1);
+            
+			return;
+		}
+		else if ( sarcopenflag == 1 )
+		{
+			if ( sarcdoneflag == 0 )
+			{
+				#sarcdoneflag = 1;
+				#StartCutscene(1);
+				#SetActorFlags(t_Player, 0x200000);
+				#StopThing(t_Player);
+				#PlayMode(t_Player, 1, 1);
+				#PlayMode(t_Player, 60, 1);
+			
+                #ClearActorFlags(t_Player, 0x200000);
+				#EndCutScene();
+				return;
+			}
+			else
+			{
+				StartCutscene(1);
+				SetActorFlags(t_Player, 0x200000);
+				StopThing(t_Player);
+				PlayMode(t_Player, 1, 1);
+				PlayMode(t_Player, 60, 1);
+				print("nope...");
+				ClearActorFlags(t_Player, 0x200000);
+				EndCutScene();
+				return;
+			}
+		}
+	}
+
+	# Player put robot gem-eye into floor slot?
+	if ( (GetSenderRef() == moveeye) && (GetCurItem(t_Player) == 78) )
+	{
+		SendMessage(hint, USER6);
+
+        #PlayMode(t_Player, 60, 1);
+        
+		#Sleep(2.0);
+		if ( MakeMeStop() == -1 )
+			return;
+		StartCutscene(1);
+		kneelActor=createThing(actorTPL, t_Player);
+		CaptureThing(kneelActor);
+		CopyPlayerHolsters(t_Player, kneelActor);
+        SetThingFlags(t_Player, 0x80000);
+		ClearThingFlags(kneelActor, 0x80000);
+        AISetCutsceneMode(kneelActor);
+		ResetThing(t_Player);
+			
+        SetExtCamOffset('-0.1 -0.05 0.07');
+
+        
+		PlayKey(kneelActor, kneelDown, 2, 0x12, 1);
+				
+		kneelTrack = PlayKey(kneelActor, kneel, 2, 0x14, 0);
+				
+		Sleep(0.5);
+        
+        ClearThingFlags(moveeye, 0x10);
+		ChangeInv(t_Player, 78, -1);
+        
+		#ClearThingFlags(moveeye, 0x80000);
+		PlaySoundLocal(eyeplaced, 1.0, 0, 0x0000, 1);
+        PlayVoice(kneelActor, fits, 1.0, 0);
+		StopKey(kneelActor, kneelTrack, 0.0);			# no longer kneeling
+		PlayKey(kneelActor, standUp, 2, 0x12, 1);		# indy stands up
+        
+		
+		#Switch to shot of pyramid so we can get Indy out of the way.
+		SetCameraFocus(2, topCam);
+        SetCameraSecondaryFocus(2, top);
+        SetCurrentCamera(2);
+		SetCameraFOV(110, 0, 0.0);
+
+        CSShake = 1;
+        SetPulse(0.01);
+        
+		PlaySoundThing(pyrMoveSnd, top, 1.0, -1.0, -1.0, 0x0);
+		MoveToFrame(top, 1, 1.0);
+        
+		ClearSurfaceFlags(ledge0, 0x1000000);
+		ClearSurfaceFlags(ledge1, 0x1000000);
+		ClearSurfaceFlags(ledge2, 0x1000000);
+		ClearSurfaceFlags(ledge3, 0x1000000);
+        
+		
+		DestroyThing(kneelActor);
+        ClearThingFlags(indy, 0x80000);
+        CopyPlayerHolsters(t_Player, indy);
+		CopyOrientandPos(indy, t_Player);
+		AISetCutsceneMode(indy);
+		AIEnableHeadTracking(indy, moveeye);
+		#AISetLookThing(indy, riseGhost);
+        Sleep(3.5);
+        
+        SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 7.5);
+		Sleep(0.01);
+		
+        SetCameraFocus(2, cam0);
+		SetCameraSecondaryFocus(2, riseGhost);
+		MoveThingToPos(riseGhost, GetThingPos(risenGhost), 7.5);
+		SetCameraFOV(50, 0, 0.0);
+		SetCameraFOV(90, 1, 7.5);
+
+		
+		SetCameraFocus(2, cam1);
+		#SetCameraSecondaryFocus(2, boss);
+        #SetCurrentCamera(2);
+		#SetCameraFOV(90, 0, 0.0);
+		
+		bossSndTrack1=PlaySoundLocal(bossMus, 1.0, 0.0, 0x0, 0);
+		bossSndTrack2=PlaySoundThing(bossRaiseSnd, elev0, 1, -1.0, -1.0, 0x8);
+
+		Rotate(door0, -180, 2, 2.0);
+		Rotate(door1, 180, 2, 2.0);
+		SetCollideType(boss, 0);
+		SetCollideType(moveeye, 0);
+		SetCollideType(elev0, 0);
+		Sleep(1.0);
+		MoveToFrame(elev0, 1, 1.0);
+		Sleep(6.0);
+		ChangeSoundVol(bossSndTrack1, 0.2, 0.2);
+		ChangeSoundVol(bossSndTrack2, 0.2, 0.2);
+		Sleep(0.01);
+        PlayKey(indy, in_ltarmup, 4, 0x12, 0);
+        PlayVoice(indy, bossComment, 1, 0);
+		Sleep(5.5);
+        PlayKey(indy, in_botharmsup, 4, 0x12, 0);
+		Sleep(3.0);
+
+		#WaitForStop(elev0);
+		#Sleep(1.0);
+		SetThingFlags(indy, 0x80000);
+		ClearThingFlags(t_Player, 0x80000);
+		DestroyThing(indy);
+		
+		
+		# revert cam
+#		v_targetpos = VectorAdd(VectorTransformToOrient(t_Player, '0.05 -0.2 0.0'), GetThingPos(t_player));	
+		SetCameraPosition(1, GetThingPos(cam1));
+
+        # Send User0 msg == special 'Create' Boss msg
+		t_RealBoss = SendMessageEx(cog_Boss, USER0, boss, 0, 0, 0);		# (cogRef, USER0, Location-Thing, 0, 0, 0)
+
+		DestroyThing(boss);
+		DestroyThing(moveeye);
+
+        
+		SetCurrentCamera(1);
+        RestoreExtCam();
+        SetCameraFOV(90, 0, 0.0);
+        
+		ClearActorFlags(t_Player, 0x200000);
+		SetCollideType(door0, 3);
+		SetCollideType(door1, 3);
+		EndCutScene();
+	}
+
+return;
+
+
+#........................................................................................
+damaged:	
+
+	if (GetParam(1) != 0x4000) return;
+
+	n_sender = GetSenderRef();
+
+	if (n_sender == sarcCharger)
+	{
+		Sleep(0.5);
+
+		if ( MakeMeStop() == -1 )
+			return;
+		DeselectWeaponWait(t_Player);
+		StartCutscene(1);
+        
+		MoveToFrame(sarcCharger, 0, 0.5);
+        PlaySoundThing(snd_chargerMove, sarcCharger, 1.0, -1.0, -1.0, 0x80);
+		
+		Sleep(0.5);
+
+        SetThingFlags(t_Player, 0x80000);
+		ResetThing(t_Player);
+        
+		SetCameraFocus(2, sarcCam);
+		SetCameraSecondaryFocus(2, sarcTarg0);
+		SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0.0);
+    
+		CopyOrientAndPos(t_Player, actor);
+		CopyPlayerHolsters(t_Player, actor);
+		ClearThingFlags(actor, 0x80000);
+		
+		AISetCutsceneMode(actor);
+		AISetMoveSpeed(actor, 1.0);
+        ResumeKey(sarcfull, tracknum0);
+        PlaySoundThing(sarcFlipSnd, sarcFull, 1.0, -1.0, -1.0, 0x0);
+		Sleep(0.5);
+
+		AISetLookThing(actor, sarcFull);
+		Sleep(0.5);
+		AISetMoveThing(actor, actorGhost, 0);
+        
+		Sleep(1.0);
+		AISetLookThing(actor, sarcEmpty);
+		
+		PlayVoice(actor, eyeVoice, 1, 1);
+		PlayKey(actor, grabKey, 4, 0x12, 0);
+
+		Sleep(1.0);
+		StopAnim(tracknum0);
+		DestroyThing(sarcfull);
+		ClearThingFlags(sarcempty, 0x80000);
+		ChangeInv(t_Player, 78, 1.0);
+		SetInvAvailable(t_Player, 78, 1);
+		JonesInvItemChanged(78);
+		
+		tracknum1=PlayKey(sarcempty, sarcclose, 4, 0x4, 0);
+		SetCollideType(invisibox0, 0);
+        
+		PlaySoundThing(sarcCloseSnd, sarcEmpty, 1.0, -1.0, -1.0, 0x0);
+		
+        CopyOrientAndPos(actor, t_Player);
+		ClearActorFlags(t_Player, 0x200000);
+		ClearThingFlags(t_Player, 0x80000);
+		SetThingFlags(actor, 0x80000);
+
+        # revert cam
+		v_targetpos = VectorAdd(VectorTransformToOrient(t_Player, '-0.2 -0.05 0.0'), GetThingPos(t_player));	
+		SetCameraPosition(1, v_targetpos);
+        
+		SetCurrentCamera(1);
+
+		EndCutScene();
+    }
+	else
+	{
+		# Charged a pad of death?
+		call ChargePadFx;
+	}
+
+	return;
+
+#........................................................................................
+arrived:
+	if (GetSenderRef() == top)
+	{
+		PlaySoundThing(pyrStopSnd, top, 1.0, -1.0, -1.0, 0x0);
+        CSShake = 0;
+		SetPulse(0.0);
+		return;
+	}
+
+	if (GetSenderRef() == elev0)
+	{
+#		print("uh, oh...hold on there big guy...");
+#
+#		Sleep(9.5);
+#
+#		# Send User0 msg == special 'Create' Boss msg
+#		t_RealBoss = SendMessageEx(cog_Boss, 27, boss, 0, 0, 0);		# (cogRef, User0, Location-Thing, 0, 0, 0)
+#
+#		DestroyThing(boss);
+#		DestroyThing(moveeye);
+	}
+
+	return;
+	
+#........................................................................................
+touched:
+	if ((GetSenderRef() == moveeye) && (bossOnce == 0))
+	{
+        PlayVoice(t_player, socketVoice, 1, 0);
+		bossOnce=1;
+	}
+	return;
+
+
+#........................................................................................
+callback:
+	callbackNum = GetParam(1);
+	if (callbackNum != 21) return;
+	if (callbackOnce == 1) return;
+	callbackOnce = 1;    
+	PauseKey(sarcfull, tracknum0);
+	AISetCutsceneMode(actor);
+	AISetLookThing(actor, sarcfull);
+	Sleep(2.0);
+	PlayVoice(actor, nubVoice, 1, 1);
+
+	Sleep(1.0);
+	MoveThingToPos(sarcTarg0, GetThingPos(sarcCharger), 2.0);
+	SetCameraFOV(40, 1, 2.0);
+	headTurn = GetThingMaxHeadVel(actor);
+	SetThingMaxHeadVel(actor, 100);
+	Sleep(0.5);
+	#AISetLookThing(actor, sarcCharger);
+    MoveToFrame(sarcCharger, 1, 0.5);
+    AIEnableHeadTracking(actor, sarcCharger);
+	PlaySoundThing(snd_chargerMove, sarcCharger, 1.0, -1.0, -1.0, 0x80);
+    CopyOrientandPos(actor, t_Player);
+	Sleep(2.0);
+	SetThingMaxHeadVel(actor, headTurn);
+	AIDisableHeadTracking(actor);
+
+	# revert cam
+	v_targetpos = VectorAdd(VectorTransformToOrient(t_Player, '-0.2 -0.05 0.0'), GetThingPos(t_player));	
+	SetCameraPosition(1, v_targetpos);
+	
+    SetCurrentCamera(1);
+	ClearActorFlags(t_Player, 0x200000);
+	ClearThingFlags(t_Player, 0x80000);
+	SetThingFlags(actor, 0x80000);
+	EndCutScene();
+	MoveThingToPos(sarcTarg0, GetThingPos(sarcTarg1), 0.0);
+
+	return;
+
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+#........................................................................................
+# n_sender (which charger) must be initialized for this to work
+#........................................................................................
+ChargePadFx:
+
+	for (n_idx=0; n_idx < i_NumPads; n_idx=n_idx + 1)
+	{
+		if ( n_sender == charger0[n_idx] )
+		{
+			if (pad0charged[n_idx] == 0)
+			{
+				MoveToFrame(charger0[n_idx], 1, 1.0);						# Move charger plate in
+				
+				n_snd = PlaySoundThing(snd_padHum, charger0[n_idx], 1.0, -1.0, -1.0, 0x81);
+				SetThingUserData(charger0[n_idx], n_snd);					# Save hum sound handle
+
+				pad0charged[n_idx]	= 1;									# Mark pad as charged
+				pad0track[n_idx]    = SurfaceAnim(pad0[n_idx], 3.8, 1);		# Start pad animating
+				SetFaceLightMode(pad0[n_idx], 0);							# Set pad lighting mode
+			}
+		}
+		else
+		{
+			MoveToFrame(charger0[n_idx], 0, 1.0);						# Move charger plate back out
+			PlaySoundThing(snd_chargerMove, charger0[n_idx], 1.0, -1.0, -1.0, 0x80);
+		}
+	}
+
+	return;
+
+#........................................................................................
+# n_BossPad and/or n_PlayerPad (which pad to discharge) must be intialized for this to work
+#........................................................................................
+DischargePadFx:
+
+	if ( b_hitBoss == 1 )
+	{
+		n_pad = n_BossPad;
+	}
+	else
+	{
+		n_pad = n_PlayerPad;
+	}
+
+	n_snd = GetThingUserData(charger0[n_pad]);					# Get hum sound handle
+	StopSound(n_snd, 0.2);										# Stop humming!
+
+	pad0charged[n_pad] = 0;										# Mark pad as discharged
+	StopAnim(pad0track[n_pad]);									# Stop pad animating
+	SetFaceLightMode(pad0[n_pad], 3);							# Reset pad lighting mode
+	SetWallCel(pad0[n_pad], 0);
+
+	if ( b_hitBoss == 1 )
+	{
+#		DEBUGFLEX(n_BossPad, "Boss discharging pad");
+		b_hitBoss = 0;
+
+		SendMessageEx(cog_Boss, USER1, 120, 0, 0, 0);				# Send USER1 msg == special 'Damage' Boss msg
+
+		vec_dir	= VectorSet(0, 0.1, 0);								# Large scale boss sparks
+		for (n_idx = 0; n_idx < 8; n_idx = n_idx + 1)
+		{
+			vec_dir	= VectorRotate(vec_dir, '0 45 0');
+			vec_pos = VectorAdd(GetThingPos(t_RealBoss), vec_dir);
+			CreateThingAtPos(tpl_sparks, FindNewSectorFromThing(t_RealBoss, vec_pos), vec_pos, '0 0 0');
+		}
+
+		vec_pos = GetThingPos(t_RealBoss);
+		vec_pos = VectorSet(VectorX(vec_pos), VectorY(vec_pos), VectorZ(vec_pos)-VectorZ(GetThingInsertOffset(t_RealBoss)));
+		sec_pos = FindNewSectorFromThing(t_RealBoss, vec_pos);
+		CreateThingAtPos(tpl_glow, sec_pos, vec_pos, '0 0 0');
+		CreateThingAtPos(tpl_arcs, sec_pos, vec_pos, '0 0 0');
+	}
+	else if ( b_hitPlayer == 1 )
+	{
+#		DEBUGFLEX(n_PlayerPad, "Player discharging pad");
+
+		if ( MakeMeStop() == -1 )
+			return;
+
+		b_hitPlayer = 0;
+
+		vec_pos = GetThingPos(t_Player);
+		vec_pos = VectorSet(VectorX(vec_pos), VectorY(vec_pos), VectorZ(vec_pos)-VectorZ(GetThingInsertOffset(t_Player)));
+		CreateThingAtPos(tpl_glow, FindNewSectorFromThing(t_Player, vec_pos), vec_pos, '0 0 0');
+		CreateThingAtPos(tpl_sparks, GetThingSector(t_Player), GetThingPos(t_Player), '0 0 0');
+
+		DamageThing(t_Player, 200, 0x100000, t_Player);				# Smack player with DAMAGE_LIGHTNING
+
+		if ( GetThingHealth(t_Player) > 0 )
+		{
+			PlaySoundLocal(snd_ow, 1.0, 0.0, 0x0, 0);
+			PlaySoundLocal(snd_shock, 1.0, 0.0, 0x0, 0);
+			PlayKey(t_player, key_inShock, 6, 0x12, 1);
+		}
+	}
+
+	return;
+
+
+#........................................................................................
+BossDeadCutscene:
+
+
+#Determine boss's direction
+if (n_BossPad == 0)			#boss is on northeast pad
+{
+	camSpot = 0;
+	v_Bosslvec = GetThingLVec(t_RealBoss);
+    v_BossFace = VectorSub((GetThingPos(deadCam1)), (GetThingPos(t_RealBoss)));
+
+	f_dot = VectorDot(VectorNorm(v_BossFace), v_Bosslvec);
+    
+	if (f_dot < 0)
+	{
+		camSpot = north;
+	}
+	else
+	{
+		camSpot = east;
+	}
+}
+
+if (n_BossPad == 1)			#boss is on southeast pad
+{
+	camSpot = 0;
+	v_Bosslvec = GetThingLVec(t_RealBoss);
+    v_BossFace = VectorSub((GetThingPos(deadCam2)), (GetThingPos(t_RealBoss)));
+
+	f_dot = VectorDot(VectorNorm(v_BossFace), v_Bosslvec);
+    
+	if (f_dot < 0)
+	{
+		camSpot = east;
+	}
+	else
+	{
+		camSpot = south;
+	}
+}
+
+
+if (n_BossPad == 2)			#boss is on southwest pad
+{
+	camSpot = 0;
+	v_Bosslvec = GetThingLVec(t_RealBoss);
+    v_BossFace = VectorSub((GetThingPos(deadCam3)), (GetThingPos(t_RealBoss)));
+
+	f_dot = VectorDot(VectorNorm(v_BossFace), v_Bosslvec);
+    
+	if (f_dot < 0)
+	{
+		camSpot = south;
+	}
+	else
+	{
+		camSpot = west;
+	}
+}
+
+if (n_BossPad == 3)				#boss is on northwest pad
+{
+	camSpot = 0;
+	v_Bosslvec = GetThingLVec(t_RealBoss);
+    v_BossFace = VectorSub((GetThingPos(deadCam0)), (GetThingPos(t_RealBoss)));
+
+	f_dot = VectorDot(VectorNorm(v_BossFace), v_Bosslvec);
+    
+	if (f_dot < 0)
+	{
+		camSpot = west;
+	}
+	else
+	{
+		camSpot = north;
+	}
+}
+
+	print("got him...!");
+	StartCutscene(1);
+    StopThing(t_Player);
+	SetActorFlags(t_Player, 0x200000);
+	PlayMode(t_Player, 1, 0);
+	
+	SetCameraLookInterp(2, 0); # no p & t
+	SetCameraPosInterp(2, 0); # no dolly
+
+	SetCameraFocus(2, deadCam0[camspot]);
+	SetCameraSecondaryFocus(2, t_RealBoss);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0);
+
+
+	PlaySoundLocal(bossDieMus, 1.0, 0.0, 0x0, 0);
+	
+    SetCameraLookInterp(2, 1); # no p & t
+    SetCameraInterpSpeed(2, 3.0);
+
+	Sleep(4.0);
+	SetCameraSecondaryFocus(2, top);
+	Sleep(1.0);
+	PlaySoundThing(pyrMoveSnd, top, 1.0, -1.0, -1.0, 0x0);
+	MoveToFrame(top, 0, 1.0);
+    SetSurfaceFlags(ledge0, 0x1000000);
+    SetSurfaceFlags(ledge1, 0x1000000);
+    SetSurfaceFlags(ledge2, 0x1000000);
+    SetSurfaceFlags(ledge3, 0x1000000);
+    Sleep(5.0);
+	
+	# revert cam
+	v_targetpos = VectorAdd(VectorTransformToOrient(t_Player, '-0.2 -0.05 0.0'), GetThingPos(t_player));	
+	SetCameraPosition(1, v_targetpos);
+	SendMessage(hint, user2);
+	
+        
+	SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0.0);
+	ClearActorFlags(t_Player, 0x200000);
+	EndCutScene();
+
+	return;
+
+#........................................................................................
+end
+

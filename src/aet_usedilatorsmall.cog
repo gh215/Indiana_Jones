@@ -1,0 +1,157 @@
+# Jones 3D Cog Script
+#
+# aet_UseDilatorSmall.cog
+#
+# [TL]
+#
+# This cog is used to control the opening of, and saylines surrounding, the "small" membrane doors
+# for the P.O.R.s for the SOL jewels.  
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+    
+message     startup
+message     damaged
+message		activated
+message		crossed
+
+surface     mem							mask=0x408	# No move adjoin.
+
+thing		mem3do									# 3do membrane-no collide.	
+thing		player						local
+thing		memfake                     mask=0x408
+
+sound		fade=aet_por_open.wav		local
+sound		gizmo=AT03J01.WAV			local		# Line once he uses the Imp5 to open membrane.
+sound		barrier=AT03J02.WAV			local		# Line for when Indy first activates membrane.
+sound		better=AT03J03.WAV			local		# Line once he crosses into the POR.
+
+int			done=0						local		# Int to tell the cog when the membrane is open for good.
+
+cog			aetDoorTalk								# Aetherium doortalk cog for different lines.
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+global1 = 0;    
+global2 = 0;
+global3 = 0;
+
+return;
+    
+# ........................................................................................
+activated:
+
+# If Indy activates the membrane with nothing in hand.
+if ((GetSenderRef() == memfake) && (GetSourceRef() == player) && (GetCurWeapon(player) == 0) || (GetCurWeapon(player) != 18))
+	{
+	if (global1 == 0)
+		{
+		global1 = 1;
+        # Begin small cutscene.
+		MakeMeStop();
+		DeselectWeaponWait(player);	
+		StartCutscene(0);
+		# Camera offset.
+		PlayMode(player, 60, 0);
+		# "Well now!  From this side, the barrier between worlds..."
+		PlayVoice(player, barrier, 1.0, 1);
+		# Return to normal.
+		ResetThing(player);
+		ClearActorFlags(player, 0x200000);
+		EndCutScene();
+		return;
+		}
+	if (global1 != 0)
+		{
+        # Begin small cutscene.
+		MakeMeStop();
+		DeselectWeaponWait(player);	
+		StartCutscene(0);
+		# Camera offset.
+		PlayMode(player, 60, 0);
+		SendMessageEx(aetDoorTalk, user3, player, 0, 0, 0);
+		while (global15 == 0)
+			{
+			#Wait for line to finish...
+			Sleep(0.01);
+			}
+		# Return to normal.
+		ResetThing(player);
+		ClearActorFlags(player, 0x200000);
+		EndCutScene();
+		}
+	}
+
+return;
+
+# ........................................................................................
+damaged:
+
+# Code for when Imp5 is used on no move adjoin.
+if ((GetSenderRef() == memfake) && (GetParam(1) == 0x5000) && (done == 0))
+{
+    done = 1;
+    # Begin small cutscene.
+	DestroyThing(memfake);
+	StartCutscene(0);
+    MakeMeStop();
+    //DeselectWeaponWait(player);	
+    # Fade out mem 3do.
+	ThingFadeAnim(mem3do, 1, 0, 3.0, 0);
+	PlaySoundLocal(fade, 1.0, 0, 0x0000, 0);
+	Sleep(3.1);
+    # Check to see if this line already played.
+	if (global2 == 0)
+		{
+		# "Well Now!  This gizmo seems to open..."
+		PlayVoice(player, gizmo, 1.0, 1);
+		global3 = 1;
+		}
+	if (global2 == 1)
+		{
+		# Code for using aet_DoorTalk.cog.
+		SendMessageEx(aetDoorTalk, user1, player, 0, 0, 0);
+        while (global15 == 0)
+			{
+			#Wait for line to finish...
+			Sleep(0.01);
+			}
+		}
+	global2 = 1;
+    # Destroy no longer needed membrane 3do.
+	DestroyThing(mem3do);
+    # Set no move adjoin to "move".
+    SetAdjoinFlags(mem, 2);
+    # Return to normal.
+    ClearActorFlags(player, 0x200000);
+	EndCutScene();
+}
+
+return;
+
+# ........................................................................................
+crossed:
+
+# Code for entering a P.O.R. for the first time and playing the right line.
+if (GetSenderRef() == mem)
+	{
+	if (global3 == 1)
+		{
+		global3 = 2;
+        # "...and I feel better already!"
+		PlayVoice(player, better, 1.0, 0);
+		}
+	}
+
+return;
+
+# ........................................................................................
+end
+

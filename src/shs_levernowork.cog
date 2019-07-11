@@ -1,0 +1,108 @@
+# Jones 3D Cog Script
+#
+# shs_TowerGates.cog     Make the gates btwn the towers open/close.  
+#
+# [JWC, RD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message 	activated
+
+keyframe	indypull=in_pull_lever.key			local
+keyframe	leverDown=gen_lever_pull.key		local
+
+sound		leverPull=nub_lever_pull_c.wav		local
+sound		leverBack=nub_lever_reset_c.wav		local
+
+
+thing		player				local
+thing		indy				nolink
+thing		cam1
+thing		lever
+thing		c1_t1			# Indy		
+
+int			curCam				local
+
+cog			NoWorkTalkCog
+
+end
+
+# ========================================================================================
+
+code
+
+
+activated:
+   
+	if (GetSenderRef() != lever) return;
+    
+	# Prep for cutscene...
+	SetActorFlags(player, 0x200000);	# paralyze him
+    StartCutscene(1);
+	curCam = GetCurrentCamera();		
+	player = GetLocalPlayerThing();
+	
+    # Disable and hide player...
+	StopThing(player);					# right now
+	PlayMode(player, 1, 0);				# get him into a nice stand
+	DeselectWeaponWait(player);			# stow any weapon or lighter
+	CopyPlayerHolsters(player, indy);	# make sure our actor has matching props
+	Sleep(0.5);							# give him some time to do his stuff
+	
+	# Switch actor indy for player...
+	
+	SetThingFlags(player, 0x80000);		# hide him
+	ClearThingFlags(indy, 0x80000);		# reveal our actor
+							   
+	# Prep camera & cut...
+	SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+	SetCameraPosInterp(2, 0);			# kill dolly mode too
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, c1_t1);
+	Sleep(0.01);
+	SetCurrentCamera(2);
+    ResetCameraFOV(0, 0.0);
+    SetCameraFOV(55, 0, 0.0);
+   
+	# Indy pulls lever
+	PlayKey(indy, indyPull, 4, 0x12, 0);
+	PlayKey(lever, leverDown, 4, 0x12, 0);
+	Sleep(1.2);
+	PlaySoundLocal(leverPull, 1.0, 0, 0x0000, 0);
+	Sleep(1.4);
+	PlaySoundLocal(leverBack, 1.0, 0, 0x0000, 0);
+	Sleep(0.3);
+
+	# Call NoWorkTalkCog
+    SendMessageEx(NoWorkTalkCog, user1, indy, 0, 0, 0);
+    global15 = 0; # per Randy
+	while (global15 == 0)
+	{
+		Sleep(0.01); # wait for line to finish
+	}
+	
+	
+	# Return control and camera to player
+    CopyOrientAndPos(indy, player); # move player to actor's spot
+	SetThingFlags(indy, 0x80000);
+    SetCameraPosition(1, GetThingPos(cam1));	# prep for camera to swing back
+	ClearThingFlags(player, 0x80000);
+    SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	Sleep(0.01);
+	SetCurrentCamera(curCam);
+	ResetCameraFOV(0, 0.0);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	
+	return; 
+ 
+end
+    
+	
+    
+

@@ -1,0 +1,83 @@
+# Jones 3D Cog Script
+#
+# shs_AmbTR.cog
+#
+# Plays a random sound at random intervals with random volume and panning
+#
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+   	message	    entered
+  	message 	pulse
+
+	# By door
+    sector      start_Amb1      linkID=1
+    sector      stop_Amb1       linkID=0
+    # By tunnel
+	sector      start_Amb2     	linkID=1
+    sector      stop_Amb2       linkID=0
+    
+	thing		soundPos0		nolink
+    thing		soundPos1		nolink
+    thing		soundPos2		nolink
+    thing		soundPos3		nolink
+    thing		soundPos4		nolink
+    thing		soundPos5		nolink
+    thing		soundPos6		nolink
+	thing		soundPos7		nolink
+    thing		soundPos8		nolink
+    thing		soundPos9		nolink
+	thing		player			local
+
+	sound		ambient0=shs_creaky_a1.wav   local
+	sound		ambient1=shs_creaky_a2.wav   local
+    sound		ambient2=shs_creaky_a3.wav   local
+    sound		ambient3=shs_creaky_a4.wav   local
+
+   
+end
+
+# ========================================================================================
+
+
+code
+
+# ........................................................................................
+
+startup:
+    player = GetLocalPlayerThing();
+	return;
+
+# ........................................................................................
+    
+	entered:
+	
+		if(GetSenderID() == 1)
+		{
+			setpulse(2.0);
+		}
+		
+		if(GetSenderID() == 0)
+		{
+			setpulse(0.0);
+		}
+  		return;
+
+# ========================================================================================
+		
+pulse:
+		
+	PlaySoundThing(ambient0[RandBetween(0, 3)], soundPos0[RandBetween(0, 9)], 1, 4, 20, 0);
+	return;
+		
+# ========================================================================================
+		
+		
+
+end
+	
+	
+

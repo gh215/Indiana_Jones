@@ -1,0 +1,64 @@
+# Jones 3D Cog Script
+#
+# shs_Dlog_broken.cog   Say the line, Indy.  
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message 	startup
+message 	activated
+                                                          
+sound		in_broken=Ss02j02.wav	local
+
+thing		player			local
+thing		elevator
+thing 		interpcam
+
+int			spoken=0		local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+      	
+	player = GetLocalPlayerThing();
+    return;
+	
+activated:
+	
+	if ((GetSenderRef() == elevator) && (spoken == 0)) 
+	{
+	    spoken=1;
+		MakeMeStop();
+        StartCutscene(1);
+        
+		# Camera stuff
+		SetExtCamOffsetToThing(interpCam);
+		
+		sleep(.5);
+
+        # "This looks like a dumb-waiter..."
+		PlayVoice(player, in_broken, 1.0, 1);
+        
+		RestoreExtCam();
+		ClearActorFlags(player, 0x200000); # player in control
+        EndCutscene();
+    	spoken=0;
+	}
+	
+return;
+     
+  
+
+end
+
+

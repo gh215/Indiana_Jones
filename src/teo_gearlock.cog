@@ -1,0 +1,278 @@
+# Jones 3D Cog Script
+#
+# TEO_Gearlock.cog
+#
+# A hack for spinning blocks around.
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		activated
+	message		arrived
+    message     blocked
+	message		user0
+
+	sector		doorsec0		nolink
+	sector		doorsec1		nolink
+	sector		doorsec2		nolink
+	sector		doorsec3		nolink
+
+	sector		doorvis0		nolink
+	sector		doorvis1		nolink
+	sector		doorvis2		nolink
+	sector		doorvis3		nolink
+
+	sound		statRotSnd
+	sound		statbutsnd
+	sound		butresetsnd
+    sound       yougotitwav=mus_gen_indy_b_motif1.wav   local
+
+	thing		door0			linkid=6
+	thing		door1			linkid=6
+	thing		door2			linkid=6
+	thing		door3			linkid=6
+
+	thing		gear0			nolink
+	thing		gear1			nolink
+	thing		gear2			nolink
+	thing		gear3			nolink
+
+	thing		gearnode0		nolink
+	thing		gearnode1		nolink
+	thing		gearnode2		nolink
+	thing		gearnode3		nolink
+	thing		gearnode4		nolink
+	thing		gearnode5		nolink
+	thing		gearnode6		nolink
+	thing		gearnode7		nolink
+	thing		gearnode8		nolink
+	thing		gearnode9		nolink
+	thing		gearnodet		nolink
+	thing		gearnodee		nolink
+
+	thing		doorcam0		nolink
+	thing		doorcam1		nolink
+	thing		doorcam2		nolink
+	thing		doorcam3		nolink
+
+	thing		indyTarget		nolink
+
+	thing		statue
+	thing		ghostcampos		nolink
+	thing		gear			nolink
+
+	thing		statswitch
+
+	thing		indy			nolink
+	thing		player			local
+
+	flex		rottime=3.0		local
+	flex		moveSpeed=1.0	local
+
+	vector		curnodepos		local
+	vector		curgearpos		local
+    vector      newgearvector   local
+
+	int			rotsound		local
+	int			doorcount=0		local
+	int			nodecount=0		local
+	int			gearcount=0		local
+	int			flag=0			local
+	int			locked=0		local
+	int			currand			local
+	int			lastrand		local
+	int			bSpoken=0		local
+
+end
+
+#====================================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+
+	doorvis0 = GetThingSector(door0);
+	doorvis1 = GetThingSector(door1);
+	doorvis2 = GetThingSector(door2);
+	doorvis3 = GetThingSector(door3);
+
+	for (doorcount=0; doorcount <=3; doorcount=doorcount+1)
+	{
+		sectoradjoins(doorvis0[doorcount], 0);
+	}
+
+return;
+
+#----------------------------------------------------------------------------------------
+activated:
+
+	if (GetSenderRef() != statswitch) return;   
+    if (GetCurItem(player) != 0) return;
+	if (GetCurFrame(statue) != 3) return;
+	if (locked != 0) return;
+
+	locked = 1;
+
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	DeselectWeaponWait(player);
+	StartCutscene(1);
+
+	# Prep Actor
+	CopyPlayerHolsters(player, indy);
+	TeleportThing(indy, indyTarget);
+	CopyOrientAndPos(indy, player);
+	Sleep(0.01);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indy, 0x80000);
+
+	# Camera...
+	SetExtCamOffset('-0.15 0.0 0.05');
+	//SetExtCamLookOffset('0.0 0.05 0.0');
+
+	MoveToFrame(statswitch, 1, moveSpeed);
+	PlaySoundThing(statbutsnd, statswitch, 0.3, 3, 10, 0);
+	PlayMode(indy, 60, 1);
+
+	Sleep(0.5);
+	SetCameraFocus(0, ghostcampos);
+	SetCurrentCamera(0);
+	Rotate(statue, -180, 1, rottime);
+	Rotate(gear, -180, 1, rottime);
+	rotsound = PlaySoundLocal(statRotSnd, 0.65, 0, 0x1, 0);
+
+	# check for door opening
+	for (doorcount=0; doorcount<=3; doorcount=doorcount+1)
+	{
+		if (GetSectorThingCount(doorsec0[doorcount]) == 3)
+		{
+			SetCollideType(door0[doorcount], 0);
+			SetCameraFocus(0, doorcam0[doorcount]);
+			MoveToFrame(doorcam0[doorcount], 1, (moveSpeed+1));
+			SectorAdjoins(doorvis0[doorcount], 1);
+            if (GetCurFrame(door0[doorcount]) == 0)
+            {
+			    MoveToFrame(door0[doorcount], 1, 1);
+            }    
+		}
+	}
+
+	# check nodes for gears
+	for (nodecount=0; nodecount<=3; nodecount=nodecount +1)
+	{
+		# innerloop
+		curnodepos = GetThingPos(gearnode0[nodecount]);	
+		for (gearcount=0; gearcount<=3; gearcount=gearcount+1)
+		{
+			curgearpos = GetThingPos(gear0[gearcount]);
+			if (VectorLen(VectorSub(curnodepos, curgearpos)) < 0.075)
+			{
+                newgearvector = VectorSet(VectorX(curnodepos), VectorY(curnodepos), VectorZ(curgearpos));   
+                MoveThingToPos(gear0[gearcount], newgearvector, 0);
+				Rotate(gear0[gearcount], 180, 1, rottime);
+				flag = 1;
+			} 		
+		}
+		# middleloop
+		curnodepos = GetThingPos(gearnode0[nodecount + 4]);
+		for (gearcount=0; gearcount<=3; gearcount=gearcount+1)
+		{
+			curgearpos = GetThingPos(gear0[gearcount]);
+			if ((VectorLen(VectorSub(curnodepos, curgearpos)) < 0.075) && (flag == 1))
+			{
+                newgearvector = VectorSet(VectorX(curnodepos), VectorY(curnodepos), VectorZ(curgearpos));   
+                MoveThingToPos(gear0[gearcount], newgearvector, 0);
+				Rotate(gear0[gearcount], -180, 1, rottime);
+				flag = 2;
+			}
+		}
+		# outerloop
+		curnodepos = GetThingPos(gearnode0[nodecount + 8]);
+        
+		for (gearcount=0; gearcount<=3; gearcount=gearcount+1)
+		{
+			curgearpos = GetThingPos(gear0[gearcount]);
+			if ((VectorLen(VectorSub(curnodepos, curgearpos)) < 0.075) && (flag == 2))
+			{
+                newgearvector = VectorSet(VectorX(curnodepos), VectorY(curnodepos), VectorZ(curgearpos));   
+                MoveThingToPos(gear0[gearcount], newgearvector, 0);
+				Rotate(gear0[gearcount], 180, 1, rottime);
+				flag = 0;
+			}
+		}
+		flag = 0;
+	}
+
+return;
+
+# -----------------------------------------------------------------------------------
+arrived:
+
+	if (GetSenderRef() == statue)
+	{
+		if (locked != 1) return;
+
+		StopSound(rotsound, 0);
+
+		SetCollideType(door0, 3);
+		SetCollideType(door1, 3);
+		SetCollideType(door2, 3);
+		SetCollideType(door3, 3);
+
+		Sleep(0.5);
+		SetCurrentCamera(1);
+		MoveToFrame(statswitch, 0, moveSpeed);
+		PlaySoundThing(butresetsnd, statswitch, 0.3, 3, 10, 0);
+		WaitForStop(statswitch);
+
+		SetThingFlags(indy, 0x80000);
+		ClearThingFlags(player, 0x80000);
+
+		RestoreExtCam();
+
+		if (bSpoken)
+		{
+			EndCutscene();
+			ClearActorFlags(player, 0x200000);
+		}
+
+		locked = 0;
+	}
+    
+    if (GetSenderID() == 6)
+    {
+        PlaySoundLocal(yougotitwav, 1, 0, 0, 0);
+    }
+
+return;
+
+#----------------------------------------------------------------------------------------
+blocked:
+
+    if ((GetSenderRef() == gear0) ||
+        (GetSenderRef() == gear1) ||
+        (GetSenderRef() == gear2) ||
+        (GetSenderRef() == gear3))
+        
+    {
+        print("I'm being blocked");
+        
+    }
+    
+return;
+
+#----------------------------------------------------------------------------------------
+user0: # Indicates that Azerim line has been spoken
+
+	bSpoken = 1;
+    
+return;
+
+end

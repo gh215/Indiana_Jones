@@ -1,0 +1,212 @@
+# Jones 3D Cog Script
+#
+# SHW_RiverVoice.cog
+#
+# Say line control for the river area in SHW
+#
+# [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols		
+	
+#...............MESSAGES................................    
+	message     startup
+    message     taken
+    message     activated
+
+#...............ACTORS................................    
+    
+    thing       player      						local
+    thing       indyActor      
+    
+#...............PROPS................................    
+    thing		door								mask=0x408
+    thing		icedam
+    thing		flask
+
+    thing       in_mv0      
+    thing       in_lk0      
+    
+#...............CAMERAS................................    
+    thing       doorCam      
+    thing       roomCam      
+    thing		roomCam2
+	
+	thing       curCam      						local
+
+#...............CAMERA TARGETS................................    
+    thing       camTarg1							local      
+
+#...............SOUNDS................................    
+    sound       inflaskspot=sw01j07.wav         	local       # some lamp oil...
+    sound       inrivspot=SW01J02.WAV      			local       # the stream is frozen solid...
+    sound       inrivhint=sw01j02a.wav      		local       # if I could melt the ice here...
+    sound       enter_cue=mus_gen_eerie2.wav		local       # music cue as indy enters the cave...
+    
+#...............KEYFRAMES................................    
+    keyframe    inStand1=0in_stand4.key             local
+    keyframe    inThinking=0in_thinking_4_4.key     local
+    keyframe	inStand2=0in_stand1_bd_4.key	    local
+    
+
+#...............TEMPLATES................................    
+    template	ghostTpl=ghost						local
+
+#...............VARIABLES................................    
+    int 		sceneplayed=0    					local
+    int 		cueplayed=0    						local
+    int 		inTrack	    						local
+    int 		doorhit=0    						local
+
+	flex		rotref								local
+
+	vector		indyPos								local	
+	
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    player = GetLocalPlayerThing();
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    if (GetSenderRef() != door) return;
+	{
+        If (doorhit == 1) return;
+		doorhit = 1;
+		If (sceneplayed == 0)
+		{
+		if (MakeMeStop() == -1) return;
+		
+		sceneplayed = 1;
+		
+		# get the camera and initialize cutscene 
+		curCam = GetCurrentCamera();
+
+        DeselectWeaponWait(player);
+		
+		StartCutScene(1);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+	
+		# Set up actor
+		CopyPlayerHolsters(player, indyActor);
+		CopyOrientAndPos(player, indyActor);
+		AISetCutSceneMode(indyActor);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indyActor, 0x80000);
+	
+		rotref=(GetThingMaxRotVel(indyActor));
+		SetThingMaxRotVel(indyActor, 150);
+		AISetLookThingEyeLevel(indyActor, door);
+	
+		# move cam to known position
+		SetExtCamOffsetToThing(doorCam);
+
+		# create ghost object at actors' position, lock it to the actor
+        camTarg1 = CreateThingAtPos(ghostTpl, GetThingSector(indyActor), GetThingPos(indyActor), '0 0 0');
+		AttachThingToThingEx(camTarg1, indyActor, 0x000C);
+        
+		Sleep(0.5);
+
+		# animate indyActor, open door
+		PlayMode(indyActor, 60, 1);
+        Rotate(door, 90, 1, 2.0);
+
+		Sleep(1.0);
+		
+		# play creepy music cue
+        PlaySoundLocal(enter_cue, 1.0, 0.0, 0x0, 0);
+		
+		
+		Sleep(1.0);
+
+		# move indyActor into the room
+		AISetLookThingEyeLevel(indyActor, in_mv0);
+		AISetMoveSpeed(indyActor, 1.5);
+		AISetMoveThing(indyActor, in_mv0, 0);
+		Sleep(1.5);
+
+		# cut to camera 2 in the room
+		SetCameraSecondaryFocus(2, camTarg1);
+		SetCameraFocus(2, roomCam);
+		SetCurrentCamera(2);
+		Sleep(0.5);
+		MoveThingToPos(roomCam, GetThingPos(roomCam2), 4.0);
+
+        # indyActor looks at the ice dam
+		AIEnableHeadTracking(indyActor, in_lk0);
+		Sleep(1.0);
+		DetachThing(camTarg1);
+
+		# pan from the actor to the dam
+		MoveThingToPos(camTarg1, GetThingPos(icedam), 3.0);
+
+        # Indy thinks as the camera moves over him
+		AIWaitForStop(indyActor);
+        
+		# close the door
+        Rotate(door, -90, 1, 2.0);
+        doorhit = 0;
+		AISetLookThing(indyActor, icedam);
+        inTrack = PlayKey(indyActor, inStand1, 2, 0x0, 0);
+        PlayVoice(indyActor, inrivspot, 1.0, 1);
+        StopKey(indyActor, inTrack, 0.5);
+
+		# Restore the player
+        CopyOrientAndPos(indyActor, player);
+		AIClearCutSceneMode(indyActor);
+		SetThingFlags(indyActor, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+
+		# restore the camera
+		RestoreExtCam();
+		SetCameraPosition(curCam, GetThingPos(roomCam2));
+		SetCurrentCamera(curCam);
+        RestoreExtCam();
+		Sleep(0.01);
+		EndCutScene();
+        
+		Sleep(3.0);
+		# flask clue line
+		PlayVoice(player, inrivhint, 1.0, 1);
+        }
+
+		else
+		{
+            PlayMode(player, 60, 1);
+			Rotate(door, 90, 1, 2.0);
+			ClearActorFlags(player, 0x200000);
+            Sleep(5.0);
+			Rotate(door, -90, 1, 2.0);
+            doorhit = 0;
+        }
+    }
+
+return;
+
+# ========================================================================================
+taken:
+
+        If (GetSenderRef() == flask)
+        {
+        PlayVoice(player, inflaskspot, 1.0, 1);
+        }
+        
+return;
+
+
+# ========================================================================================
+end
+
+

@@ -1,0 +1,83 @@
+# Jones 3D Cog Script
+#
+# SOL_FinalRmSpikes.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     touched
+    
+    thing       player      local
+    thing       deadIndy    local
+    
+    thing       spike0      linkID=1
+    thing       spike1      linkID=1
+    thing       spike2      linkID=1
+    thing       spike3      linkID=1
+    thing       spike4      linkID=1
+    thing       spike5      linkID=1
+    thing       spike6      linkID=1
+    thing       spike7      linkID=1
+    
+    surface     surf0       linkID=1
+    
+    sound       sndDie=tem_temspikes_up_kill_c.wav      local
+    sound       say_Ugh=inxj018a.wav                    local
+    
+    template    tpl_Indy=indy_sh_actor          local
+
+    keyframe    inDie=in_die_buckle.key         local
+
+    int         deadMan=0       local
+    int         victim          local
+    int         i               local
+    int         spikes=8        local
+    
+end
+
+# ========================================================================================
+
+code
+
+touched:
+
+    player = GetLocalPlayerThing();
+
+    if((GetSenderID() == 1) && (deadMan == 0))
+    {
+        deadMan = 1;
+        
+        for(i=0; i<spikes; i=i+1)                                                        	            
+        {            
+            SetCollideType(spike0[i], 0);
+        }
+        
+        DamageThing(player, 1000.0, 0x1, victim);
+        Sleep(0.1);
+        
+        PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+        PlaySoundLocal(say_Ugh, 1.0, 0.0, 0x0, 0);
+                            
+        # hide player
+        SetThingFlags(player, 0x80000);
+        
+        # create actor indy
+        deadIndy = CreateThing(tpl_Indy, player);
+        CaptureThing(deadIndy);
+                            
+        # Show actor Indy and play Keyframe
+        ClearThingFlags(deadIndy, 0x80000);
+        PlayKey(deadIndy, inDie, 4, 0x14, 0);
+    }
+
+    return;
+    
+# ========================================================================================
+        
+end
+

@@ -1,0 +1,63 @@
+# Jones 3D Cog Script
+#
+# VOL_Crate_Puzzle.cog
+#
+# This elevator will come down to frame one, sleep, then return to frame 0.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+#...................MESSAGES...............    
+	message  startup
+    message  taken
+    
+#...................ACTORS...............    
+	thing	scorpian 		
+	
+
+#...................PROPS...............    
+	thing	treasure			
+    
+
+#...................ACTOR MARKS...............    
+	thing	scorp_mv0			
+    		
+
+#...................VARIABLES...............
+	flex	scorpsize					local	
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+    AISetCutSceneMode(scorpian);
+	scorpsize=GetThingMoveSize(scorpian);
+
+return;
+
+# ========================================================================================
+taken:
+
+		
+	If (GetSenderRef() == treasure) 
+		{
+		SetThingMoveSize(scorpian, 0.01);
+		AISetLookThing(scorpian, scorp_mv0);
+        AISetMoveSpeed(scorpian, 1.2);
+        AISetMoveThing(scorpian, scorp_mv0, 1);
+		SetThingMoveSize(scorpian, scorpsize);
+		AIClearCutSceneMode(scorpian);
+        }
+return;
+
+# ========================================================================================
+end
+
+

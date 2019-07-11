@@ -1,0 +1,63 @@
+# Jones 3D Cog Script
+#
+# TEM_AmbWaterFall.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    
+    thing       bot_Pos
+    thing       top_Pos
+    
+    sector      start_Amb1      linkID=1
+    sector      start_Amb2      linkID=1
+    sector      start_Amb3      linkID=1
+    sector      start_Amb4      linkID=1
+    
+    sector      stop_Amb1       linkID=0
+    sector      stop_Amb2       linkID=0
+    sector      stop_Amb3       linkID=0
+    
+    sound       snd_WaterFall=gen_waterfall_a.wav     local
+    
+    flex        vol=1.0
+    flex        min=15.0
+    flex        max=25.0
+    
+    int         top_Loop    local
+    int         bot_Loop    local
+    int         soundsOn=0  local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    if((GetSenderID() == 1) && (soundsOn == 0))
+    {
+        soundsOn = 1;
+        bot_Loop = PlaySoundThing(snd_WaterFall, bot_Pos, vol, min, max, 0x0001);
+        top_Loop = PlaySoundThing(snd_WaterFall, top_Pos, 0.5, min, max, 0x0001);
+    }
+
+    if((GetSenderID() == 0) && (soundsOn == 1))
+    {
+        soundsOn = 0;
+        StopSound(bot_Loop, 2.0);
+        StopSound(top_Loop, 2.0);
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

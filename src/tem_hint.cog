@@ -1,0 +1,243 @@
+# Jones 3D Cog Script
+#
+# TEM_Hint.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     user0
+    message     entered
+    message     activated
+    
+    thing       player      local
+    
+    thing       hint1       # Level 06-TEM. Hint 1: jump 0: Indy meets Lava Warrior.
+    thing       hint2       # Level 06-TEM. Hint 2: jump 1: Enter the Melt Maze.
+    thing       hint3       # Level 06-TEM. Hint 3: jump 0: Climb to top of climb wall.
+    thing       hint4       # Level 06-TEM. Hint 4: jump 0: Pick up Shark Key.
+    thing       hint5       # Level 06-TEM. Hint 5: jump 0: Break IMP#1 wall.
+    thing       hint6       # Level 06-TEM. Hint 6: jump 0: Crawl to shark door.
+    thing       hint7       # Level 06-TEM. Hint 7: jump 0: Open shark door.
+    thing       hint8       # Level 06-TEM. Hint 8: jump 0: Get tiki1.
+    thing       hint9       # Level 06-TEM. Hint 9: jump 0: Go to other end of boulder hall.
+    thing       hint10      # Level 06-TEM. Hint 10: jump 0: Climb back up to MM.
+    thing       hint11      # Level 06-TEM. Hint 11: jump 0: Open Tiki1 door.
+    thing       hint12      # Level 06-TEM. Hint 12: jump 0: Enter first bridge area.
+    thing       hint13      # Level 06-TEM. Hint 13: jump 0: Drop to broken bridge.
+    thing       hint14      # Level 06-TEM. Hint 14: jump 0: Climb up from bridges
+    thing       hint15      # Level 06-TEM. Hint 15: jump 0: Climb up again to waterfall.
+    thing       hint16      # Level 06-TEM. Hint 16: jump 0: Jump in water, go over first waterfall.
+    thing       hint17      # Level 06-TEM. Hint 17: jump 0: Go over second waterfall.
+    thing       hint18      # Level 06-TEM. Hint 18: jump 0: Climb first wall.
+    thing       hint19      # Level 06-TEM. Hint 19: jump 0: Climb second wall to Tiki2 temple.
+    thing       hint20      # Level 06-TEM. Hint 20: jump 0: Cut the rope bridge.
+    thing       hint21      # Level 06-TEM. Hint 21: jump 0: Go back fallen bridge side of Hut Connect bridge.
+    thing       hint22      # Level 06-TEM. Hint 22: jump 0: Enter caves aka Hut Connect.
+    thing       hint23      # Level 06-TEM. Hint 23: jump 0: Climb first ladder.
+    thing       hint24      # Level 06-TEM. Hint 24: jump 0: Cut spider web and pass thru.
+    thing       hint25      # Level 06-TEM. Hint 25: jump 0: Cut vines and pass to waterfall.
+    thing       hint26      # Level 06-TEM. Hint 26: jump 0: Whip swing across waterfall.
+    thing       hint27      # Level 06-TEM. Hint 27: jump 0: Slide down slope.
+    thing       hint28      # Level 06-TEM. Hint 28: jump 0: Climb down fallen bridge and enter cave.
+    thing       hint29      # Level 06-TEM. Hint 29: jump 0: Pick up Monkey Key.
+    thing       hint30      # Level 06-TEM. Hint 30: jump 0: Climb back up first climb.
+    thing       hint31      # Level 06-TEM. Hint 31: jump 0: Open Monkey Key door (Tiki2 room).
+    thing       hint32      # Level 06-TEM. Hint 32: jump 0: Pick up Tiki 2.
+    thing       hint33      # Level 06-TEM. Hint 33: jump 0: Drop down to Boulder Dash.
+    thing       hint34      # Level 06-TEM. Hint 34: jump 0: Get to other side of Boulder Dash.
+    thing       hint35      # Level 06-TEM. Hint 35: jump 0: Go to next bridge to Boss Entrance.
+    thing       hint36      # Level 06-TEM. Hint 36: jump 0: Open Boss Door.
+    thing       hint37      # Level 06-TEM. Hint 37: jump 0: Walk down to Boss lake, meet Boss.
+    thing       hint38      # Level 06-TEM. Hint 38: jump 0: Go to Boss bridge.
+    thing       hint39      # Level 06-TEM. Hint 39: jump 0: Make way across lake to first IMP2 shore.
+    thing       hint40      # Level 06-TEM. Hint 40: jump 0: Pick up IMP#2.
+    thing       hint41      # Level 06-TEM. Hint 41: jump 0: Go back to boss bridge.
+    thing       hint42      # Level 06-TEM. Hint 42: jump 0: Cross boss bridge to water side.
+    thing       hint43      # Level 06-TEM. Hint 43: jump 0: Jump across lava ravine.
+    thing       hint44      # Level 06-TEM. Hint 44: jump 0: Activate button to flood the boss room.
+    thing       hint45      # Level 06-TEM. Hint 45: jump 0: Go back to boss bridge.
+    thing       hint46      # Level 06-TEM. Hint 46: jump 0: Exit thru exit hallway.
+    
+    thing       shark_Key   # pick up shark key
+    thing       tiki1_Key   # pick up tiki1 key
+    
+    thing       t_Bridge        # drop down to bridge
+    thing       t_BossBridge    # go to boss bridge
+    
+    sector      sec_Meet        # meet warrior
+    sector      sec_MM_Ent      # enter melt maze
+    sector      sec_MM_Climb    # top of climb wall
+    sector      sec_Crawl       # crawl to shark door
+    sector      sec_Boulder     # go back towards MM
+    sector      sec_MM_Climb2   # climb back up to MM
+    sector      sec_BA_Main     # enter BA main area
+    sector      sec_BA_Climb1   # climb up from bridges
+    sector      sec_BA_Climb2   # climb up to waterfall
+    sector      sec_BA_Fall1    # go over first waterfall
+    sector      sec_BA_Fall2    # go over second waterfall
+    sector      sec_BA2_Climb1  # climb first wall
+    sector      sec_BA2_Climb2  # climb second wall
+    sector      sec_HC_Ent      # entrance to hun con
+    sector      sec_HC_Climb1   # climb first ladder
+    sector      sec_HC_Web      # pass web
+    sector      sec_HC_Vines    # pass vines
+    sector      sec_WF_Swing    # swing across waterfall
+    sector      sec_WF_Slide    # slide down slope
+    sector      sec_MK_Enter    # climb down fallen bridge
+    sector      sec_BD_Enter    # drop down to BD
+    sector      sec_BD_End      # reach other side of BD
+    sector      sec_BE_Bridge   # reach boss entrance bridge
+    sector      sec_BR_Meet     # meet the boss in boss room
+    sector      sec_BR_Shore    # go to imp2 shore
+    sector      sec_BR_WatSide  # cross bridge to water side
+    sector      sec_BR_Ravine   # jump over ravine
+    sector      sec_BR_Exit     # see ya
+        
+    cog         cog_IMP1        # break down imp wall
+    cog         cog_SharkDoor   # open shark door
+    cog         cog_Tiki1       # pick up tiki1
+    cog         cog_Tiki1Door   # open tiki1 door
+    cog         cog_FallBridge  # cut the bridge
+    cog         cog_MonkeyKey   # pick up monkey key
+    cog         cog_MonkeyDoor  # open monkey door
+    cog         cog_Tiki2Key    # pick up tiki 2
+    cog         cog_BossDoor    # open boss door
+    cog         cog_BossFlood   # flood the boss
+    
+    int         sender      local
+    int         source      local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+
+# ========================================================================================
+
+user0:
+
+    Print("user0");
+
+    if((GetSenderRef() == cog_IMP1) && (GetHintSolved(hint5) == 0)) SetHintSolved(hint5);
+    
+    else if((GetSenderRef() == cog_SharkDoor) && (GetHintSolved(hint7) == 0)) SetHintSolved(hint7);
+    
+    else if((GetSenderRef() == cog_Tiki1) && (GetHintSolved(hint8) == 0)) SetHintSolved(hint8);
+    
+    else if((GetSenderRef() == cog_Tiki1Door) && (GetHintSolved(hint11) == 0)) SetHintSolved(hint11);
+    
+    else if((GetSenderRef() == cog_FallBridge) && (GetHintSolved(hint20) == 0)) SetHintSolved(hint20);
+    
+    else if((GetSenderRef() == cog_MonkeyKey) && (GetHintSolved(hint29) == 0)) SetHintSolved(hint29);
+    
+    else if((GetSenderRef() == cog_MonkeyDoor) && (GetHintSolved(hint31) == 0)) SetHintSolved(hint31);
+    
+    else if((GetSenderRef() == cog_Tiki2Key) && (GetHintSolved(hint32) == 0)) SetHintSolved(hint32);
+    
+    else if((GetSenderRef() == cog_BossDoor) && (GetHintSolved(hint36) == 0)) SetHintSolved(hint36);
+    
+    else if((GetSenderRef() == cog_BossFlood) && (GetHintSolved(hint40) == 0)) SetHintSolved(hint40);
+    
+    else if((GetSenderRef() == cog_BossFlood) && (GetHintSolved(hint44) == 0)) SetHintSolved(hint44);
+
+    return;
+
+# ========================================================================================
+
+entered:
+
+    sender = GetSenderRef();
+    source = GetSourceRef();
+
+    if((sender == sec_Meet) && (GetHintSolved(hint1) == 0) && (source == player)) SetHintSolved(hint1);
+    
+    else if((sender == sec_MM_Ent) && (GetHintSolved(hint2) == 0) && (source == player)) SetHintSolved(hint2);
+    
+    else if((sender == sec_MM_Climb) && (GetHintSolved(hint3) == 0) && (source == player)) SetHintSolved(hint3);
+
+    else if((sender == sec_Crawl) && (GetHintSolved(hint6) == 0) && (source == player)) SetHintSolved(hint6);
+    
+    else if((sender == sec_Boulder) && (GetHintSolved(hint9) == 0) && (source == player)) SetHintSolved(hint9);
+    
+    else if((sender == sec_MM_Climb2) && (GetHintSolved(hint10) == 0) && (source == player)) SetHintSolved(hint10);
+    
+    else if((sender == sec_BA_Main) && (GetHintSolved(hint12) == 0) && (source == player)) SetHintSolved(hint12);
+    
+    else if((sender == t_Bridge) && (GetHintSolved(hint13) == 0) && (source == player)) SetHintSolved(hint13);
+    
+    else if((sender == sec_BA_Climb1) && (GetHintSolved(hint14) == 0) && (source == player)) SetHintSolved(hint14);
+    
+    else if((sender == sec_BA_Climb2) && (GetHintSolved(hint15) == 0) && (source == player)) SetHintSolved(hint15);
+    
+    else if((sender == sec_BA_Fall1) && (GetHintSolved(hint16) == 0) && (source == player)) SetHintSolved(hint16);
+    
+    else if((sender == sec_BA_Fall2) && (GetHintSolved(hint17) == 0) && (source == player)) SetHintSolved(hint17);
+    
+    else if((sender == sec_BA2_Climb1) && (GetHintSolved(hint18) == 0) && (source == player)) SetHintSolved(hint18);
+    
+    else if((sender == sec_BA2_Climb2) && (GetHintSolved(hint19) == 0) && (source == player)) SetHintSolved(hint19);
+    
+    else if((sender == sec_BA2_Climb1) && (GetHintSolved(hint21) == 0) && (source == player)) SetHintSolved(hint21);
+    
+    else if((sender == sec_HC_Ent) && (GetHintSolved(hint22) == 0) && (source == player)) SetHintSolved(hint22);
+    
+    else if((sender == sec_HC_Climb1) && (GetHintSolved(hint23) == 0) && (source == player)) SetHintSolved(hint23);
+    
+    else if((sender == sec_HC_Web) && (GetHintSolved(hint24) == 0) && (source == player)) SetHintSolved(hint24);
+    
+    else if((sender == sec_HC_Vines) && (GetHintSolved(hint25) == 0) && (source == player)) SetHintSolved(hint25);
+    
+    else if((sender == sec_WF_Swing) && (GetHintSolved(hint26) == 0) && (source == player)) SetHintSolved(hint26);
+    
+    else if((sender == sec_WF_Slide) && (GetHintSolved(hint27) == 0) && (source == player)) SetHintSolved(hint27);
+    
+    else if((sender == sec_MK_Enter) && (GetHintSolved(hint28) == 0) && (source == player)) SetHintSolved(hint28);
+    
+    else if((sender == sec_BA2_Climb1) && (GetHintSolved(hint30) == 0) && (source == player)) SetHintSolved(hint30);
+    
+    else if((sender == sec_BD_Enter) && (GetHintSolved(hint33) == 0) && (source == player)) SetHintSolved(hint33);
+    
+    else if((sender == sec_BD_End) && (GetHintSolved(hint34) == 0) && (source == player)) SetHintSolved(hint34);
+    
+    else if((sender == sec_BE_Bridge) && (GetHintSolved(hint35) == 0) && (source == player)) SetHintSolved(hint35);
+    
+    else if((sender == sec_BR_Meet) && (GetHintSolved(hint37) == 0) && (source == player)) SetHintSolved(hint37);
+    
+    else if((sender == t_BossBridge) && (GetHintSolved(hint38) == 0) && (source == player)) SetHintSolved(hint38);
+    
+    else if((sender == sec_BR_Shore) && (GetHintSolved(hint39) == 0) && (source == player)) SetHintSolved(hint39);
+    
+    else if((sender == t_BossBridge) && (GetHintSolved(hint41) == 0) && (source == player)) SetHintSolved(hint41);
+    
+    else if((sender == sec_BR_WatSide) && (GetHintSolved(hint42) == 0) && (source == player)) SetHintSolved(hint42);
+    
+    else if((sender == sec_BR_Ravine) && (GetHintSolved(hint43) == 0) && (source == player)) SetHintSolved(hint43);
+    
+    else if((sender == sec_BR_WatSide) && (GetHintSolved(hint45) == 0) && (source == player)) SetHintSolved(hint45);
+    
+    else if((sender == sec_BR_Exit) && (GetHintSolved(hint46) == 0) && (source == player)) SetHintSolved(hint46);
+    
+    return;
+
+# ========================================================================================
+
+activated:
+
+    if((GetSenderRef() == shark_Key) && (GetHintSolved(hint4) == 0) && (source == player)) SetHintSolved(hint4);
+    
+    return;
+
+# ========================================================================================
+end
+

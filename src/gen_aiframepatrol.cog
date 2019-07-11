@@ -1,0 +1,132 @@
+# Jones 3D Cog Script
+#
+# 00_AIFramePatrol.cog
+# "patroller" travels patrol route of frames.
+# Patrol begins at startup unless either gosector or gosurface are assigned as triggers.
+# Compatible with 00_SendMessage. (Gosurface or gosector must be assigned or it will begin on startup.)
+#
+# Flex Variables:
+#
+# RouteStyle: use 0 for circular (or 2-point) patrol, 1 for linear, and 2 for random
+# FramePause: use a constant value, or use 0 for random pauses between 2 and Maxpause (best for pedestrians)
+# NumFrames: number of frames in the route, excluding frame 0; NOTE: Inaccurately high framenum results in 1-way patrol
+# PatrolSpeed: 1 for walk (default), 2 for run
+# MaxPause: longest pause at frame, used only if framepause = 0
+#
+# [RD]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup
+	message	activate
+	message	entered
+	message	arrived
+	message	timer
+
+	sector	gosector		linkid=1
+	surface	gosurface	linkid=1
+
+	thing		patroller
+
+	flex		patrolspeed=1.0
+	flex		framepause=1.0
+	flex		routestyle=0.0
+	flex		numframes=1.0
+	flex		maxpause=10.0
+    
+    # ** subroutines **
+    flex        beginpatrol local
+
+	int		curframe=1		local
+	int		framenum=0		local
+	int		direction=1		local		// control forward or backward through frames
+	int		begun=0			local
+	int		testnum=0		local
+end
+
+# ========================================================================================
+
+code
+startup:
+	if (gosector + gosurface == -2)	// no sector/surface assigned
+	{
+		call beginpatrol;
+	}
+	return;
+
+# ........................................................................................
+
+activate:
+	call beginpatrol;
+	return;
+
+# ........................................................................................
+
+entered:
+	if (GetSenderID() != 1) return;
+	
+	call beginpatrol;
+	return;
+	
+# ........................................................................................
+
+beginpatrol:
+	if (begun) return;
+	begun = 1;
+	
+	AISetMoveSpeed(patroller, patrolspeed);
+	
+	SetTimer(.1);
+	return;
+
+# ........................................................................................
+
+arrived:
+	curframe = curframe + direction;
+	if (curframe > numframes)			// end of patrol
+	{
+		if (routestyle == 1)
+		{
+			direction = -1;			// if linear, reverse frame directional
+			curframe = numframes - 1;
+		}
+		else
+		{
+			curframe = 0;			// if circular, go to frame 0
+		}
+	}
+
+	if ((curframe == -1) && (routestyle == 1))	// if linear and returned to initial frame
+	{
+		direction = 1;					// restore forward frame directional
+		curframe = 1;					// small bug fixed by Tim L., changed from 0 to 1
+	}
+
+	if (routestyle == 2)
+	{
+		curframe = (Rand() * numframes) + 1;
+	}
+
+	if (framepause > 0)
+	{
+		SetTimer(framepause);
+	}
+	else
+	{
+		SetTimer((Rand() * (maxpause - 1)) + 2);
+	}
+	return;
+
+# ........................................................................................
+
+timer:
+	AISetLookFrame(patroller, curframe);
+	AISetMoveFrame(patroller, curframe);
+	return;
+
+# ........................................................................................
+
+end
+

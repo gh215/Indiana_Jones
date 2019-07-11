@@ -1,0 +1,202 @@
+# Jones 3D Cog Script
+#
+# nub_BullButt.cog
+#
+# [RKD] [TL] [RT] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols	
+
+message		startup
+message		activated	
+message		arrived		
+message		pulse
+message		timer
+
+thing		door0									#door is bull?!
+thing		lever
+thing		player							local
+thing		indy
+thing		camera1			
+thing		camera2
+thing		bubbleGhost0
+thing		bubbleGhost1
+thing		tempring0				nolink	local
+thing		tempring1				nolink	local
+thing		tempring2				nolink	local
+thing		tempring3				nolink	local
+thing		rotateGhost0
+thing		rotateGhost1
+thing		ringGhost0
+thing		ringGhost1
+thing		ringGhost2
+thing		ringGhost3
+
+
+keyframe	in_pull=in_uw_pullswitch.key	local
+sound		startdoor=nub_bull_move1_c.wav	local
+sound		movedoor0=nub_bull_move2_c.wav	local
+sound		movedoor1=nub_bull_move3_c.wav	local
+sound		movedoor2=nub_bull_move4_c.wav	local
+sound		movedoor3=nub_bull_move5_c.wav	local
+sound		movedoor4=nub_bull_move6_c.wav	local
+sound		stopdoor=nub_bull_stop_c.wav	local
+sound		bullMus=mus_pyr_intro.wav		local
+
+vector		campos							local
+
+template	bubbleparticles0=bullbubbles	local
+template	ring=+ripples					local
+
+int			startchannel					local
+int			move0channel					local
+int			move1channel					local
+int			move2channel					local
+int			move3channel					local
+int			move4channel					local
+int			stopchannel						local
+int			begun=0							local
+thing		bubbles0						local
+thing		bubbles1						local
+int			bubbling=0						local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+return;
+
+#........................................................................................
+activated:
+
+if (begun == 1)	return;
+begun = 1;
+if (GetSenderRef() != lever) return;
+	
+AttachThingToThing(bubbleGhost0, rotateGhost0);
+AttachThingToThing(bubbleGhost1, rotateGhost1);
+
+AttachThingToThing(ringGhost0, rotateGhost0);
+AttachThingToThing(ringGhost1, rotateGhost1);
+AttachThingToThing(ringGhost2, rotateGhost0);
+AttachThingToThing(ringGhost3, rotateGhost1);
+
+
+Rotate(rotateGhost0, 30, 1, 0.2);
+
+StartCutscene(1);
+SetThingFlags(player, 0x80000);
+StopThing(player);
+SetActorFlags(player, 0x200000);
+
+SetCameraLookInterp(2, 0);
+SetCameraPosInterp(2, 0);
+Sleep(0.01);
+
+SetCameraFocus(2, camera1);
+SetCameraSecondaryFocus(2, indy);
+SetCurrentCamera(2);
+
+CopyPlayerHolsters(player, indy);
+ClearThingFlags(indy, 0x80000);
+PlayKey(indy, in_pull, 4, 0x12, 0);
+Sleep(1.4);
+MoveToFrame(lever, 1, 0.3);
+
+Sleep(1.0);
+SetCameraFocus(2, camera2);
+SetCameraSecondaryFocus(2, door0);
+SetCurrentCamera(2);
+SetCameraFOV(90, 0, 0.0);
+
+
+startchannel = PlaySoundThing(startdoor, door0, 1.0, -1.0, -1.0, 0x0001);
+move0channel = PlaySoundThing(movedoor0, door0, 1.0, -1.0, -1.0, 0x0001);
+MoveToFrame(door0, 1, 1.5);
+
+SetPulse(0.25);	
+SetTimer(0.25);
+PlaySoundLocal(bullMus, 1.0, 0, 0x0, 0);
+
+
+move1channel = PlaySoundThing(movedoor1, door0, 1.0, -1.0, -1.0, 0x0001);
+Sleep(2.0);
+MoveToFrame(camera2, 1, 1.3);
+
+move2channel = PlaySoundThing(movedoor2, door0, 1.0, -1.0, -1.0, 0x0000);
+WaitForSound(move2channel);
+move3channel = PlaySoundThing(movedoor3, door0, 1.0, -1.0, -1.0, 0x0000);
+WaitForSound(move3channel);
+move4channel = PlaySoundThing(movedoor4, door0, 1.0, -1.0, -1.0, 0x0000);
+WaitForSound(move4channel);
+
+bubbling = 1;
+
+return;
+
+#........................................................................................
+arrived:    
+if ((GetSenderRef() == rotateGhost0) && (bubbling == 0))
+{
+	Rotate(rotateGhost0, RandBetween(10, 90) * RandBetween(-1, 1) + 1, 1, RandBetween(1, 2) * 0.1);
+	Rotate(rotateGhost1, RandBetween(10, 90) * RandBetween(-1, 1) + 1, 1, RandBetween(1, 2) * 0.1);
+	return;
+}
+
+if (GetSenderRef() == door0)
+{
+    
+    SetPulse(0.0);
+	StopSound(startchannel, 0.0);
+	StopSound(move0channel, 0.0);
+	StopSound(move1channel, 0.0);
+	stopchannel = PlaySoundThing(stopdoor, door0, 1.0, -1.0, -1.0, 0x0000);
+	WaitForSound(stopchannel);
+	
+	Sleep(1.0);
+    
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0.0);
+    CopyOrientandPos(indy, player);
+	SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    ClearActorFlags(player, 0x200000);
+	
+	EndCutscene();
+}
+
+return;
+
+#........................................................................................
+pulse:
+
+bubbles0 = CreateThing(bubbleparticles0, bubbleGhost0);
+bubbles1 = CreateThing(bubbleparticles0, bubbleGhost1);
+
+return;
+
+#........................................................................................
+timer:
+if (bubbling == 1) return;
+
+tempring0 = CreateThing(ring, ringGhost0);
+AnimateSpriteSize(tempring0, '0.1 0.1 1', '0.3 0.3 0', 2);
+tempring1 = CreateThing(ring, ringGhost1);
+AnimateSpriteSize(tempring1, '0.1 0.1 1', '0.3 0.3 0', 2);
+tempring2 = CreateThing(ring, ringGhost2);
+AnimateSpriteSize(tempring2, '0.1 0.1 1', '0.3 0.3 0', 2);
+tempring3 = CreateThing(ring, ringGhost3);
+AnimateSpriteSize(tempring3, '0.1 0.1 1', '0.3 0.3 0', 2);
+SetTimer(0.25);
+return;
+
+
+#........................................................................................
+end

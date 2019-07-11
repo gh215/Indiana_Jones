@@ -1,0 +1,89 @@
+# Jones 3D Cog Script
+#
+#
+# gen_SimpleDoor.cog
+#
+#
+# Hit the button, open the door. There's a break
+#
+#
+# (PAZ)
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+		message			startup
+        message         activated			
+         
+        thing           door
+        thing           button
+		thing			player					local
+
+        float           speed=0.5
+        
+        int             up=1                    local
+        
+end
+
+#=================================================================================================
+
+code
+
+startup:
+
+	player=GetLocalPlayerThing();
+	return;
+	
+#........................................................................................
+
+activated:
+
+		if (GetSourceRef() != player) return;
+
+        if  (GetSenderRef() == button)
+        
+            {
+			
+            if (GetCurFrame(door) == 0)
+			
+				{
+				SetActorFlags(player, 0x200000);	   
+				SetExtCamOffset('1.0, 1.0, 1.0');
+				Sleep(0.1);
+				PlayMode(player, 60, 0);
+				MoveToFrame(button, 1, speed);
+				MoveToFrame(door, 1, speed);
+				WaitForStop(door);
+				MoveToFrame(button, 0, speed);
+				RestoreExtCam();
+				ClearActorFlags(player, 0x200000);
+				return;
+				}
+			        
+				
+			if  (GetCurFrame(door) == 1)
+        
+				{
+				SetActorFlags(player, 0x200000);
+				SetExtCamOffset('1.0, 1.0, 1.0');
+				Sleep(0.1);
+				PlayMode(player, 60, 0);
+				MoveToFrame(button, 1, speed);
+				MoveToFrame(door, 0, speed);
+				WaitForStop(door);
+				MoveToFrame(button, 0, speed);
+				RestoreExtCam();
+				ClearActorFlags(player, 0x200000);
+				return;
+				}
+
+            }
+			
+			return;
+                
+        
+        
+                                
+end
+           

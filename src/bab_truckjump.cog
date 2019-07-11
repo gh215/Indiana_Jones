@@ -1,0 +1,103 @@
+# Jones 3D Cog Script
+#
+# BAB_truckjump.cog
+#
+# Babylon entry gate truck puzzle.
+#
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+end
+
+# ========================================================================================
+code
+
+startup:
+		truck0 = CreateThing(truck, truck0pos);	//create entering truck
+		CaptureThing(truck0);
+		truck1 = CreateThing(truck, truck1pos);	//create exiting truck
+		CaptureThing(truck1);
+return;
+
+# ........................................................................................
+activate:
+
+if (GetSenderRef() == startswitch)
+{
+   MoveToFrame(truck0, lastframenum);
+}
+return;
+
+# .......................................................................................
+arrived:
+
+if ((GetSenderRef() == truck0) &&
+	 (GetCurFrame(truck0) == lastframenum))
+{
+	//move truck1 through reverse frames.
+}
+
+// stop truck in front of first gate
+if ((GetSenderRef() == truck0) &&					
+	 (CetCurFrame(truck0) == gate0frame))
+{
+	PathMovePause(truck0);
+	MoveToFrame(gate0, 1, gatespeed);
+	MoveToFrame(gate1, 1, gatespeed);
+	WaitForStop(gate0);
+	PathMoveResume(truck0);
+}
+
+// stop truck after gate and continue
+if ((GetSenderRef() == truck0) &&
+    (GetCurFrame(truck0) == gate0post))
+{
+   PathMovePause(truck0);
+	MoveToFrame(gate0, 0, gatespeed);
+	MoveToFrame(gate1, 0, gatespeed);
+	WaitForStop(gate0);
+	PathMoveResume(truck0);
+}
+
+// stop truck in front of second gate
+if ((GetSenderRef() == truck0) &&					
+	 (CetCurFrame(truck0) == gate1frame))
+{
+	PathMovePause(truck0);
+	MoveToFrame(gate0, 1, gatespeed);
+	MoveToFrame(gate1, 1, gatespeed);
+	WaitForStop(gate0);
+	PathMoveResume(truck0);
+}
+
+// stop truck in after gate and finish sequence
+if ((GetSenderRef() == truck0) &&
+    (GetCurFrame(truck0) == gate1post))
+{
+   PathMovePause(truck0);
+	MoveToFrame(gate0, 0, gatespeed);
+	MoveToFrame(gate1, 0, gatespeed);
+	WaitForStop(gate0);
+	PathMoveResume(truck0);
+}
+
+
+
+# .......................................................................................
+entered:
+
+if (GetSenderRef() ==(GetLocalPlayerThing()))
+{
+	//stop creation loop
+	//take control of camera
+	//put indy in crouch position
+	//return control when cutscene is finished playing
+}
+
+
+
+

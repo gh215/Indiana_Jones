@@ -1,0 +1,255 @@
+# Jones 3D Cog Script
+#
+# pyr_proximityglow.cog
+#	
+# Draw light beams in the desert as Indy gets closer to the monojackals
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	pulse
+message entered
+message exited
+message	user1
+
+# world things
+thing	player		nolink	local
+thing	sparkle		nolink
+thing	boxeye		nolink
+thing	flame		nolink
+
+# beam and endpoint
+thing	beam		nolink	local
+thing	endbeam		nolink
+
+# extra beam and endpoint for pyramid 3
+thing	beam2		nolink	local
+thing	endbeam2	nolink
+
+# sectors
+sector	trigger1
+sector	trigger2
+sector	trigger3
+sector	trigger4
+sector	trigger5
+sector	trigger6
+sector	trigger7
+															
+# materials
+material	sparklemat
+material	beammat
+
+# world surfaces
+surface		bigtrigger		nolink
+surface		poolsurface		nolink
+
+# variables
+flex	distance=0		local
+flex	distportion=0	local
+flex	oldportion=0	local
+flex	maxdistance=2.0
+flex	sparklesize=1
+flex	nullvalue=0.0	local
+int		dummy=0			local
+int		insector=0		local
+int		beamstatus=1
+end
+
+code
+startup:
+	sleep(.01);
+
+	# make animation run throughout
+	nullvalue = AnimateSpriteSize(sparkle, '.5 .5 0.0', '.6 .6 0.0', .1);
+	nullvalue = MaterialAnim(sparklemat, 5, 1);
+	SetThingFlags(sparkle, 0x10);
+
+	# create beam, hide it
+	beam = CreatePolylineThing(sparkle, endbeam, '0 0 0', beammat, .02, .02, 0);
+	nullvalue = ThingFadeAnim(beam, .1, 0, .01, 0);
+	SetThingFlags(beam, 0x10);
+	
+	# beamstatus key:
+	#	0: puzzle solved, no beams
+	#	1: only one beam
+	#	2: two beams, one of them is on (pyramid 3)
+	#	3: two beams, both of them are on (pyramids 1 and 4)
+	
+	# if two beams exist (for pool puzzle) draw a beam to it as well
+	# pyramid 1 also draws the extra beam to prevent multisector beam from blinking out
+	# pyramid 4	also draws the extra beam to enhance visibility of yellow glow
+		
+	if (beamstatus >= 2)
+	{
+		beam2 = CreatePolylineThing(endbeam, endbeam2, '0 0 0', beammat, .02, .02, 0);
+		nullvalue = ThingFadeAnim(beam2, .1, 0, .01, 0);
+		SetThingFlags(beam2, 0x10);
+	}
+	else
+	{
+		# otherwise ensure that beam2 isn't mistaken for the player
+		beam2 = -1;
+	}
+
+	return;
+
+entered:
+# --> Trigger sectors
+
+	# if already in a trigger sector, or lightbox down, or puzzle solved, exit
+	if (insector) return;
+	if (GetThingFlags(flame) & 0x10) return;
+	if (beamstatus == 0) return;
+
+	insector = 1;
+	
+	# set sparkle light to light value of boxeye
+	SetThingLight(sparkle, GetThingLight(boxeye), .001, .1);
+	
+	# fade the beam in to a light alpha
+	ThingFadeAnim(beam, 0, .1, 3, 0);
+
+	# if pool surface is visible for pyramid 3 upgrade beamstatus and draw 2nd beam
+	if ((GetFaceGeoMode(poolsurface) == 4) && (beamstatus >= 2))
+	{
+		beamstatus = 3;
+		ClearThingFlags(beam2, 0x10);
+		ThingFadeAnim(beam2, 0, .1, 3, 0);
+	}
+		
+	sleep(3);
+
+	# start proximity pulse
+	SetPulse(.2);
+	ClearThingFlags(beam, 0x10);
+	ClearThingFlags(sparkle, 0x10);
+
+	return;
+
+exited:
+# --> Trigger sectors
+
+	# if flame not visible, exit
+	if (GetThingFlags(flame) & 0x10) return;
+	
+	# if puzzle solved, exit
+	if (beamstatus == 0) return;
+
+	player = GetLocalPlayerThing();
+
+	# sleep to prevent "Player in the sector he just exited" bug
+	sleep(.01);
+	
+	# if player entered another trigger sector, exit
+	if ((GetThingSector(player) == trigger1) || (GetThingSector(player) == trigger2) ||
+		(GetThingSector(player) == trigger3) || (GetThingSector(player) == trigger4) ||
+		(GetThingSector(player) == trigger5) || (GetThingSector(player) == trigger6) ||
+		(GetThingSector(player) == trigger7)) return;
+	
+	sleep(.5);
+
+	# wierd entry problem on monojackal requires a check
+	dummy = GetSenderRef();
+	sleep(.1);
+	if (GetThingSector(player) == dummy) return;
+	
+	insector = 0;
+	
+	# kill pulse and fade the beam out
+	SetPulse(0);
+	ThingFadeAnim(beam, GetThingAlpha(beam), 0, 3, 0);
+
+   	# remove 2nd beam if there is one
+	if (beamstatus == 3)
+	{
+		ThingFadeAnim(beam2, GetThingAlpha(beam2), 0, 3, 0);
+	}
+
+	# reset distportion and make sparkle fully alpha
+	distportion = 0;
+	AnimateSpriteSize(sparkle, '1 1 0', '1 1 0', 2);
+	
+	return;
+
+user1:
+# ---> monojackal cog
+	
+	SetPulse(0);
+	
+	AnimateSpriteSize(sparkle, '1 1 0', '1 1 0', 2);
+	MaterialAnim(sparklemat, 5, 0);
+
+	# fade the main beam out
+	ThingFadeAnim(beam, 1, 0, 8, 0);
+	
+	# fade the secondary beam out, if it exists
+	if (beamstatus == 3)
+	{
+		ThingFadeAnim(beam2, 1, 0, 8, 0);
+	}
+	
+	# wait a bit, then destroy sparkle and other beam
+	sleep(9);
+	DestroyThing(sparkle);
+	DestroyThing(beam);
+
+	# fade the other beam out if it exists
+	if (beamstatus == 3)
+	{
+		DestroyThing(beam2);
+	}
+
+	# set beam status to reflect puzzle completion
+	beamstatus == 0;
+
+	return;
+	
+pulse:
+	# get distance from player to center of cyclops
+	distance = VectorDist(GetThingPos(GetLocalPlayerThing()), GetSurfaceCenter(bigtrigger));
+		
+	# if distance is within the set parameter, alter sparkle and beam value
+	if (distance < maxdistance)
+	{
+		# calculate relative nearness to monojackal after saving previous calculation
+		oldportion = distportion;
+		distportion = 1 - (distance/maxdistance);
+		
+		# fade and resize sparkle with proximity
+		nullvalue = AnimateSpriteSize(sparkle, VectorSet(oldportion * sparklesize, oldportion * sparklesize, oldportion * 1.5),
+									VectorSet(distportion * sparklesize, distportion * sparklesize, distportion * 1.5), .1);
+	
+		# if no change in distance, exit
+		if (oldportion == distportion) return;
+		
+		# otherwise, fade 1st beam in or out	
+		nullvalue = ThingFadeAnim(beam, oldportion, distportion, .2, 0);
+		
+		# redraw 2nd beam if it exists
+		if (beamstatus == 3)
+		{
+			nullvalue = ThingFadeAnim(beam2, oldportion, distportion, .2, 0);
+		}
+	}
+	else
+	{
+		# set alpha to minimum
+		nullvalue = SetThingAlpha(beam, 0);
+
+		# do the same to the 2nd beam if pool is visible
+		if (beamstatus == 3)
+		{
+			nullvalue = SetThingAlpha(beam2, 0);
+		}
+	}
+
+	return;
+
+end
+
+
+	

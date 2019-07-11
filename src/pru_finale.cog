@@ -1,0 +1,566 @@
+# Jones 3D Cog Script
+#
+# PRU_finale.cog    Grab the idol and the floor drops away and another boulder starts to roll.
+# Triggers PRU_camerashake.cog.
+#
+# [GGJ] [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message         startup                                 //startup
+message			entered									//triggers the doors
+message         pulse                                   //triggers falling blocks
+message         timer                                   //time between idol grab and ball roll
+message			arrived
+message			activated
+message			callback
+
+cog				shake									//sends message to PRU_camerashake.cog
+cog				shake2									//sends message to PRU_camerashake2.cog
+cog				fallingDebris
+
+sector			idolroom
+
+sector			wobbleSec0
+sector			wobbleSec1
+sector			safeSect
+
+sector			fallSector0
+sector			fallSector1
+sector			fallSector2
+
+
+sound			dialogue=pu04j01.wav				local
+sound			dialogue2=inxj011.wav				local		 
+sound			floorfall=olv_fallfloor_c.wav		local
+sound	   		floorcrash=pru_boulder_crash_c.wav	local
+sound			rise=olv_quetzdoor_move_c.wav		local
+sound			stuck=pru_trapblock_stuck_c.wav		local
+sound			trigger=gen_stone_stop_c.wav 		local	#or gen_stonebutt_push_c.wav lag_propbreak_c.wav nub_aethdoorarm_stop_c.wav
+sound			whistle=inxj006.wav					local
+sound			wobble0=olv_presswitch_c.wav		local
+sound			sink=nub_2mstep_move_c.wav			local
+sound			musSafe=mus_gen_indyrelief.wav		local
+sound			great=inxj014.wav					local
+sound			hmm=inxj269.wav						local
+sound			trap=inxj041a.wav					local
+sound			doorShutSnd=mus_gen_danger3.wav		local
+sound			idolGrabSnd=mus_gen_awesome1.wav	local
+sound			enterMus=mus_tem_tiki2int.wav		local
+
+surface			safeSurf
+
+thing           player				local           //Indy
+thing           floor0                                 //floor pieces that fall away
+thing           floor1
+thing           floor2
+thing           floor3
+thing           floor4
+thing           floor5
+thing           floor6
+thing           floor7
+thing           pedastal                                        //triggers doors
+thing           idol									//main treasure on level
+thing			invisibox								#keeps Indy from jumping onto pedastal
+
+thing			floortarget2
+thing			floortarget3
+thing			floortarget4
+thing			floortarget5
+
+thing			door0									//entrance
+thing			door1                                   //exit
+
+thing			camera0
+thing			camera1
+thing			camera2
+thing			camera3
+thing			actor									local
+thing			target0
+thing			target1
+thing			target2
+thing			camTarget0
+thing			camTarget1
+thing			floorTarget
+thing			safeActorGhost
+thing			invisiplate								#prevents Indy's head from going through rising door
+
+template		tplActor=indy_sh_actor					local
+
+keyframe		turnAroundR=in_rotate_right_nohead.key	local
+keyframe		turnAroundL=in_rotate_left_nohead.key	local
+keyframe		shaking=in_wobble.key					local
+keyframe		putAway=0in_takeobj_1_1.key				local
+
+flex	tempRotVel			local
+
+vector		posOffset	local
+vector		angOffset	local
+
+flex		posDelta=10.0	local
+flex		angDelta=180.0	local
+
+int		chooseLine			local
+int		count = 0			local
+int		dialoguelength = 2
+int		curCam				local
+int		player				local
+int		tempCam				local
+int		once=0				local
+int		over=0				local
+int		safeOnce=0			local
+int		frame=2				local
+int		whistleScene=0		local
+int		grab=0				local
+int		sceneOnce=0			local
+
+# Swapping stuff
+model	idolHand=hand_in_idol.3do	local
+int		callNum						local
+int		swapRef						local
+int		noPickup=1			local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+ClearThingFlags(pedastal, 0x40000000);
+player = GetLocalPlayerThing();
+SetThingLight(pedastal, '0.4 0.4 0.35', 1.0, 1.25);
+AttachThingToThing(invisiplate, door1);
+return;
+
+# ========================================================================================
+entered:
+#Cutscene of Indy entering room and discovering the new idol.
+if ((GetSenderRef() == idolroom) && (once == 0))
+{
+    once = 1;
+	noPickup = 1;
+	curCam = GetCurrentCamera();
+	StartCutscene(1);
+    
+	#Stop the player from moving and put him in a standing position
+    MakeMeStop();
+    DeselectWeaponWait(player);
+	Sleep(0.01);
+	
+	#Create an actor at the player's location and swap them out
+	actor = CreateThing(tplActor, target0);
+    CaptureThing(actor);
+
+	CopyPlayerHolsters(player, actor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(actor, 0x80000);
+	ResetThing(player);
+
+    PlaySoundLocal(enterMus, 1, 0, 0x0, 0);
+
+	#The actor walks over to the idol.
+	AISetLookThing(actor, idol);
+	AISetMoveSpeed(actor, 1.0);
+	AISetMoveThing(actor, target1, 0);
+	MoveToFrame(camTarget0, 1, 1.25);
+
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+    SetCameraFocus (2, camera0);
+	SetCameraSecondaryFocus(2, camTarget0);
+	SetCurrentCamera(2);
+	SetCameraFOV(70, 0, 0.0);
+	Sleep(0.01);
+    SetCameraFOV(25, 1, 2.7);
+	MoveToFrame(camera0, 1, 2.0);
+	AIWaitForStop(actor);
+    CopyOrientandPos(actor, player);
+	AISetLookPos(actor, vectorAdd(GetThingPos(idol), '0.0 0.0 -0.05'));
+	Sleep(0.5);
+			
+	#"Another Idol!  Well, Belloq won't get this one!"
+	PlayVoice(actor, dialogue, 1, 1);
+
+	#Door closes behind Indy.  Camera turns left to watch.
+	PlaySoundLocal(doorShutSnd, 1.0, 0.0, 0x0, 0);
+	MoveToFrame(door0, 1, 2.0);
+	MoveToFrame(camTarget0, 2, 2.0);
+	SetCameraFOV(45, 1, 1.0);
+    Sleep(1.0);
+	
+	#Indy turns, noticing that he's trapped.  "Uh-oh!"
+	tempRotVel=GetThingMaxRotVel(actor);
+    AISetLookThing(actor, camera2);
+	AISetLookThing(actor, door0);
+	Sleep(0.75);
+	#PlayKey(actor, turnAroundR, 4, 0x12, 1);
+    PlayVoice(actor, dialogue2, 1, 1);
+    SetThingMaxRotVel(actor, 200.0);
+    Sleep(0.5);
+	#PlayKey(actor, turnAroundL, 4, 0x12, 0);
+    
+    SkipToFrame(camTarget0, 1, 1.75);
+	over=1;
+	AISetLookThing(actor, camera2);
+    Sleep(0.25);
+    AISetLookThing(actor, target2);
+	AIWaitForStop(actor);
+	
+    
+	#Move the player again so he's in the same spot as the actor, and swap them back
+    SetThingMaxRotVel(actor, tempRotVel);
+    CopyOrientandPos(actor, player);
+    SetThingFlags(actor, 0x80000);
+	#DestroyThing(actor);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	DestroyThing(actor);
+	EndCutscene();
+    return;
+}
+
+#Indy reaches safety beyond the falling floor blocks.
+if (((GetSenderRef() == safeSurf) || (GetSenderRef() == safeSect)) && (safeOnce == 0) && (sceneOnce == 0))
+{
+    sceneOnce=1;
+	SetPulse(0.0);
+    SendMessage(fallingDebris, user1);
+	whistleScene=1;
+    
+    TeleportThing(floor2, floortarget2);
+    TeleportThing(floor3, floortarget3);
+    TeleportThing(floor4, floortarget4);
+    TeleportThing(floor5, floortarget5);
+    
+	curcam=GetCurrentCamera();
+	SetCameraFocus (2, camera3);
+	SetCameraSecondaryFocus(2, camTarget1);
+	SetCurrentCamera(2);
+	MoveToFrame(camera3, 1, 1.0);
+	MoveToFrame(camTarget1, 1, 1.2);
+	
+    if (GetCurWeapon(player) != 2)
+	{
+		DeselectWeaponWait(player);		#put away anything but the whip.
+	}
+   
+	MakeMeStop();
+    
+	#Create an actor at the player's location and swap them out
+	StartCutscene(1);
+
+	actor = CreateThing(tplActor, safeActorGhost);
+	CaptureThing(actor);
+    CopyPlayerHolsters(player, actor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(actor, 0x80000);
+	ResetThing(player);
+	AISetLookThing(actor, door0);
+	
+	SendMessage(shake, user0);
+	MoveToFrame(floor6, 1, 4.0);
+	PlaySoundThing(floorfall, floor6, 0.5, -1.0, -1.0, 0x880);
+	Sleep(1.5);
+	MoveToFrame(floor6, 2, 20.0);
+	Sleep(1.5);
+	MoveToFrame(floor7, 1, 4.0);
+	PlaySoundThing(stuck, floor7, 1, -1.0, -1.0, 0x880);
+	SetPOVShake('-0.001 0.001 -0.001', '0.01 -0.01 0.0', posDelta, angDelta);
+	Sleep(0.05);
+	SetPOVShake('0.001 -0.001 0.001', '-0.01 0.01 0.0', posDelta, angDelta);
+	Sleep(0.05);
+	SetPOVShake('-0.001 0.001 -0.001', '0.01 -0.01 0.0', posDelta, angDelta);
+}
+
+#The loose floorblock will rock if Indy moves around on it.
+if ((getSenderRef() == wobbleSec0) && (GetSourceRef() == player) && (safeOnce == 1))
+{
+    if (frame == 1)
+	{
+        MoveToFrame(floor7, 2, 0.5);
+		frame=2;
+		PlaySoundThing(wobble0, floor7, 1, -1.0, -1.0, 0x880);
+        Sleep(0.05);
+		SetPOVShake('-0.001 0.001 -0.001', '0.01 -0.01 0.0', posDelta, angDelta);
+		Sleep(0.05);
+		SetPOVShake('0.001 -0.001 0.001', '-0.01 0.01 0.0', posDelta, angDelta);
+		Sleep(0.05);
+		SetPOVShake('-0.001 0.001 -0.001', '0.01 -0.01 0.0', posDelta, angDelta);
+	}
+}
+
+if ((getSenderRef() == wobbleSec1) && (GetSourceRef() == player) && (safeOnce == 1))
+{
+    if (frame == 2)
+	{
+        MoveToFrame(floor7, 1, 0.5);
+		frame=1;
+		PlaySoundThing(wobble0, floor7, 1, -1.0, -1.0, 0x880);
+		Sleep(0.05);
+		SetPOVShake('0.001 -0.001 0.001', '-0.01 0.01 0.0', posDelta, angDelta);
+		Sleep(0.05);
+		SetPOVShake('-0.001 0.001 -0.001', '0.01 -0.01 0.0', posDelta, angDelta);
+		Sleep(0.05);
+		SetPOVShake('0.001 -0.001 0.001', '-0.01 0.01 0.0', posDelta, angDelta);
+	}
+}
+if ((GetSenderRef() == fallSector0) || (GetSenderRef() == fallSector1) || (GetSenderRef() == fallSector2))
+{
+    DetachThing(player);
+	return;
+}
+
+return;
+# ========================================================================================
+activated:
+
+if (grab == 1) return;
+Print("grab not equal to 1");
+
+if (noPickup == 1) return;
+
+if (GetSenderRef() == pedastal)
+{
+	Print("activated Idol");
+	grab = 1;
+	DeselectWeaponWait(player);
+    if ((GetMoveStatus(player) >= 3) && (GetMoveStatus(player) <= 5))
+	{
+		 makemestop();
+	}
+	
+	DestroyThing(invisibox);
+
+	#Stop the player from moving and put him in a standing position
+	MakeMeStop();
+//	Sleep(0.01);
+
+	StartCutscene(1);
+	SetActorFlags(player, 0x200000);
+	curCam=GetCurrentCamera();
+	ResetCameraFOV(0, 0);
+	
+	#SetExtCamOffsetToThing(camera1);
+	PlaySoundLocal(IdolGrabSnd, 0.8, 0.0, 0x0, 0);
+
+	#pos x is to the right, pos y is forward, pos z is up.
+	SetExtCamOffset('0.25 0.15 0.12');
+	SetExtCamLookOffSet('0.0 0.05 -0.01');
+	
+	#Create an actor at the player's location and swap them out.  Capture actor to get callback.
+	actor = CreateThing(tplActor, player);
+	CaptureThing(actor);
+	CopyPlayerHolsters(player, actor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(actor, 0x80000);
+//	ResetThing(player);
+
+	PlayKey(actor, putAway, 4, 0x12, 1);
+
+}
+return;
+
+# ========================================================================================
+pulse:
+if (count < 7)
+{
+	SendMessage(shake, user0);
+	SendMessage(fallingDebris, user0);
+	MoveToFrame(floor0[count], 1, 4.0);
+	PlaySoundThing(floorfall, floor0[count], 0.5, -1.0, -1.0, 0x880);
+	if (count == 1)
+	{
+		MoveToFrame(pedastal, 2, 4.0);
+		PlaySoundThing(floorfall, pedastal, 0.5, -1.0, -1.0, 0x880);
+		SetTimer(1.5);
+	}
+	Sleep(1.5);
+
+    if (count == 0)
+	{
+    	# RT 10/9/99: Savegame fix -- moved from the callback section
+        MoveToFrame(door1, 1, 0.5);
+		PlaySoundThing(rise, door1, 0.7, -1, -1, 0x880);
+    }
+
+	SendMessage(shake, user0);
+	MoveToFrame(floor0[count], 2, 15.0);
+}   
+
+if (count == 7)
+{
+	MoveToFrame(floor7, 1, 4.0);
+	PlaySoundThing(stuck, floor7, 1, -1.0, -1.0, 0x880);
+	SetPulse(0.0);
+    SendMessage(fallingDebris, user1);
+    #return;					
+}
+	
+count = count + 1;
+
+return;
+
+# ========================================================================================
+timer:
+		MoveToFrame(pedastal, 3, 15.0);
+		return;
+		
+# ========================================================================================
+arrived:
+	if ((GetSenderRef() == floor0[count]) && (GetCurFrame(floor0[count]) == 2))
+	{
+		PlaySoundThing(floorcrash, floor0[count], 1.0, 2.0, 20.0, 0x880);
+        SendMessage(fallingDebris, user1);
+	}
+	
+	#reset the camera at the end of the "another idol" cutscene.
+	if ((GetSenderRef() == camTarget0) && (over == 1))
+	{
+		Sleep(0.25);
+		SetCameraPosInterp(2, 0);
+		SetCameraLookInterp(2, 0);
+		tempCam = GetThingPos(camera2);
+        SetCameraPosition(curcam, tempCam);
+        SetCurrentCamera(curcam);
+		
+		Sleep(1.0);
+		noPickup = 0;
+	}
+
+if ((GetSenderRef() == floor6) && (GetCurFrame(floor6) == 2) && (safeOnce == 1))
+{
+    AISetLookThing(actor, floor7);
+	#SetCameraSecondaryFocus(2, floor7);
+}
+
+if ((GetSenderRef() == floor7) && (GetCurFrame(floor7) == 1) && (safeOnce == 0))
+{
+	safeonce=1;
+	if ((GetThingSector(player) == fallsector0) || (GetThingSector(player) == fallsector1) || (GetThingSector(player) == fallsector2)) return;
+	
+    if (whistleScene == 0)
+	{
+        SafeOnce=1;
+		SetPulse(0.0);
+        SendMessage(fallingDebris, user1);
+		whistleScene=1;
+        curcam=GetCurrentCamera();
+		SetCameraFocus (2, camera3);
+		SetCameraSecondaryFocus(2, camTarget1);
+		SetCurrentCamera(2);
+		MoveToFrame(camera3, 1, 1.0);
+		MoveToFrame(camTarget1, 1, 1.0);
+		PlaySoundLocal(musSafe, 1.0, 0.0, 0x0, 0);
+        
+		MakeMeStop();
+
+        if (GetCurWeapon(player) != 2)
+		{
+			DeselectWeaponWait(player);		#put away anything but the whip.
+		}
+		
+		#Create an actor at the player's location and swap them out
+		actor = CreateThing(tplActor, player);
+		CaptureThing(actor);
+		CopyPlayerHolsters(player, actor);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(actor, 0x80000);
+		AISetLookThing(actor, door0);
+	}
+	
+	Sleep(1.0);
+	
+	AISetMoveSpeed(actor, 1.0);
+	AISetMoveThing(actor, floorTarget, 1);
+	Sleep(0.25);
+	AISetLookThing(actor, floor0);
+	PlayVoice(actor, whistle, 1, 1);
+	
+	
+	Sleep(1.0);
+    CopyOrientandPos(actor, player);
+    SetThingFlags(actor, 0x80000);
+	#DestroyThing(actor);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+    SetCurrentCamera(curcam);
+    safeOnce=1;
+}
+
+return;
+
+# ========================================================================================
+
+callback:
+Print("callback....  grrrr!  Indented!");	
+
+	if (GetSenderRef() != actor)
+		return;
+
+Print("GetsenderRef IS actor");
+	# 5/17/99 Randy: Here's where we take care of swapping the idol in and out of Indy's hand.
+	
+	callNum = GetParam(1);
+PRINtInt(callnum);
+
+	if (callNum == 21)
+	{
+		# Swap the idol in
+		swapRef = SetThingMesh(actor, 15, idolHand, 0);
+		DestroyThing(idol);#
+        
+		ChangeInv(player, 36, 500.0);
+		SetInvAvailable(player, 36, 1);
+		JonesInvItemChanged(80);
+		
+    }
+	else if (callNum == 22)
+	{
+		# Now get rid of it
+		RestoreThingMesh(actor, swapRef);
+		
+        AISetLookPos(actor, vectorAdd(GetThingPos(pedastal), '0.0 0.0 0.01'));
+		
+		SetCameraFOV(70, 1, 2.0);
+		PlaySoundThing(trigger, pedastal, 1.0, -1.0, -1.0, 0x880);
+		MoveToFrame(pedastal, 1, 0.3);
+		PlaySoundThing(sink, pedastal, 1.0, -1.0, -1.0, 0x880);
+		chooseLine = RandBetween(1, 2);
+		Sleep(0.25);
+        if (chooseLine == 1)
+		{
+			PlayVoice(actor, great, 1, 0);
+		}
+		else
+		{
+			PlayVoice(actor, hmm, 1, 1);
+			Sleep(0.5);
+			PlayVoice(actor, trap, 1, 0);
+		}
+        
+		SetPulse(3.0);
+        
+		Sleep(2.25);
+	
+		#Move the player again so he's in the same spot as the actor, and swap them back
+		CopyOrientandPos(actor, player);
+		SetThingFlags(actor, 0x80000);
+		#DestroyThing(actor);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		
+		#SetCurrentCamera(curCam);
+		RestoreExtCam();
+		ResetCameraFOV(0, 0);
+		EndCutscene();
+        
+		Sleep(3.0);
+	}
+	return;
+
+end

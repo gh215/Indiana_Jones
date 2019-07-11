@@ -1,0 +1,151 @@
+# Jones 3D Cog Script
+#
+# aet_SprPulse.cog
+#
+# Produces the effect of a track of strobing lights all in a row.  May be used for different patterns.
+#
+# [TL] [RD]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+message	startup
+message	pulse
+message	crossed
+message	user0					# message begining pulse if needed
+message	user1                   # message ending pulse if needed
+
+thing	light0=-1		local	# throw-away for [index] use
+thing	light1
+thing	light2
+thing	light3
+thing	light4
+thing	light5
+thing	light6
+thing	light7
+thing	light8
+thing	light9
+thing	light10
+
+cog		offspring				# next cog in the string for more than 10 lights
+
+surface	adjoinOn				# turns on lights
+surface	adjoinOff				# turns off lights
+
+flex	valXoff=0.1				# smallest size of X axis value
+flex	valYoff=0.1             # smallest size of Y axis value
+flex	valAoff=0.1             # smallest amount of alpha value
+flex	valXon=0.5				# largest size of X axis value
+flex	valYon=0.5              # largest size of Y axis value
+flex	valAon=0.5              # largest amount of alpha value
+flex	fadetime=1.0			# amount of time it takes a light to fade from off to on or vice versa
+flex	pulsetime=1.0			# amount of time between pulses (this number must be >= fadetime)
+
+vector	vecoff			local
+vector	vecon			local
+
+int		cnt				local
+int		indexadd=1				# change this number to change pattern of light pulses (i.e. skip lights)
+int		lightnum=10				# number of highest attached light (i.e. light9 == 9)
+int		index=0					# change number to start pulse on light other than lowest attached light
+int		parent=1				# 1 == first cog to start string of pulses, 0 == not first cog to start string
+int		nullvalue		local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+# turning all of the sprites off at start up
+for (cnt = 0; cnt <= lightnum; cnt = cnt + 1)
+	{
+	if (light0[cnt] > 0)
+		{
+		nullvalue = AnimateSpriteSize(light0[cnt], '0 0 0', '0 0 0', 0);
+		}
+	}
+# if this cog is not the first in the string, then don't turn on the pulse at startup 
+if (parent == 0) return;
+# checking to see if any adjoins are attached to the cog, if not, then calls user0 to start pulse
+if (adjoinOn == -1)
+	{
+	call user0;
+	}
+
+return;
+
+# ........................................................................................
+crossed:
+
+# calls user0 to start pulse if On adjoin is crossed
+if (GetSenderRef() == adjoinOn)
+	{
+	call user0;
+	}
+# calls user1 to stop pulse if Off adjoin is crossed
+if (GetSenderRef() == adjoinOff)
+	{
+	call user1;
+	}
+
+return;
+
+# ........................................................................................
+user0:
+
+# starts lights pulsing and asigns values to sprite size and alpha 
+vecoff = VectorSet(valXoff, valYoff, valAoff);
+vecon = VectorSet(valXon, valYon, valAon);
+
+//AnimateSpriteSize(light0[index], vecoff, vecon, fadetime);
+
+SetPulse(pulsetime);
+
+return;
+
+# ........................................................................................
+pulse:
+
+# actual pulsing mechanism for lights
+# checks to see if some lights are NOT attatched and skips those index numbers
+if (light0[index] != -1)
+	{
+	nullvalue = AnimateSpriteSize(light0[index], vecon, vecoff, fadetime);
+	}
+# sets the index number ahead the indexadd amount to tell the cog the next sprite to be faded up
+index = index + indexadd;
+
+# once the index number is greater than the total number of lights...
+if (index > lightnum)
+	{
+	index = index - lightnum;
+	if (offspring != -1)
+		{
+		call user1;
+        SendMessage(offspring, user0);
+		return;
+		}
+	}
+
+# checks to see if some lights are NOT attatched and skips those index numbers
+if (light0[index] != -1)
+	{
+	nullvalue = AnimateSpriteSize(light0[index], vecoff, vecon, fadetime);
+	}
+
+return;
+
+# ........................................................................................
+user1:
+
+# turns off pulse and sets last of the sprites off...currently a small BUG in this code...
+//AnimateSpriteSize(light0[index], vecon, vecoff, fadetime);
+SetPulse(0);
+
+return;
+
+# ........................................................................................
+end

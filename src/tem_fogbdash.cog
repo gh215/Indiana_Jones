@@ -1,0 +1,88 @@
+# Jones 3D Cog Script
+#
+# TEM_FogBDash.cog
+#
+# [MDR] && [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    message     pulse
+    
+    thing       player          local
+    thing       fogGhost
+    
+    sector      start_Pulse1
+    sector      start_Pulse2
+    sector      end_Pulse1
+                       
+    vector      vec_facing      local
+    
+    int         inCave=0        local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    player = GetLocalPlayerThing();
+    
+    if((GetSenderRef() == start_Pulse1) || (GetSenderRef() == start_Pulse2))
+    {
+        Print("entered start_Pulse");
+        inCave = 1;
+        SetPulse(0.5);
+    }
+    
+    if(GetSenderRef() == end_Pulse1)
+    {
+        Print("entered end_Pulse1");
+        inCave = 0;
+        SetPulse(0.0);
+        
+        # set fog to blue
+        SetFog(1, '0.50 0.50 0.60', 10, 350);
+    }
+        
+    return;
+        
+# ========================================================================================
+
+pulse:
+
+    vec_facing = VectorSub( GetThingPos(fogGhost), GetThingPos(player));
+    vec_facing = VectorNorm(vec_facing);
+    
+    if(inCave == 1)
+    {
+        if (VectorDot(GetThingLVec(player), vec_facing) >= 0)
+        {
+            # Player is facing fogGhost
+            # set fog to red
+            #SetFog(1, '0.5, 0.05 0.05', 40, 125);
+            SetFog(1, '0.5, 0.05 0.05', 70, 150);
+        }
+        
+        else
+        {
+            # player's back is to fogGhost
+            # change fog values to blue
+            SetFog(1, '0.50 0.50 0.60', 10, 350);
+        }
+    }
+    
+    else
+        return;
+    
+    return;
+        
+# ========================================================================================
+
+end
+

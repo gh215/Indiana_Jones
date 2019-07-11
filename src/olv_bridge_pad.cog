@@ -1,0 +1,326 @@
+# Jones 3D Cog Script
+#
+# olv_bridge_pad.cog
+#
+# Cog to move snake bridges using pads.
+#
+# [DS & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message     entered
+	message     exited
+	message	activated
+	message		arrived
+	message		user0
+	message		user1
+
+	keyframe	in_think=0in_figithat_4_4.key				local
+	keyframe	in_1to4=0in_stand1_bd_4.key					local
+	keyframe	in_stand4=0in_stand4.key					local
+	keyframe	nopush=in_pushpull_anticipate.key				local
+
+	sound		plyerlvsnd=ov02j01.wav						local	# "Whoops. I need something to hold this pressure pad down"
+	sound		plyersnd=inxj054.wav						local	# "Must be a presure switch"
+	sound		blksnd=inxj112.wav							local	# "That ought to do it"
+	sound		switchsnd=olv_presswitch_c.wav				local
+	sound		bridgesnd=olv_quetzdoor_move_c.wav			local
+	sound		brdgstop=olv_quetzdoor_stop_c.wav			local
+	sound		nope=inxj098.wav						local	#It won't budge.
+
+	thing		pad_indy
+	thing       bridge0                          
+	thing       bridge1
+	thing		block0
+	thing		pad_cam_1									nolink
+	thing		pad_poscam									nolink
+	thing		pad_ct_1									nolink
+	thing		pad_in_mk_1									nolink
+	thing		pad_in_mk_2									nolink
+
+	surface     pad0										mask=0x480
+
+	cog			otherpadcog_a								# another instance of this cog
+	cog			otherpadcog_b								# another instance of this cog
+	cog			jag2_cog									# to send flee to jag.
+
+	vector		v_campos									local
+	flex        movespeed=1.0								local
+	int			doorstatus=0								local
+	int			redysteped=0								local
+	int			sndplay=-1									local
+	int			curcam										local
+	int			track										local
+	int			noexitthistime=0							local
+	int			startFOV_1									# value set in Marcus
+	int			startFOV_2									# value set in Marcus
+	int			finalFOV_1									# value set in Marcus
+	int			finalFOV_2									# value set in Marcus
+
+
+	thing		player			local
+	flex		opendoors			local
+	flex		close_doors			local
+	int		stepsnd			local
+	int		on_top=0			local
+
+end
+
+#-------------------------------------------------------------------------------
+
+code
+
+#...............................................................................
+
+startup:
+
+	# Print("bridgepad cog starting up...");
+
+	player=GetLocalPlayerThing();
+	return;
+
+#...............................................................................
+activated:
+	if(on_top == 1) return;
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(0);
+	PlayKey(player, nopush, 4, 0x12, 1);
+	PlayVoice(player, nope, 1.0, 1);
+		EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	return;
+#...............................................................................
+
+entered:
+
+	if (getsenderref() != pad0) return;
+
+	if (sndplay != -1)
+	{
+		StopSound(sndplay, 0);
+		sndplay = -1;
+	}
+
+	PlaySoundLocal(switchsnd, 1.0, 0.0, 0x0, 0);
+
+	if ((redysteped == 0) && (getsourceref() == player) && (getmovestatus(player) != 8))
+	{
+
+		# Print("started switch cutscene");
+		noexitthistime = 1; # prevent exit messages while this scene plays
+
+		# Prep...
+		curcam = GetCurrentCamera();
+		SendMessage(jag2_cog, user1);
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(1);
+		CopyOrient(player, pad_in_mk_1); # orient mark to match player
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(pad_indy, 0x80000);
+		CopyPlayerHolsters(player, pad_indy); # match props	
+		TeleportThing(pad_indy, pad_in_mk_1);
+		SetThingMaxRotVel(pad_indy, 180.0);
+		
+		# Cut to shot of Indy on pad...
+		SetCameraLookInterp(2, 0); # snap camera in place. 
+		SetCameraFocus(2, pad_cam_1);
+		SetCameraSecondaryFocus(2, pad_indy);
+   		SetCurrentCamera(2);
+		SetCameraFOV(startFOV_1, 0, 0.0);
+	 	call OpenDoors;
+
+		# Pan to bridge as Indy watches...
+		AISetLookThing(pad_indy, pad_ct_1);
+		SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 3.0);
+		Sleep(0.5);
+		SetCameraSecondaryFocus(2, pad_ct_1);
+		SetCameraFOV(finalFOV_1, 1, 3.0);
+		AIWaitForStop(pad_indy);
+		track = PlayKey(pad_indy, in_Stand4, 2, 0x0, 0);
+		PlayKey(pad_indy, in_1to4, 4, 0x12, 0);
+		stepsnd = PlayVoice(pad_indy, plyersnd, 1.0, 0);
+		WaitForStop(bridge0);
+		StopKey(pad_indy, track, 0.5);
+		Sleep(1.0);
+
+		# Print("indy steps off switch...");
+		SetCameraLookInterp(2, 0);
+		SetCameraSecondaryFocus(2, pad_indy);
+		SetCameraFOV(startFOV_2, 0, 0);
+
+		#  Move Indy off Pad...	
+		AISetMoveSpeed(pad_indy, 1.0);
+		AISetLookThingEyeLevel(pad_indy, pad_in_mk_2);
+		AISetMoveThing(pad_indy, pad_in_mk_2, 1);
+		PlaySoundLocal(switchsnd, 1.0, 0.0, 0x0, 0);
+
+		# Cut to shot of bridge retracting...
+		call Close_Doors;
+		SetCameraLookInterp(2, 1);
+		AISetLookThing(pad_indy, pad_ct_1);
+		Sleep(0.5);
+		SetCAmeraInterpSpeed(2, 3.0);
+		Sleep(0.01);
+		SetCameraSecondaryFocus(2, pad_ct_1);
+		SetCameraFOV(finalFOV_2, 1, 2.5);
+		PlayVoice(player, plyerlvsnd, 1.0, 0);
+		waitForStop(bridge0);
+		Sleep(1.0);
+	
+		# Clean up & restore player control...
+		SetCameraLookInterp(2, 0);
+		SetCameraInterpSpeed(2, 1);	# reset default
+
+		v_campos = GetThingPOS(pad_poscam); 
+		SetCameraPosition(1, v_campos); # prep to swing back to follow-cam
+		ResetCameraFOV(0, 0.0);
+		SetCurrentCamera(curcam);
+		SetCameraFOV(90, 0, 0);
+		TeleportThing(player, pad_indy); # orient player to actor
+		SetThingFlags(pad_indy, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+
+		# Forbid pad cutscenes to repeat on other pads ...
+		SendMessage(otherpadcog_a, user0);
+		SendMessage(otherpadcog_b, user0);
+		redysteped=1;
+		noexitthistime=0;
+		EndCutscene();
+		# Print("ending cutscene 2...");
+		return;
+		}
+
+
+#=============================================================================
+		
+	if (getsourceref() == block0)
+	{
+		doorstatus=1;
+		redysteped = 1;
+
+		# No longer able to move head.
+		ClearThingFlags(block0, 0x40000000);
+
+		call OpenDoors;
+		PlayVoice(player, blksnd, 1.0, 0);
+
+		return;
+	}
+	else
+	{
+		redysteped=1;
+		doorstatus=3;					#player is on pad int.
+		call OpenDoors;
+	}
+
+	return;
+
+#...............................................................................
+	
+exited:
+	if(redysteped == 0) return;
+	if (getsenderref() != pad0 || (noexitthistime == 1))
+	{
+		return;
+	}
+
+	if (sndplay != -1)
+	{
+		StopSound(sndplay, 0);
+		sndplay = -1;
+	}
+	PlaySoundLocal(switchsnd, 1.0, 0.0, 0x0, 0);
+
+	if (getsourceref() == block0)
+	{
+		if(doorstatus == 3) return;			#player on pad.
+		doorStatus = 0;
+		call close_doors;
+		return;
+	}
+	else
+	{
+		if (doorstatus == 1)
+		{
+			return;			# block is on pad.
+		}
+		call close_doors;
+
+	}
+
+	return;
+
+#...............................................................................
+
+user0:
+
+	# When received, kills ability to run pad cutscenes...
+
+	redysteped = 1;
+	return;
+
+#...............................................................................
+
+user1:
+
+	# Print("user1...");
+
+	redysteped = 1;
+	call OpenDoors;
+
+	return;
+
+#...............................................................................
+
+arrived:
+
+	# Print("arrived...");
+
+	if ((GetSenderRef() == bridge0) || (Getsenderref() == bridge1))
+	{ 		
+		if (sndplay != -1)
+		{
+			StopSound(sndplay, 0);
+			sndplay = -1;
+		}
+
+		PlaySoundThing(brdgstop, bridge0, 1, 20, 55, 0);
+	}
+
+	return;
+
+#...............................................................................
+
+OpenDoors:
+
+	# Print("opendoors...");
+
+    MoveToFrame(bridge0, 1, moveSpeed);
+	MoveToFrame(bridge1, 1, moveSpeed);	
+	sndplay = PlaySoundThing(bridgesnd, bridge0, 1, 20, 55, 1);
+
+	return;
+
+#...............................................................................
+
+close_doors:
+
+	# Print("closedoors...");
+
+	movetoframe(bridge0, 0, movespeed);
+	movetoframe(bridge1, 0, movespeed);
+	sndplay = PlaySoundThing(bridgesnd, bridge0, 1, 20, 55, 1);
+
+	return;
+
+end
+

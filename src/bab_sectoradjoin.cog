@@ -1,0 +1,44 @@
+# Jones 3D Cog Script
+#
+# BAB_CourtyardCommmie2.cog
+# This cog is based on the brilliant groundbreaking cog work pioneered by Reed Derleth
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    
+    thing       player          local
+    
+    sector      onsector
+    sector      vizsector
+        
+    int         done=0          local
+        
+end
+
+code
+
+# ========================================================================================
+startup:
+    player = GetLocalPlayerThing();
+    SetSectorAdjoins(vizsector, 0);
+    return;
+
+#----------------------------------------------------------------------------------------
+entered:
+    if ((GetSenderRef() == onsector) && (done == 0))
+    {
+        done = 1;
+        //print("turning courtyards on");
+        SetSectorAdjoins(vizsector, 1);
+    }                    
+    return;
+
+#----------------------------------------------------------------------------------------
+end

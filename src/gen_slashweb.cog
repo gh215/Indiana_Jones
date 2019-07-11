@@ -1,0 +1,96 @@
+# Jones 3D Cog Script
+#
+# gen_SlashWeb.cog
+#
+# Damage no move web with Machete to allow move through. 
+# Use gen_a4web.mat
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     activated
+    message     damaged
+    
+	thing       player      					local
+    thing       burnPos     					local
+    
+    surface     web								mask=0x408
+	surface	    webback							mask=0x408
+    
+    template	smoke=dustcloud     			local
+    
+    material	dustMat=gen_a4sfx_dustcloud.mat	local
+    
+    sound       lightWeb=gen_torchlitet_c.wav	local
+    
+    vector      smokeStart      				local
+    vector      smokeEnd        				local
+    
+    int         isBurnt=0       				local
+
+	# Subroutines
+	flex		RemoveWeb						local
+    
+end
+
+# ========================================================================================
+
+code
+
+activated:
+
+    if(isBurnt == 1) return;
+
+    isBurnt = 1;
+    
+    player = GetLocalPlayerThing();
+    smokeStart = VectorSet(0.2, 0.2, 0.5);
+    smokeEnd = VectorSet(1.0, 1.0, 0.0);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    burnPos = CreateThingAtPos(smoke, GetSurfaceSector(web), GetSurfaceCenter(web), '0.0 0.0 0.0');
+	CaptureThing(burnPos);
+    
+    PlaySoundThing(lightWeb, burnPos, 1.0, 5.0, 10.0, 0);
+
+    # alter adjoin
+	call RemoveWeb;
+    
+    # animate smoke
+    SetMaterialCel(dustMat, 0);
+    MaterialAnim(dustMat, 4.0, 1);
+    AnimateSpriteSize(burnPos, smokeStart, smokeEnd, 2.0);
+    
+    return;
+
+# ========================================================================================
+
+damaged:
+
+	# See if damage is from machete -- RT
+    if (GetParam(1) == 0x20)
+	{
+        call RemoveWeb;
+    }
+        
+	return;
+
+# ========================================================================================
+
+RemoveWeb:
+
+	SetWallCel(web, 1);
+    SetWallCel(webback, 1);
+    ClearAdjoinFlags(web, 0x10); 	# Clear no player move flag
+    SetAdjoinflags(webback, 0x2);	# Set move flag
+	
+	return;
+
+end
+

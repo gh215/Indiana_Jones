@@ -1,0 +1,30 @@
+# ===================================================================
+# Jones 3D Cog Script
+#
+# pyr_blockblocker.cog
+#
+# [RKD]
+#
+# Activate/deactivate a block to prevent another block from being pulled.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ===================================================================
+
+symbols
+message	entered
+message	exited
+
+sector	trigger
+
+thing	highblock	nolink
+end
+
+code
+entered:
+	ClearThingFlags(highblock, 0x40000000);
+	return;
+
+exited:
+	SetThingFlags(highblock, 0x40000000);
+	return;
+end

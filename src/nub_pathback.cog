@@ -1,0 +1,91 @@
+# Jones 3D Cog Script
+#
+# NUB_PathBack.cog
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		damaged
+message		arrived
+message		activated
+
+thing		player			local
+thing		door
+thing		socket0			mask=0x8
+thing		socket1			mask=0x8
+
+sound		startDoorSnd=nub_stonedoor_start_c.wav		local
+sound		moveDoorSnd=nub_stonedoor_move_c.wav		local
+sound		stopDoorSnd=nub_stonedoor_stop_c.wav		local
+
+
+# right key lines...
+sound	open0=Inxj103.wav				local # Whoa! It opened.
+sound	open1=Inxj111.wav				local # what...know...worked!
+
+# door locked lines...
+sound	locked0=Inxj096.wav				local # I can't open it-->insayline[25]
+sound	locked1=Inxj097.wav			local # For some reason...won't open.
+sound	locked2=Inxj102.wav				local # must be way...don't know how.
+
+
+int			opened=0		local
+int			move0Channel	local
+int			talking=0		local
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+activated:
+if (talking == 1) return;
+
+if ((GetSenderRef() == door) || (GetSenderRef() == socket0))
+{
+	talking = 1;
+	PlayVoice(player, locked0[randbetween(0, 2)], 1, 1);
+	talking = 0;
+}
+return;
+# ........................................................................................
+damaged:
+if (opened == 1) return;
+
+# if player activates socket WITH IMP #4 and door is closed
+if (((GetSenderRef() == socket0) || (GetSenderRef() == socket1))  && (GetParam(1) == 0x4000))
+	{
+    opened = 1;
+	
+	PlaySoundThing(startDoorSnd, door, 1.0, -1, -1, 0);
+	move0Channel = PlaySoundThing(moveDoorSnd, door, 1.0, -1, -1, 0x1);
+	MoveToFrame(door, 1 - GetCurFrame(door), 1.0);
+    PlayVoice(player, open0[randbetween(0, 1)], 1, 0);
+	Sleep(2.0);
+	opened = 0;
+    
+	}
+return;
+
+# ........................................................................................
+arrived:
+if (GetSenderRef() == door)
+{
+	StopSound(move0channel, 0.0);
+	PlaySoundThing(stopDoorSnd, door, 1.0, -1, -1, 0);
+}
+return;
+
+# ........................................................................................
+end

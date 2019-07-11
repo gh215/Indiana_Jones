@@ -1,0 +1,336 @@
+# Jones 3D Cog Script
+#
+# INF_IMP1_Pistons.cog
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     pulse
+    message     touched
+    
+    message     user0       # right imp part inserted
+    message     user1       # wrong part inserted
+    message     user2       # no part inserted
+    
+    cog         elevcog0
+    cog         elevcog1
+    cog         elevcog2
+    cog         elevcog3
+    cog         elevcog4
+    cog         elevcog5
+    cog         elevcog6
+    cog         elevcog7
+    cog         elevcog8
+    
+    thing       player                                      local
+    thing       actorindy
+    
+    thing       piston0                                     linkid=5
+    thing       piston1                                     linkid=5
+    thing       piston2                                     linkid=5
+    thing       piston3                                     linkid=5
+    thing       piston4                                     linkid=5
+    
+    thing       ptarget0
+    thing       ptarget1
+    thing       ptarget2
+    thing       ptarget3
+    thing       ptarget4
+    
+    thing       lightning_strike                            local
+    thing       strike_sector                               local
+    
+    thing       camera_tgt0
+    thing       camera_pos0
+    
+    keyframe    inShocked=in_activate_medium_shock.key		local
+    
+    template    sparks=bluesparks      						local
+    template    smoke0=+pistol_smoke1						local
+    template	lightzap=+lightningzap						local
+    template	lighthit=+lightninghit						local
+    
+    material	lightningmat0=inf_4sfx_lightning_a.mat	    local
+    material	lightningmat1=inf_4sfx_lightning_b.mat	    local
+    material	lightningmat2=inf_4sfx_lightning_c.mat	    local
+    material	lightningmat3=inf_4sfx_lightning_d.mat	    local
+        
+    sector      triggersector
+    sector      current_sector                              local
+    
+    sector      cylinder0                                   linkid=3
+    sector      cylinder1                                   linkid=3
+    sector      cylinder2                                   linkid=3
+    sector      cylinder3                                   linkid=3
+    sector      cylinder4                                   linkid=3
+    
+    sector      safeportal0                                 linkid=4
+    sector      safeportal1                                 linkid=4
+    
+    int         testhack=0                                  local
+    int         pulsetime=2                                 local
+    int         cnt=0                                       local
+    int         curcyl_indy=0                               local
+    int         in_cylinders=0                              local
+    int         rumbler_on=0                                local
+    int         killit=0                                    local
+    int         count                                       local
+    int         cyl                                         local
+    
+    vector      player_pos                                  local
+    
+    sound		contact0=gen_lightning_contact_c.wav		local
+    sound       contact1=gen_lightning_contact_c.wav        local
+    sound       contact2=aet_lightning_04.wav               local
+    
+    sound       pistonhit=inf_piston_2.wav                  local
+    sound       pistonupswing=inf_piston_1.wav              local
+    sound       zapdown=fol_gf_attack.wav                   local
+    sound       powerdwn=imp5_powerdown.wav                 local
+    sound       workedline=INXJ111.wav                      local
+      
+end
+
+
+code
+#........................................................................................
+startup:
+    //inital conditions
+
+    player = GetLocalPlayerThing();
+    SetPulse(2);
+    
+return;
+
+#........................................................................................
+//right part
+user0:
+
+    rumbler_on = 1;
+    //print("IMP1 has been placed");
+    SendMessage(elevcog0, user0);
+    SendMessage(elevcog1, user0);
+    SendMessage(elevcog2, user0);
+    SendMessage(elevcog3, user0);
+    SendMessage(elevcog4, user0);
+    SendMessage(elevcog5, user0);
+    SendMessage(elevcog6, user0);
+    SendMessage(elevcog7, user0);
+    SendMessage(elevcog8, user0);
+    
+    StartCutscene(1);
+    SetActorFlags(player, 0x200000);
+    StopThing(player);
+    SetCameraFocus(2, camera_pos0);
+    SetCameraSecondaryFocus(2, camera_tgt0);
+    SetCurrentCamera(2);
+    SetCameraFOV(110, 0, 0);
+    Sleep(5);
+    SetCameraFOV(90, 0, 0);
+    
+    // return control to the player
+    CopyOrientAndPos(actorindy, player);
+    SetThingFlags(actorindy, 0x80000);
+    ClearThingFlags(player, 0x10);
+    ClearThingFlags(player, 0x80000);
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0);
+    PlayVoice(player, workedline, 1, 1);
+    EndCutscene();
+    ClearActorFlags(player, 0x200000);
+    
+    
+return;
+
+#........................................................................................
+//wrong part
+user1:
+
+    rumbler_on = 0;
+    //print("IMP4 has been taken");
+    
+    StartCutscene(1);
+    SetActorFlags(player, 0x200000);
+    StopThing(player);
+    SetCameraFocus(2, camera_pos0);
+    SetCameraSecondaryFocus(2, camera_tgt0);
+    SetCurrentCamera(2);
+    SetCameraFOV(110, 0, 0);
+    //play power up noise
+    Sleep(4);
+    SetCameraFOV(90, 0, 0);
+    
+    // return control to the player
+    CopyOrientAndPos(actorindy, player);
+    SetThingFlags(actorindy, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    ClearThingFlags(player, 0x10);
+    ClearThingFlags(player, 0x80000);
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0);
+    EndCutscene();
+    
+return;
+
+#........................................................................................
+//no part
+user2:
+
+    rumbler_on = 2;
+    //print("There is no part here");
+    
+    //cut to show cylinders
+    StartCutscene(1);
+    SetActorFlags(player, 0x200000);
+    StopThing(player);
+    SetCameraFocus(2, camera_pos0);
+    SetCameraSecondaryFocus(2, camera_tgt0);
+    SetCurrentCamera(2);
+    SetCameraFOV(110, 0, 0);
+    //play power down noise
+    CreateThing(sparks, piston4);
+    sleep(0.5);
+    CreateThing(sparks, piston4);
+    PlaySoundLocal(zapdown, 1, 0, 0, 1);
+    //PlaySoundLocal(powerdwn, 1, 0, 0, 1);
+    Sleep(2);
+    SetCameraFOV(90, 0, 0);
+    
+    // return control to the player
+    CopyOrientAndPos(actorindy, player);
+    SetThingFlags(actorindy, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    ClearThingFlags(player, 0x10);
+    ClearThingFlags(player, 0x80000);
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0);
+    EndCutscene();
+
+return;
+
+#........................................................................................
+
+entered:
+
+    if (GetSenderID() == 4)
+    {
+        in_cylinders = 0;
+        //print("indy is in safe sectors");
+    }
+
+    if ((GetSenderID() == 3) && (GetSourceRef() == player))
+    {
+        in_cylinders = 1;
+        current_sector=GetThingSector(player);
+        if (current_sector == cylinder0)
+        {
+            curcyl_indy = 0;
+            //print("indy is in cylinder0");
+            
+        }
+        if (current_sector == cylinder1)
+        {
+            curcyl_indy = 1;
+            //print("indy is in cylinder1");
+            
+        }
+        if (current_sector == cylinder2)
+        {
+            curcyl_indy = 2;
+            //print("indy is in cylinder2");
+            
+        }
+        if (current_sector == cylinder3)
+        {
+            curcyl_indy = 3;
+            //print("indy is in cylinder3");
+    
+            
+        }
+        if (current_sector == cylinder4)
+        {
+            curcyl_indy = 4;
+            //print("indy is in cylinder4");
+        }
+    }
+                                           
+    return;
+        
+#........................................................................................
+
+pulse:
+
+    //wrong part side effects
+    if (rumbler_on == 0) 
+    {
+        //lightning strikes
+        PlaySoundThing(contact0[RandBetween(0, 2)], piston0[count], 1, 5, 10, 0);
+        for (cnt = 4; cnt <= RandBetween(4, 8); cnt = cnt + 1)
+        {
+            lightning_strike = CreatePolylineThing(piston0[count], ptarget0[count], '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+            Sleep(0.05); 
+        }
+        if ((curcyl_indy == count) && (in_cylinders == 1))
+            {
+                //print("indy gets hit");
+                SetActorFlags(player, 0x200000);
+                StopThing(player);
+                player_pos = VectorAdd(GetThingPos(player), '0 0 0.05');
+                for (cnt = 4; cnt <= RandBetween(4, 8); cnt = cnt + 71)
+                {
+                    CreatePolylineThing(piston0[count], player_pos, '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+                    Sleep(0.05); 
+                }
+                CreateThingAtPos(sparks, GetThingSector(player), player_pos, '0 0 0');
+	            CreateThingAtPos(smoke0, GetThingSector(player), player_pos, '0 0 0');
+	            CreateThingAtPos(lighthit, GetThingSector(player), player_pos, '0 0 0');
+                DamageThing(player, 1000, 0x2, piston0[count]);
+                Sleep(1);
+                ClearActorFlags(player, 0x200000);
+            }
+            count=count+1;
+        if (count == 5)
+        {
+            count = 0;
+        }
+    }
+    
+    if (rumbler_on == 1)
+    {
+        MoveToFrame(piston0[cyl], 1, 6);
+        PlaySoundThing(pistonhit, piston0[cyl], 1, 2, 15, 0x80);
+        WaitForStop(piston0[cyl]);
+        PlaySoundThing(pistonupswing, piston0[cyl], 1, 2, 15, 0x80);
+        MoveToFrame(piston0[cyl], 0, 3);
+        cyl = cyl + 1;
+        if (cyl == 5)
+        {
+            cyl = 0;
+        }
+    }
+    return;
+    
+#........................................................................................
+
+touched:
+
+    If ((GetSenderID() == 5) && (GetSourceRef() == player) && (killit == 0) && (rumbler_on == 1))
+    {
+        //print("cylinder is blocked");
+        DamageThing(player, 1000, 0x80, piston0[count]);
+        killit=1;
+    }
+    
+return;
+    
+#........................................................................................
+
+end
+
+

@@ -1,0 +1,273 @@
+# Jones 3D Cog Script
+#
+# SOL_MineSftyDoors.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     user1
+    message     user2
+    message     entered
+    message     activated
+    message     blocked
+
+    thing       car             local
+    thing       player          local
+    thing       doorL                              
+    thing       doorR
+    sector      doorSector      nolink
+
+    surface     open            mask=0x404
+    surface     close           mask=0x404
+	surface		stopface			
+    
+    sound       sndOpen=sol_cardoor_open_c.wav      local
+    sound       sndClose=sol_cardoor_close_c.wav    local
+    
+    sound       in_Line0=Pr15j02.wav        local   # The fire door only opens...
+    sound       in_Line1=Inxj096.wav        local   # I can't open it.
+    sound	    fireSafety=pr15j01.wav	    local   # Horner must have been worried...
+    
+    vector      color           local
+    
+    flex        R=0.3
+    flex        G=0.3
+    flex        B=0.35
+    
+    int         doorsOpen=0		local
+    int         sender			local
+    int         sound1          local
+    int         newComment      local
+    int         oldComment      local
+    int         playing=0       local
+    
+    int         override=0      local
+    int         doorsMoving=0   local
+    int         chase1Wait=0    local
+    int         count=0         local
+
+    # ** Subroutines **
+	flex        openDoors       local
+    flex        closeDoors      local
+    flex		doorLine		local
+        
+end
+
+# ========================================================================================
+code
+
+startup:
+
+    SectorAdjoins(doorSector, 0);
+    color = VectorSet(R, G, B);
+    SetThingLight(doorL, color, 0.001, 0.1);
+    SetThingLight(doorR, color, 0.001, 0.1);
+    
+    return;
+        
+# ========================================================================================
+
+user0:
+
+    override = 1;
+    call openDoors;
+    return;
+    
+# ========================================================================================
+
+user1:
+
+    call closeDoors;
+    override = 0;
+    return;
+    
+# ========================================================================================
+
+user2:
+
+    chase1Wait = 1;
+    return;
+    
+# ========================================================================================
+      
+entered:
+        
+	sender = GetSenderRef();
+    car = GetSourceRef();
+
+    if((BitTest(GetPhysicsFlags(car), 0x01000000)) && (!doorsMoving) && (!override))
+    {
+        if((sender == open) && (!doorsOpen))
+        {
+            call openDoors;    
+        }
+        
+    	else if((sender == close) && (doorsOpen))
+        {
+            call closeDoors;
+        }
+    }
+        
+    return;
+
+# ========================================================================================
+
+activated:
+
+    Print("Activated: Mine Doors");
+    player = GetLocalPlayerThing();
+
+    if((GetSenderRef() == doorL) || (GetSenderRef() == doorR))
+    {
+        if(playing == 0) Call doorLine;
+    }
+
+    return;
+
+# ========================================================================================
+
+openDoors:
+
+    doorsMoving = 1;
+    # turn on adjoin, remove door collisions
+    SectorAdjoins(doorSector, 1);
+    SetCollideType(doorL, 0);
+    SetCollideType(doorR, 0);
+    
+    # play door sounds
+    if(doorsOpen == 0)
+    {
+        sound1 = PlaySoundThing(sndOpen, doorL, 0.75, 15.0, 30.0, 0);
+        Sleep(0.02);
+        PlaySoundThing(sndOpen, doorR, 0.75, 15.0, 30.0, 0);
+    }
+    
+    # open the doors
+    MoveToFrame(doorL, 1, 2.2);
+    MoveToFrame(doorR, 1, 2.2);
+    #WaitForStop(doorL);
+    doorsOpen = 1;
+    doorsMoving = 0;
+	SetSurfaceFlags(stopface, 0x4000);
+
+    return;
+
+# ========================================================================================
+
+closeDoors:
+
+    doorsMoving = 1;
+    
+    WaitForStop(doorL);
+    WaitForSound(sound1);
+    
+    if(chase1Wait == 1)
+    {
+        Print("MineSftyDoors: waiting");
+        Sleep(5.0);
+        chase1Wait = 0;
+    }
+    
+    SetCollideType(doorL, 3);
+    SetCollideType(doorR, 3);
+    
+    # play door sounds
+    PlaySoundThing(sndClose, doorL, 0.75, 15.0, 30.0, 0);
+    Sleep(0.02);
+    PlaySoundThing(sndClose, doorR, 0.75, 15.0, 30.0, 0);
+    
+    # close the doors
+    MoveToFrame(doorL, 0, 1.6);
+    MoveToFrame(doorR, 0, 1.6);
+    
+	ClearSurfaceFlags(stopface, 0x4000);
+
+    # turn off adjoin, reset collisions
+    WaitForStop(doorL);
+    
+    #SetCollideType(doorL, 3);
+    #SetCollideType(doorR, 3);
+    
+    Sleep(1.0);
+    SectorAdjoins(doorSector, 0);
+    doorsOpen = 0;
+    doorsMoving = 0;
+
+    return;
+    
+# ========================================================================================
+
+doorLine:
+
+    playing = 1;
+    
+    while (newComment == oldComment) 
+    {
+    	newComment = RandBetween(0, 1);
+    }
+    
+    oldComment = newComment;
+    
+    count = count + 1;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # offset camera and nudge the door
+    SetExtCamOffset('0.1 0.0 0.065');
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # player never activated door in PYR
+    if(global12 == 0)
+    {
+        PlayVoice(player, fireSafety, 1.0, 1);
+        global12 = 1;
+    }
+    
+    # player activated door in PYR
+    else if(global12 == 1)
+    {
+        if(count == 5)
+        {
+            count = 0;
+            PlayVoice(player, fireSafety, 1.0, 1);
+        }
+        
+        else
+        {
+            PlayVoice(player, in_Line0[newComment], 1.0, 1);
+        }
+    }
+    
+    RestoreExtCam();
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+blocked:
+
+    Print("blocked");
+    Call openDoors;
+    return;
+    
+# ========================================================================================
+
+end
+

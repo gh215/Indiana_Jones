@@ -1,0 +1,111 @@
+# Jones 3D Cog Script
+#
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#===============================================================================
+
+
+symbols
+
+    message     startup
+    message     activated
+    message	    timer
+
+    thing       switch0         
+	thing		door0
+	thing		door1
+	thing		indy				nolink	desc=cutscene actor
+	thing		campos	
+	
+	thing		player					local
+	sector  	doorsector					local
+	int		doorstatus					local
+	int		movestatus					local
+	keyframe	in_activate=in_uw_pullswitch.key	local 
+	cog		hints
+	sound		doorsnd=teo_stonebar_slide_c.wav	local
+	sound		doorstop=teo_teobut_pull_c.wav	local
+	int		doormove					local
+	int		actit						local
+	int		curcam					local
+	flex		checkstatus					local
+
+end
+
+code
+
+#========================================================================================
+startup:
+	player = GetLocalPlayerThing();
+	doorsector = GetThingSector(door0);
+	SetSectorAdjoins(doorsector, 0);
+	return;
+    
+#========================================================================================
+activated:
+	if (GetSenderRef() != switch0) return;
+	call checkstatus;
+	if(movestatus) return;
+	curCam = GetCurrentCamera();
+    if(doorstatus == 0)
+    {                                      
+	SetSectorAdjoins(doorsector, 1);
+	SetThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	CopyPlayerHolsters(player, indy);
+	StartCutscene(1);
+	ClearThingFlags(indy, 0x80000);
+	SetCameraLookInterp(2, 0);			# turns off interp to lookthing.
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, indy);
+	SetCurrentCamera(2);
+	SetCameraFOV(45, 0, 0);				
+	SetTimer(1.5);
+	actit = PlayKey(indy, in_activate, 4, 0x12, 1);
+		SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 2);
+		sleep(0.1);
+		SetCameraSecondaryFocus(2, door0);
+		sleep(1.5);
+	movetoframe(door0, 1, 0.5);
+	movetoframe(door1, 1, 0.5);
+	doormove=PlaySoundThing(doorsnd, door0, 1, 45, 60, 1);
+	WaitForStop(door0);
+	StopSound(doormove, 0.1);
+	PlaySoundThing(doorstop, door0, 1, 45, 60, 0);
+	SetCameraLookInterp(2, 0);			#reset default
+	SetCameraFOV(90, 0, 0);				#reset default
+	SetCameraInterpSpeed(2, 1);			#reset default
+	SetCurrentCamera(curCam);
+	SetThingFlags(indy, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	EndCutscene();
+
+        # Send message to hint cog
+	SendMessageEx(hints, user6, 1, 0, 0, 0);   	 #param0=1; solved.
+
+	}
+	return;
+    
+#========================================================================================
+timer:
+	MoveToFrame(switch0, 1, 0.5);
+	return;
+
+#========================================================================================
+checkstatus:
+	moveStatus = 0;
+	doorStatus = 0;
+	if (door0 >= 0) {
+			moveStatus = moveStatus + IsThingMoving(door0);
+			doorStatus = doorStatus + GetCurFrame(door0);
+		}
+	return;
+    
+
+#========================================================================================
+
+end

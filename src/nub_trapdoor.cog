@@ -1,0 +1,81 @@
+# Jones 3D Cog Script
+#
+# nub_TrapDoor.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	entered
+message	startup
+
+thing	door			
+thing	player							local
+sector	musTrigger
+sound	creak 
+sound	slam
+sound	snakeMus=mus_gen_eerie1.wav		local
+
+thing	snake0
+thing	snake1
+thing	snake2
+thing	snake3
+
+int		done=0	local
+int		musDone=0	local
+
+end
+
+# ........................................................................................
+code
+startup:
+Sleep(0.1);
+AISetCutsceneMode(snake0);
+AISetCutsceneMode(snake1);
+AISetCutsceneMode(snake2);
+AISetCutsceneMode(snake3);
+return;
+
+entered:
+
+if (GetSenderRef() == door)
+{
+    if (done == 1) return;
+	player = GetLocalPlayerThing();
+	done = 1;
+	
+	PlaySoundLocal(creak, 1.0, 0, 0x0000, 0);
+    Sleep(2.0);
+    #if ((GetMoveStatus(player) >= 3) && (GetMoveStatus(player) <= 5))
+	#{
+	#	MakeMeStop();
+	#	Sleep(0.01);
+	#	ClearActorFlags(player, 0x200000);
+	#}
+	Sleep(0.1);
+	Rotate(door, -90, 0, 0.5);
+	PlaySoundLocal(slam, 1.0, 0, 0x0000, 0);
+
+	Sleep(0.5);
+	AIClearCutsceneMode(snake0);
+	AIClearCutsceneMode(snake1);
+	AIClearCutsceneMode(snake2);
+	AIClearCutsceneMode(snake3);
+	return;
+}
+
+if (GetSenderRef() == musTrigger)
+{
+	if (musDone == 1) return;
+	musDone = 1;
+	PlaySoundLocal(snakeMus, 1.0, 0, 0x0, 0);
+}
+
+return;
+
+# ........................................................................................
+end
+

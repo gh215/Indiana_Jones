@@ -1,0 +1,259 @@
+# Jones 3D Cog Script
+#
+# VOL_Hint.cog
+#
+# Solves hints    
+#
+# [SXC]	adapted by [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+        message         startup
+        message         entered
+        message         crossed
+        message         user0
+        message         activated
+
+        
+        thing           player                          local
+
+        # HINT OBJECTS/SURFS/SECTORS
+        
+		thing           hint2
+        sector         	h2_sect             	# blast first damaged wall and enter sector
+        
+        thing           hint4
+        surface         h4_face             	# cross adjoin to hidden cave 1
+        
+        thing           hint6
+        surface         h6_face           		# enter rock smash face
+        
+        thing           hint8  			 
+        thing         	h8_boatswitch           # hit boat mover switch
+        
+		thing           hint10
+        cog				h10_sharkkeycog			# take key from boat after movement
+
+		thing           hint12
+        surface         h12_face    	        # cross adjoin to hidden cave 2 water tunnel from shark area
+        
+        thing           hint14
+        sector			h14_sect				# cross adjoin to hidden cave 2 from water tunnel
+        
+        thing           hint16
+        surface         h16_face            	# enter face at mouth of switch cave above lava river
+        
+        thing           hint18
+        thing         	h18_gateswitch			# push shark area gate open switch 
+        
+        thing           hint20
+        surface         h20_face				# cross through shark exit doors        
+
+        thing           hint22
+        thing	        h22_deathaltar			# enter lava altar 3do
+
+        thing           hint24
+        thing         	h24_lavaswitch			# flood the lava room
+
+        thing           hint26
+        surface         h26_face				# exit lava room
+
+        thing           hint28
+        surface         h28_face				# enter face with first sophia cutscene
+
+        thing           hint30
+        sector         	h30_sect					# enter face behind door of lekk
+
+        thing           hint32
+        sector         	h32_SECT				# enter face beneath lava mouth in co-op room
+
+        thing           hint34
+        thing          	h34_sophiatalkobj   	# talk to sophia for the first time
+        
+        thing           hint36
+        cog          	h36_commiekeycog    	# pick up key from dead commie
+
+        thing           hint38
+        thing          	h38_sophiafreeobj      	# free sophia
+
+        thing           hint40
+		cog          	h40_sophiacoopcog		# speak with sophia at bridge
+
+        thing           hint42
+        surface         h42_face				# swing across after speaking with sophia
+
+        thing           hint44
+        thing          	h42_trampart        	# take tram wheel from crate
+		thing			h42_trampartB			# invisiplate near part
+
+        thing           hint46
+        cog		        h46_funicularcog    	# fix the funicular
+
+		thing           hint48
+        thing          	h48_switch          	# hit the funciular switch
+		
+
+end
+
+
+# ========================================================================================
+code
+
+startup:
+    player = GetLocalPlayerThing();
+return;
+
+# ========================================================================================
+# ========================================================================================
+crossed:
+
+	If ((GetSenderRef() == h4_face) && (GetHintSolved(hint4) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint4);
+    }
+	
+	if ((GetSenderRef() == h12_face) && (GetHintSolved(hint12) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint12);
+		}
+
+return;
+    
+
+# ========================================================================================
+
+entered:
+        
+	If ((GetSenderRef(h2_sect))	 &&  (GetHintSolved(hint2) == 0))
+		{
+		SetHintSolved(hint2);
+		}	
+
+	if ((GetSenderRef() == h6_face) && (GetHintSolved(hint6) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint6);
+		}
+
+    if ((GetSenderRef() == h14_sect) && (GetHintSolved(hint14) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint14);
+		}
+    
+    if ((GetSenderRef() == h16_face) && (GetHintSolved(hint16) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint16);
+		}
+
+    if ((GetSenderRef() == h20_face) && (GetHintSolved(hint20) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint20);
+		}
+
+    if ((GetSenderRef() == h22_deathaltar) && (GetHintSolved(hint22) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint22);
+		}
+
+    if ((GetSenderRef() == h26_face) && (GetHintSolved(hint26) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint26);
+		}
+
+    if ((GetSenderRef() == h28_face) && (GetHintSolved(hint28) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint28);
+		}
+
+    If ((GetSenderRef(h30_sect)) && (GetSourceRef() == player) && (GetHintSolved(hint30) == 0))
+		{
+		SetHintSolved(hint30);
+		}
+	
+    if ((GetSenderRef() == h32_SECT) && (GetHintSolved(hint32) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint32);
+		}
+
+	if ((GetSenderRef() == h42_face) && (GetHintSolved(hint42) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint42);
+		}
+    	
+return;
+	
+# ========================================================================================
+activated:	
+	
+    if ((GetSenderRef() == h8_boatswitch) && (GetHintSolved(hint8) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint8);
+		}
+
+    if ((GetSenderRef() == h18_gateswitch) && (GetHintSolved(hint18) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint18);
+		}
+
+    if ((GetSenderRef() == h24_lavaswitch) && (GetHintSolved(hint24) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint24);
+		}
+
+    if ((GetSenderRef() == h34_sophiatalkobj) && (GetHintSolved(hint34) == 0) && (GetSourceRef() == player))
+		{
+        SetHintSolved(hint34);
+		}
+
+    if ((GetSenderRef() == h38_sophiafreeobj) && (GetHintSolved(hint38) == 0) && (GetCurItem(player) == 110))
+		{
+        If (GetHintSolved(hint34) == 0) SetHintSolved(hint34);
+		SetHintSolved(hint38);
+		}
+
+    if (((GetSenderRef() == h42_trampart) || (GetSenderRef() == h42_trampartB)) && (GetHintSolved(hint44) == 0))
+		{
+        print("activated on the triggers");
+		SetHintSolved(hint44);
+		}
+	
+	if ((GetSenderRef() == h48_switch) && (GetHintSolved(hint48) == 0))
+		{
+        SetHintSolved(hint48);
+		}
+
+return;
+
+# ========================================================================================
+user0:
+
+	If ((GetSenderRef() == h10_sharkkeycog) && (GetHintSolved(hint10) == 0))
+		{
+            SetHintSolved(hint10);
+        }
+
+	If ((GetSenderRef() == h36_commiekeycog) && (GetHintSolved(hint36) == 0))
+		{
+            SetHintSolved(hint36);
+        }
+
+    If ((GetSenderRef() == h40_sophiacoopcog) && (GetHintSolved(hint40) == 0))
+		{
+            SetHintSolved(hint40);
+        }
+
+    If ((GetSenderRef() == h46_funicularcog) && (GetHintSolved(hint46) == 0))
+		{
+            SetHintSolved(hint46);
+        }
+	
+return;
+    
+	
+	
+# ========================================================================================
+# ========================================================================================
+end
+

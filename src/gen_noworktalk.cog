@@ -1,0 +1,223 @@
+# Jones 3D Cog Script
+#
+# gen_NoWorkTalk.cog
+#
+# Indy comments upon an unsatisfactory situation
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+# NOTE: This is a random verbal reaction when Indy's efforts fail.
+# Glue it into your level and reach it from a calling cog like this:
+#
+# 1. Create a valid reference to this cog in your calling cog;
+#
+# 2. Use the following verb:
+#    SendMessageEx(thiscogREF, i_userMessage, f_parm0, f_parm1, f_parm2, f_parm3);
+#    (see each section below for details...)
+#
+# 3. Use global15 as a semaphore and return value where neeeded;
+#
+# The resulting chatter is pre-approved by HB...
+#
+# PRODUCT SUPPORT:  cogsrus x8371
+
+# ==============================================================================
+
+symbols
+
+# ................................. MESSAGES ...................................
+
+	message user0	# doubt lines
+	message user1	# didn't work lines
+
+# ................................. SAY LINES ..................................
+
+	# doubt lines...
+	sound	in_sayline=Inxj058.wav				local # That won't work-->in_sayline[0]
+	sound	in_notanswer=Inxj060.wav			local # Not the right answer
+	sound	in_notsure=Inxj061.wav				local # Not sure good idea
+	sound	in_neverwork=Inxj059.wav			local # That will never work
+
+	# didn't work lines...
+	sound	in_nowork=Inxj089.wav				local # That didn't work-->in_sayline[4]
+	sound	in_somethingwrong=Inxj090.wav		local # ...something wrong.
+	sound	in_hmnotquite=Inxj092.wav			local # Hmm...didn't quite work.
+	sound	in_notright=Inxj060.wav				local # I don't think...right answer
+	sound	in_whoops=Inxj087.wav				local # Whoops.
+	sound	in_nope=Inxj088.wav					local # Nope.
+	sound	in_ofcourseno=Inxj091.wav			local # Of course that didn't work.
+
+# ............................... VARIABLES ....................................
+
+	flex	talkerREF							local
+	flex	forceTalk							local
+	flex	forceLine							local
+	
+	int		lineindex							local # indexes sound array
+	int		doubtoffset=0						local # define
+	int		noworkoffset=4						local # define 
+
+	int		alreadyworking=0					local
+
+	int		d_newline=50						local # init outside actual range
+	int		d_oldline=50						local
+	int		w_newline=50						local
+	int		w_oldline=50						local
+
+	int		dummy
+
+	flex		randdoubtlines						local
+	flex		randnoworklines						local
+	
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+user0:
+
+	# NOTE: Indy expresses DOUBT that something he tries will work...
+	# (Useful when Indy does something so offbeat that it doesn't
+	# even qualify as a legitimate failed attempt)
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(negtalkcogREF, user0, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, the calling cog can use global15 as a semaphore
+	#
+	# Hey!  You can also force a line choice.  Here's how:
+	# 1. Note your intention by setting f_forceTalk parm to some non-zero value
+	# 2. Examine the available lines to find the one you want (counting from 0)
+	# 3. Pass that number in the forceLine parameter (parm2) 
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	alreadyworking = 1; # stall multiple calls
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	if (forceTalk > 0)
+	{
+		d_newline = forceLine; # choose this line
+		d_oldline = 0;
+	}
+
+	call randdoubtlines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ........................................................................................
+
+user1:
+
+	# NOTE: Indy laments that something he tried DIDN'T WORK as hoped... 
+	# (Useful when Indy tried something in the right circumstances, but it failed.)
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(negtalkcogREF, user1, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, you can force a line choice.
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	alreadyworking = 1; # stall multiple calls
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	if (forceTalk > 0)
+	{
+		w_newline = forceLine; # choose this line
+		w_oldline = 0;
+	}
+
+	call randnoworklines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ........................................................................................
+
+randdoubtlines:
+
+	# NOTE: never say same line twice in a row
+	# and say some lines less frequently than others
+	
+	while (d_newline == d_oldline)
+	{		
+		d_newline = RandBetween(0, 9);
+		if (d_newline == 9)
+		{	
+			d_newline = 3; # 1/10 chance for line 3
+		}
+		else
+		{
+			d_newline = RandBetween(0, 2); # ~1/3 chance for lines 0 thru 2
+		}
+	}
+	d_oldline = d_newline; # remember choice
+	lineindex = doubtoffset + d_newline;
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+# ..............................................................................
+
+randnoworklines:
+
+	while (w_newline == w_oldline)
+	{		
+		w_newline = RandBetween(0, 29);
+		if (w_newline > 26)
+		{
+			w_newline = (w_newline - 23); # 1/10 chance for 4, 5 or 6
+		}
+		else
+		{	
+			w_newline = RandBetween(0, 3); # ~1/4 chance for 0 thru 3
+		}
+	}
+	w_oldline = w_newline;
+	lineindex = noworkoffset + w_newline;
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+end
+

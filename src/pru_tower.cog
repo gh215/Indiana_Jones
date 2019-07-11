@@ -1,0 +1,133 @@
+# Jones 3D Cog Script
+#
+# PRU_tower.cog    Activate an adjoin and it vanishes
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+message		startup
+message		activated
+
+surface		sound1
+surface		sound2
+surface		sound3
+surface		sound4
+surface		sound5
+
+sound		note1=pru_CE_1.wav	local
+sound		note2=pru_CE_2.WAV	local
+sound		note3=pru_CE_3.wav	local
+sound		note4=pru_CE_4.wav	local
+sound		note5=pru_CE_5.wav	local
+
+thing		bug			nolink
+thing		ship		nolink
+thing		sender		local
+
+surface		RoyNeary	nolink
+
+int			CE3K=0		local
+int			locked=0	local
+int			success=0	local
+int			done=0		local
+
+
+end
+# ========================================================================================
+code
+
+startup:
+
+ClearAdjoinFlags(RoyNeary, 2);	#no move
+SetFaceGeoMode(RoyNeary, 4);	#draw on
+AttachThingToThing(ship, bug);
+AISetMoveSpeed(bug, 10);
+return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+if (locked) return;
+
+locked = 1;
+sender = GetSenderRef();
+
+if (sender == sound1)
+{
+    PlaySoundLocal(note1, 1, 0.0, 0x0, 0);
+	if (CE3K == 0)
+    {
+		CE3K = 1;
+		SetSurfaceLight(sound1, '1.0 0.0 0.0', 0.0);
+		success = 1;
+    }
+}
+else if (sender == sound2)
+{
+	PlaySoundLocal(note2, 1, 0.0, 0x0, 0);
+	if (CE3K == 1)
+    {
+		CE3K = 2;
+		SetSurfaceLight(sound2, '0.0 1.0 0.0', 0.0);
+		success = 1;
+    }
+}
+else if (sender == sound3)
+{
+	PlaySoundLocal(note3, 1, 0.0, 0x0, 0);
+	if (CE3K == 2)
+    {
+		CE3K = 3;
+		SetSurfaceLight(sound3, '0.0 0.0 1.0', 0.0);
+		success = 1;
+	}
+}
+else if (sender == sound4)
+{
+	PlaySoundLocal(note4, 1, 0.0, 0x0, 0);
+	if (CE3K == 3)
+    {
+		CE3K = 4;
+		SetSurfaceLight(sound4, '1.0 1.0 0.0', 0.0);
+		success = 1;
+	}
+}
+else if (sender == sound5)
+{
+	PlaySoundLocal(note5, 1, 0.0, 0x0, 0);
+	if (CE3K == 4)
+    {
+		CE3K = 5;
+		SetSurfaceLight(sound5, '1.0 0.0 1.0', 0.0);
+        if (!done)
+		{
+			SetAdjoinFlags(RoyNeary, 2);
+			SetFaceGeoMode(RoyNeary, 0);
+			done = 1;
+		}
+		success = 1;
+    }
+}
+
+if (!success)
+{
+	SetSurfaceLight(sound1, '0.0 0.0 0.0', 0.0);
+	SetSurfaceLight(sound2, '0.0 0.0 0.0', 0.0);
+	SetSurfaceLight(sound3, '0.0 0.0 0.0', 0.0);
+	SetSurfaceLight(sound4, '0.0 0.0 0.0', 0.0);
+	SetSurfaceLight(sound5, '0.0 0.0 0.0', 0.0);
+	CE3K = 0;
+}
+
+Sleep(1.5);
+success = 0;
+locked = 0;
+
+return;
+
+end
+

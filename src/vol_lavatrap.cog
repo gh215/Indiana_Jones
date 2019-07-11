@@ -1,0 +1,740 @@
+# Jones 3D Cog Script
+#
+# VOL_LavaRoom.cog
+#
+# This cog will flood an area with lava, break apart a walkway 3do, and open the exit.
+#
+# [CM & tiny revision by HB]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+   
+
+	#...............MESSAGES..................
+	message  startup
+	message  activated
+	message  pulse
+	message  entered
+	message  arrived
+	message  exited
+
+	
+	#...............ACTORS..................
+	thing   player	local
+    thing   indy
+
+
+	#...............COGS....................
+	cog		fieldCOG
+
+	#...............PROPS..................
+	thing   block0 		
+	thing   block1
+    thing   switch 		
+    thing   walkway0 		
+    thing   walkway1 		
+    thing   walkway2 		
+	thing   door
+	
+	thing   lava_chan
+	thing   lava_left
+	thing   lava_right
+
+	thing	puzzleblock0
+	thing	puzzleblock1
+
+		
+	thing	puzzleslab0
+	thing	puzzleslab1
+
+	thing	puzzlecube0									
+	thing	puzzlecube1
+
+    #...............CAMERAS..................
+    thing   switchcam
+    thing   camPos
+    thing   camPos2
+	thing	bridgeCam
+	thing	curCam										local
+	thing	blockCam										
+
+    
+	#...............CAMERA TARGETS..................
+    thing   camtarget
+    thing   doorcamtarget    	
+    
+
+	#...............EVENTPOSITIONS..................
+    thing	deathspot									local
+    thing	lava_leftPos
+    thing	lava_rightPos
+    thing	flamespot
+    
+	surface	block0surf0					mask=0x80		linkID=5
+	surface	block0surf1					mask=0x80       linkID=5
+	surface	block0surf2					mask=0x80       linkID=5
+	surface	block0surf3					mask=0x80       linkID=5
+	
+	surface	block1surf0					mask=0x80       linkID=6
+	surface	block1surf1					mask=0x80       linkID=6
+
+	sector	channelSECT
+	
+	# catwalk debris creation positions
+	thing	debspot0
+	thing	debspot1
+	thing	debspot2
+	thing	debspot3
+	thing	debspot4
+	thing	debspot5
+	thing	debspot6
+	
+	
+	#...............FLOOR SURFS..................
+	surface	lavaFACE0			   						linkID=2
+	surface	lavaFACE1   		   						linkID=2
+	surface	lavaFACE2   		   						linkID=2
+	surface	lavaFACE3   		   						linkID=2
+	surface	lavaFACE4   		   						linkID=2
+	surface	lavaFACE5   		   						linkID=2
+	surface	lavaFACE6   		   						linkID=2
+	surface	lavaFACE7   		   						linkID=2
+	surface	lavaFACE8   		   						linkID=2
+	surface	lavaFACE9   		   						linkID=2
+	surface	lavaFACE10  	   	   						linkID=2
+	surface	lavaFACE11     		   						linkID=2
+
+	#...............CANAL SURFS..................
+	surface	canalFACE0			   					 	linkID=2
+	surface	canalFACE1   		   					 	linkID=2
+	surface	canalFACE2   		   					 	linkID=2
+	surface	canalFACE3   		   					 	linkID=2
+	surface	canalFACE4   		   					 	linkID=2
+	surface	canalFACE5   		   					 	linkID=2
+
+
+
+    #...............TILE SURFS..................
+	surface	tileFACE0  			   					 	
+	surface	tileFACE1  			   					 	
+	surface	tileFACE2  			   					 	
+	surface	tileFACE3  			   					 	
+	surface	tileFACE4  			   					 	
+	surface	tileFACE5  			   					 	
+	surface	tileFACE6  			   					 	
+	surface	tileFACE7  			   					 	
+	surface	tileFACE8  			   					 	
+	surface	tileFACE9  			   					 	
+	surface	tileFACE10  			   					 	
+	surface	tileFACE11  			   					 	
+	surface	tileFACE12  			   					 	
+	surface	tileFACE13  			   					 	
+
+	
+    
+	#...............KEYFRAMES..................
+	keyframe	inReach=in_activate_medium.key        	local
+    
+	
+	#...............TEMPLATES..................
+	template	lavaspray
+	template	tempRefKill=ghost						local
+	template	walkwayburning=lavadeathsparks			local
+    template	invis_shot=+dummy_bazooka				local
+	
+	# debris templates
+	template	fallwalkA=debcatbbama					local		
+	
+	template	fallwalkB=debcatcbama					local		
+	template	fallwalkC=debcatcbamb					local		
+	
+	template	fallwalkD=debcatbbamc					local		
+	template	fallwalkE=debcatbbamb					local		
+	template	fallwalkF=debcatcbamc					local		
+	
+	#...............MATERIALS..................
+	material	fireskin=gen_a_lavab.mat				local
+	material	tileskin=vol_wall_engraved_runes_clear.mat			local
+	
+	
+	#...............VARIABLES..................
+	int     flooded=0									local
+	int     dead=0										local
+	int     bridgeout=0									local
+	int     i=0											local
+	int     cueplayed=0									local
+	int     blockinzone0=0								local
+	int     blockinzone1=0								local
+	int     soundrun									local
+	
+	flex    clearfloor									local
+	flex    returncam									local
+	
+	#...............VECTORS..................
+    vector	look1										local
+    vector	cubePos										local
+
+	#...............SOUNDS..................
+	sound   scream=INXJ015.WAV							local
+    sound	ancientdevice=nub_aethdoorarm_start_c.wav	local
+    sound	waterrush=nub_bull_move2_c.wav				local
+    sound	stress=shs_beambreaking_c.wav				local
+    sound	breakway=shs_beamcrash_c.wav				local
+    sound	awe_cue=mus_gen_awechord1.wav				local
+
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	#	get the player
+    player = GetLocalPlayerThing();
+	
+	#	clear the floor surfaces that will become lava
+    for (i = 0; i <=11; i = i + 1)
+		{
+			SetFaceGeomode(lavaFACE0[i], 0);					# make faces no draw
+			ClearSurfaceFlags(lavaFACE0[i], 0x200000);			# clear lava bit
+            SetAdjoinFlags(lavaFACE0[i], 2);					# adjoin can be passed through
+			SetAdjoinFlags(GetSurfaceAdjoin(lavaFACE0[i]), 2);	# double adjoin clearing
+        }
+
+    #	clear the canal surfaces that will become lava
+    for (i = 0; i <=5; i = i + 1)
+		{
+			SetFaceGeomode(canalFACE0[i], 0);
+			ClearSurfaceFlags(canalFACE0[i], 0x200000);
+            SetAdjoinFlags(canalFACE0[i], 2);
+			SetAdjoinFlags(GetSurfaceAdjoin(canalFACE0[i]), 2);
+        }
+
+    #	remove the lava_chan and puzzleslabs from play
+    SetThingFlags(lava_chan, 0x10);
+	SetThingFlags(lava_left, 0x10);
+	SetThingFlags(lava_right, 0x10);
+	# get lava_chan to first pos
+    JumpToFrame(lava_chan, 1, channelSECT);
+	
+	# slabs no see
+	SetThingFlags(puzzleslab0, 0x10);
+	SetThingFlags(puzzleslab1, 0x10);
+    # slabs no collide
+	SetCollideType(puzzleslab0, 0);
+	SetCollideType(puzzleslab1, 0);
+	
+	# attach the slabs for flooded state to the push blocks 
+	AttachThingToThing(puzzleslab0, puzzleblock0);
+	AttachThingToThing(puzzleslab1, puzzleblock1);
+
+	# attach the anti A-bug cubes to the puzzleblocks
+    AttachThingToThing(puzzlecube0, puzzleblock0);
+    AttachThingToThing(puzzlecube1, puzzleblock1);
+	SetCollideType(puzzlecube0, 0);
+	SetCollideType(puzzlecube1, 0);
+    
+return;
+
+# ========================================================================================
+activated:                 // If player activates block
+   
+	# clear any previously uncleared camera interp
+    SetCameraLookInterp(2, 0);
+
+	if ((GetSenderRef() == switch) && (flooded == 0) && (IsMoving(switch) == 0))
+	{
+		
+        # disable the player
+		StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+		
+        #CopyOrientAndPos(lavaPos, lava_chan);
+		flooded = 1;
+		curCam = GetCurrentCamera();
+		# prep the player
+		DeselectWeapon(player);
+		Sleep(0.5);
+		# prep the actor
+		
+
+        # set the puzzlecube to in play	if block is not in correct spot	for both blocks
+		If (blockinzone0 == 0)
+			{
+			    SetCollideType(puzzlecube0, 3);
+			}
+
+        If (blockinzone1 == 0)
+			{
+			    SetCollideType(puzzlecube1, 3);
+			}
+		
+		# Line actor up...
+		CopyOrientAndPos(player, indy);		# actor takes position of the player
+		CopyPlayerHolsters(player, indy); 	# make sure actor has matching props
+		
+		SetThingFlags(player, 0x80000);		# hide player, show actor
+		ClearThingFlags(indy, 0x80000);
+		
+		AISetLookThing(indy, switch);		# actor looks at the switch
+		AIWaitForStop(indy);
+		
+        # offset cam to switchcam position
+		SetExtCamOffsetToThing(switchcam);
+        
+        # actor hits the switch
+		PlayKey(indy, inReach, 4, 0x12, 0);
+		Sleep(0.25);
+		MovetoFrame(switch, 1, .5);
+		Sleep(0.8);
+
+		# move lava objects to their ready positions
+		Rotate(lava_left, 90, 2, 0.01);
+		Rotate(lava_right, -90, 2, 0.01);
+		
+        # camera move to show action
+		SetCameraFocus(2, camPos);
+		SetCameraSecondaryFocus(2, indy);
+		Sleep(.25);
+        SetCameraLookInterp(2, 1);
+        SetCameraPosInterp(2, 1);
+        SetCameraInterpSpeed(2, 4.5);
+		Sleep(0.01);
+		SetCurrentCamera(2);
+		Sleep(0.3); # was 0.5
+        
+		# camera targets the moving blocks now
+		SetCameraSecondaryFocus(2, camtarget);
+		SetCameraFocus(2, blockCam);
+		#MovetoFrame(camPos, 1, 4.0);
+		
+		# sound fx
+		PlaySoundLocal(ancientdevice, 1.0, 0, 0x0, 0);
+		Sleep(4.5);
+        
+		# begin screenshake and move blocks
+		SetPulse(.1);
+		MovetoFrame(block1, 1, 1.1);
+		MovetoFrame(block0, 1, 1.1);
+
+        # reset the lava sides for good measure
+		CopyOrientAndPos(lava_leftPos, lava_left);
+		CopyOrientAndPos(lava_rightPos, lava_right);
+
+		# clear look and pos interps
+        SetCameraLookInterp(2, 0);
+        SetCameraPosInterp(2, 0);
+
+		Sleep(1.0);
+		# show lava_chan and move it to "full" position
+        ClearThingFlags(lava_chan, 0x10);
+		MoveToFrame(lava_chan, 0, 0.2);
+        
+        # hide pushblocks
+		SetThingFlags(puzzleblock0, 0x80000);
+		SetThingFlags(puzzleblock1, 0x80000);
+		# slabs are shown
+		ClearThingFlags(puzzleslab0, 0x10);
+		ClearThingFlags(puzzleslab1, 0x10);
+		# slabs collide
+		SetCollideType(puzzleslab0, 3);
+		SetCollideType(puzzleslab1, 3);
+
+        soundrun = PlaySoundLocal(waterrush, 1, 1, 0x01, 0);
+    }
+
+    if ((GetSenderRef() == switch) && (flooded == 1) && (IsMoving(switch) == 0))
+	{
+        # disable the player
+		StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+		
+		#CopyOrientAndPos(lavaPos, lava_chan);
+		ClearThingFlags(block0, 0x10);
+		ClearThingFlags(block1, 0x10);
+        flooded = 0;
+		curCam = GetCurrentCamera();
+
+		# clear the puzzlecubes
+        SetCollideType(puzzlecube0, 0);
+        SetCollideType(puzzlecube1, 0);
+        
+        # prep the player
+		DeselectWeapon(player);
+		Sleep(0.5);
+		# prep the actor
+		
+		# Line actor up...
+		CopyOrientAndPos(player, indy);		# actor takes position of the player
+		CopyPlayerHolsters(player, indy); 	# make sure actor has matching props
+		
+		SetThingFlags(player, 0x80000);		# hide player, show actor
+		ClearThingFlags(indy, 0x80000);
+		
+		AISetLookThing(indy, switch);		# actor looks at the switch
+		AIWaitForStop(indy);
+		
+        # offset cam to switchcam position
+		SetExtCamOffsetToThing(switchcam);
+		
+        # actor hits the switch
+		PlayKey(indy, inReach, 4, 0x12, 0);
+		MovetoFrame(switch, 1, .5);
+		Sleep(1.0);
+        
+		# camera move to show action
+		SetCameraFocus(2, camPos);
+		SetCameraSecondaryFocus(2, indy);
+		Sleep(.25);
+        SetCameraLookInterp(2, 1);
+        SetCameraPosInterp(2, 1);
+        SetCameraInterpSpeed(2, 4.5);
+		Sleep(0.01);
+		SetCurrentCamera(2);
+		Sleep(0.5);
+        
+		# camera looks down toward the action
+		SetCameraSecondaryFocus(2, camtarget);
+        SetCameraFocus(2, blockCam);
+		#MovetoFrame(camPos, 1, 4.0);
+		
+		# sound fx
+        PlaySoundLocal(ancientdevice, 1.0, 0, 0x0, 0);
+		
+		Sleep(4.5);
+        
+		# screenshake begins
+		SetPulse(.1);
+
+		# reset the lava sides for good measure
+		CopyOrientAndPos(lava_leftPos, lava_left);
+		CopyOrientAndPos(lava_rightPos, lava_right);
+		
+		# show lava_chan and empty it
+		ClearThingFlags(lava_chan, 0x10);
+		ClearThingFlags(lava_left, 0x10);
+		ClearThingFlags(lava_right, 0x10);
+        
+		# restore floodplain surfaces to non lava
+		Call clearfloor;
+		
+		# stop the bubble FX
+		SendMessage(fieldCOG, user1);
+		
+		MoveToFrame(lava_chan, 1, 0.2);
+		Rotate(lava_left, 90, 2, 6.0);
+		Rotate(lava_right, -90, 2, 6.0);
+		
+        # move the blocks to open position
+		MovetoFrame(block1, 0, 1.1);
+		MovetoFrame(block0, 0, 1.1);
+
+        # clear look and pos interps
+        SetCameraLookInterp(2, 0);
+        SetCameraPosInterp(2, 0);
+
+        Sleep(1.5);
+		
+		# show pushblocks, hide slabs
+		ClearThingFlags(puzzleblock0, 0x80000);
+		ClearThingFlags(puzzleblock1, 0x80000);
+		# hide and no-collide the slabs
+		SetThingFlags(puzzleslab0, 0x10);
+		SetThingFlags(puzzleslab1, 0x10);
+		SetCollideType(puzzleslab0, 0);
+		SetCollideType(puzzleslab1, 0);
+		
+		sleep(.5);
+		Call returncam;
+        # reset the position of the lava_chan
+		SetThingFlags(lava_chan, 0x10);
+		SetThingFlags(lava_left, 0x10);
+		SetThingFlags(lava_right, 0x10);
+
+        StopSound(soundrun, 2.0); 
+    }
+return;
+
+# ========================================================================================
+entered:
+
+	If ((GetSenderID() == 5) && (GetSourceRef() == puzzleblock0))
+	{
+        blockinzone0 = 1;
+		#print("block0 is in the zone");
+    }
+
+	If ((GetSenderID() == 6) && (GetSourceRef() == puzzleblock1))
+	{
+        Sleep(0.5);
+		blockinzone1 = 1;
+		#print("block1 is in the zone");
+    }
+
+    
+return;
+
+
+# ========================================================================================
+exited:
+
+	If ((GetSenderID() == 5) && (GetSourceRef() == puzzleblock0))
+	{
+		blockinzone0 = 0;
+		#print("block0 is out of the zone");
+    }
+
+	If ((GetSenderID() == 6) && (GetSourceRef() == puzzleblock1))
+	{
+		blockinzone1 = 0;
+		#print("block1 is out of the zone");
+    }
+
+    If ((GetSenderID() == 6) && (GetSourceRef() == puzzleblock1))
+	{
+		blockinzone1 = 0;
+		#print("block1 is out of the zone");
+    }
+
+return;
+
+				
+# ========================================================================================
+pulse:
+
+	SetPOVShake('0.0 0.0 0.008', '0.0 0.0 0.0', 80.0, 0.80);
+    return;
+
+# ========================================================================================
+arrived:
+
+	If ((GetSenderRef() == lava_chan) && (GetCurFrame(lava_chan) == 0))
+    {
+        
+		If (cueplayed == 0)
+		{
+            PlaySoundLocal(awe_cue, 1.0, 1, 0x0, 0);
+            cueplayed = 1;
+		}
+		
+		
+		
+		# get lava planes into starting rotation position
+		Rotate(lava_left, 90, 2, 0.01);
+		Rotate(lava_right, -90, 2, 0.01);
+		WaitForStop(lava_right);
+		
+		# hide blocks and lava_chan 3do to avoid clipping with lava surfs
+		SetThingFlags(block0, 0x10);
+    	SetThingFlags(block1, 0x10);
+    	SetThingFlags(lava_chan, 0x10);
+
+		# reset the position of the lava_chan
+		#CopyOrientAndPos(lavaPos, lava_chan); 
+        
+		# change canal surfaces to lava
+		for (i = 0; i <=5; i = i + 1)
+		{
+			SetFaceGeomode(canalFACE0[i], 4);						# make faces draw						
+			SetSurfaceFlags(canalFACE0[i], 0x200000);               # set lava bit
+            ClearAdjoinFlags(canalFACE0[i], 2);                     # adjoin cannot be passed through
+			ClearAdjoinFlags(GetSurfaceAdjoin(canalFACE0[i]), 2);   # double adjoin setting
+        }
+        
+		# change tile surfs to lava
+		for (i = 0; i <=13; i = i + 1)
+		{
+		SetSurfaceMat(tileFACE0[i], fireskin);
+		SetSurfaceFlags(tileFACE0[i], 0x200000); 	#lava flag for tile faces
+		SetFaceLightMode(tileFACE0[i], 0);
+        }
+	
+	# show and rotate lavas left and right to their full positions
+    ClearThingFlags(lava_left, 0x10);
+    ClearThingFlags(lava_right, 0x10);
+	Rotate(lava_left, -90, 2, 2.5);
+    Rotate(lava_right, 90, 2, 2.5);
+    
+	Sleep(2.5);
+    
+	#	change floor surfaces to lava
+		for (i = 0; i <=11; i = i + 1)
+		{
+			SetFaceGeomode(lavaFACE0[i], 4);						# make faces draw
+			SetSurfaceFlags(lavaFACE0[i], 0x200000);				# set lava bit
+            ClearAdjoinFlags(lavaFACE0[i], 2);						# adjoin cannot be passed through
+			ClearAdjoinFlags(GetSurfaceAdjoin(lavaFACE0[i]), 2);	# double adjoin setting
+        }
+
+    # start the bubble FX
+	SendMessage(fieldCOG, user0);
+
+	# hide and reset the lava side 3dos
+	SetThingFlags(lava_left, 0x10);
+	SetThingFlags(lava_right, 0x10);
+	CopyOrientAndPos(lava_leftPos, lava_left);
+	CopyOrientAndPos(lava_rightPos, lava_right);
+	
+	Sleep(0.75);
+	Call returncam;
+	}
+
+
+
+
+
+return;
+
+# ========================================================================================
+clearfloor:    
+    
+	#	clear the floor surfaces that were lava
+    for (i = 0; i <=11; i = i + 1)
+		{
+			SetFaceGeomode(lavaFACE0[i], 0);					# make faces no draw
+			ClearSurfaceFlags(lavaFACE0[i], 0x200000);			# clear lava bit
+            SetAdjoinFlags(lavaFACE0[i], 2);					# adjoin can be passed through
+			SetAdjoinFlags(GetSurfaceAdjoin(lavaFACE0[i]), 2);	# double adjoin clearing
+        }
+
+    #	clear the canal surfaces that were lava
+    for (i = 0; i <=5; i = i + 1)
+		{                                                        
+			SetFaceGeomode(canalFACE0[i], 0);                   # make faces no draw           
+			ClearSurfaceFlags(canalFACE0[i], 0x200000);         # clear lava bit               
+            SetAdjoinFlags(canalFACE0[i], 2);                   # adjoin can be passed through 
+			SetAdjoinFlags(GetSurfaceAdjoin(canalFACE0[i]), 2); # double adjoin clearing      
+        }
+
+    # reset the tile surfaces
+		for (i = 0; i <=13; i = i + 1)
+		{
+		SetSurfaceMat(tileFACE0[i], tileskin);		# swap texture back to tile
+		ClearSurfaceFlags(tileFACE0[i], 0x200000); 	#lava flag for tile faces
+		SetFaceLightMode(tileFACE0[i], 4);			# set to gourad lighting
+        }
+
+return;        
+# ========================================================================================
+returncam:
+
+If (flooded == 0)
+{
+    StopSound(soundrun, 4.0);
+		
+	Sleep(0.5);
+    SetCameraLookInterp(2,0);
+	SetCameraSecondaryFocus(2, doorcamtarget);
+	SetCameraFocus(2, camPos2);
+	MoveToFrame(camPos2, 1, 2.5);
+	MoveToFrame(door, 0, 1.5);
+	WaitforStop(door);
+	SetPulse(0);
+	Sleep(1.0);
+    
+	MovetoFrame(camPos2, 0, 100);
+	MovetoFrame(switch, 0, .5);
+
+    SetThingFlags(indy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+    
+}
+
+else If (flooded == 1)
+{
+    StopSound(soundrun, 3.0);
+		
+	#camera shows the exit door opening
+	Sleep(0.5);
+    SetCameraLookInterp(2,0);
+	SetCameraSecondaryFocus(2, doorcamtarget);
+	SetCameraFocus(2, camPos2);
+	MoveToFrame(camPos2, 1, 2.0);
+	MoveToFrame(door, 1, 1.5);
+	WaitforStop(door);
+	# stop screenshake
+	SetPulse(0);
+	Sleep(1.0);
+    
+	# hide actor show player
+	SetThingFlags(indy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	
+	# reset event camera positions
+	MovetoFrame(camPos2, 0, 100);
+    MovetoFrame(switch, 0, .5);
+	
+}
+
+If (bridgeout == 0)		# collapse the bridge segments
+	{
+	bridgeout = 1;
+	# cut to camera at walkway segments
+	SetPulse(0.05);	# a little screenshake
+	SetCameraLookInterp(2, 0);
+	SetCameraSecondaryFocus(2, walkway1);
+	SetCameraFocus(2, bridgeCam);
+	PlaySoundLocal(stress, 8, 1, 0x0, 0);
+	Sleep(1.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraInterpSpeed(2, 3.0);
+	PlaySoundLocal(breakway, 0.75, 1, 0x0, 0);
+	
+	#MovetoFrame(walkway0, 3, 8);
+	CreateThing(fallwalkA, debspot0);
+	CreateThing(fallwalkB, debspot1);
+	CreateThing(fallwalkC, debspot2);
+	CreateThing(fallwalkA, debspot3);
+	
+    DestroyThing(walkway0);
+	
+	Sleep(0.25);
+	CreateThing(fallwalkD, debspot4);
+	CreateThing(fallwalkE, debspot5);
+	
+	DestroyThing(walkway1);
+
+	SetCameraSecondaryFocus(2, flamespot);
+	
+    Sleep(0.25);
+	CreateThing(fallwalkF, debspot6);
+	DestroyThing(walkway2);
+	
+	Sleep(1.5);
+	CreateThing(invis_shot, flamespot);
+	Sleep(0.5);
+	CreateThing(invis_shot, flamespot);
+	CreateThing(invis_shot, flamespot);
+	Sleep(0.25);
+	CreateThing(invis_shot, flamespot);
+	Sleep(0.25);
+	CreateThing(invis_shot, flamespot);
+	Sleep(1.5);
+    }
+SetCameraLookInterp(2, 0);
+ClearActorFlags(player, 0x200000);
+EndCutScene();
+SetCurrentCamera(curCam);
+RestoreExtCam();
+SetCameraFocus(2, camPos);
+SetPulse(0.0);
+
+#If (bridgeout == 1)
+#{
+#	DestroyThing(walkway0);
+#	DestroyThing(walkway1);
+#	SetPulse(0.0);
+#	DestroyThing(walkway2);
+#	bridgeout = 2;
+#}
+
+return;
+# ========================================================================================
+
+end
+
+ 

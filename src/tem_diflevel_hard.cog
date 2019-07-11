@@ -1,0 +1,39 @@
+# Jones 3D Cog Script
+#
+# TEM_DifLevel_Hard.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    
+    thing       t_Item
+    
+    int         dif_Level=5
+    
+    int         difficulty       local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    difficulty = GetDifficulty();
+    
+    if(difficulty >= dif_Level) return;
+    
+    else SetThingFlags(t_Item, 0x80000);
+        
+    return;
+
+# ========================================================================================
+
+end
+

@@ -1,0 +1,117 @@
+# Jones 3D Cog Script
+#
+# SHS_CutsceneIceMonster.cog
+#
+# [PKM]
+#
+# For the cutscene version of the sticky ice monster only!  He'll jump off wall or ceiling in
+# response to a user 0 message.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		user0
+	message		user1
+	message		aievent
+
+	sound		detachSound=fol_si_detach.wav			local
+
+	thing		stickyChicken
+	thing		positionGhost
+
+	template	newMonster=ice_monster					local
+	template	iceSprShower=+ice_spr_exp_blast			local
+	template	iceShowerSmall=+ice_exp_blast_sm		local
+	template	iceShower=+ice_exp_blast				local
+	template	iceBlast=+ice_spr_exp_cloud				local
+	template	iceCloud=+ice_exp_cloud					local
+	template	iceShards=+ice_spr_exp_shards			local
+	template	explosionParticlesA=+IceChickenExplA	local
+	template	explosionParticlesB=+IceChickenExplB	local
+	template	explosionParticlesC=+IceChickenExplC	local
+	template	explosionParticlesD=+IceChickenExplD	local
+
+	thing		newMonsterRef=-2						local
+
+	vector		lookVectorPYR							local
+	vector		newMonsterPos							local
+	
+	int			floordistance							local
+	int			thingPos								local	
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	AISetCutsceneMode(stickyChicken);
+	SetActorFlags(stickyChicken, 0x100008);
+	return;
+
+# ........................................................................................
+
+user0:
+	// In response to a user0 message, we need to detach and fall.
+
+	PlaySoundThing(detachSound, stickyChicken, 1.0, 0.1, 10.0, 0x80);
+	DetachThing(stickyChicken);
+
+	floorDistance = CheckFloorDistance(stickyChicken);
+	thingPos = GetThingPos(stickyChicken);
+	thingPos = vectorSet(vectorX(thingPos), vectorY(thingPos), vectorZ(thingPos) - floorDistance);
+	SetPhysicsFlags(stickyChicken, 0x2000);
+
+	AIClearCutsceneMode(stickyChicken);
+	AISetMovePos(stickyChicken, thingPos, 0);
+	AISetMoveSpeed(stickyChicken, 0.50);
+
+	return;
+
+user1:
+	// When we're sent a user1 message, it's time for the ice chicken to run to his new position.
+	CaptureThing(newMonsterRef);
+	AISetLookThing(newMonsterRef, positionGhost);
+	AISetMovePos(newMonsterRef, GetThingPos(positionGhost), 0);
+	AISetMoveSpeed(newMonsterRef, 3.0);
+
+	return;
+
+aievent:
+	if ((GetSenderRef() == stickyChicken) && BITTEST(GetParam(0), 0xe04))
+	{
+		// We've reached our movement goal, or we hit a wall, floor, or thing - explode!
+
+		lookVectorPYR = GetThingLVecPYR(stickyChicken);
+		lookVectorPYR = VectorSet(0, VectorY(lookVectorPYR), VectorZ(lookVectorPYR));
+
+		newMonsterPos = VectorSet(VectorX(thingPos), VectorY(thingPos), VectorZ(thingPos) + 0.05);
+
+		newMonsterRef = CreateThingAtPos(newMonster, GetThingSector(stickyChicken), newMonsterPos, lookVectorPYR);
+		SetActorFlags(newMonsterRef, 0x8);
+		AISetCutsceneMode(newMonsterRef);
+		CreateThing(iceShowerSmall, stickyChicken);
+
+		DestroyThing(stickyChicken);
+		stickyChicken = -1;
+
+		return;
+	}
+
+	if ((GetSenderRef() == newMonsterRef) && BITTEST(GetParam(0), 0x800))
+	{
+		ReleaseThing(newMonsterRef);
+		DestroyThing(newMonsterRef);
+		newMonsterRef = -2;
+		return;
+	}
+
+	return;
+
+end
+

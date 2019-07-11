@@ -1,0 +1,572 @@
+# Jones 3D Cog Script
+#
+# 15_AET_Forgive.cog
+#
+# Indy forgives Sophia's treachery
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		pulse
+	message		user0
+	#### message		entered #### TEST ONLY #### REMOVE BEFORE FLIGHT
+	
+# .................................. KEYFRAMES .................................
+	
+	keyframe	in_armsCrossed=0in_stand2.key			local
+	keyframe	in_handsONhips=0in_stand4.key			local
+	keyframe	in_crossArms=0in_stand1_bd_2.key	   	local # 48x
+	keyframe	in_handsTOhips=0in_stand1_bd_4.key	   	local # 26x
+	keyframe	in_ltarmup=0in_leftarm_1_1.key			local
+	keyframe	in_hatpush=0in_figithat_4_4.key			local # 84x
+	keyframe	in_helpsophia=0in_helpsophia_1_1.key	local # 89x
+	keyframe	in_walkover=0in_embrace_1_16.key		local # 66x
+	keyframe	in_embrace=0in_stand16.key				local
+	keyframe	in_startled=0in_startled_16.key			local
+
+	keyframe	so_checkhead=0so_twoheads_2_2.key		local # 87x
+	keyframe	so_hairbrush=0so_hair_2_4.key			local
+
+	keyframe	so_armsATside=0so_stand2.key			local
+	keyframe	so_sideTOhips=0so_stand2_bd_1.key		local
+	keyframe	so_handsONhips=0so_stand1.key			local
+	keyframe	so_armsFolded=0so_stand4.key			local
+	
+	keyframe	so_lying=0so_stand8.key					local
+	keyframe	so_standup=0so_getsup_8_2.key			local # 87x
+	keyframe	so_walkover=0so_embrace_1_9.key			local # 62x
+	keyframe	so_embrace=0so_stand9.key				local
+	keyframe	so_startled=0so_startled_9.key			local # 60x	
+
+# .................................. MODELS ....................................
+
+				
+# .................................. SOUNDS ....................................
+
+	sound		so_twoheads=At05s01.wav					local
+	sound		in_twofaces=At05j02.wav					local
+	sound		so_pardonme=At05s03.wav					local
+	sound		in_turnerside=At05j04.wav				local
+	sound		so_neverlied=At05s05.wav				local
+	sound		in_humanenuf=At05j06.wav				local
+	sound		so_bastard=At05s07.wav					local
+	sound		in_livetell=At05j08.wav					local
+	sound		mus_forgive=mus_aet_forgivehug.wav		local
+
+# ............................... ACTOR THINGS .................................
+
+	thing		player									local
+	thing		indy	    							linkid=0
+	thing		sophia
+
+# .............................. OBJECT THINGS .................................
+
+
+
+# .............................. CAMERA THINGS .................................
+
+	thing		cam_1									nolink
+	thing		cam_2									nolink
+	thing		cam_3									nolink
+	thing		cam_4									nolink
+	thing		cam_5									nolink
+	thing		cam_6									nolink
+	thing		cam_7									nolink
+	thing		cam_8									nolink
+
+	thing		ct_1									nolink
+	thing		ct_2									nolink
+	thing		ct_3 									nolink
+	thing		ct_4									nolink
+	thing		ct_5									nolink
+	thing		ct_6									nolink
+	thing		ct_7									nolink
+
+# .............................. TARGET THINGS .................................
+
+	thing		in_mk_1									nolink
+	thing		in_mk_2									nolink
+#	thing		in_mk_3									nolink
+	thing		in_mk_4									nolink
+
+	thing		so_mk_1									nolink
+	thing		so_mk_2									nolink
+	thing		so_mk_3									nolink
+
+	thing		kiss_mk_1								nolink
+	thing		kiss_mk_2								nolink
+	thing		spritedummy6							nolink
+	thing		spritething								local
+
+# ........................... WORLD & ENGINE REFS ..............................
+
+	template	tpl_sprite=aet_flash					local	
+
+# ............................... VARIABLES ....................................
+	
+	vector		v_targetpos								local
+
+	vector		posOffset								local
+	vector		angOffset								local
+	
+	flex		in_headrate								local
+	flex		in_rotrate								local
+	flex		so_rotrate								local
+
+	int			cutSceneState=0							local # overall state var
+
+	int			in_colltype								local	
+	int			so_colltype								local
+	
+	int			in_keytrack1							local
+	int			in_keytrack2							local
+	int			so_keytrack1							local
+
+	int			cursound								local
+	int			musicchannel							local
+	int			curcam									local
+	int			vibe									local
+	int			shake									local
+
+	#### TEST ONLY #### REMOVE BEFORE FLIGHT
+
+	thing		stage_1
+	thing		stage_2
+	thing		stage_3
+
+	####
+	
+# ......................... Tim Longo's added code .............................
+
+	cog			timCog
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+
+	# Prep actors...
+	curcam = GetCurrentCamera();
+	so_rotrate = GetThingMaxRotVel(sophia);
+	SetThingFlags(indy, 0x80000);
+	SetThingFlags(sophia, 0x80000);
+	AISetCutSceneMode(indy);
+	AISetCutSceneMode(sophia);
+	in_headrate = GetThingMaxHeadVel(indy);
+	in_rotrate = GetThingMaxRotVel(indy);
+	in_colltype = GetCollideType(indy);
+	in_headrate = GetThingMaxHeadVel(indy);
+	in_rotrate = GetThingMaxRotVel(indy);
+	in_colltype = GetCollideType(indy);
+
+	return;
+
+# ..............................................................................
+
+	# TO DO: blow up mini-Mophia, bring her to final resting place
+	# and thus conceal big move of player to stage...
+
+# ..............................................................................
+
+#### entered:
+	
+	#### TEST ONLY #### REMOVE BEFORE FLIGHT
+
+	if ((GetSenderRef() == stage_1) || (GetSenderRef() == stage_2) || (GetSenderRef() == stage_3))
+	{
+		ClearThingFlags(stage_1, 0x80000);
+		ClearThingFlags(stage_2, 0x80000);
+		ClearThingFlags(stage_3, 0x80000);
+		goto user0;
+	}
+
+	return;
+
+# ..............................................................................
+
+user0:
+
+	# NOTE: received from aet_RotateCage.cog when Mophia is no more...
+
+	if (cutSceneState != 0)
+	{
+		return;
+	}
+
+	# Prep...
+	cutSceneState = 1;
+	//curcam = GetCurrentCamera();
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+			
+	//StartCutScene(2);
+
+	SetActorFlags(player, 0x200000);
+	//DeselectWeapon(player);
+	ResetThing(player);
+	PlayMode(player, 1, 0);
+	CopyPlayerHolsters(player, indy);
+	SetThingflags(player, 0x80000);
+	
+	# Sophia is back to normal, crumpled on the floor...
+	ClearThingFlags(sophia, 0x80000);
+	TeleportThing(sophia, so_mk_1);
+	so_keytrack1 = PlayKey(sophia, so_lying, 2, 0x10, 0);
+	
+	# Cut to Sophia...
+	SetCameraFocus(2, cam_1);
+	SetCameraSecondaryFocus(2, ct_1);
+	SetCurrentCamera(2);
+	SetCameraFOV(50, 0, 0.0);
+
+	# Place Indy...
+	ClearThingFlags(indy, 0x80000);
+	TeleportThing(indy, in_mk_1);
+	AISetLookThing(indy, sophia);
+
+	# VFX here...
+	spritething = CreateThing(tpl_sprite, spritedummy6);
+	CaptureThing(spritething);
+	AnimateSpriteSize(spritething, '3 3 1', '4 4 1', 0.2);
+	Sleep(0.2);
+	AnimateSpriteSize(spritething, '4 4 1', '5 5 0', 0.5);
+	Sleep(0.5);
+
+	# Get ready to dolly...
+	SetCameraInterpSpeed(2, 3.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.01);
+
+	# Play music...
+	musicchannel = PlaySoundLocal(mus_forgive, 1.0, 0.0, 0x0, 0);
+	
+	# Indy helps Sophia to her feet...
+	PlayKey(indy, in_helpsophia, 4, 0x12, 0);
+	StopKey(sophia, so_keytrack1, 0.0);
+	so_keytrack1 = PlayKey(sophia, so_armsATside, 2, 0x10, 0);
+	PlayKey(sophia,  so_standup, 4, 0x12, 0);
+
+	# Pull back to watch...
+	SetCameraFocus(2, cam_2);
+	SetCameraSecondaryFocus(2, ct_2);
+	SetCameraFOV(58, 1, 3.0);
+	Sleep(3.5);
+
+	# Cut to Indy and push in...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_3);
+	SetCameraSecondaryFocus(2, ct_3);
+	SetCameraFOV(40, 0, 0.0); # was 43
+	Sleep(0.01);
+	SetCameraFOV(30, 1, 3.0); # was 33
+	in_keytrack1 = PlayKey(indy, in_armsCrossed, 2, 0x10, 0);
+	PlayKey(indy, in_crossArms, 4, 0x12, 1); # 1.6 sec
+	Sleep(1.5);
+	
+    # Cut to Sophia and push in...
+	SetCameraFocus(2, cam_4);
+	SetCameraSecondaryFocus(2, ct_4);
+	SetCameraFOV(38, 0, 0.0);
+	SetThingFlags(indy, 0x10); # invis
+	Sleep(0.01);
+	SetCameraFOV(28, 1, 3.0);
+	
+	# Sophia: "What...have I got two heads or something?"
+	cursound = PlayVoice(sophia, so_twoheads, 1.0, 0); # 2.96s
+	PlayKey(sophia, so_checkhead, 4, 0x12, 0);
+	WaitForSound(cursound);
+
+	# Cut back to Indy...
+	SetCameraFocus(2, cam_3);
+	SetCameraSecondaryFocus(2, ct_3);
+	SetCameraFOV(33, 0, 0.0);
+	ClearThingFlags(indy, 0x10); # vis
+	Sleep(0.01);
+	SetCameraFOV(28, 1, 2.0);
+
+	# Indy: "No, two faces maybe."
+	cursound = PlayVoice(indy, in_twofaces, 1.0, 0); # 1.97 sec
+	WaitForSound(cursound);
+	Sleep(0.1);
+
+	# Cut to wider shot of both...
+	SetCameraFocus(2, cam_5);
+	SetCameraSecondaryFocus(2, ct_5);
+	SetCameraFOV(52, 0, 0.0);
+
+	# Sophia: "Pardon me?!"
+	cursound = PlayVoice(sophia, so_pardonme, 1.0, 0);
+	StopKey(sophia, so_keytrack1, 0.0);
+	so_keytrack1 = PlayKey(sophia, so_handsONhips, 2, 0x10, 0);
+	PlayKey(sophia, so_sideTOhips, 4, 0x12, 1);
+	WaitForSound(cursound);
+
+	# Indy: "You were on Turner's side...until the end."
+	cursound = PlayVoice(indy, in_turnerside, 1.0, 0);
+	StopKey(indy, in_keytrack1, 0.5);
+	Sleep(0.5);
+	PlayKey(indy, in_ltarmup, 4, 0x12, 0);
+	WaitForSound(cursound);
+
+	# Sophia: "I never lied...doing my job."
+	StopKey(sophia, so_keytrack1, 0.5);
+	Sleep(0.2);
+	cursound = PlayVoice(sophia, so_neverlied, 1.0, 0);
+	Sleep(0.3);
+	so_keytrack1 = PlayKey(sophia, so_armsFolded, 2, 0x10, 0);
+	PlayKey(sophia, so_hairbrush, 4, 0x12, 1);
+	WaitForSound(cursound);
+	in_keytrack2 = PlayKey(indy, in_handsONhips, 2, 0x10, 0);
+	PlayKey(indy, in_handsTOhips, 4, 0x12, 1);
+
+	# Cut close on Indy...
+	SetCameraFocus(2, cam_3);
+	SetCameraSecondaryFocus(2, ct_3);
+	SetCameraFOV(32, 0, 0.0);
+
+	# Cheat actors to marks...
+	TeleportThing(indy, kiss_mk_2);
+	TeleportThing(sophia, kiss_mk_1);
+
+    ChangeSoundVol(musicchannel, 0.3, 3.0);
+	
+	# Indy: "I guess that's human enough."
+	SetCameraInterpSpeed(2, 2.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.2);
+	PlayKey(indy, in_hatpush, 4, 0x12, 1);
+	cursound = PlayVoice(indy, in_humanenuf, 1.0, 0);
+	Sleep(1.5);
+	StopKey(indy, in_keytrack1, 0.5);
+	Sleep(0.5);
+	WaitForSound(cursound);
+	
+	# Pull back to see them embrace...
+	SetCameraFocus(2, cam_6);
+	SetCameraSecondaryFocus(2, ct_6);
+	SetCameraFOV(65, 1, 2.0);
+	
+	StopKey(sophia, so_keytrack1, 0.0);
+	PlayKey(sophia, so_walkover, 4, 0x12, 0);
+	PlayKey(indy, in_walkover, 4, 0x12, 1);
+	in_keytrack1 = PlayKey(indy, in_embrace, 2, 0x10, 0);
+	so_keytrack1 = PlayKey(sophia, so_embrace, 2, 0x10, 0);
+	## Sleep(1.0);
+
+	# Swing around the romantic pair...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	AttachThingToThing(cam_6, ct_6);
+	Rotate(ct_6, -370, 1, 6.0);
+	SetCameraFOV(40, 1, 4.2);
+
+	# Sophia: "You bastard."
+	PlayVoice(sophia, so_bastard, 1.0, 0);	
+	Sleep(1.0);	
+	SetPulse(0.1);
+
+	Sleep(1.0);	
+	SetPulse(0.0);
+	Sleep(1.0);
+    
+	ChangeSoundVol(musicchannel, 1.0, 1.0);
+
+	# Camera shakes as world starts to disintegrate...
+	shake = 1;
+	SetPulse(0.1);
+	Sleep(1.0);
+	shake = 2;
+	SetCAmeraFOV(75, 1, 0.8);
+	Sleep(1.0);
+	shake = 3;
+
+	# TO DO: visual effects of flashing and popping...
+
+	# Indy: "Let's live to tell this tale!"
+	PlayVoice(indy, in_livetell, 1.0, 0);
+	StopKey(indy, in_keytrack1, 0.0);
+	StopKey(sophia, so_keytrack1, 0.0);
+	TeleportThing(indy, in_mk_2);
+	TeleportThing(sophia, so_mk_2);
+	PlayKey(indy, in_startled, 4, 0x12, 0);
+	SetThingMaxRotVel(sophia, 180.0);
+	AISetLookThing(sophia, so_mk_3);
+	PlayKey(sophia, so_startled, 4, 0x12, 1);
+	shake = 2;
+
+	# Cut to long shot...
+	SetCameraFocus(2, cam_7);
+	SetCameraSecondaryFocus(2, ct_7);
+	SetCameraFOV(70, 0, 0.0);
+	SetCollideType(indy, in_colltype);
+	SetCollideType(sophia, so_colltype);
+			
+	# Sophia flees...
+	AISetMoveSpeed(sophia, 3.2);
+	AISetMoveThing(sophia, so_mk_3, 0);
+	AIEnableBodyTracking(indy, sophia); # Indy watches her go
+	Sleep(0.01);
+
+	# Pull back to watch...
+	SetCameraFOV(50, 1, 2.0);
+	SetCameraInterpSpeed(2, 2.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(2.0);
+	AIDisableBodyTracking(indy);
+	AISetLookThing(indy, in_mk_4);
+	SetCameraFocus(2, cam_8);
+	SetCameraFOV(90, 1, 1.8);
+	Sleep(2.0);
+
+	# Restore control...
+	shake = 1;
+	v_targetpos = GetThingPos(cam_8);
+	SetCameraPosition(1, v_targetpos); # prep
+	CopyOrientAndPos(indy, player);
+	DestroyThing(indy);
+	DestroyThing(sophia);
+	ClearThingFlags(player, 0x80000);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	ClearActorFlags(player, 0x200000);
+
+	# Kill shake...
+	SetPulse(0.0);
+
+	# Tim Longo's added code for calling the turning off of Aetherium sectors.
+	SendMessage(timCog, user0);
+
+	EndCutScene();
+
+	return;
+
+# ..............................................................................
+
+pulse:
+
+	if (shake == 3)
+	{
+		vibe = RandBetween(1, 3);
+		if (vibe == 3)
+		{
+			# Skip this time...
+			return;
+		}
+	}
+
+	vibe = RandBetween(1, 4);
+	if (vibe == 1)
+	{
+		if (shake == 1)
+		{
+			posOffset = '-0.008 0.00 -0.002'; #1 was .005x
+			angOffset = '0.00 -0.002 0.002';
+		}
+		if (shake == 2)
+		{
+			posOffset = '0.01 -0.01 0.005'; #2
+			angOffset = '0.005 0.00 -0.005';
+		}
+		if (shake == 3)
+		{
+			posOffset = '0.01 0.02 -0.02'; #3
+			angOffset = '-0.01 0.01 -0.01';
+		}
+	}
+	if (vibe == 2)
+	{
+		if (shake == 1)
+		{
+			posOffset = '0.008 -0.005 0.002'; #2 was .005x
+			angOffset = '0.002 0.00 -0.002';
+		}
+		if (shake == 2)
+		{
+			posOffset = '0.005 0.01 -0.01'; #3
+			angOffset = '-0.005 0.005 -0.00';
+		}
+		if (shake == 3)
+		{
+			posOffset = '-0.02 0.00 0.02'; #4 was .01x
+			angOffset = '0.00 0.00 0.01';
+		}
+	}
+	if (vibe == 3)
+	{
+		if (shake == 1)
+		{
+			posOffset = '0.005 0.005 -0.005'; #3 was .002x
+			angOffset = '-0.002 0.005 -0.005';
+		}
+		if (shake == 2)
+		{
+			posOffset = '-0.015 0.00 0.01'; #4 was .01x
+			angOffset = '0.00 0.00 0.01';
+		}
+		if (shake == 3)
+		{
+			posOffset = '-0.025 0.00 -0.01'; #1 was .02x
+			angOffset = '0.00 -0.01 0.01';
+		}
+	}
+	if (vibe == 4)
+	{
+		if (shake == 1)
+		{
+			posOffset = '-0.002 0.00 0.005'; #4
+			angOffset = '0.00 0.00 0.002';
+		}
+		if (shake == 2)
+		{
+			posOffset = '-0.01 0.00 -0.005'; #1
+			angOffset = '0.00 -0.005 0.005';
+		}
+		if (shake == 3)
+		{
+			posOffset = '0.02 -0.02 0.01'; #2
+			angOffset = '0.01 0.00 -0.01';
+		}
+	}
+
+	vibe = RandBetween(1, 3);
+	if (vibe == 1)
+	{
+		SetPulse(0.05);
+	}
+	if (vibe == 2)
+	{
+		SetPulse(0.1);
+	}
+	if (vibe == 3)
+	{
+		SetPulse(0.15);
+	}
+
+	SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+
+	return;
+	
+end

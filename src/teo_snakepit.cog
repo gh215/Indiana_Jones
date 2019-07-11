@@ -1,0 +1,65 @@
+# Jones 3D Cog Script
+#
+# TEO_Snakepit.cog
+#
+# Trick floor for snakepit
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message         taken
+    message         startup                             
+                                                      
+    sound           keyline                           
+                                                      
+    thing           floorslab                         
+    thing           keyitem
+    thing           player                  local
+                                                      
+    flex            moveSpeed=1.0                     
+    int             hapnin = 0              local
+    thing           scorp0
+    thing           scorp1     
+    
+end
+
+code
+# ........................................................................................
+startup:
+
+    player=GetLocalPlayerThing();
+    AISetCutsceneMode(scorp0);
+    AISetCutsceneMode(scorp1);
+    SetCollideType(scorp0, 0);
+    SetCollideType(scorp1, 0);
+    
+return;
+
+# ........................................................................................
+taken:
+    
+    if ((GetSenderRef() == keyitem) &&                    
+       (hapnin == 0))                                     
+    {                                                     
+        hapnin = 1;                                   
+        PlayVoice(player, keyline, 1.0, 1);      
+        MoveToFrame(floorslab, 1, moveSpeed);
+        WaitForStop(floorslab);
+        SetCollideType(floorslab, 0);
+        AIClearCutsceneMode(scorp0);
+        AIClearCutsceneMode(scorp1);
+        SetCollideType(scorp0, 1);
+        SetCollideType(scorp1, 1);
+        
+    }                                                     
+    
+return;                                               
+        
+# ........................................................................................
+                                                     
+end
+

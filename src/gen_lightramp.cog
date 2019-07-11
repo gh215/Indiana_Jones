@@ -1,0 +1,52 @@
+# Jones 3D Cog Script
+#
+# gen_LightRamp.cog
+#
+# [RT]
+#
+# Ramps the value of a Light Thing once sector is entered.
+#
+# (C) 1997 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message	startup
+	message	entered
+
+	sector	trigger
+	
+	thing		lightThing	
+
+	flex     change_time=120   desc=time_to_complete_change
+
+	flex		red_start=0.0	
+	flex		green_start=0.0	
+	flex		blue_start=0.0
+    flex		radius_start=0.0
+
+	flex 		red_stop=5.0
+	flex		green_stop=5.0	
+	flex		blue_stop=5.0
+    flex		radius_stop=0.0
+
+	vector	vecLight				local
+	
+end
+
+# ========================================================================================
+
+code
+
+startup:
+   vecLight = VectorSet(red_start, green_start, blue_start);
+   SetThingLight(lightThing, vecLight, radius_start, 0.01);
+	return;
+
+entered:
+	vecLight = VectorSet(red_stop, green_stop, blue_stop);
+	SetThingLight(lightThing, vecLight, radius_stop, change_time);
+	return;
+
+end
+

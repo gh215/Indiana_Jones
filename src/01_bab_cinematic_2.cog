@@ -1,0 +1,500 @@
+# Jones 3D Cog Script
+#
+# 01_BAB_Cinematic_2.cog
+#
+# Introduce Volodnikov as Indy overhears his Babylon plans 
+#
+# [HB]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	# ************************ MESSAGES ************************
+
+	message		startup
+	message		entered
+    message		callback
+	message		pulse
+    message     activate
+	
+	# ************************ KEYFRAMES ***********************
+	
+	keyframe	in_kneel=in_stand_bd_crawl.key			local
+	keyframe	in_standUp=0in_crawl_bd_stand.key		local
+	   
+	keyframe	vo_foldArms=0vo_stand3_bd_1.key			local
+	keyframe	vo_armsBack=vo_stand2_arms_back.key		local
+	keyframe	vo_armsSide=vo_stand3_arms_side.key		local
+	keyframe	vo_rubHead=0vo_rubhead_1_2.key			local
+	keyframe	vo_thumpHands=0vo_truestory_3_2.key		local
+	keyframe	vo_glassesR=0vo_glassesR_3_3.key		local
+	keyframe	vo_stop=0vo_handhalt_3_3.key			local
+	
+	keyframe	vo_waveBoth=0vo_waveboth_walk.key		local
+	keyframe	vo_leftup=0vo_leftup_2_1.key			local
+	keyframe	vo_leftUp3=0vo_leftup_3_3.key			local
+	keyframe	vo_rightup=0vo_rightup_3_3.key			local
+	keyframe	vo_bothup=0vo_bothup_3_3.key			local
+	keyframe	vo_machine=0vo_machine_3_3.key			local
+
+	keyframe	rm_twiddle=0rm_switches_1_1.key			local
+	keyframe	rm_point=0rm_points_1_1.key				local
+	keyframe	rm_doubt=0rm_methods_1_1.key			local
+
+	# ************************* MODELS *************************
+		
+    model  		mod_in=gen_in_shirt.3do					local
+	model  		mod_vo=gen_vo.3do						local 
+	model		mod_radMan=bab_rm.3do					local
+	model		mod_chair=bab_chair_dirctr.3do			local
+
+	# ************************* SOUNDS *************************
+    
+	sound		rm_reminds=Bb02m02.wav					local
+	sound		vo_apparat=Bb02v03.wav					local
+	sound		rm_decode=Bb02m04.wav					local
+	sound		vo_lookMarduk=Bb02v05.wav				local
+	sound		rm_whatPlane=Bb02m06.wav				local
+	sound		vo_aetherium=Bb02v07.wav				local
+	sound		rm_doubts=Bb02m08.wav					local
+	sound		vo_informMin=Bb02v09a.wav				local
+	sound		vo_trueStory=Bb02v09b.wav				local
+    sound       open_doorsound=sea_doors_open_c.wav     local
+    sound       close_doorsound=sea_doors_close_c.wav   local
+    
+    sound       volmusic=mus_gen_russremin3.wav         local
+    sound       voclue=BB02J01.WAV                      local
+    
+    # ************************* THINGS *************************
+
+	thing		player									local
+							
+	thing		indy	    							linkid=0
+    thing		volod	    							linkid=1
+	thing		radman									linkid=2
+												
+	thing		in_tgt1  								nolink
+	thing		in_tgt2  								nolink
+	thing		in_tgt3									nolink
+
+	thing		vo_mov_tgt1								nolink
+	thing		vo_mov_tgt2								nolink
+	thing		vo_mov_tgt3								nolink
+	thing		vo_mov_tgt4								nolink
+	thing		vo_mov_tgt5								nolink
+
+	thing		cam_roof1								nolink
+	thing		cam_roof2								nolink
+	thing		cam_inside1								nolink
+	thing		cam_inside2								nolink
+	
+	thing		cam_look_tgt1  							nolink
+	thing		cam_look_tgt2  							nolink
+	thing		cam_look_tgt3  							nolink
+	
+	thing		cam_mov_tgt1  							nolink
+
+	thing		chair									nolink
+	thing		camera_1								nolink
+    thing       fence_door
+    thing       vo_door
+    
+    thing       vodoor0                                 linkid=5
+    thing       vodoor1                                 linkid=5
+						   
+	# *********************** VARIABLES ***********************
+			
+	surface		trigger         						linkid=3
+	surface		trigger1         						linkid=3
+	surface		trigger2         						linkid=3
+    
+    surface     chatsurf0                               local
+    surface     chatsurf1                               local
+    surface     chatsurf2                               local
+    surface     chatsurf3                               local
+						
+	vector		v_camspot								local
+
+	int			in_keyTrack1							local
+	int			in_keyTrack2							local
+
+	int			vo_keyTrack1							local
+	int			vo_keyTrack2							local
+											
+	int			curSound								local
+	int			didThisBefore=0							local
+
+	int			curCam									local
+    int         doorcommentchan                         local
+    int         safety=0                                local
+
+	flex		vo_Turn									local
+	flex		moveHeadInterval=0.1					local
+	
+end
+
+# ===================================================================
+
+code
+
+# -------------------------------------------------------------------
+startup:
+
+	# Pointer to Player
+	player = GetLocalPlayerThing();
+    # Prep Radio Man...
+    ClearThingFlags(radman, 0x80000);
+    AISetCutSceneMode(radman);
+	
+	return;
+
+# -------------------------------------------------------------------
+activate:
+
+    if ((GetSenderID() == 5) && (safety == 0))
+    {
+        safety=1;
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        doorcommentchan=PlayVoice(player, voclue, 1, 0);
+        WaitForSound(doorcommentchan);
+        sleep(0.5);
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        safety=0;
+    }
+    
+return;
+
+# -------------------------------------------------------------------
+entered:
+
+	if ((GetSenderID() == 3) && (didThisBefore == 0))
+    {
+    
+	    didThisBefore = 1;       
+	    curCam = GetCurrentCamera();
+	    
+		SetActorFlags(player, 0x200000);
+	    StartCutscene(1);
+        
+	    # Mood music!
+        PlaySoundLocal(volmusic, 1, 0, 0, 0);
+        
+	    # Disable player...
+        SetThingFlags(player, 0x80000);
+        
+	    # Prep actor Indy...
+        CopyPlayerHolsters(player, indy);
+        CopyOrientandPos(player, indy);
+	    ClearThingFlags(indy, 0x80000);
+        RotatePivot(vo_door, 1, 1);
+        SetCollideType(fence_door, 0);
+        MoveToFrame(fence_door, 1, 1);
+        PlaySoundThing(open_doorsound, vo_door, 1, 3, 10, 0);
+	    
+        # Prep Volodnikov...
+        ClearThingFlags(volod, 0x80000);
+	    TeleportThing(volod, vo_mov_tgt1);
+	    AISetMoveSpeed(volod, 1.2);
+	    vo_Turn = GetThingMaxRotVel(volod);
+	    SetThingMaxRotVel(volod, 135.0);
+	    
+	    # Prep Radio Man...
+        ClearThingFlags(radman, 0x80000);
+		AISetCutSceneMode(radman);
+
+	    # Prep camera...
+	    SetCameraLookInterp(2, 0);
+	    SetCameraPosInterp(2, 0);
+	     
+        # Cut to shot of Indy on roof...
+	    SetCameraFocus(2, cam_roof1);
+	    SetCameraSecondaryFocus(2, indy);
+	    SetCurrentCamera(2);
+	    SetCameraFOV(80, 0, 0.0);  
+	    Sleep(0.1);
+        
+	    # Indy crosses the roof...
+        AISetMoveSpeed(indy, 1.0);
+	    AISetLookThingEyeLevel(indy, in_tgt1);
+        AISetMoveThing(indy, in_tgt1, 0);
+	    
+	    SetCameraFOV(55, 1, 3.1);
+	    Sleep(1.0);
+	    
+	    AISetLookThingEyeLevel(indy, in_tgt2); # re-target Indy early to smooth his path 
+        AISetMoveThing(indy, in_tgt2, 0);
+        
+	    # Radioman: "Ministairstvah hereby reminds..."                                          
+        PlayVoice(radman, rm_reminds, 1, 0);
+
+	    Sleep(2.0);
+        
+	    AISetLookThing(indy, vo_mov_tgt3); # why doesn't Indy look down?
+	    Sleep(0.8);
+	    in_keyTrack1 = PlayKey(indy, in_kneel, 4, 0x14, 0);
+	    Sleep(1.0);
+        
+	    # Cut to shot over Indy's shoulder...
+	    SetCameraFocus(2, cam_roof2);
+	    SetCameraSecondaryFocus(2, cam_look_tgt1);
+	    SetCameraFOV(90, 0, 0.0);
+	    Sleep(0.1);
+        
+	    # dolly camera forward & peer down into Soviet Bab HQ...
+	    SetCameraInterpSpeed(2, 9.0); # speed is actually time (was 8.8)
+	    SetCameraPosInterp(2, 1); # turn on dolly mode
+	    SetCameraFocus(2, cam_mov_tgt1); # start moving
+	    MoveToFrame(cam_look_tgt1, 1, 0.35); # move target as well (was 0.36)
+	    SetCameraFOV(60, 1, 9.0); # tighten frame (was 65, 8.8)
+        
+	    # Volodnikov pace 1...
+	    Sleep(1.2);
+	    AISetLookThing(volod, vo_mov_tgt2);
+        AISetMoveThing(volod, vo_mov_tgt2, 0);
+	    Sleep(1.9); 
+        
+	    # V pace 2...
+	    AISetLookThing(volod, vo_mov_tgt1);
+	    Sleep(0.8); # wait for him to turn
+        AISetMoveThing(volod, vo_mov_tgt1, 0);
+        
+	    # Volodnikov: "Those doctrinaire apparatchiki..."
+	    curSound = PlayVoice(volod, vo_apparat, 1.0, 0.0);
+	    vo_keyTrack1 = PlayKey(volod, vo_waveBoth, 1, 0x02, 0);
+	    Sleep(1.3);
+	    StopKey(volod, vo_keyTrack1, 0.5); # prevent hands behind back
+	    Sleep(0.5);
+        
+	    # V pace 3 to middle...
+	    AISetLookThing(volod, vo_mov_tgt3);
+	    Sleep(0.4); # wait for him to turn
+        AISetMoveThing(volod, vo_mov_tgt3, 1);
+	    Sleep(0.2);
+	    
+	    # V halts facing radioman...
+	    AISetLookThing(volod, radman);
+	    vo_keyTrack1 = PlayKey(volod, vo_bothup, 4, 0x02, 0);
+	    Sleep(1.0);
+	    StopKey(volod, vo_keyTrack1, 0.5); # smooth transition to fold
+	    vo_keyTrack1 = PlayKey(volod, vo_foldArms, 4, 0x04, 0);
+	    WaitForSound(curSound);
+	    
+	    # Radioman: "Possibly... I'm just decoding the message..."
+	    PlayKey(radman, rm_twiddle, 4, 0x12, 0);
+	    Sleep(0.1);
+	    curSound = PlayVoice(radman, rm_decode, 1.0, 0.0);
+	    Sleep(1.5);
+	    PlayKey(radman, rm_point, 4, 0x12, 0);
+	    WaitForSound(curSound);
+	    
+	    # Set Radioman to watch V pace...
+		AIEnableHeadTracking(radman, volod);
+	    
+	    # Cut to closer shot inside...
+	    SetCameraPosInterp(2, 0); # kill dolly mode
+	    SetCameraFocus(2, cam_inside1);
+	    SetCameraSecondaryFocus(2, cam_look_tgt2);
+	    SetCameraFOV(65, 0, 0.0);
+	    Sleep(0.1);
+        
+	    # Volodnikov: "I'm searching for Marduk..."
+	    PlayVoice(volod, vo_lookMarduk, 1.0, 0.0);
+	    Sleep(0.6);
+	    StopKey(volod, vo_keyTrack1, 0.7);
+	    Sleep(0.7);
+	    vo_keyTrack1 = PlayKey(volod, vo_armsBack, 2, 0x04, 0);
+	    Sleep(1.0);
+	    StopKey(volod, vo_keyTrack1, 0.0);
+	    vo_keyTrack1 = PlayKey(volod, vo_leftup, 4, 0x14, 0);
+	    Sleep(1.5);
+	    StopKey(volod, vo_keyTrack1, 0.5);
+	    Sleep(0.5);
+	    
+	    # V resumes pace 3...
+	    AISetLookThing(volod, vo_mov_tgt2);
+	    vo_keyTrack1 = PlayKey(volod, vo_rightup, 2, 0x12, 0);
+	    Sleep(0.6); # wait for him to turn
+	    StopKey(volod, vo_keyTrack1, 0.5);
+	    AISetMoveThing(volod, vo_mov_tgt2, 0);
+	    Sleep(0.8);
+	    
+	    # V pace 4...
+	    AISetLookThing(volod, vo_mov_tgt1);
+	    Sleep(1.0); # wait for him to turn
+        AISetMoveThing(volod, vo_mov_tgt1, 0);	    
+	    Sleep(1.8);
+        
+	    # V pace 5...
+	    AISetLookThing(volod, vo_mov_tgt2);
+	    Sleep(0.5); # start turn
+        
+	    # Radioman: "What kind of plane..."
+	    PlayVoice(radman, rm_whatPlane, 1.0, 0.0);
+	    PlayKey(radman, rm_point, 4, 0x12, 0);
+	    Sleep(0.5); # finish turn
+	    AISetMoveThing(volod, vo_mov_tgt2, 0);
+	    Sleep(1.8);
+        
+	    # V faces radioman...
+	    AISetLookThing(volod, radman);
+	    Sleep(0.8); # wait for him to turn
+        
+  	    # Volodnikov: "Not airplane, you idiot..."
+	    curSound = PlayVoice(volod, vo_aetherium, 1.0, 0.0);
+	    vo_keyTrack1 = PlayKey(volod, vo_glassesR, 2, 0x02, 0);
+	    Sleep(1.2);
+	    StopKey(volod, vo_keyTrack1, 0.5);
+        
+	    # V pace to corner...
+	    AISetLookThing(volod, vo_mov_tgt5);
+	    Sleep(0.6); # wait for him to turn
+	    AISetMoveThing(volod, vo_mov_tgt5, 0);
+	    Sleep(1.8);
+        
+	    # V turns back toward radioman...
+	    AISetLookThing(volod, radman);
+	    Sleep(0.2);
+	    PlayKey(volod, vo_bothup, 4, 0x12, 0);
+	    Sleep(1.3); # wait for him to turn
+	    WaitForSound(curSound);
+        
+	    # V's pacing has ended, so stop Radioman's head swivel...
+		AIDisableHeadTracking(radman);
+        
+	    # Radioman: "Be careful, professor..."
+	    curSound = PlayVoice(radman, rm_doubts, 1.0, 0.0);
+	    PlayKey(radman, rm_doubt, 4, 0x12, 0);
+	    Sleep(0.5);
+	    vo_keyTrack1 = PlayKey(volod, vo_foldArms, 2, 0x04, 0); # hold pose
+	    Sleep(3.0); # was 4.0
+	    
+	    # V reacts...
+	    StopKey(volod, vo_keyTrack1, 0.0); # rub takes pose from here
+	    vo_keyTrack1 = PlayKey(volod, vo_armsBack, 2, 0x10, 0); # prep arms back pose
+	    PlayKey(volod, vo_rubhead, 4, 0x12, 1); # play rub ending in arms back
+	    vo_keyTrack2 = PlayKey(volod, vo_armsSide, 2, 0x10, 0); # prep arms at side
+	    StopKey(volod, vo_keyTrack1, 0.5); # fade arms from back to side 
+	    Sleep(0.5);
+	    WaitForSound(curSound); # just in case
+        
+	    # Volodnikov: "Inform Ministairstvah..."
+	    PlayKey(volod, vo_stop, 4, 0x12, 0);
+	    Sleep(0.3); # get gesture underway before talk
+	    curSound = PlayVoice(volod, vo_informMin, 1.0, 0.0);
+	    Sleep(1.8);
+	    PlayKey(volod, vo_leftUp3, 4, 0x02, 1);
+	    StopKey(volod, vo_keyTrack2, 0.5);
+	    Sleep(0.7);
+	    
+	    # V heads back toward radioman...
+	    AISetMoveSpeed(volod, 1.0);
+	    AISetMoveThing(volod, vo_mov_tgt3, 1);
+	    
+	    # Cut to close-up of V...
+	    WaitForSound(curSound);
+	    SetCameraFocus(2, cam_inside2);
+	    SetCameraSecondaryFocus(2, cam_look_tgt3);
+	    SetCameraFOV(50, 0, 0.0);
+	    
+	    # Volodnikov: "We know the true story..."
+	    PlayKey(volod, vo_rightup, 4, 0x12, 0);
+	    Sleep(0.3);
+	    PlayVoice(volod, vo_trueStory, 1.0, 0.0);
+	    Sleep(0.8);
+	    PlayKey(volod, vo_thumpHands, 4, 0x12, 1);
+	    PlayKey(volod, vo_machine, 4, 0x12, 1);
+	    Sleep(0.8);
+	    PlayKey(volod, vo_leftUp3, 4, 0x12, 1);
+        
+	    # Prep the roof early...
+	    AISetLookThing(indy, vo_mov_tgt5);
+	    
+	    # Exit V...
+	    AISetLookThing(volod, vo_mov_tgt4);
+	    vo_keyTrack1 = PlayKey(volod, vo_rightup, 2, 0x12, 0);
+	    Sleep(0.9); # wait for turn
+	    StopKey(volod, vo_keyTrack1, 0.3);
+		Sleep(0.2);
+        SetCollideType(vo_door, 0);
+        SetCollideType(volod, 0);
+	    AISetMoveSpeed(volod, 1.0);
+	    AISetMoveThing(volod, vo_mov_tgt4, 0);
+	    MoveToFrame(cam_look_tgt3, 1, 1.0); # pan to doorway
+	    SetCameraFOV(65, 1, 3.0); # widen frame
+	    Sleep(1.0);
+	    MoveToFrame(cam_inside2, 1, 0.3); # boom up a bit
+	    Sleep(2.25); # adjust to be sure V is gone
+        
+	    # TO DO: insert door close here...
+        RotatePivot(vo_door, 1, -1);
+        PlaySoundThing(close_doorsound, vo_door, 1, 3, 10, 0);     
+	    AIWaitForStop(volod);
+	    Sleep(0.5); # take a beat
+        SetCollideType(fence_door, 0);
+        
+	    # Cut back to Indy on roof top...
+	    SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	    SetCameraPosInterp(2, 0); # kill dolly mode
+	    SetCameraFocus(2, cam_roof1);
+	    SetCameraSecondaryFocus(2, indy);
+	    SetCurrentCamera(2);
+	    SetCameraFOV(45, 0, 0.0);
+	    Sleep(0.1);
+	    PlayKey(indy, in_standUp, 6, 0x12, 1); # stand him up
+	    StopKey(indy, in_keyTrack1, 0.0); # kill kneeling pose
+	    AISetLookThing(indy, in_tgt3);
+	    Sleep(0.4); # was 0.5
+        
+	    # Clean up...
+	    SetCameraLookInterp(2, 0);
+	    SetCameraPosInterp(2, 0);
+	    SetThingFlags(volod, 0x80000);
+	    SetThingFlags(indy, 0x80000);
+		AIClearCutSceneMode(radman);
+	    
+	    SetThingMaxRotVel(volod, vo_Turn);
+	    CopyOrientAndPos(indy, player);
+	    ResetThing(player);
+	    # need to reset Indy's action so he just stands here...
+	    Sleep(0.01);
+	    ClearThingFlags(player, 0x80000);
+	    
+	    v_camspot = VectorAdd(VectorTransformToOrient(player, '0.25 -0.1 0.0'), GetThingPos(player));	
+		SetCameraPosition(1, v_camspot);
+		SetCurrentCamera(curCam);
+	    ResetCameraFOV(0, 0.0);     
+	    Sleep(1.0);                                                    
+        SetCollideType(fence_door, 3);
+		DestroyThing(radman); # gone!
+
+	    EndCutscene();
+		ClearActorFlags(player, 0x200000);
+        MoveToFrame(fence_door, 0, 1);
+        SetCollideType(vo_door, 3);
+        safety=1;
+    }        
+     
+	return;
+
+# -------------------------------------------------------------------
+
+pulse:
+
+	SetThingHeadLookThing(radman, volod);
+
+return;
+    
+# -------------------------------------------------------------------
+
+callback:
+
+return;
+
+# -------------------------------------------------------------------
+
+end

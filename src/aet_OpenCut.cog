@@ -1,0 +1,308 @@
+# Jones 3D Cog Script
+#
+# aet_OpenCut.cog
+#
+# [TL] & [PAZ] & [HB] & [RT]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+message		startup
+message		user0
+message		entered
+
+thing		player									local
+thing		fadeplate								nolink
+
+# Doors that open/close when marduk enters/exits:
+thing		door1
+thing		door2
+thing		door3
+
+# targets & marks:
+thing		soph
+thing		indy											# Indy actor
+thing		doortarg								nolink
+thing		indytarg2										# Mark for Indy to be teleported to
+thing		cage											# Sophia's cage.
+thing		cagetarg										# Target for the cage to move to.
+thing		cagebouncetarg							local	# create on fly
+
+# camera positions:								
+thing		cam0									nolink	# Camera in Mophia room.
+thing		cam1									nolink	# Camera in Marduk room.
+
+# necessary evils:
+keyframe	in_falling=in_jump_fall.key				local 	# Falling key for actor.
+keyframe	cg_spin=inf_cage.key					local	# Animation for cage
+
+sound		machine=at01j01.wav						local	# "...this whole place is a machine..."
+sound		ahhh=INXJ015.wav						local	# Indy yells...
+sound		nooo=im03s15.wav						local	# Sophia
+
+sound		musicA=mus_olv_snakedead.wav			local
+sound		musicB=mus_inf_awesome4.wav				local
+
+sound		doorstart=aet_dais_start.wav			local
+sound		doormove=aet_dais_move.wav				local
+sound		doorstop=aet_dais_stop.wav				local
+
+sound		cagestop=aet_moph_fireball.wav			local	
+sound		collidecage=aet_mr_hit_indy.wav			local	
+
+sound		ascend=gen_cage_ascend.wav				local
+sound		descend=gen_cage_descend.wav   			local
+
+sector		musictrigger
+sector		doortrigger								mask=400
+sector		camsector								local	# var
+
+template	tpl_ghost=ghost							local
+
+vector		v_down									local
+vector		v_camspot								local
+
+int			cursound								local
+int			doorclose=0								local	# flag
+int			done0=0									local	# bulletproofing
+int			mus_track								local
+int			pl_colltype								local
+int			dr_colltype								local
+
+int			bSeen=0									local
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	# Start on black...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraSecondaryFocus(2, doortarg);
+	SetCameraFocus(2, cam0);		
+	SetCurrentCamera(2);
+	SetCameraFOV(35, 0, 0);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+	player = GetLocalPlayerThing();
+
+    CopyPlayerHolsters(player, indy);
+
+	# Cage stuff
+	AISetCutsceneMode(cage);
+    ClearThingFlags(cage, 0x80000);
+	SetThingMass(cage, 0);
+	SetCollideType(cage, 0);
+
+    # Sophia stuff
+	ClearPhysicsFlags(soph, 0x01); 					# No gravity no more.
+	AttachThingToThingEx(soph, cage, 0x000C); 		# Attach soph to cage.
+	SetThingMass(soph, 0);							# Stop sophia from moving.
+	SetCollideType(soph, 0);
+
+	# Spin cage...
+	PlayKey(cage, cg_spin, 4, 0x0, 0);
+    
+	# Cut to Mophia room cam and focus on cage...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraSecondaryFocus(2, doortarg);
+	SetCameraFocus(2, cam0);		
+	SetCurrentCamera(2);
+	SetCameraFOV(35, 0, 0);
+	
+	ClearThingFlags(fadeplate, 0x80000);
+	SetCollideType(fadeplate, 0);
+	SetThingAlpha(fadeplate, 1.0);
+	SetThingAlpha(indy, 0.0);
+	SetThingAlpha(soph, 0.0);
+	SetThingAlpha(cage, 0.0);
+
+	Sleep(0.01);
+
+	# Begin opening cutscene...
+	StartCutScene(2);
+	mus_track = PlaySoundLocal(musicA, 0, 0, 0x0, 0); # force load
+
+	# Prepare actor, camera, and player...
+	pl_colltype = GetCollideType(player);
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x80000);
+	AISetCutsceneMode(indy);
+	
+	# Fade in...
+	ThingFadeAnim(fadeplate, 1.0, 0.0, 1.0, 0);
+	
+	# Open doors...
+	dr_colltype = GetCollideType(door1);
+	SetCollideType(door1, 0);
+	SetCollideType(door2, 0);
+	SetCollideType(door3, 0);
+	MoveToFrame(door1, 1, 2.0);
+	MoveToFrame(door2, 1, 2.0);
+	MoveToFrame(door3, 1, 2.0);
+
+	PlaySoundLocal(doorstart, 1.0, 0, 0x0, 0);
+	//cursound = PlaySoundLocal(doorstart, 1.0, 0, 0x0, 0);
+	//WaitForSound(cursound);	
+	cursound = PlaySoundLocal(doormove, 1.0, 0, 0x1, 0);
+	WaitForStop(door1);
+	StopSound(cursound, 0.0);
+	PlaySoundLocal(doorstop, 1.0, 0, 0x0, 0);
+
+	# Make a cage target...
+	v_camspot = VectorAdd(VectorTransformToOrient(cagetarg, '0.0 0.0 -0.1'), GetThingPos(cagetarg));	
+	camsector = FindNewSectorFromThing(cagetarg, v_camspot);
+	cagebouncetarg = CreateThingAtPos(tpl_ghost, camsector, v_camspot, '0 0 0');
+	CaptureThing(cagebouncetarg);
+	
+    PlaySoundLocal(ascend, 1.0, 0, 0x0, 0);
+    //PlaySoundThing(ascend, cage, 1.0, 5.0, 15.0, 0x0);
+
+	# Move cage down
+	AISetMoveSpeed(cage, 2.0);
+	AISetMoveThing(cage, cagebouncetarg, 0);
+	ThingFadeAnim(soph, 0.0, 1.0, 0.5, 0);
+	ThingFadeAnim(cage, 0.0, 1.0, 0.5, 0);
+	SetCameraFOV(85, 1, 3.8); # was 4.0
+	Sleep(1.0);
+				
+	# Tilt down to watch...
+	SetCameraLookInterp(2, 1);
+	SetCameraInterpSpeed(2, 2.8); # was 3.0
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, cagetarg);
+	Sleep(1.0);	
+
+	PlayVoice(soph, nooo, 1.0, 0);
+	Sleep(0.5);
+
+	AIWaitForStop(cage);
+	Sleep(0.01);
+	PlaySoundLocal(cagestop, 1, 0, 0x0, 0);
+	AISetMoveSpeed(cage, 1.0);
+	AISetMoveThing(cage, cagetarg, 1);
+	Sleep(2.0);
+	
+	# Tilt back up...
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, doortarg);
+	SetCameraFOV(50, 1, 0.7);
+	Sleep(0.8);
+	
+	//StopSound(mus_track, 0.0);
+	PlaySoundLocal(musicA, 1, 0, 0x0, 0);
+	
+	# Reveal indy, make him flail
+	SetThingAirDrag(indy, 3.0);
+	ClearThingFlags(indy, 0x80000);
+	PlayKey(indy, in_falling, 2, 0x0, 0);
+	ThingFadeAnim(indy, 0.0, 1.0, 0.3, 0);
+	Sleep(1.0);
+
+	# Tilt down again...
+	SetCameraSecondaryFocus(2, cagetarg);
+	SetCameraInterpSpeed(2, 1.6); # was 2.0	
+	SetCameraFOV(80, 1, 1.6); # was 2.0
+
+	PlayVoice(player, ahhh, 1.0, 0);
+	
+	# Sleep 'til Indy gets to cage...
+  	Sleep(1.8);
+	
+	# Teleport indy to below the cage
+	PlaySoundLocal(collidecage, 1, 0, 0x0, 0);
+	TeleportThing(indy, indytarg2);
+
+	# Cut to cam1 down below...
+	SetThingAirDrag(indy, 2.5);
+	SetCameraLookInterp(2, 0);
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, indy);
+	Sleep(0.01);
+	SetCameraFOV(90, 1, 1.0);
+
+	# Sleep long enough for indy to fall to camera
+	Sleep(1.6); # was 1.2
+	  
+	# Move the player to the actor's position	
+	TeleportThing(player, indy);
+	
+	# Camera follows him as he swings past...
+	ResetCameraFOV(0, 0.0);
+	SetCameraPosition(1, GetThingPos(cam1));  
+	SetCurrentCamera(1);
+	
+	# Give the player control as he falls into the aetherium
+	SetThingFlags(indy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	SetCollideType(player, 0);
+	v_down = GetThingVel(indy);
+	SetThingVel(player, v_down);
+	SetThingAirDrag(player, 0.68);
+
+	Sleep(1.0);
+	
+	PlaySoundLocal(descend, 1, 0, 0x0, 0);
+	
+	Sleep(1.5);
+	# Close doors...
+	doorclose = 1;
+	MoveToFrame(door1, 0, 2.0);	
+	MoveToFrame(door2, 0, 2.0);	
+	MoveToFrame(door3, 0, 2.0);
+	cursound = PlaySoundThing(doorstart, door1, 0.5, 5.0, 10.0, 0x484);
+	WaitForSound(cursound);
+	cursound = PlaySoundThing(doormove, door1, 0.5, 5.0, 10.0, 0x485);
+	WaitForStop(door1);
+	StopSound(cursound, 0.0);
+	cursound = PlaySoundThing(doorstop, door1, 1.0, 5.0, 10.0, 0x484);
+	SetCollideType(door1, dr_colltype);
+	SetCollideType(door2, dr_colltype);
+	SetCollideType(door3, dr_colltype);
+	WaitForSound(cursound);
+
+	DestroyThing(cagebouncetarg);
+	SetCollideType(player, pl_colltype);
+	SetThingAirDrag(player, 0.5); # standard
+	PlayVoice(player, machine, 1.0, 1);
+		
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+# ..............................................................................
+
+entered:
+
+if ((GetSenderRef() == musictrigger) && (bSeen == 1) && (done0 == 0))
+	{
+		done0 = 1;
+		PlaySoundLocal(musicB, 1, 0, 0x0, 0);
+    }
+	
+	return;
+
+end
+

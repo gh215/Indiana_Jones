@@ -1,0 +1,243 @@
+# Jones 3D Cog Script
+#
+# 09_OLV_Cine_End.cog
+#
+# Volodnikov captures Indy
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		entered
+	
+# .................................. KEYFRAMES .................................
+	
+	keyframe	in_snag=0in_snagged.key					local
+	keyframe	in_hang=0in_snagged_hang.key			local
+
+	keyframe	vo_armsATfold=vo_stand1_arms_front.key	local
+	keyframe	vo_foldArms=0vo_stand3_bd_1.key			local
+	
+	keyframe	vo_leftUp3=0vo_leftup_3_3.key			local
+
+# .................................. SOUNDS ....................................
+    
+	sound		whip=gen_whip_fire.wav					local # temp for snare!
+	sound		in_uuh=Inxj018a.wav						local
+	sound		vol_gotindy=Ov06v01.wav					local
+	sound		music0=mus_bab_guard.wav				local
+
+# ............................... ACTOR THINGS .................................
+
+	thing		player									local
+	thing		indy 	    							linkid=0
+	thing		ropeindy
+	thing		volod
+	thing		commie1
+	thing		commie2
+
+# .............................. CAMERA THINGS .................................
+
+	thing		cam_1									nolink
+	thing		cam_2									nolink
+	thing		cam_3									nolink
+	
+	thing		ct_1									nolink
+	thing		ct_2									nolink
+	thing		ct_3 									nolink
+	
+# .............................. TARGET THINGS .................................
+
+	thing		in_mk_1									nolink
+
+	thing		vol_mk_1								nolink
+	
+	thing		c1_mk_1									nolink
+	thing		c2_mk_1									nolink
+
+# ........................ OTHER ENGINE REFERENCES .............................
+			
+	sector		trigger
+	
+# ............................... VARIABLES ....................................
+	
+	flex		in_rotRate								local
+	flex		vol_rotRate								local
+
+	int			cutSceneState=0							local
+
+	int			in_keyTrack1							local
+	int			vol_keyTrack1							local
+		
+	int			curSound								local
+	int			curCam									local
+	
+# ............................... VARIABLES ....................................
+	thing		fader						# gen_fadeplat thing
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+
+	# Prep...
+	SetThingFlags(indy, 0x80000);
+	SetThingFlags(ropeindy, 0x80000);
+	SetThingFlags(volod, 0x80000);
+	SetThingFlags(commie1, 0x80000);
+	SetThingFlags(commie2, 0x80000);
+	SetThingAlpha(fader, 0.0);				#transparent.
+	in_rotRate = GetThingMaxRotVel(indy);
+	vol_rotRate = GetThingMaxRotVel(volod);
+
+	return;
+
+# ..............................................................................
+
+entered:
+	
+	if (GetSenderRef() != trigger) return;
+	if (cutSceneState > 0) return;
+    
+	# Prep...
+	cutSceneState = 1;
+	StartCutScene(1);
+	curCam = GetCurrentCamera();
+	StopThing(player);
+	DeselectWeaponWait(player);
+	CopyPlayerHolsters(player, indy);
+	CopyPlayerHolsters(player, ropeindy);
+	SetThingflags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	ClearThingFlags(indy, 0x80000);
+
+	# Indy walks out into the sun...
+	AttachThingToThing(ct_1, indy);
+	SetCameraLookInterp(2, 0); # no p & t
+	SetCameraPosInterp(2, 0); # no d
+	SetCameraFocus(2, cam_1);
+	SetCameraSecondaryFocus(2, ct_1);
+	SetCurrentCamera(2);
+	SetCameraFOV(70, 0, 0.0);
+	Sleep(0.1);
+	AISetMoveSpeed(indy, 1.0);
+	AISetMoveThing(indy, in_mk_1, 0);
+	AIWaitForStop(indy);
+
+	#---------- music cue -------------
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+
+	# Whoops!  Indy is snared...
+	SetCameraLookInterp(2, 1); # pan & tilt
+	SetCameraPosInterp(2, 1); # dolly
+	SetCameraInterpSpeed(2, 0.5);
+	ClearThingFlags(ropeindy, 0x80000);
+	CopyOrientAndPos(indy, ropeindy);
+	SetThingFlags(indy, 0x80000);
+	Sleep(0.01);
+	in_keyTrack1 = PlayKey(ropeindy, in_hang, 2, 0x10, 0);
+	PlayKey(ropeindy, in_snag, 4, 0x12, 0);
+	curSound = PlaySoundLocal(whip, 1.0, 0.0, 0x0, 0);
+	Sleep(0.3);
+	SetCameraFocus(2, cam_2);
+	SetCameraSecondaryFocus(2, ct_2);
+	SetCameraFOV(55, 1, 0.5);
+	Sleep(0.2);
+	MoveToFrame(ct_2, 1, 8.0); # zzzip!
+	WaitForSound(curSound);
+
+	# Indy dangles...
+	curSound = PlayVoice(indy, in_uuh, 1.0, 0);
+	Sleep(2.2);
+
+	# Move to frame Indy and Volod...
+	SetCameraInterpSpeed(2, 1.5);
+	SetCameraFocus(2, cam_3);
+	SetCameraSecondaryFocus(2, ct_3);
+	SetCameraFOV(43, 1, 1.5);
+	Sleep(0.1);
+
+	# Volodnikov: "We've captured a jungle animal..."
+	curSound = PlayVoice(volod, vol_gotindy, 1.0, 0);
+
+	# Prep Volod & company...
+	ClearThingFlags(volod, 0x80000);
+	AISetMoveSpeed(volod, 1.1);
+	AISetLookThing(volod, ropeindy);
+	AISetMoveThing(volod, vol_mk_1, 0);
+	Sleep(1.5);
+
+	# Commie1 joins his boss...
+	ClearThingFlags(commie1, 0x80000);
+	SetWeaponModel(commie1, 22); # Simonov rifle
+	SetArmedMode(commie1, 3);
+	PlayMode(commie1, 62, 0);
+	AISetMoveSpeed(commie1, 1.1);
+	AISetLookThing(commie1, ropeindy);
+	AISetMoveThing(commie1, c1_mk_1, 0);
+
+	# Volod surveys his captive...
+	AIWaitForStop(volod);
+	PlayKey(volod, vo_leftUp3, 4, 0x12, 1);
+	Sleep(0.2);
+	
+	# Now commie2 appears...
+	ClearThingFlags(commie2, 0x80000);
+	SetWeaponModel(commie2, 22); # Simonov rifle
+	SetArmedMode(commie2, 3);
+	PlayMode(commie2, 62, 0);
+	AISetMoveSpeed(commie2, 1.1);
+	AISetLookThing(commie2, c2_mk_1);
+	AISetMoveThing(commie2, c2_mk_1, 0);
+	Sleep(0.5);
+
+	# Volod is stern...
+	vol_keyTrack1 = PlayKey(volod, vo_armsATfold, 2, 0x10, 0);
+	PlayKey(volod, vo_foldArms, 4, 0x12, 0);
+
+	# Commie2 arrives...
+	AIWaitForStop(commie2);
+	AISetLookThing(commie2, ropeindy);
+	WaitForSound(curSound);
+
+	# TO DO:  Goons point their guns...
+
+	# Let the tableau sink in...
+# fade out added--------(DS)--
+	Sleep(1.5);
+	ThingFadeAnim(fader, 0, 1, 2.0, 0);
+	Sleep(3.0);
+
+	# Clean up...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	EndCutScene();
+
+	# Restore control (TEMP!  This cog should end the level!)...
+#	StopThing(player);
+#	SetThingMaxRotVel(indy, in_rotRate);
+#	CopyOrientAndPos(ropeindy, player);
+#	ClearThingFlags(player, 0x80000);
+#	ClearActorFlags(player, 0x200000);
+#	SetCurrentCamera(curCam);
+
+	ResetCameraFOV(0, 0.0);
+	JonesEndLevel();					# On to the next level.
+	return;
+
+end

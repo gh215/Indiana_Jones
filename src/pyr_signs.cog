@@ -1,0 +1,124 @@
+# Jones 3D Cog Script
+#
+# pyr_signs.cog
+#
+# Indy reads up on Meroe
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ==============================================================================
+
+symbols
+message	startup
+message	entered
+message	exited
+message	activated
+
+# world things
+thing	sign
+thing	player		local
+
+# camera stuff
+thing	readcam
+thing	cam1spot	local
+thing	cam1look	local
+
+# surfaces
+surface	readsign
+
+# saylines
+sound	fairytale=pr04j03.wav	local
+sound	fabulous=pr04j04.wav	local
+sound	mines=Pr04j04b.wav		local
+
+int		oktoread=0	local
+end
+
+
+code
+startup:
+	sleep(.01);
+	player = GetLocalPlayerThing();
+	
+	# global7 represents the number of sign readings have taken place
+	global7 = 1;
+	
+	return;
+
+entered:
+	if (GetSenderRef() != readsign) return;
+
+	oktoread = 1;
+	return;
+
+exited:
+	if (GetSenderRef() != readsign) return;
+
+	oktoread = 0;
+	return;
+	
+	
+activated:
+	if (GetSenderRef() != sign) return;
+	if (oktoread == 0) return;
+
+	# prepare player
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+	
+	StartCutscene(1);
+	
+	# setup offset camera
+	cam1spot = CreateThing(GetThingTemplate(readcam), readcam);
+	cam1look = CreateThing(GetThingTemplate(readcam), readcam);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+	SetCameraFocus(2, readcam);
+	SetCameraSecondaryFocus(2, sign);
+	
+	# perform lines
+	sleep(.5);
+	if (global7 == 1)
+	{
+		PlayVoice(player, fairytale, 1, 1);
+		global7 = 2;
+	}
+	else if (global7 == 2)
+	{
+		PlayVoice(player, fabulous, 1, 1);
+		global7 = 3;
+	}
+	else if (global7 == 3)
+	{
+		PlayVoice(player, mines, 1, 1);
+	}
+	
+	Sleep(.5);
+
+	# restore camera and get rid of objects
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(readcam));
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	DestroyThing(cam1spot);
+	DestroyThing(cam1look);
+	
+	#restore player, end scene
+	sleep(.5);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	
+	return;
+
+end

@@ -1,0 +1,297 @@
+# Jones 3D Cog Script
+#
+# pyr_shackexplode.cog
+#
+# Make the shack blow up when Indy shoots the dynamite
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ==============================================================================
+
+symbols
+message	startup
+message	activated
+message	entered
+message	exited
+message	killed
+message	pulse
+
+# actors
+thing	player		nolink	local
+
+# camera things and lookthings
+thing	boomcam			nolink
+thing	boomcamlook		nolink
+thing	doorcam			nolink
+thing	doorcamlook		nolink
+thing	cam1spot		local
+thing	cam1look		local
+
+# world objects
+thing	shack
+thing	box2			nolink
+thing	box3			nolink
+thing	box4			nolink
+thing	dynamite0
+thing	dynamite1		nolink
+thing	dynamite2		nolink
+thing	shackend
+thing	shackendblown	nolink
+thing	zookaghost		nolink
+
+# boxes to be made non-pushable
+thing	box5			nolink
+thing	box6			nolink
+thing	box7			nolink
+thing	box8			nolink
+thing	box9			nolink
+
+# surfaces
+surface	doormat
+surface	shootmat
+surface	shootmat2
+
+# explosion templates
+template	zooka=+dummy_debris	local
+
+# voicelines
+sound	locked=inxj077.wav		local
+sound	wayin=bb03j04.wav		local
+
+# music
+sound	pyrtheme=mus_aet_pocket_pyr.wav	local
+
+# sounds
+sound	boxsmash=shs_beamcrash_c.wav	local
+
+# variables
+int		oktosay=0		local
+int		counter=10		local
+
+# subroutines
+flex	startscene=0.0	local
+flex	endscene=0.0	local
+flex	fixcams=0.0		local
+flex	changecam=0.0	local
+end
+
+
+code
+startup:
+	sleep(.01);
+	player = GetLocalPlayerThing();
+
+	SetThingFlags(shackendblown, 0x10);
+	
+	# make dynamite non-targettable
+	SetActorFlags(dynamite0, 0x100000);
+
+	# make other dynamites non-targettable for good
+	SetActorFlags(dynamite1, 0x100000);
+	SetActorFlags(dynamite2, 0x100000);
+	
+	# make all dynamite unkillable until player can shoot it legitimately
+	SetActorFlags(dynamite0, 0x8);
+	SetActorFlags(dynamite1, 0x8);
+	SetActorFlags(dynamite2, 0x8);
+
+	return;
+
+entered:
+# ---> doormat, shootmat
+
+	if (GetSenderRef() == doormat)
+	{
+		oktosay = 1;
+	}
+	else if ((GetSenderRef() == shootmat) || (GetSenderRef() == shootmat2))
+	{
+		if (dynamite0 != -1)
+		{
+			# make dynamite targettable
+			ClearActorFlags(dynamite0, 0x100000);
+			
+			# make dynamite killable
+			ClearActorFlags(dynamite0, 0x8);
+		}
+	}
+	
+	return;
+
+exited:
+# ---> doormat, shootmat
+	
+	if (GetSenderRef() == doormat)
+	{
+		oktosay = 0;
+	}
+	else if ((GetSenderRef() == shootmat) || (GetSenderRef() == shootmat2))
+	{
+		if (dynamite0 != -1)
+		{
+			# make dynamite non-targettable
+			SetActorFlags(dynamite0, 0x100000);
+			
+			# make dynamite non-killable
+			SetActorFlags(dynamite0, 0x8);
+		}
+	}
+	
+	return;
+	
+activated:
+# ---> shack
+	if (GetSenderRef() != shack) return;
+	if (dynamite0 == -1) return;
+	if (oktosay == 0) return;
+
+	# prepare player
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+	
+	StartCutscene(0);
+
+	# setup offset camera
+	cam1spot = CreateThing(GetThingTemplate(doorcam), doorcam);
+	cam1look = CreateThing(GetThingTemplate(doorcam), doorcam);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+	SetCameraFocus(2, doorcam);
+	SetCameraSecondaryFocus(2, doorcamlook);
+
+	# indy vs. the door again
+	PlayMode(player, 60, 1);
+	PlayVoice(player, locked, 1, 1);
+	PlayVoice(player, wayin, 1, 1);
+	
+	Sleep(0.25);
+
+	# restore camera and get rid of objects
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(doorcam));
+	SetCurrentCamera(1);
+	DestroyThing(cam1spot);
+	DestroyThing(cam1look);
+
+	# finish up
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+    return;
+
+killed:
+# ---> dynamite
+	if (GetSenderRef() != dynamite0) return;
+	
+	PlaySoundLocal(pyrtheme, 1, 0, 0, 0);
+	dynamite0 = -1;
+	setpulse(.1);
+	
+	call startscene;
+	call changecam;
+
+	sleep(.1);
+
+	# blow other dynamite boxes up
+	ClearActorFlags(dynamite1, 0x8);
+	ClearActorFlags(dynamite2, 0x8);
+	DamageThing(dynamite1, 60, 0x1, player);
+	
+	# destroy boxes and good end of shack
+	DestroyThing(box2);
+	DestroyThing(box3);
+	DestroyThing(box4);
+	DestroyThing(shackend);
+	
+	# create explosion projectile, make blown shack visible, play sounds
+	CreateThing(zooka, zookaghost);
+	ClearThingFlags(shackendblown, 0x10);
+	PlaySoundThing(boxsmash, shackendblown, 1, -1, -1, 0);
+
+	sleep(3);
+
+   	# make crates non-pushable
+	ClearThingFlags(box5, 0x40000000);
+	ClearThingFlags(box6, 0x40000000);
+	ClearThingFlags(box7, 0x40000000);
+	ClearThingFlags(box8, 0x40000000);
+	ClearThingFlags(box9, 0x40000000);
+
+	call endscene;
+	
+	return;
+
+changecam:
+	#change to boomcam
+	SetCameraFocus(2, boomcam);
+	SetCameraSecondaryFocus(2, boomcamlook);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0);
+	return;
+
+startscene:
+	call fixcams;
+
+	StartCutscene(1);
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+		
+	return;
+			
+endscene:
+	call fixcams;
+
+	ClearActorFlags(player, 0x200000);
+
+	SetCurrentCamera(1);
+	EndCutscene();
+
+	# clean up
+	DestroyThing(boomcam);
+	DestroyThing(boomcamlook);
+	DestroyThing(doorcam);
+	DestroyThing(doorcamlook);
+	DestroyThing(zookaghost);
+
+	return;
+
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(1, 0);
+	SetCameraLookInterp(1, 0);
+	RestoreExtCam();
+	return;
+
+pulse:
+	
+	if (counter > 1)
+	{
+		counter = counter - 1;
+
+		SetPOVShake(VectorScale(VectorSet(RandBetween(-1, 1), RandBetween(-1, 1), RandBetween(-1, 1)), .0005 * counter),
+					VectorScale(VectorSet(RandBetween(-6, 6), RandBetween(-4, 4), RandBetween(-2, 2)), .05 * counter),
+					10, 180);
+	}
+	else
+	{
+		SetPulse(0);
+		counter=0;
+	}
+
+	return;
+
+end
+

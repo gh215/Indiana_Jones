@@ -55,9 +55,9 @@ symbols
 	vector      forcething
 	vector		v_targetpos								local
 
-    flex        speed=1.0
-	flex        doorSpeed=0.5
-    flex        waittime=3.0	
+    flex        speed=1.2
+	flex        doorSpeed=1.5
+    flex        waittime=4.0	
     
     int         cursound	                            local
     int         enterflag=0                             local

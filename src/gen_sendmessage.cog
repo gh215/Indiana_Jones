@@ -1,0 +1,63 @@
+# Jones 3D Cog Script
+#
+# gen_SendMessage.cog
+#
+# Send Activated message to another cog when chosen sectors, faces, or things are Entered
+# Set flex "onetime" to 1 for one-time-only use, otherwise set it to 0
+# Disclaimer: Activate message on recipient cog should have code to handle multiple activations!
+# Disclaimer #2: May not work with some scripts due to GetSenderID checks! (works OK with 00elevswitch)
+#
+# [YB]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	entered
+	message	timer
+
+	surface	surface1
+	surface	surface2
+
+	sector	sector1
+	sector	sector2
+
+	thing		thing1
+	thing		thing2
+
+	cog		recipient
+
+	flex		onetime=0		// multiple instances by default
+	flex		messagedelay=0
+
+# subroutines
+	flex	sendit=0.0	local
+end
+
+code
+# ........................................................................................
+
+entered:
+	if (onetime == 2) return;
+	SetTimer(messagedelay + .01);
+	return;
+
+# ........................................................................................
+
+sendit:
+	if (onetime == 1)
+	{
+		onetime = 2;
+	}
+
+	SendMessage(recipient, activate);
+	return;
+
+# ........................................................................................
+
+timer:
+	call sendit;
+	return;
+	
+end
+

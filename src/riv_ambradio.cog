@@ -1,0 +1,79 @@
+# Jones 3D Cog Script
+#
+# RIV_AmbRadio.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message	    entered
+    message     timer
+
+	thing		soundPos0
+    
+    sector      on_sec1         linkID=1
+    sector      on_sec2         linkID=1
+    
+    sector      off_sec1        linkID=0
+    sector      off_sec2        linkID=0
+
+	sound		noise0=riv_radio_chatter_a1.wav   local
+	sound		noise1=riv_radio_chatter_a2.wav   local
+	sound		noise2=riv_radio_chatter_a3.wav   local
+	sound		noise3=riv_radio_chatter_a4.wav   local
+	sound		noise4=riv_radio_chatter_a5.wav   local
+    
+    int         chatterOff=0    local
+    int         newLine         local
+    int         oldLine         local
+    int         noiseChannel    local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	if(GetSenderID() == 1)
+    {
+        chatterOff = 0;
+        SetTimer(1.0);
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        chatterOff = 1;
+    }
+    
+	return;
+
+# ========================================================================================
+
+timer:
+
+    while (newLine == oldLine)
+    {	
+        newLine = RandBetween(0, 4); # pick new line
+    }
+    
+    oldLine = newLine; # remember what got picked
+    
+    noiseChannel = PlaySoundThing(noise0[newLine], soundPos0, 1.0, 2, 8, 0);    # was 1, 6
+    WaitForSound(noiseChannel);
+    
+    if(chatterOff == 0)
+    {
+        Sleep(Rand());
+        SetTimer(1.0);
+    }
+
+	return;
+
+# ========================================================================================
+
+end

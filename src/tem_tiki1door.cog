@@ -1,0 +1,517 @@
+# Jones 3D Cog Script
+#
+# TEM_Tiki1Door.cog
+#
+# tikikey = 53
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     exited
+    message     activated
+    
+    thing       player          local
+    thing       tiki            local
+    thing       door            linkID=1
+    thing       tiki1Ghost
+    thing       camera          
+    thing       camera2
+    thing       camTarget       
+    thing       indy
+    thing       target1
+    thing       target2
+    thing       target3
+    thing       spot0Offset
+    thing       spot1Offset
+    thing       t_Monkey        # stupid monkey
+    
+    # ** spiders **
+    thing       spider0
+    thing       spider1
+    
+    # on spot surfaces
+    surface     spot0           linkID=2
+    surface     spot1           linkID=2
+    surface     spot2           linkID=2
+    surface     spot3           linkID=2   # adjoin spot
+    surface     spot4           linkID=2
+    surface     spot5           linkID=2
+    surface     spot6           linkID=2
+    surface     spot7           linkID=2
+    surface     spot8           linkID=2
+    surface     spot9           linkID=2
+    surface     spot10          linkID=2
+    
+    surface     slot
+    surface     surf_Door0      linkID=1
+    
+    sector      doorSec         
+        
+    template    tikiMove=tikikeymove            local
+    
+    keyframe    inReach=in_pickup.key	        local
+    
+    # ** wrong spot lines **
+	sound	    in_WrongSpot0=Inxj093.wav		local # Good idea...
+	sound	    in_WrongSpot1=Inxj094.wav		local # Perfect world...but not this one
+	sound	    in_WrongSpot2=Inxj095.wav		local # Must be a different way
+	sound	    in_WrongSpot3=Inxj092.wav		local # Hmm, didn't quite work
+    
+    # ** using the wrong or no item lines (whichLine = 1) **
+	sound	    in_WrongLine0=Inxj089.wav       local # That didn't work-->in_sayline[11]
+	sound	    in_WrongLine1=Inxj090.wav		local # ...something wrong.
+	sound	    in_WrongLine2=Inxj092.wav		local # Hmm...didn't quite work.
+	sound	    in_WrongLine3=Inxj060.wav		local # I don't think...right answer
+	sound	    in_WrongLine4=Inxj091.wav		local # Of course that didn't work.
+    
+    # ** locked door lines (whichLine = 2) **
+    sound	    in_DoorLocked0=Inxj081.wav		local # Oh no...why...always locked?
+    sound       in_DoorLocked1=Inxj076.wav      local # This door is locked
+    sound       in_DoorLocked2=Inxj077.wav      local # it's locked
+    sound	    in_DoorLocked3=Inxj078.wav		local # Locked.
+	sound	    in_DoorLocked4=Inxj080.wav		local # Locked...luck never changes.
+    
+    # ** misc voice lines **
+    sound       inFits=Inxj109.wav              local   # it fits
+    sound       in_Stubby=Tm03j04.wav           local   # this door has stubby little...
+    
+    # ** sound fx **
+    sound       sndRotate=tem_tikikeymove_rotate_c.wav  local
+    sound       snd_Lava=gen_lava_flow_a.wav            local
+    
+    # ** music **
+    sound       mus_AweInspiring=mus_lag_uwatertemple.wav   local
+    
+    cog         mazeBubbles
+    cog         MM2BAAmbients
+    cog         cog_Hint
+    
+    vector      cave1               local
+    vector      blue                local
+    
+    # ** subroutines **
+    flex        opendoor            local
+    flex        wrongSpot           local
+    flex        firstSpeak          local
+    flex        speak               local
+        
+    int         tikiTurned=0        local
+    int         open=0              local
+    int         spot=0              local
+    int         tikiDown=0          local
+    int         playing=0           local
+    int         firstTime=0         local
+    int         firstVisit=1        local
+    
+    int         curCam              local
+    int         curItem             local
+    int         whichLine           local
+    int         lavaChannel         local
+    
+    int         newComment          local
+    int         oldComment          local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    SectorAdjoins(doorSec, 0);
+    SetThingLight(door, '0.35 0.3 0.2', 0.001, 0.1);
+    cave1 = VectorSet(0.10, 0.10, 0.10);    # canned in favor of blue (for now)
+    blue = VectorSet(0.50, 0.50, 0.60);
+    
+    # hide the stupid monkey so we can't hear him from MM
+    SetThingFlags(t_Monkey, 0x80000);
+    
+    return;
+        
+# ========================================================================================
+
+entered:
+
+    if(GetSenderID() == 2)
+    {
+        Print("spot = 1");
+        spot = 1;
+    }
+        
+    return;
+
+# ========================================================================================
+
+exited:
+
+    if((GetSenderID() == 2) && (GetSourceRef() == player)) 
+    {
+        Print("spot = 0");
+        spot = 0;
+    }
+        
+    return;
+    
+# ========================================================================================
+
+activated:
+    
+    curCam = GetCurrentCamera();
+    curItem = GetCurItem(player);
+
+    if((GetSenderID() == 1) && (tikiDown == 0) && (playing == 0))
+    {
+        if(spot == 1)
+        {
+            # first visit to door and is not using tiki key
+            if((firstVisit == 1) && (curItem != 53))
+            {
+                firstVisit = 0;
+                playing = 1;
+                Call firstSpeak;
+            }
+        
+            # player uses tiki key in correct spot
+            else if(curItem == 53)
+            {
+                tikiDown = 1;
+                Call openDoor;
+            }
+            
+            # player doesn't have or isn't using tiki key
+            else if(curItem == 0)
+            {
+                playing = 1;
+                whichLine = 2;
+                Call speak;
+                whichLine = 0;
+            }
+                
+            # player is using something other than tiki key
+            else
+            {
+                playing = 1;
+                whichLine = 1;
+                Call speak;
+                whichLine = 0;
+            }
+        }
+        
+        # player is standing in the wrong spot
+        else if(spot == 0)
+        {
+            # first visit to door
+            if((firstVisit == 1) && (curItem != 53))
+            {
+                firstVisit = 0;
+                playing = 1;
+                Call firstSpeak;
+            }
+            
+            # player is using tiki key in wrong spot
+            else if(curItem == 53)
+            {
+                playing = 1;
+                Call wrongSpot;
+            }
+            
+            # player doesn't have or isn't using tiki key
+            else if(curItem == 0)
+            {
+                playing = 1;
+                whichLine = 2;
+                Call speak;
+                whichLine = 0;
+            }
+                
+            # player is using something other than tiki key
+            else
+            {
+                playing = 1;
+                whichLine = 1;
+                Call speak;
+                whichLine = 0;
+            }
+        }
+    }
+        
+    return;
+        
+# ========================================================================================
+
+openDoor:
+
+    Print("the tiki has landed");
+    
+    # solve hint 11
+    SendMessage(cog_Hint, user0);
+    
+    # show the monkey
+    ClearThingFlags(t_Monkey, 0x80000);
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # cut to cam 2 and watch door open
+    SetCameraFocus(2, camera);
+    SetCameraSecondaryFocus(2, camTarget);
+    SetCurrentCamera(2);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # hide player, show indy
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # remove tiki from inventory
+    ChangeInv(player, 53, -1);
+    
+    # mark slot adjoin as move so tiki will slide
+    SetAdjoinFlags(slot, 2);         # move
+    SetAdjoinFlags(spot3, 2);        # move
+    SetAdjoinFlags(spot5, 2);        # move
+    
+    # put tiki1 down and create it
+    PlayKey(indy, inReach, 4, 0x12, 0);
+    Sleep(1.0);
+    tiki = CreateThing(tikiMove, tiki1Ghost);
+    CaptureThing(tiki);
+    Sleep(0.2);
+    PlaySoundLocal(inFits, 1.0, 0.0, 0x0, 1);
+    
+    Sleep(0.5);
+    
+    # play music cue
+    PlaySoundLocal(mus_AweInspiring, 1.0, 0.0, 0x0, 0);
+    
+    Sleep(0.5);
+    
+    # rotate the tiki's
+    Rotate(tiki, -90, 1, 2.0);
+    PlaySoundThing(sndRotate, tiki, 1.0, 5.0, 10.0, 0x0);
+    WaitForStop(tiki);
+    
+    # change fog values
+    SetFog(1, blue, 40, 350);
+    
+    # clear adjoin stuff
+    SectorAdjoins(doorSec, 1);
+    SetAdjoinFlags(surf_Door0, 2);   # move
+    Sleep(0.1);
+    
+    # open the door
+    MoveToFrame(tiki, 1, 1.0);
+    MoveToFrame(door, 1, 1.0);
+    WaitForStop(door);
+    
+    # sends message to spider_wall's class cog, saying "user0" (27)
+    SendMessageEx(GetThingClassCog(spider0), 27, spider0, 0, 0, 0);
+    SendMessageEx(GetThingClassCog(spider1), 27, spider1, 0, 0, 0);
+    
+    ClearAdjoinFlags(slot, 2);      # no move
+    ClearAdjoinFlags(spot3, 2);     # no move
+    ClearAdjoinFlags(spot5, 2);     # no move
+    
+    # walk indy to tiki
+    AISetMoveSpeed(indy, 1.2);
+    AISetLookThing(indy, target1);
+    AISetMoveThing(indy, target1, 1);
+    Sleep(0.5);
+    
+    # pick up the tiki
+    PlayKey(indy, inReach, 4, 0x12, 0);
+    Sleep(1.0);
+    DestroyThing(tiki);
+    
+    # add tiki1 back into inventory
+    SetInvAvailable(player, 53, 1);
+    ChangeInv(player, 53, 1.0);
+    JonesInvItemChanged(53);
+    Sleep(0.5);
+    
+    # walk to the door
+    AISetLookThing(indy, target2);
+    AISetMoveThing(indy, target2, 1);
+    Sleep(0.5);
+    
+    # add ambient sound
+    lavaChannel = PlaySoundThing(snd_Lava, door, 1.0, 5.0, 10.0, 0x0001);
+    
+    # change fog and switch cameras
+    SetFog(1, '0.50 0.05 0.05', 70, 150);
+    SetCameraFocus(2, camera2);
+    SetCameraSecondaryFocus(2, indy);
+    
+    # walk to other side of door
+    AISetLookThing(indy, target3);
+    AISetMoveThing(indy, target3, 1);
+    
+    # close door behind indy
+    MoveToFrame(door, 0, 1.0);
+    WaitForStop(door);
+    
+    # turn off ambient sound
+    StopSound(lavaChannel, 0.0);
+    
+    # turn off melt maze bubbles
+    SendMessage(mazeBubbles, user0);
+    
+    # turn on MM2BA ambients
+    SendMessage(MM2BAAmbients, user0);
+    
+    # block adjoin
+    SectorAdjoins(doorSec, 0);
+    
+    # change fog again
+    SetFog(1, blue, 10, 350);
+    
+    # change door color
+    SetThingLight(door, '0.3 0.3 0.2', 0.001, 0.1);
+    
+    # move player into position
+    CopyOrientAndPos(indy, player);
+    
+    # hide indy show player
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # return camera to normal
+    SetCurrentCamera(curCam);
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    return;
+    
+# ========================================================================================
+
+wrongSpot:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # move ext cam around player
+    SetExtCamOffsetToThing(spot0Offset);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # nudge door
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # say voice line
+    PlayVoice(player, in_WrongSpot0[RandBetween(0, 3)], 1.0, 1);
+    
+    # return camera to normal
+    RestoreExtCam();
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+firstSpeak:
+
+    Print("firstVisit");
+            
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # move ext cam around player
+    if(spot == 1) SetExtCamOffsetToThing(spot1Offset);
+    
+    else SetExtCamOffsetToThing(spot0Offset);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # say voice line
+    PlayVoice(player, in_Stubby, 1.0, 1);
+    
+    # return camera to normal
+    RestoreExtCam();
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+speak:
+
+    while (newComment == oldComment) 
+    {
+        newComment = RandBetween(0, 4);
+    }
+    
+    oldComment = newComment;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # move ext cam around player
+    if(spot == 1) SetExtCamOffsetToThing(spot1Offset);
+    
+    else SetExtCamOffsetToThing(spot0Offset);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    if(whichLine == 1)
+    {
+        PlayVoice(player, in_WrongLine0[newComment], 1.0, 1);
+    }
+    
+    else if(whichLine == 2)
+    {
+        PlayVoice(player, in_DoorLocked0[newComment], 1.0, 1);
+    }
+    
+    # return camera to normal
+    RestoreExtCam();
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+end
+

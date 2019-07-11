@@ -1,0 +1,68 @@
+# Jones 3D Cog Script
+#
+# TEM_AmbBridges.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message	    entered
+    message     pulse
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+    thing		soundPos2		nolink
+    
+    sector      start_Amb1      linkID=1
+    sector      start_Amb2      linkID=1
+    sector      start_Amb3      linkID=1
+    
+    sector      stop_Amb1       linkID=0
+    sector      stop_Amb2       linkID=0
+    sector      stop_Amb3       linkID=0
+
+	sound		ambient0=tem_bridge_b.wav   local
+	sound		ambient1=tem_bridge_c.wav   local
+    
+    flex        vol=1.0
+    flex        minDist=5.0
+    flex        maxDist=12.0
+    
+    int         soundsOn=0      local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	if((GetSenderID() == 1) && (soundsOn == 0))
+    {
+        soundsOn = 1;
+        setpulse(2.0);
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        soundsOn = 0;
+        SetPulse(0.0);
+    }
+    
+	return;
+
+# ========================================================================================
+
+pulse:
+
+    PlaySoundThing(ambient0[RandBetween(0, 1)], soundPos0[RandBetween(0, 2)], vol, minDist, maxDist, 0);
+    
+    return;
+
+# ========================================================================================
+
+end

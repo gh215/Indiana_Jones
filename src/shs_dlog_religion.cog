@@ -1,0 +1,126 @@
+# Jones 3D Cog Script
+#
+# shs_Dlog_religion.cog   Say the line, Indy.  
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message 	startup
+message 	crossed
+
+keyframe 	in_pushHat=0in_figithat_4_4.key			local
+keyframe    in_handsONhips=0in_stand4.key       	local
+keyframe    in_sideTOhips=0in_stand1_bd_4.key   	local
+
+sound 		music0=mus_gen_awechord1.wav  			local
+sound		in_religionunknown=Ss01j01.wav			local
+
+surface 	trigger
+
+thing   	indy	
+thing		player			local
+thing   	cam1
+thing		c1_t1
+thing		c1_t2
+thing 		dummycam
+
+int			curCam			local
+int			played=0		local
+int			in_track0		local
+
+cog			wolf
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+      	
+	player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+	return;
+
+
+crossed:
+	
+	if ((GetSenderRef() == trigger) && (played == 0)) 
+	{
+        played=1; 	# play only once
+		
+		# play "awesome" music
+		PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);        
+        
+		MakeMeStop();
+		StartCutscene(1);
+        DeselectWeaponWait(player);				# stow any weapon or lighter
+        
+        # switch actor for player
+        SetThingFlags(player, 0x80000); 	# hide him
+        ClearThingFlags(indy, 0x80000);		# reveal our actor
+		CopyPlayerHolsters(player, indy);	# make sure our actor has matching props
+    	CopyOrientAndPos(player, indy); 	# move actor to player's spotClearThingFlags(indy, 0x80000); # reveal our actor
+        AISetLookThing(indy, c1_t1);
+		
+		# Prep camera & cut...
+        SetCameraLookInterp(2, 0); # no pan & tilt
+    	SetCameraPosInterp(2, 0); # no dolly
+    	SetCameraFocus(2, Cam1);
+    	SetCameraSecondaryFocus(2, indy);
+    	Sleep(0.01);
+		SetCurrentCamera(2);
+    	SetCameraFOV(35, 0, 0.0);
+     
+        # Indy walks into shot
+        AISetMoveSpeed(indy, 1.0);
+		AISetMoveThing(indy, c1_t2, 1);
+		
+		# Indy gestures
+		in_track0 = PlayKey(indy, in_handsONhips, 2, 0x00, 0);
+        PlayKey(indy, in_sideTOhips, 4, 0x12, 1);
+        PlayKey(indy, in_PushHat, 4, 0x12, 0);
+		sleep(1.5);
+
+		# "This seems like a monastery..."
+		PlayVoice(indy, in_religionunknown, 1.0, 0);
+        
+					   	
+        SendMessageEx(wolf, 27, 1, 0, 0, 0);		# activates wolf cog
+
+        # Swing to monastery
+		SetCameraLookInterp(2, 1); # pan & tilt
+		SetCameraInterpSpeed(2, 3.0);
+		Sleep(0.01);
+		SetCameraSecondaryFocus(2, c1_t1);
+        SetCameraFOV(85, 1, 3.0);
+		sleep(4.5);	# allow	camera to get to monastery
+        StopKey(indy, in_track0, 0.5);
+		
+
+		# Return control
+    	CopyOrientAndPos(indy, player); # move player to actor's spot
+    	SetThingFlags(indy, 0x80000); # hide actor	
+        ClearThingFlags(player, 0x80000); # player visible
+		SetCameraPosition(1, GetThingPos(dummycam)); # prep to swing back to follow-cam
+    	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+    	SetCameraPosInterp(2, 0); # kill dolly mode
+    	sleep(.01);
+		ResetCameraFOV(0, 0.0);
+		SetCurrentCamera(1);                          
+    	ClearActorFlags(player, 0x200000); # player in control
+        EndCutscene();
+	}
+	
+return;
+     
+  
+
+end
+

@@ -1,0 +1,29 @@
+# Jones 3D Cog Script
+#
+# aet_SprSun.cog
+#
+# [TL] [HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+message	startup
+
+thing	sun				
+
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+# Used for sizing the final shot of the game's sun sprite.  Cutscene only.
+AnimateSpriteSize(sun, '1 1 1', '1.5 1.5 1', 0); # was 0.7 - Hal
+
+return;
+
+# ........................................................................................
+end

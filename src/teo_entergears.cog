@@ -1,0 +1,103 @@
+# Jones 3D Cog Script
+#
+# TEO_EnterGears
+#
+# A basic cutscene cog
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message     startup
+	message     crossed
+   
+    keyframe    in_stand4=0in_stand4.key            local
+    keyframe    in_SideToHips=0in_stand1_bd_4.key   local
+    
+    surface     crosurf
+   
+	sound       indyline
+    sound       awesomewav=mus_gen_awesome3.wav     local
+       
+	thing       camera0
+    thing       cam_tgt0
+    thing       cam_tgt1
+    
+    #thing       actor_look_tgt0
+    
+	thing       player          local
+    thing       actorindy
+    
+    flex        moveSpeed=1
+    flex        cameraTime=5
+    int         chek=0          local
+    int         in_track0       local
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+    
+return;
+
+#........................................................................................
+crossed:
+    if ((GetSenderRef() == crosurf) && (chek == 0))
+    {
+        chek = 1;
+        MakeMeStop();
+        DeselectWeaponWait(player);
+        StartCutscene(1);
+        SetCameraLookInterp(2, 0);
+        
+        DeselectWeapon(player);
+        CopyPlayerHolsters(player, actorindy);
+        
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(actorindy, 0x80000);
+        AttachThingToThing(cam_tgt0, actorindy);
+        
+        SetCameraFocus(2, camera0);
+        SetCameraSecondaryFocus(2, actorindy);
+        SetCurrentCamera(2);
+        SetCameraFOV(30, 0, 0);
+        
+        AISetMoveSpeed(actorindy, 1.0);
+        AISetMoveFrame(actorindy, 1);
+        AIWaitforStop(actorindy);
+        
+        in_track0 = PlayKey(actorindy, in_stand4, 2, 0x00, 0);
+        PlayKey(actorindy, in_SideToHips, 4, 0x12, 0);
+        PlayVoice(player, indyline, 1, 0);
+        Sleep(1);
+        
+        SetCameraLookInterp(2, 1); 
+        SetCameraInterpSpeed(2, 2);
+        sleep(0.01);
+        SetCameraSecondaryFocus(2, cam_tgt1);
+        SetCameraFOV(80, 1, 2);
+        PlaySoundLocal(awesomewav, 0.75, 0, 0, 0);
+        Sleep(6);
+        StopKey(actorindy, in_track0, 0.5);
+        SetCameraLookInterp(2, 0);
+        CopyOrientAndPos(actorindy, player);
+        SetThingFlags(actorindy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0);
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        
+    }        
+    return; 
+    
+#........................................................................................
+end
+
+

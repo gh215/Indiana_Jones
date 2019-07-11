@@ -1,0 +1,82 @@
+# Jones 3D Cog Script
+#
+# gen_DoorRotStep.cog
+#
+# Rotating Door triggered by the floor
+#
+# [RKD]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message	startup		
+message	entered	
+message	arrived		
+message	blocked		
+
+thing		door
+
+surface	switch
+
+int      open=0				local
+
+flex		duration=1.0
+
+sector	doorSector			local
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	Print("Startup");
+	doorSector = GetThingSector(door);
+	SetSectorAdjoins(doorSector, 0);
+
+	return;
+
+# ........................................................................................
+
+entered:
+	Print("Entered");
+##	Playsound(click);
+
+	if (isMoving(door)) return;
+	if (GetSenderRef() == door) return;
+		
+	if (open == 0)						// open or close door depending on current status 
+	{
+		PrintInt(open);
+		Rotate(door, 90, duration);
+		SetSectorAdjoins(doorSector, 1);	 
+	}
+	else
+	{
+		PrintInt(open);
+		Rotate(door, -90, duration);
+	}
+	
+   return;
+
+# ........................................................................................
+
+arrived:	
+
+	Print("Door arrived");
+	open = 1 - open;
+	SetSectorAdjoins(doorSector, open);  
+
+	return;
+
+# ........................................................................................
+
+blocked:
+	Print("Blocked");
+#	?????	
+	return;
+
+end
+

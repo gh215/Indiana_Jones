@@ -1,0 +1,129 @@
+# Jones 3D Cog Script
+#
+# Tub_Clue.cog
+#
+# Give the player a hint at the tubs in Div Room3 in SHW 
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+
+#	MESSAGES
+    message	entered		
+    message	startup		
+
+#	PROPS
+	surface		trigger0	linkID=2
+	surface		trigger1	linkID=2
+	thing		tub
+
+#	ACTORS
+    thing		indy	    
+	thing		player		local	    
+    
+#	CAMERAS
+    thing       tubCam		
+
+#	CAMERA TARGETS
+    thing       tubMoveTarg	local
+	
+        
+#	VARIABLES
+    int			checked=0       local
+    int			snd       local
+
+#	VECTORS
+    vector      tubCamTarg         local
+
+#	TEMPLATES
+    template    ghostTpl=ghost      local
+
+#	SOUNDS
+    sound       in_hidden=INXJ003.wav        local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+
+# ........................................................................................
+entered:
+
+If ((GetSenderID() == 2) && (checked == 0))
+	{
+	checked = 1;
+    
+	# Stop the player
+	MakeMeStop();
+	
+	# SET UP THE ACTOR WITH CORRECT WEAPONS
+	CopyPlayerHolsters(player, indy);
+	
+	# Prep for scene...
+    curCam = GetCurrentCamera();
+	StartCutScene(1);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	
+    AISetCutSceneMode(indy);
+	CopyOrientAndPos(player, indy);
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+
+    # move cam to known position
+    SetExtCamOffsetToThing(tubCam);
+	
+	# create target for secondary focus at player position.
+    tubCamTarg = VectorAdd(VectorTransformToOrient(player, '0.0 0.0 0.0'), GetThingPos(player));
+    tubMoveTarg = CreateThingAtPos(ghostTpl, GetThingSector(player), tubCamTarg, '0 0 0');
+    CaptureThing(tubMoveTarg);
+    
+    # offset camera to thing.
+	SetExtCamLookOffsetToThing(tubMoveTarg);
+
+	Sleep(1.0);
+    snd = PlayVoice(indy, in_hidden, 1.0, 0);
+
+    # switch to camera 2 with focus on ghost at indy's position
+    SetCameraFocus(2, tubCam);
+    SetCameraSecondaryFocus(2, tubMoveTarg);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+
+    # move camera focus object up to strut
+    animId = MoveThingToPos(tubMoveTarg, GetThingPos(tub), 1.5);
+
+    AISetLookThing(indy, tub);
+	WaitForSound(snd);
+	Sleep(0.5);
+
+    # put the player at actors' position, clear actor, show player
+	CopyOrientAndPos(indy, player);
+    AIClearCutSceneMode(indy);
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+    SetThingFlags(indy, 0x80000);
+	
+	# Restore the cam, end the scene
+    SetCameraPosition(curCam, GetThingPos(tubCam));
+    SetCurrentCamera(curCam);
+    RestoreExtCam();
+    SetCameraFOV(90, 0, 0.0);
+    EndCutScene();
+	}
+
+return;
+
+# .....................................................................................
+end
+
+

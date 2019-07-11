@@ -1,0 +1,192 @@
+# Jones 3D Cog Script
+#
+# nub_Anubis.cog
+#
+# [TL] [RT]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	activated
+message	arrived
+message	startup
+
+thing	anubis			# Anubis Statue
+thing	arm				# PathMove Arm
+thing	ledge
+thing	button
+thing	Camerapos1		# Cutscene Camera
+thing	player			local
+thing	actor
+thing	chapelCam
+thing	buttonTarg
+thing	anubisTarg
+
+cog		hint
+
+keyframe	pushButton=in_activate_medium.key		local
+
+sound	ledgemove=nub_3mledge_move_c.wav				local
+sound	ledgestop=nub_3mledge_stop_c.wav				local
+
+int		out=0			local
+int		ledgedone		local
+int		begun=0			local
+int		buttondone		local
+int		sender			local
+
+flex	moveSpeed=1.0
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+SetCameraLookInterp(2, 0);
+SetCameraPosInterp(2, 0);
+player = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+activated:
+
+if ((GetSenderRef() != button) || (begun == 1))
+	return;
+
+begun = 1;
+
+MakeMeStop();
+DeselectWeaponWait(player);
+StartCutscene(1);
+CopyPlayerHolsters(player, actor);
+SetThingFlags(player, 0x80000);
+ClearThingFlags(actor, 0x80000);
+
+SetCameraFocus(2, chapelCam);
+SetCameraSecondaryFocus(2, buttonTarg);
+SetCurrentCamera(2);
+ResetCameraFOV(0, 0.0);
+
+PlayKey(actor, pushButton, 4, 0x12, 0);
+
+Sleep(0.2);
+
+MoveToFrame(button, 1, 0.4);
+
+Sleep(1.0);
+
+# Make sure nothing collides...
+SetCollideType(anubis, 0);
+SetCollideType(arm, 0);
+SetCollideType(ledge, 0);
+
+if (out == 0)
+{
+	# Move it out...
+	SendMessage(hint, user0);
+	MoveToFrame(anubis, 1, moveSpeed);
+	MoveToFrame(arm, 1, moveSpeed);
+	MoveToFrame(ledge, 1, moveSpeed);
+
+	SetCameraFocus(2, Camerapos1);
+	SetCameraSecondaryFocus(2, anubisTarg);
+	SetCurrentCamera(2);
+
+	ledgedone = PlaySoundLocal(ledgemove, 1.0, 0, 0x0001, 0);
+	
+	MoveToFrame(Camerapos1, 1, 1.0);
+	WaitForStop(Camerapos1);
+	Sleep(2.0);								#was 2.5
+
+	#Return to player views
+	SetCameraPosition(1, GetThingPos(Camerapos1));
+	SetCurrentCamera(1);
+    Movetoframe(Camerapos1, 0, 10);
+    
+    
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	SetThingFlags(actor, 0x80000);
+	EndCutscene();
+	begun = 0;
+}
+else
+{
+	# Move it in...
+	MoveToFrame(anubis, 0, moveSpeed);
+	MoveToFrame(arm, 0, moveSpeed);
+	MoveToFrame(ledge, 0, moveSpeed);
+
+    SetCameraFocus(2, Camerapos1);
+	SetCameraSecondaryFocus(2, anubisTarg);
+    SetCurrentCamera(2);
+    
+	ledgedone = PlaySoundLocal(ledgemove, 1.0, 0, 0x0001, 0);
+
+	MoveToFrame(Camerapos1, 1, 1.0);
+	WaitForStop(Camerapos1);
+	Sleep(2.0);								#was 2.5
+	
+    
+	SetCameraPosition(1, GetThingPos(Camerapos1));
+	SetCurrentCamera(1);
+    Movetoframe(Camerapos1, 0, 10);
+    
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	SetThingFlags(actor, 0x80000);
+	EndCutscene();
+	begun = 0;
+}
+
+return;
+
+# ........................................................................................
+arrived:
+
+sender = GetSenderRef();
+
+if (sender == button)
+{
+	if (GetCurFrame(button) == 1)
+	{
+		Sleep(0.75);
+		MoveToFrame(button, 0, 0.4);
+	}
+}
+else if (sender == anubis)
+{
+    # Reset collision...
+	SetCollideType(anubis, 3);
+
+	out = 1 - out;
+	StopSound(ledgedone, 0.0);
+	PlaySoundLocal(ledgestop, 1.0, 0, 0x0000, 0);
+
+	#DEBUGPRINT("Anubis statue arrived");
+}
+else if (sender == arm)
+{
+    # Reset collision...
+	SetCollideType(arm, 1);
+
+	#DEBUGPRINT("Anubis arm arrived");
+}
+else if (sender == ledge)
+{
+    # Reset collision...
+	SetCollideType(ledge, 3);
+
+	#DEBUGPRINT("Ledge arrived");
+}
+
+return;
+
+# ........................................................................................
+end
+

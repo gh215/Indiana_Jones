@@ -1,0 +1,550 @@
+# Jones 3D Cog Script
+#
+# olv_wolfsneak.cog   
+#
+# [SCHOLL]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message entered
+message	startup
+message	aievent
+message	arrivedwpnt
+message timer
+
+thing	t_Wolf
+thing	t_Indy		local
+
+int		n_eventType		local
+int		n_CrntAIMode 	local
+int		n_OldAIMode 	local
+int		n_Waypoint		local
+flex	f_DistToIndy	local 
+flex	f_FleeTime		local
+int		n_TimerID		local 
+
+int		b_OKToStopFlee=0 		local
+int		b_AttackOnStopFlee=0 	local
+int		n_idx					local
+int		b_WpntsActive=0			local
+int		n_FleeDir				local
+
+vector	v_IndyPos		local
+vector	v_WolfPos		local
+vector	v_Temp			local
+
+
+
+# ===========================FLEE WAYPOINTS================================================
+int         BASE_WAYPOINT_NUM=32            local
+int			NUM_FLEE_WAYPOINTS=25			local
+thing		t_Waypoint00
+thing		t_Waypoint01
+thing		t_Waypoint02
+thing		t_Waypoint03
+thing		t_Waypoint04
+thing		t_Waypoint05
+thing		t_Waypoint06
+thing		t_Waypoint07
+thing		t_Waypoint08
+thing		t_Waypoint09
+thing		t_Waypoint10
+thing		t_Waypoint11
+thing		t_Waypoint12
+thing		t_Waypoint13
+thing		t_Waypoint14
+thing		t_Waypoint15
+thing		t_Waypoint16
+thing		t_Waypoint17
+thing		t_Waypoint18
+thing		t_Waypoint19
+thing		t_Waypoint20
+thing		t_Waypoint21
+thing		t_Waypoint22
+thing		t_Waypoint23
+thing		t_Waypoint24
+
+
+# ===========================SECTORS================================================
+
+int			NUM_AUTO_FLEE_SECTORS=2 	local
+sector		s_AutoFlee00			mask=0x5 # need entered messages from wolf
+sector		s_AutoFlee01			mask=0x5 # need entered messages from wolf
+
+int			NUM_ACTIVATE_WPNT_SECTORS=3 local
+sector		s_ActivateWpnts00
+sector		s_ActivateWpnts01
+sector		s_ActivateWpnts02
+
+int			NUM_DEACTIVATE_WPNT_SECTORS=3 local
+sector		s_DeactivateWpnts00
+sector		s_DeactivateWpnts01
+sector		s_DeactivateWpnts02
+
+
+# ===========================MISC CONSTANTS================================================
+
+flex	MIN_FLEE_DISTANCE=2.0			local # distance wolf wants to be from Indy before stopping fleeing
+flex	MIN_FLEE_RESTART_DISTANCE=1.0			local # distance wolf wants to be from Indy before stopping fleeing
+flex	MAX_FLEEATTACK_DISTANCE=1.0			local # 
+flex	MIN_FLEE_TIME=4.0				local 
+flex	VARIABLE_FLEE_TIME=3.0			local
+
+int		TIMER_ID_OKAY_TO_STOP_FLEE=0	local
+int		TIMER_ID_START_FLEE=1			local
+int		TIMER_ID_ATTACK=2			local
+
+# ===========================SUBROUTINES================================================
+
+flex	SetDistToIndy			local
+flex	ActivateWaypoints		local
+flex	DeactivateWaypoints		local
+flex	RankWaypointsForFlee 	local
+flex	RankWaypointsForFleeToEast local
+flex 	RankWaypointsForFleeToWest	local
+flex	ResetWaypointRanks		local
+
+end
+# ========================================================================================
+
+code
+startup:
+	t_Indy=GetLocalPlayerThing();
+
+	return;
+
+# ========================================================================================
+entered:
+	if (GetSourceRef() == t_Indy)
+	{
+		for (n_idx = 0; n_idx < NUM_ACTIVATE_WPNT_SECTORS; n_idx = n_idx + 1)
+		{
+			if (GetSenderRef() == s_ActivateWpnts00[n_idx])
+			{
+				call ActivateWaypoints;
+			}
+		}
+		for (n_idx = 0; n_idx < NUM_DEACTIVATE_WPNT_SECTORS; n_idx = n_idx + 1)
+		{
+			if (GetSenderRef() == s_DeactivateWpnts00[n_idx])
+			{
+				call DeactivateWaypoints;
+			}
+		}
+	}
+	else if (GetSourceRef() == t_Wolf)
+	{
+		for (n_idx = 0; n_idx < NUM_AUTO_FLEE_SECTORS; n_idx = n_idx + 1)
+		{
+			if (GetSenderRef() == s_AutoFlee00[n_idx])
+			{
+//				DebugPrint("Wolf auto fleeing");
+				AIFlee(t_Wolf, t_Indy);
+			}
+		}
+	}
+
+	return;
+
+# ========================================================================================
+aievent:
+	n_eventType		= GetParam(0);
+	n_CrntAIMode	= GetParam(1);
+	n_OldAIMode		= GetParam(2);	// only valid for certain n_eventType values
+
+	if (n_eventType == 0x100)		// SITHAI_EVENTMODECHANGED
+	{
+		// if changing to flee mode
+		// turn on waypoints
+		if ( !BITTEST(n_OldAIMode, 0x800) && BITTEST(n_CrntAIMode, 0x800) )
+		{
+//			DebugPrint("Entering flee mode");
+			AISetSubMode(t_Wolf, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+			f_FleeTime = (MIN_FLEE_TIME + (Rand() * VARIABLE_FLEE_TIME));
+//			DebugFlex( f_FleeTime, "Flee time");
+			SetTimerEx(f_FleeTime , TIMER_ID_OKAY_TO_STOP_FLEE, 0, 0 );
+			b_OKToStopFlee = 0;
+			call RankWaypointsForFlee;
+		}
+		// if exiting flee mode
+		// turn off waypoints
+		else if ( BITTEST(n_OldAIMode, 0x800) && !BITTEST(n_CrntAIMode, 0x800) )
+		{
+			call SetDistToIndy;
+		
+			if (b_AttackOnStopFlee)
+			{
+				SetTimerEx(0.01 , TIMER_ID_ATTACK, 0, 0);
+				b_AttackOnStopFlee = 0;
+				AIClearSubMode(t_Wolf, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+				call ResetWaypointRanks;
+			}
+			// Consider restarting fleeing if Indy too close
+			else if (f_DistToIndy < MIN_FLEE_RESTART_DISTANCE)
+			{
+//				DebugFlex(f_DistToIndy, "Wolf restarting fleeing due to distance");
+				// Restart using timer to avoid nested mode changes
+				SetTimerEx(0.01 , TIMER_ID_START_FLEE, 0, 0 );
+			}
+			else
+			{
+				AIClearSubMode(t_Wolf, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+				call ResetWaypointRanks;
+//				DebugPrint("Exiting flee mode");
+			}
+		}
+	}
+
+return;
+
+# ========================================================================================
+timer:
+	t_Indy = GetLocalPlayerThing();
+
+	n_TimerID = GetSenderID();
+	if (n_TimerID == TIMER_ID_OKAY_TO_STOP_FLEE)
+	{
+		b_OKToStopFlee = 1;
+	}
+	else if (n_TimerID == TIMER_ID_START_FLEE)
+	{
+		call RankWaypointsForFlee;
+		AIFlee(t_Wolf, t_Indy);
+	}
+	else if (n_TimerID == TIMER_ID_ATTACK)
+	{
+		AISetFireTarget(t_Wolf, t_Indy);
+	}
+
+
+	return;
+
+
+# ========================================================================================
+arrivedwpnt:
+	n_Waypoint = GetParam(0);
+
+	call SetDistToIndy;
+
+	if ( b_OKToStopFlee 
+		 && (f_DistToIndy > MIN_FLEE_DISTANCE)
+		 && BITTEST(AIGetMode(t_Wolf), 0x800) // fleeing
+		 && (RandBetween(0,100) < 90)
+		 )
+	{
+//		DebugFlex(f_DistToIndy, "Wolf stopping fleeing due to distance");
+		// StopThing before StopFlee so wolf will turn to face indy
+		StopThing(t_Wolf);
+		AIStopFlee(t_Wolf);
+	}
+	else if ( b_OKToStopFlee 
+		 && (f_DistToIndy < MAX_FLEEATTACK_DISTANCE)
+		 && BITTEST(AIGetMode(t_Wolf), 0x800) // fleeing
+		 && (RandBetween(0,100) < 30)
+		 )
+	{
+//		DebugFlex(f_DistToIndy, "Wolf stopping fleeing. Surprise attack");
+		b_AttackOnStopFlee = 1;
+		AIStopFlee(t_Wolf);
+	}
+	else if ( (n_FleeDir == -1)
+			  && BITTEST(AIGetMode(t_Wolf), 0x800) // fleeing
+			  )
+	{
+		// fleeing south
+		if (n_Waypoint <= (2 + BASE_WAYPOINT_NUM) )
+		{
+			if (f_DistToIndy > MIN_FLEE_RESTART_DISTANCE)
+			{
+				// StopThing before StopFlee so wolf will turn to face indy
+//				DebugPrint("Wolf Reached Flee Waypoint and Stopped.");
+				StopThing(t_Wolf);
+				AIStopFlee(t_Wolf);
+			}
+			else
+			{
+//				DebugFlex(f_DistToIndy, "Wolf Restarting fleeing.");
+				call RankWaypointsForFlee;
+			}
+		}
+	}
+	else if ( (n_FleeDir == 1)
+			  && BITTEST(AIGetMode(t_Wolf), 0x800) // fleeing
+			  )
+	{
+		if (n_Waypoint == (23 + BASE_WAYPOINT_NUM))
+		{
+			if (f_DistToIndy > MIN_FLEE_RESTART_DISTANCE)
+			{
+				// StopThing before StopFlee so wolf will turn to face indy
+//				DebugPrint("Wolf Reached Flee Waypoint and Stopped.");
+				StopThing(t_Wolf);
+				AIStopFlee(t_Wolf);
+			}
+			else
+			{
+//				DebugFlex(f_DistToIndy, "Wolf Restarting fleeing.");
+				call RankWaypointsForFlee;
+			}
+		}
+	}
+
+	return;
+
+# ========================================================================================
+SetDistToIndy:
+	v_IndyPos = GetThingPos(t_Indy);
+	v_WolfPos = GetThingPos(t_Wolf);
+
+	f_DistToIndy = VectorDist(v_IndyPos, v_WolfPos);
+
+	return;
+
+# ========================================================================================
+ActivateWaypoints:
+	if (b_WpntsActive)
+	{
+		return;
+	}
+
+//	DebugPrint("ACTIVATING WAYPOINTS FOR WOLF IN SNEAK AREA");
+	b_WpntsActive = 1;
+	AISetInstinctWpntMode(t_Wolf);
+
+	for ( n_idx = 0; n_idx < NUM_FLEE_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx + BASE_WAYPOINT_NUM);
+	}
+
+	AIConnectWpnts(0 + BASE_WAYPOINT_NUM, 1 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(0 + BASE_WAYPOINT_NUM, 3 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(0 + BASE_WAYPOINT_NUM, 5 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(1 + BASE_WAYPOINT_NUM, 2 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(1 + BASE_WAYPOINT_NUM, 3 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(2 + BASE_WAYPOINT_NUM, 3 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(2 + BASE_WAYPOINT_NUM, 4 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(3 + BASE_WAYPOINT_NUM, 4 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(3 + BASE_WAYPOINT_NUM, 5 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(3 + BASE_WAYPOINT_NUM, 6 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(4 + BASE_WAYPOINT_NUM, 5 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(4 + BASE_WAYPOINT_NUM, 6 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(5 + BASE_WAYPOINT_NUM, 6 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(5 + BASE_WAYPOINT_NUM, 7 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(5 + BASE_WAYPOINT_NUM, 8 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(6 + BASE_WAYPOINT_NUM, 7 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(6 + BASE_WAYPOINT_NUM, 8 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(7 + BASE_WAYPOINT_NUM, 8 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(7 + BASE_WAYPOINT_NUM, 9 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(7 + BASE_WAYPOINT_NUM, 10 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(8 + BASE_WAYPOINT_NUM, 9 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(8 + BASE_WAYPOINT_NUM, 10 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(9 + BASE_WAYPOINT_NUM, 10 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(9 + BASE_WAYPOINT_NUM, 11 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(10 + BASE_WAYPOINT_NUM, 11 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(11 + BASE_WAYPOINT_NUM, 12 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(12 + BASE_WAYPOINT_NUM, 13 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(13 + BASE_WAYPOINT_NUM, 14 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(13 + BASE_WAYPOINT_NUM, 15 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(13 + BASE_WAYPOINT_NUM, 16 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(14 + BASE_WAYPOINT_NUM, 15 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(14 + BASE_WAYPOINT_NUM, 16 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(15 + BASE_WAYPOINT_NUM, 16 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(15 + BASE_WAYPOINT_NUM, 17 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(15 + BASE_WAYPOINT_NUM, 18 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(16 + BASE_WAYPOINT_NUM, 17 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(16 + BASE_WAYPOINT_NUM, 18 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(17 + BASE_WAYPOINT_NUM, 18 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(17 + BASE_WAYPOINT_NUM, 19 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(17 + BASE_WAYPOINT_NUM, 20 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(18 + BASE_WAYPOINT_NUM, 19 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(18 + BASE_WAYPOINT_NUM, 20 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(19 + BASE_WAYPOINT_NUM, 20 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(19 + BASE_WAYPOINT_NUM, 21 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(19 + BASE_WAYPOINT_NUM, 22 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(20 + BASE_WAYPOINT_NUM, 21 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(20 + BASE_WAYPOINT_NUM, 22 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(21 + BASE_WAYPOINT_NUM, 22 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(21 + BASE_WAYPOINT_NUM, 23 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(21 + BASE_WAYPOINT_NUM, 24 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(22 + BASE_WAYPOINT_NUM, 23 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(22 + BASE_WAYPOINT_NUM, 24 + BASE_WAYPOINT_NUM);
+	AIConnectWpnts(23 + BASE_WAYPOINT_NUM, 24 + BASE_WAYPOINT_NUM);
+
+	return;
+
+# ========================================================================================
+DeactivateWaypoints:
+	if (!b_WpntsActive)
+	{
+		return;
+	}
+
+//	DebugPrint("DEACTIVATING WAYPOINTS FOR WOLF SNEAK");
+	b_WpntsActive = 0;
+	AIClearInstinctWpntMode(t_Wolf);
+	StopThing(t_Wolf);
+
+	return;
+
+
+# ========================================================================================
+RankWaypointsForFlee:
+	v_IndyPos = GetThingPos(t_Indy);
+	v_WolfPos = GetThingPos(t_Wolf);
+
+	// If Indy is in the western arm then flee east
+	v_Temp = GetThingPos(t_Waypoint17);
+	if (VectorX(v_IndyPos) < VectorX(v_Temp))
+	{
+		call RankWaypointsForFleeToEast;
+		return;
+	}
+
+	// If Indy is in the eastern/southern arm then flee west
+	v_Temp = GetThingPos(t_Waypoint10);
+	if (VectorY(v_IndyPos) < VectorY(v_Temp))
+	{
+		call RankWaypointsForFleeToWest;
+		return;
+	}
+
+	// If Indy is on the main east/west road flee away from him
+	v_Temp = GetThingPos(t_Waypoint16);
+	if (VectorY(v_IndyPos) < VectorY(v_Temp))
+	{
+		if (VectorX(v_WolfPos) < VectorX(v_IndyPos))
+		{
+			call RankWaypointsForFleeToWest;
+			return;
+		}
+		call RankWaypointsForFleeToEast;
+		return;
+	}
+
+
+	// Indy must be at the intersection between road and sneak path
+
+	if (VectorY(v_WolfPos) < VectorY(v_IndyPos))
+	{
+		call RankWaypointsForFleeToEast;
+		return;
+	}
+
+	call RankWaypointsForFleeToWest;
+
+	return;
+
+# ========================================================================================
+RankWaypointsForFleeToEast:
+	
+//	DebugPrint("Rank waypoints for Flee To East");
+	n_FleeDir = -1;
+
+	AISetWpntRank(0 + BASE_WAYPOINT_NUM, 240);
+	AISetWpntRank(1 + BASE_WAYPOINT_NUM, 240);
+	AISetWpntRank(2 + BASE_WAYPOINT_NUM, 240);
+
+	AISetWpntRank(3 + BASE_WAYPOINT_NUM, 225);
+	AISetWpntRank(4 + BASE_WAYPOINT_NUM, 225);
+
+	AISetWpntRank(5 + BASE_WAYPOINT_NUM, 210);
+	AISetWpntRank(6 + BASE_WAYPOINT_NUM, 210);
+	
+	AISetWpntRank(7 + BASE_WAYPOINT_NUM, 195);
+	AISetWpntRank(8 + BASE_WAYPOINT_NUM, 195);
+
+	AISetWpntRank(9 + BASE_WAYPOINT_NUM, 180);
+	AISetWpntRank(10 + BASE_WAYPOINT_NUM, 180);
+
+	AISetWpntRank(11 + BASE_WAYPOINT_NUM, 165);
+
+	AISetWpntRank(12 + BASE_WAYPOINT_NUM, 150);
+
+	AISetWpntRank(13 + BASE_WAYPOINT_NUM, 135);
+
+	AISetWpntRank(14 + BASE_WAYPOINT_NUM, 120);
+
+	AISetWpntRank(15 + BASE_WAYPOINT_NUM, 105);
+	AISetWpntRank(16 + BASE_WAYPOINT_NUM, 105);
+
+	AISetWpntRank(17 + BASE_WAYPOINT_NUM, 90);
+	AISetWpntRank(18 + BASE_WAYPOINT_NUM, 90);
+
+	AISetWpntRank(19 + BASE_WAYPOINT_NUM, 75);
+	AISetWpntRank(20 + BASE_WAYPOINT_NUM, 75);
+
+	AISetWpntRank(21 + BASE_WAYPOINT_NUM, 60);
+	AISetWpntRank(22 + BASE_WAYPOINT_NUM, 60);
+
+	AISetWpntRank(23 + BASE_WAYPOINT_NUM, 45);
+	AISetWpntRank(24 + BASE_WAYPOINT_NUM, 45);
+
+
+	return;
+
+RankWaypointsForFleeToWest:
+	
+//	DebugPrint("Rank waypoints for Flee To West");
+	n_FleeDir = 1;
+
+	AISetWpntRank(0 + BASE_WAYPOINT_NUM, 0);
+	AISetWpntRank(1 + BASE_WAYPOINT_NUM, 0);
+	AISetWpntRank(2 + BASE_WAYPOINT_NUM, 0);
+
+	AISetWpntRank(3 + BASE_WAYPOINT_NUM, 15);
+	AISetWpntRank(4 + BASE_WAYPOINT_NUM, 15);
+
+	AISetWpntRank(5 + BASE_WAYPOINT_NUM, 30);
+	AISetWpntRank(6 + BASE_WAYPOINT_NUM, 30);
+	
+	AISetWpntRank(7 + BASE_WAYPOINT_NUM, 45);
+	AISetWpntRank(8 + BASE_WAYPOINT_NUM, 45);
+
+	AISetWpntRank(9 + BASE_WAYPOINT_NUM, 60);
+	AISetWpntRank(10 + BASE_WAYPOINT_NUM, 60);
+
+	AISetWpntRank(11 + BASE_WAYPOINT_NUM, 75);
+
+	AISetWpntRank(12 + BASE_WAYPOINT_NUM, 90);
+
+	AISetWpntRank(13 + BASE_WAYPOINT_NUM, 105);
+
+	AISetWpntRank(14 + BASE_WAYPOINT_NUM, 120);
+
+	AISetWpntRank(15 + BASE_WAYPOINT_NUM, 135);
+	AISetWpntRank(16 + BASE_WAYPOINT_NUM, 135);
+
+	AISetWpntRank(17 + BASE_WAYPOINT_NUM, 150);
+	AISetWpntRank(18 + BASE_WAYPOINT_NUM, 150);
+
+	AISetWpntRank(19 + BASE_WAYPOINT_NUM, 165);
+	AISetWpntRank(20 + BASE_WAYPOINT_NUM, 165);
+
+	AISetWpntRank(21 + BASE_WAYPOINT_NUM, 180);
+	AISetWpntRank(22 + BASE_WAYPOINT_NUM, 180);
+
+	AISetWpntRank(23 + BASE_WAYPOINT_NUM, 195);
+	AISetWpntRank(24 + BASE_WAYPOINT_NUM, 195);
+
+	return;
+
+# ========================================================================================
+ResetWaypointRanks:
+
+//	DebugPrint("Reset waypoint ranks");
+
+	n_FleeDir = 0;
+	for ( n_idx = 0; n_idx < NUM_FLEE_WAYPOINTS; n_idx = n_idx + 1 ) {
+		AISetWpntRank(n_idx + BASE_WAYPOINT_NUM, 0);
+	}
+
+	return;
+
+
+
+
+end
+

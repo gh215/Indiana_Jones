@@ -1,0 +1,125 @@
+# Jones 3D Cog Script
+#
+# gen_CommieTalk.cog
+#
+# Indy worries about the Soviets
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+# NOTE: This is a random verbal reaction to the presence of Reds.
+# Glue it into your level and reach it from a calling cog like this:
+#
+# 1. Create a valid reference to this cog in your calling cog;
+#
+# 2. Use the following verb:
+#    SendMessageEx(thiscogREF, i_userMessage, f_parm0, f_parm1, f_parm2, f_parm3);
+#    (see each section below for details...)
+#
+# 3. Use global15 as a semaphore and return value where neeeded;
+#
+# The resulting chatter is pre-approved by HB...
+#
+# PRODUCT SUPPORT:  cogsrus x8371
+
+# ==============================================================================
+
+symbols
+
+# ................................. MESSAGES ...................................
+
+	message user0	# commie lines
+
+# ................................. SAY LINES ..................................
+
+	# snake lines...
+	sound	in_sayline=Inxj062.wav				local # Reds!-->in_sayline[0]
+	sound	in_commies=Inxj063.wav				local # Commies!
+	sound	in_comherefirst=Inxj064.wav			local # Looks like commies here first
+	sound	in_comagain=Inxj066.wav				local # Oh no. Commies again.
+	sound	in_redagain=Inxj067.wav				local # Well well. Reds again.
+	sound	in_redewhere=Inxj068.wav			local # Reds. They're everywhere.
+	sound	in_jumpreds=Inxj065.wav				local # Reds! Thought I had jump
+
+# ............................... VARIABLES ....................................
+
+	flex	talkerREF							local
+	flex	forceTalk							local
+	flex	forceLine							local
+	
+	int		alreadyworking=0					local
+
+	int		newline=50							local # init outside actual range
+	int		medline=50							local
+	int		oldline=50							local
+
+	int		dummy
+	
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+user0:
+
+	# NOTE: Indy doesn't like the Soviets much better than he did the N's...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(negtalkcogREF, user0, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, the calling cog can use global15 as a semaphore
+	#
+	# Hey!  You can also force a line choice.  Here's how:
+	# 1. Note your intention by setting f_forceTalk parm to some non-zero value
+	# 2. Examine the available lines to find the one you want (counting from 0)
+	# 3. Pass that number in the forceLine parameter (parm2) 
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	alreadyworking = 1; # stall multiple calls
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	if (forceTalk > 0)
+	{
+		newline = forceLine; # choose this line
+		medline = 0;
+		oldline = 0;
+	}
+	
+	# remember and avoid previous 2 lines...
+	while (newline == oldline || newline == medline)
+	{		
+		newline = RandBetween(0, 6);
+	}
+	oldline = medline;
+	medline = newline;
+
+	PlayVoice(talkerREF, in_sayline[newline], 1, 1);
+
+	global15 = 1;
+
+	alreadyworking = 0;
+
+	return;
+
+end
+

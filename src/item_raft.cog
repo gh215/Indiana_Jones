@@ -1,0 +1,97 @@
+# Jones 3D Cog Script
+#
+# item_Raft.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	activated
+message	touched
+message	taken
+
+cog		talkCog					local
+
+sound	foundSnd0=RV02J01.wav	local
+sound	foundSnd1=RV02J03.wav	local
+
+thing	player					local
+
+int		bin=57					local
+int		bFound					local
+int		bRiver					local
+
+end
+
+# ===================================================================
+
+code
+
+activated:
+
+	StartCutscene(0);
+
+	talkCog = GetCogByIndex(0);
+	SendMessage(talkCog, 27);
+
+	if (Rand() < 0.5)
+	{
+		SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+		SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 -0.01');
+
+	return;
+
+# -------------------------------------------------------------------
+
+touched:
+
+	player = GetSourceRef();
+
+	if (GetInv(player, bin) < GetInvMax(player, bin))
+	{
+		TakeItem(GetSenderRef(), player);
+	}
+    else
+	{
+		EndCutscene();
+	}
+	
+	return;
+
+# -------------------------------------------------------------------
+
+taken:
+
+	player = GetSourceRef();
+	bFound = IsItemFound(bin);
+    bRiver = ((IsLevelName("02_RIV.cnd")) || (IsLevelName("02_RIV.ndy")));
+
+	ChangeInv(player, bin, 1.0);
+	SetInvAvailable(player, bin, 1);
+	JonesInvItemChanged(bin);
+
+	Sleep(1.0);
+
+	if (bRiver && !bFound)
+	{
+		PlayVoice(player, foundSnd0, 1.0, 0);
+	}
+	else
+	{
+		PlayVoice(player, foundSnd1, 1.0, 0);
+	}
+
+	EndCutscene();
+
+	return;
+
+end

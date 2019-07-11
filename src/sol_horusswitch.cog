@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# SOL_HorusSwitch.cog
+#
+# [TRM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    
+    thing       car         local
+    
+    surface     before      mask=0x404
+    surface     after       mask=0x404
+    surface     track
+        
+end
+
+# ========================================================================================
+code
+
+entered:
+
+    car = GetSourceRef();
+
+    if(BitTest(GetPhysicsFlags(car), 0x01000000))
+    {
+        if(GetSenderRef() == before)
+        {
+            # minecar can go straight
+            #Print("go straight");
+            SetSurfaceFlags(track, 0x4000);
+        }
+            
+        if(GetSenderRef() == after)
+        {
+            # minecar can backup and drive to horus door
+            #Print("turn off");
+            ClearSurfaceFlags(track, 0x4000);
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

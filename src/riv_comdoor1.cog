@@ -1,0 +1,303 @@
+# Jones 3D Cog Script
+#
+# RIV_ComDoor1.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     exited
+    message     activated
+
+    thing       player      local
+    thing       door
+    thing       button1
+    thing       button2
+    thing       camOffset1
+    thing       camOffset2
+    
+    surface     surf_lockedSide
+    
+    # ** sfx **
+    sound       snd_DoorOpen=bab_door_metal_slide_c.wav     local
+    sound       snd_DoorStop=bab_door_metal_stop.wav        local
+    sound       snd_Button=gen_wood_button.wav              local
+    
+    # ** voice lines **
+    sound	    in_DoorLine0=Inxj098.wav				local # It won't budge.
+	sound	    in_DoorLine1=Inxj099.wav			    local # Something is holding this door closed.
+	sound	    in_DoorLine2=Inxj096.wav				local # I can't open it.
+    sound	    in_DoorLine3=Inxj102.wav			    local # ...I can't seem to open it from this side.
+    
+    sound	    in_ButtLine0=Inxj096.wav				local # I can't open it.
+	sound	    in_ButtLine1=Inxj098.wav				local # It won't budge.
+    
+    # ** subroutines **
+    flex        openDoor        local
+    flex        closeDoor       local
+    flex        RandDoorLines   local
+    flex        RandButtLines   local
+    
+    int         open=0          local
+    int         playing=0       local
+    int         firstTime=1     local
+    int         but1Pushed=0    local
+    int         but2Pushed=0    local
+    int         chnl_Door       local
+    int         newLine         local
+    int         oldLine         local
+    int         lockedSide=0    local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    SetThingLight(button1, '0.25 0.25 0.25', 0.01, 0.5);
+    SetThingLight(button2, '0.25 0.25 0.25', 0.01, 0.5);
+    SetThingLight(door, '0.25 0.25 0.25', 0.01, 0.5);
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if(GetSenderRef() == surf_lockedSide)
+    {
+        lockedSide = 1;
+    }
+
+    return;
+
+# ========================================================================================
+
+exited:
+
+    if((GetSenderRef() == surf_LockedSide) && (GetSourceRef() == player))
+    {
+        lockedSide = 0;
+    }
+
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    if((GetSenderRef() == button1) && (open == 0) && (playing == 0) && (lockedSide == 0))
+    {
+        playing = 1;
+        Call openDoor;
+    }
+    
+    else if((GetSenderRef() == button2) && (open == 1) && (playing == 0))
+    {
+        playing = 1;
+        Call closeDoor;
+    }
+    
+    else if((GetSenderRef() == door) && (open == 0) && (playing == 0))
+    {
+        Call RandDoorLines;
+    }
+    
+    else if((GetSenderRef() == button1) || (GetSenderRef() == button2))
+    {
+        if(lockedSide == 1)
+        {
+            Call RandButtLines;
+        }
+    }
+    
+    return;
+    
+# ========================================================================================
+
+openDoor:
+
+    open = 1;
+    but1Pushed = 1;
+    but2Pushed = 0;
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    #SetExtCamOffsetToThing(camOffset1);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    PlaySoundThing(snd_Button, button1, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(button1, 1, 1.0);
+    WaitForStop(button1);
+    
+    Sleep(0.25);
+    
+    SetCollideType(door, 0);
+    chnl_Door = PlaySoundThing(snd_DoorOpen, door, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(door, 1, 2.0);
+    WaitForStop(door);
+    StopSound(chnl_Door, 0.5);
+    PlaySoundThing(snd_DoorStop, door, 1.0, 5.0, 10.0, 0);
+    SetCollideType(door, 3);
+    
+    Sleep(0.25);
+    
+    PlaySoundThing(snd_Button, button1, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(button1, 0, 1.0);
+    WaitForStop(button1);
+    playing = 0;
+    
+    #RestoreExtCam();
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    return;
+    
+# ========================================================================================
+
+closeDoor:
+
+    open = 0;
+    but1Pushed = 0;
+    but2Pushed = 1;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    #SetExtCamOffsetToThing(camOffset2);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    PlaySoundThing(snd_Button, button2, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(button2, 1, 1.0);
+    WaitForStop(button2);
+    
+    Sleep(0.25);
+    
+    SetCollideType(door, 0);
+    chnl_Door = PlaySoundThing(snd_DoorOpen, door, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(door, 0, 2.0);
+    WaitForStop(door);
+    StopSound(chnl_Door, 0.5);
+    PlaySoundThing(snd_DoorStop, door, 1.0, 5.0, 10.0, 0);
+    SetCollideType(door, 3);
+    
+    Sleep(0.25);
+    
+    PlaySoundThing(snd_Button, button2, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(button2, 0, 1.0);
+    WaitForStop(button2);
+    playing = 0;
+    
+    #RestoreExtCam();
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    return;
+           
+# ========================================================================================
+
+RandDoorLines:
+
+	playing = 1;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    if(lockedSide == 1)
+    {
+        if(firstTime == 1)
+        {
+    		firstTime = 0;
+            PlayVoice(player, in_DoorLine3, 1.0, 1);
+            oldLine = 3;
+        }
+        
+        else
+        {
+            while (newLine == oldLine)
+        	{	
+        		newLine = RandBetween(0, 3); # pick new line
+        	}
+            
+        	oldLine = newLine; # remember what got picked
+            
+            PlayVoice(player, in_DoorLine0[newLine], 1.0, 1);
+        }
+    }
+    
+    else
+    {
+        while (newLine == oldLine)
+    	{	
+    		newLine = RandBetween(0, 1); # pick new line
+    	}
+        
+    	oldLine = newLine; # remember what got picked
+        
+        PlayVoice(player, in_DoorLine0[newLine], 1.0, 1);
+    }
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+	
+    playing = 0;
+
+	return;
+    
+# ========================================================================================
+
+RandButtLines:
+
+	playing = 1;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    while (newLine == oldLine)
+    {	
+    	newLine = RandBetween(0, 1); # pick new line
+    }
+        
+    oldLine = newLine; # remember what got picked
+       
+    PlayVoice(player, in_ButtLine0[newLine], 1.0, 1);
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+	
+    playing = 0;
+
+	return;
+    
+# ========================================================================================
+
+end

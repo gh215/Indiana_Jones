@@ -1,0 +1,175 @@
+# Jones 3D Cog Script
+#
+# General Underwater Door.
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#===============================================================================
+
+
+symbols
+
+    message     startup
+    message     activated
+    message	    arrived
+    message	    timer
+
+	thing       switch0         
+	thing		door0
+	thing		indy				nolink	desc=cutscene actor
+	thing		campos
+	thing		campos2
+	thing		cam2_targ	
+	flex		movespeed=0.5
+	
+	thing		player					local
+	sector  	doorsector					local
+	int		doorstatus					local
+	int		movestatus					local
+	keyframe	in_activate=in_uw_pullswitch.key	local 
+	keyframe	in_door=in_activate_medium.key	local
+
+# ---------------------------------------------------------------
+#		Indy Say Lines
+# ---------------------------------------------------------------
+	int	lineindex					local # indexes sound array
+
+	sound	in_stuck0=Inxj096.wav		local # I can't open it
+	sound	in_stuck1=Inxj097.wav		local # For some reason...won't open.
+	sound	in_stuck2=Inxj098.wav		local # It won't budge.
+	sound	in_stuck3=Inxj099.wav		local # Something is holding this door closed.
+	sound	in_stuck4=Inxj102.wav		local # must be way...don't know how.
+	sound	in_stuck5=Inxj090.wav		local # ...something wrong.
+	sound	in_stuck6=Inxj091.wav		local # Of course that didn't work.	
+	int	dl_newline=50			local
+	int	dl_oldline=50			local
+
+
+	flex		randlocklines		local
+	int		speak0			local
+	flex		checkstatus			local
+	int		curcam			local
+	flex		open_doors			local
+	int		lockoffset=0		local
+
+end
+
+code
+
+#========================================================================================
+startup:
+	player = GetLocalPlayerThing();
+	doorsector = GetThingSector(door0);
+	SetSectorAdjoins(doorsector, 0);
+	return;
+    
+activated:
+	if(GetSenderRef() == door0)
+	{
+		SetActorFlags(player, 0x200000);
+		StopThing(Player);
+		DeselectWeaponWait(player);
+		PlayKey(player, in_door, 4, 0x12, 0);
+		call randlocklines;
+		WaitForSound(speak0);
+		ClearActorFlags(player, 0x200000);
+		return;
+	}
+	if (GetSenderRef() == switch0)
+	{
+		call checkstatus;
+		if(movestatus) return;
+		curCam = GetCurrentCamera();
+	    if(doorstatus == 0)
+	    {                                      
+		SetSectorAdjoins(doorsector, 1);
+		SetThingFlags(player, 0x80000);
+		SetActorFlags(player, 0x200000);
+		CopyPlayerHolsters(player, indy);
+		StartCutscene(1);
+		ClearThingFlags(indy, 0x80000);
+		SetCameraLookInterp(2, 0);			# turns off interp to lookthing.
+		SetCameraFocus(2, campos);
+		SetCameraSecondaryFocus(2, indy);
+		SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0);				# makes sure set to default.	
+		SetTimer(1.5);
+		PlayKey(indy, in_activate, 4, 0x12, 1);
+
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 1.5);
+		SetCameraFocus(2, campos2);
+		SetCameraSecondaryFocus(2, cam2_targ);
+		SetCurrentCamera(2);
+		call open_doors;
+		WaitForStop(door0);
+		SetCameraInterpSpeed(2, 1.0);			#Reset Default.
+		SetCameraPosInterp(2, 0);
+
+		SetCurrentCamera(curCam);
+		SetThingFlags(indy, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		ClearThingFlags(player, 0x80000);
+		EndCutscene();
+		}
+	}
+	return;
+    
+#====================================================================
+arrived:
+	if (getsenderref() != door0) return;
+	return;
+
+timer:
+	MoveToFrame(switch0, 1, 0.5);
+	return;
+
+open_doors:
+	movetoframe(door0, 1, movespeed);
+	return;
+
+
+#=====================================================================
+checkstatus:
+	moveStatus = 0;
+	doorStatus = 0;
+	if (door0 >= 0) {
+			moveStatus = moveStatus + IsThingMoving(door0);
+			doorStatus = doorStatus + GetCurFrame(door0);
+		}
+	return;
+
+#=====================================================================
+#		Locked lines
+#=====================================================================
+randlocklines:
+
+	while (dl_newline == dl_oldline)
+	{		
+		dl_newline = RandBetween(0, 19);
+		if (dl_newline < 14)
+		{	
+			dl_newline = RandBetween(0, 2); # ~1/4 chance for 0 thru 2
+		}
+
+		if (dl_newline > 17)
+		{
+			dl_newline = (dl_newline - 13); # 1/20 chance for 5 or 6 
+		}	
+		if (dl_newline > 15)
+		{
+			dl_newline = 4; # 1/10 chance
+		}
+		if (dl_newline > 13)
+		{
+			dl_newline = 3; # 1/10 chance
+		}
+	}
+	dl_oldline = dl_newline;
+	lineindex = lockoffset + dl_newline;
+	speak0 = PlayVoice(player, in_stuck0[lineindex], 1.0, 0);
+	return;
+
+    
+end

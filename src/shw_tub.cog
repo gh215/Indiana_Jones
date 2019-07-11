@@ -1,0 +1,79 @@
+# Jones 3D Cog Script
+#
+# shw_tub.cog
+#
+# The Tub Cog, heh
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+        message activated
+        message damaged
+        
+        thing   tub		mask=0x48     
+        thing   blast   local
+        
+        thing	fragment	local
+        
+        int     blastcount      local
+        int     pieces=6	desc=num_debris
+        int     die=0		local
+        
+        thing  tubpos  
+        
+        
+        template    debris0=metalshrapa 		
+        template	debris1=metalshrapb   		
+        template	debris2=metalshrapc
+        
+        
+        sound   hit=gen_torchlitet_c.wav        local
+        sound   clang=shs_bell_dull.wav        local
+        
+        
+end
+
+# ========================================================================================
+code
+
+damaged:
+	Print("damaged");	
+	If (getSenderRef() != tub) return;
+	#If ( BITTEST(GetParam(1), 0x20) )
+			{
+			die = die + GetParam(0);
+			PrintInt(die);
+			PlaySoundThing(clang, tub, 1.0, 10.0, 5.0, 0);
+			If (die >= 80)
+				{
+				call boom;
+				}
+			}        
+        
+return;
+
+# ========================================================================================
+boom:
+activated:
+
+        
+        print("destroyed");
+        PlaySoundThing(hit, tub, 1.0, 10.0, 20.0, 0);
+        for(blastcount=0; blastcount<pieces; blastcount=blastcount+1)                                                        	            
+        {                                                                                    	            
+            fragment = CreateThing(debris0[RandBetween(0, 2)], tubpos);                                 
+            SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.0'), 1.0));
+            SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 100.0));    	            
+        }                                                                                    	            
+        Destroything(tub);
+                
+        
+return;
+        
+end
+
+        

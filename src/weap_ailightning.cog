@@ -1,0 +1,184 @@
+# Jones 3D Cog Script
+#
+# weap_AILightning.cog
+#
+# Generic Weapon Class Cog for AI lightning fire.
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		fire
+message		timer
+message		touched
+message		removed
+
+# ************************** SUBROUTINES ********************
+flex		CreateNewArc								local
+
+# ************************* TEMPLATES ***************************
+template	tpl_ghost=ghost								local
+template	tpl_hit=+shortElecHit						local
+
+material	mat_arc0=aet_4sfx_lightning_v2_a.mat		local
+material	mat_arc1=aet_4sfx_lightning_v2_b.mat		local
+material	mat_arc2=aet_4sfx_lightning_v2_c.mat		local
+material	mat_arc3=aet_4sfx_lightning_v2_d.mat		local
+material	mat_arc4=aet_4sfx_lightning_v2_e.mat		local
+
+# ************************* MISC LOCAL VARS *********************
+thing		t_shooter									local
+thing		t_victim									local
+thing		t_bullet									local
+thing		t_arc										local
+thing		t_arcSource									local
+thing		t_arcTarget									local
+thing		t_arcHit									local
+flex		f_arcSize									local
+flex		f_arcTime=0.05								local
+vector		vec_pos										local
+
+end
+
+
+# ===================================================================
+code
+
+# ...................................................................
+# Handler for FIRE msg (the one sent from weapon module)
+# ...................................................................
+fire:
+
+	t_bullet	= GetSenderRef();
+	t_shooter	= GetSourceRef();
+	if ( (t_bullet < 0) || (t_shooter < 0) )
+		return;															# Bad bullet?  Bail...
+
+	f_arcSize	= GetThingMoveSize(t_bullet);							# Beam size is size of bullet
+
+	vec_pos		= VectorAdd( GetThingPos(t_shooter), VectorTransformToOrient(t_shooter, GetThingFireoffset(t_shooter)) );
+	t_arcSource = CreateThingAtPos(tpl_ghost, GetThingSector(t_shooter), vec_pos, '0 0 0');
+	if ( t_arcSource < 0 )
+		return;
+
+	CaptureThing(t_arcSource);											# Enable arcSource feedback
+	AttachThingToThingEx(t_arcSource, t_shooter, 0x08);					# Attach arcSource to bullet
+	SetLifeLeft(t_arcSource, GetLifeLeft(t_bullet));					# Set max arcing time
+	SetLifeLeft(t_bullet, 0);											# Reset the bullet back to "immortal"
+
+	SetThingUserData(t_bullet, t_arcSource);							# bullet remembers arcSource
+	SetThingUserData(t_arcSource, t_bullet);							# arcSource remembers bullet
+
+	call CreateNewArc;													# Create first arc
+
+	PlaySoundClass(t_bullet, 106);										# Play a SITHSOUNDCLASS_FIRE1 sound on bullet
+
+#	DEBUGFLEX(t_arcSource, "Made new arcSource =");
+	return;
+
+
+# ...................................................................
+timer:
+
+	t_arcSource = GetSenderRef();
+	if ( (t_arcSource < 0) || (GetThingType(t_arcSource) != 8) )		# Check for SITH_THING_GHOST
+		return;
+
+	call CreateNewArc;													# Make a new arc
+
+#	DEBUGFLEX(t_arcSource, "Timer for arcSource =");
+	return;
+
+
+# ...................................................................
+# Bullet hit someTHING
+# ...................................................................
+touched:
+	t_bullet = GetSenderRef();
+	if ( (t_bullet < 0) || (GetThingType(t_bullet) != 3) )				# Check for SITH_THING_WEAPON
+		return;
+
+	t_arcSource = GetThingUserData(t_bullet);
+	if ( GetThingType(t_arcSource) != 8 )								# Check for SITH_THING_GHOST
+		return;
+
+	t_victim	= GetSourceRef();
+	SetThingUserData(t_arcSource, t_victim);							# arcSource now hits victim
+	SetThingUserData(t_bullet, 0);										# bullet forgets arcSource
+
+	# Create hit sprite
+	vec_pos = VectorSet( 0, 0, VectorZ(GetThingEyeOffset(t_victim))/2 );
+	vec_pos = VectorAdd(GetThingPos(t_victim), vec_pos);
+
+	t_arcHit = CreateThingAtPos(tpl_hit, FindNewSectorFromThing(t_victim, vec_pos), vec_pos, '0 0 0');
+	if (t_arcHit > -1)
+	{
+		AttachThingToThingEx(t_arcHit, t_victim, 0x08);					# Attach hit sprite to victim
+	}
+
+#	DEBUGFLEX(t_arcSource, "Bullet TOUCHED, attaching arc to victim.  arcSource =");
+	return;
+
+
+# ...................................................................
+# Bullet has collided
+# ...................................................................
+removed:
+
+	t_bullet = GetSenderRef();											# bullet or arcSource?
+
+	if ( GetThingType(t_bullet) == 3 )									# Check for SITH_THING_WEAPON (bullet)
+	{
+		t_arcSource = GetThingUserData(t_bullet);
+		if ( t_arcSource == 0 )											# No arcSource referenced?
+			return;
+
+		if ( GetThingType(t_arcSource) == 8 )							# Check for SITH_THING_GHOST
+		{
+#			DEBUGPRINT("Bullet removed, creating temp arcTarget");
+
+			t_arcTarget = CreateThingAtPos(tpl_ghost, GetThingSector(t_bullet), GetThingPos(t_bullet), '0 0 0');
+			if ( t_arcTarget > 0 )
+			{
+				SetThingUserData(t_arcSource, t_arcTarget);
+				SetLifeLeft(t_arcTarget, GetLifeLeft(t_arcSource));
+			}
+		}
+	}
+
+	if ( GetThingType(t_bullet) == 8 )									# Check for SITH_THING_GHOST (arcSource)
+	{
+		SetThingTimer(t_bullet ,0);
+	}
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+# t_arcSource MUST be initialized before this call!
+# ...................................................................
+CreateNewArc:
+
+	t_arcTarget	= GetThingUserData(t_arcSource);
+
+	vec_pos = VectorSet( 0, 0, VectorZ(GetThingEyeOffset(t_arcTarget))/2 );
+	vec_pos = VectorAdd(GetThingPos(t_arcTarget), vec_pos);
+
+#	t_arc = CreatePolylineThing(t_arcSource, t_arcTarget, '0 0 0', mat_arc0[RandBetween(0, 4)], f_arcSize, f_arcSize, f_arcTime);
+	t_arc = CreatePolylineThing(t_arcSource, -1, vec_pos, mat_arc0[RandBetween(0, 4)], f_arcSize, f_arcSize, f_arcTime);
+
+	SetThingTimer(t_arcSource, f_arcTime);								# Set next arc time
+
+	return;
+
+
+# ===================================================================
+end

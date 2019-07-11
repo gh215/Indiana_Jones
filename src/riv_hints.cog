@@ -1,0 +1,333 @@
+# Jones 3D Cog Script
+#
+# RIV_Hints.cog
+#
+# cndlb = Red Candel
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     user0
+    message     entered
+    message     activated
+    
+    thing       player      local
+    
+# pre-river hints
+    thing       hint1       # Level 02-RIV. Hint 1: jump 0: Jump down from landing to first bridge
+    thing       hint2       # Level 02-RIV. Hint 2: jump 0: climb up bridge to roadway
+    thing       hint3       # Level 02-RIV. Hint 3: jump 0: bread crumb near sneak path (sneakpath1)
+    thing       hint4       # Level 02-RIV. Hint 4: jump 0: walk to boarder, trigger cutscene
+    thing       hint5       # Level 02-RIV. Hint 5: jump 0: go back to sneak path (sneakpath2)
+    thing       hint6       # Level 02-RIV. Hint 6: jump 0: climb up to access tower (sneakpath3)
+    thing       hint7       # Level 02-RIV. Hint 7: jump 0: jump to tower
+    thing       hint8       # Level 02-RIV. Hint 8: jump 0: climb down into raft house
+    thing       hint9       # Level 02-RIV. Hint 9: jump 0: open door to radio room
+    thing       hint10      # Level 02-RIV. Hint 10: jump 0: climb up into air vent
+    thing       hint11      # Level 02-RIV. Hint 11: jump 0: locker room (get raft and open fence)
+    
+# begin river hints
+    thing       hint12      # Level 02-RIV. Hint 12: jump 0: launch raft
+    thing       hint13      # Level 02-RIV. Hint 13: jump 0: get out of raft just past bridge to Shambala
+    thing       hint14      # Level 02-RIV. Hint 14: jump 0: visit candelabra
+    thing       hint15      # Level 02-RIV. Hint 15: jump 0: bread crumb on path to patch shack
+    thing       hint16      # Level 02-RIV. Hint 16: jump 0: walk thru patch shack area
+    
+    thing       hint17      # Level 02-RIV. Hint 17: jump 0: launch raft near elevator top
+    thing       hint18      # Level 02-RIV. Hint 18: jump 0: take a left at the first fork (riv1 fork
+    thing       hint19      # Level 02-RIV. Hint 19: jump 0: go right to tower
+    thing       hint20      # Level 02-RIV. Hint 20: jump 0: get out at tower shore
+    thing       hint21      # Level 02-RIV. Hint 21: jump 0: pull tower lever to open door
+    thing       hint22      # Level 02-RIV. Hint 22: jump 0: get the red candel
+    thing       hint23      # Level 02-RIV. Hint 23: jump 0: launch raft
+    thing       hint24      # Level 02-RIV. Hint 24: jump 0: take left path past waterfall
+    thing       hint25      # Level 02-RIV. Hint 25: jump 0: get the yellow candel
+    thing       hint26      # Level 02-RIV. Hint 26: jump 0: launch raft
+    thing       hint27      # Level 02-RIV. Hint 27: jump 0: take elevator back to top
+    thing       hint28      # Level 02-RIV. Hint 28: jump 0: launch raft near elevator top
+    thing       hint29      # Level 02-RIV. Hint 29: jump 0: take a left at first fork (riv1 fork)
+    thing       hint30      # Level 02-RIV. Hint 30: jump 0: take a left at next fork to candel temple
+    thing       hint31      # Level 02-RIV. Hint 31: jump 0: get the green candel at the cellar
+    thing       hint32      # Level 02-RIV. Hint 32: jump 0: launch raft
+    thing       hint33      # Level 02-RIV. Hint 33: jump 0: get out at the bridge
+    thing       hint34      # Level 02-RIV. Hint 34: jump 0: bread crumb inside masher room
+    thing       hint35      # Level 02-RIV. Hint 35: jump 0: entrance to candel room
+    thing       hint36      # Level 02-RIV. Hint 36: jump 0: get the violet candel (masher)
+    thing       hint37      # Level 02-RIV. Hint 37: jump 0: launch raft at bridge
+    thing       hint38      # Level 02-RIV. Hint 38: jump 0: ride the elevator up to top
+    thing       hint39      # Level 02-RIV. Hint 39: jump 0: bread crumb near patch shack
+    thing       hint40      # Level 02-RIV. Hint 40: jump 0: put all the candels in the candleabra and light them
+    thing       hint41      # Level 02-RIV. Hint 41: jump 0: walk across the bridge to Shambala  
+    
+    thing       candel_Red          # temple
+    thing       candel_Yellow       # tree
+    thing       candel_Green        # cellar
+    thing       candel_Violet       # masher
+    
+    # pre-river hints
+    sector      sec_JumpDown
+    sector      sec_ClimbBridge
+    sector      sec_SneakPath1  # hint3
+    sector      sec_Boarder
+    sector      sec_SneakPath2  # hint5
+    sector      sec_SneakPath3  # hint6
+    sector      sec_Tower
+    sector      sec_RaftHouse
+    sector      sec_RadioRoom
+    sector      sec_AirVent
+    
+    # begin river hints
+    sector      sec_RH_Launch       # raft house launch
+    sector      sec_B2S_Dock        # get out past B2S
+    sector      sec_Candelabra
+    sector      sec_Path2Shack1
+    sector      sec_PatchShack      # bread crumb
+    sector      sec_Cndl1_Dock      # dock at candel temple
+    sector      sec_Bridge_Dock
+    sector      sec_Mash_Crumb1
+    sector      sec_Mash_Crumb2
+    
+    sector      sec_ET_Launch       # elevator top launch
+    
+    sector      sec_Cndl1_GoRight   # go right towards candle
+    sector      sec_Bridge_Launch
+    
+    # rode the elevator up
+    sector      sec_ET_Elev1        linkID=1
+    sector      sec_ET_Elev2        linkID=1
+    
+    #surface     srf_ET_Launch       # elevator top launch
+    surface     srf_Riv1_GoLeft     # go left at riv1 fork
+    #surface     srf_Cndl1_GoRight   # go right towards candle
+    surface     srf_Cndl1_Launch
+    surface     srf_Cndl1_GoLeft    # go left towards tree
+    surface     srf_Cndl2_Launch    # launch raft at tree
+    surface     srf_Riv1_GoLeft2    # go left to cellars
+    surface     srf_Cndl3_Launch    # launch the raft at cellar
+    #surface     srf_Bridge_Launch
+    
+    # locker and fence hint11
+    cog         cog_LockerRaft
+    cog         cog_Fence
+    
+    cog         cog_Lever
+    cog         cog_Candelabra
+    
+    # ** misc ints **
+    int         sender      local
+    int         source      local
+    int         count=0     local
+    
+    int         solved_Hint22=0         local
+    int         solved_Hint31=0         local
+    int         solved_Hint36=0         local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+
+# ========================================================================================
+
+user0:
+
+    Print("Hints: user0");
+    
+    # get raft and open fence to solve hint11
+    if((GetSenderRef() == cog_LockerRaft) || (GetSenderRef() == cog_Fence))
+    {
+        if(GetHintSolved(hint11) == 0)
+        {
+            count = count + 1;
+            
+            if(count == 2) SetHintSolved(hint11);
+        }
+    }
+    
+    else if((GetSenderRef() == cog_Lever) && (GetHintSolved(hint21) == 0)) SetHintSolved(hint21);
+    
+    else if((GetSenderRef() == cog_Candelabra) && (GetHintSolved(hint40) == 0)) SetHintSolved(hint40);
+
+    return;
+
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    sender = GetSenderRef();
+    source = GetSourceRef();
+    
+    Print("hints: entered");
+
+# *********************
+# ** pre-river hints **
+# *********************    
+    
+    if(source == player)
+    {
+        if((sender == sec_JumpDown) && (GetHintSolved(hint1) == 0)) SetHintSolved(hint1);
+        
+        else if((sender == sec_ClimbBridge) && (GetHintSolved(hint2) == 0)) SetHintSolved(hint2);
+        
+        else if((sender == sec_SneakPath1) && (GetHintSolved(hint3) == 0)) SetHintSolved(hint3);
+        
+        else if((sender == sec_Boarder) && (GetHintSolved(hint4) == 0)) SetHintSolved(hint4);
+        
+        else if((sender == sec_SneakPath2) && (GetHintSolved(hint5) == 0) && (GetHintSolved(hint4) == 1)) SetHintSolved(hint5);
+        
+        else if((sender == sec_SneakPath3) && (GetHintSolved(hint6) == 0))
+        {
+            if(GetHintSolved(hint3) == 0) SetHintSolved(hint3);
+            if(GetHintSolved(hint4) == 0) SetHintSolved(hint4);
+            if(GetHintSolved(hint5) == 0) SetHintSolved(hint5);
+            SetHintSolved(hint6);
+        }
+        
+        else if((sender == sec_Tower) && (GetHintSolved(hint7) == 0)) SetHintSolved(hint7);
+        
+        else if((sender == sec_RaftHouse) && (GetHintSolved(hint8) == 0)) SetHintSolved(hint8);
+        
+        else if((sender == sec_RadioRoom) && (GetHintSolved(hint9) == 0)) SetHintSolved(hint9);
+    
+        else if((sender == sec_AirVent) && (GetHintSolved(hint10) == 0)) SetHintSolved(hint10);
+        
+# ***********************    
+# ** begin river hints **
+# ***********************
+    
+        else if((sender == sec_RH_Launch) && (GetHintSolved(hint12) == 0) && (GetHintSolved(hint11) == 1)) SetHintSolved(hint12);
+        
+        else if((sender == sec_B2S_Dock) && (GetHintSolved(hint13) == 0)) SetHintSolved(hint13);
+        
+        else if((sender == sec_Candelabra) && (GetHintSolved(hint14) == 0)) SetHintSolved(hint14);
+        
+        else if((sender == sec_Path2Shack1) && (GetHintSolved(hint15) == 0)) SetHintSolved(hint15);
+        
+        else if((sender == sec_PatchShack) && (GetHintSolved(hint16) == 0)) SetHintSolved(hint16);
+        
+        else if((sender == sec_ET_Launch) && (GetHintSolved(hint17) == 0))
+        {
+            if(GetHintSolved(hint14) == 0) SetHintSolved(hint14);
+            if(GetHintSolved(hint15) == 0) SetHintSolved(hint15);
+            if(GetHintSolved(hint16) == 0) SetHintSolved(hint16);
+            SetHintSolved(hint17);
+        }
+        
+        else if((sender == srf_Riv1_GoLeft) && (GetHintSolved(hint18) == 0)) SetHintSolved(hint18);
+        
+        else if((sender == sec_Cndl1_GoRight) && (GetHintSolved(hint19) == 0)) SetHintSolved(hint19);
+        
+        else if((sender == sec_Cndl1_Dock) && (GetHintSolved(hint20) == 0))
+        {
+            if(GetHintSolved(hint19) == 0) SetHintSolved(hint19); # failsafe
+            SetHintSolved(hint20);
+        }
+        
+        else if((sender == srf_Cndl1_Launch) && (GetHintSolved(hint23) == 0) && (GetHintSolved(hint22) == 1)) SetHintSolved(hint23);
+        
+        else if((sender == srf_cndl1_GoLeft) && (GetHintSolved(hint24) == 0) && (GetHintSolved(hint23) == 1)) SetHintSolved(hint24);
+        
+        else if((sender == srf_Cndl2_Launch) && (GetHintSolved(hint26) == 0) && (GetHintSolved(hint25) == 1)) SetHintSolved(hint26);
+    
+        else if((GetSenderID() == 1) && (GetHintSolved(hint27) == 0) && (GetHintSolved(hint26) == 1)) SetHintSolved(hint27);
+        
+        else if((sender == sec_ET_Launch) && (GetHintSolved(hint28) == 0) && (GetHintSolved(hint27) == 1)) SetHintSolved(hint28);
+        
+        else if((sender == srf_Riv1_GoLeft) && (GetHintSolved(hint29) == 0) && (GetHintSolved(hint28) == 1)) SetHintSolved(hint29);
+        
+        else if((sender == srf_Riv1_GoLeft2) && (GetHintSolved(hint30) == 0) && (GetHintSolved(hint29) == 1))
+        {
+            SetHintSolved(hint30);
+            if(solved_Hint31 == 1)
+            {
+                Print("solving hints 31 - 32");
+                # player had already picked up green candle
+                SetHintSolved(hint31);
+                SetHintSolved(hint32);
+            }
+            
+            if(solved_Hint36 == 1)
+            {
+                Print("solving hints 33 - 37");
+                # player had already picked up violet candle
+                SetHintSolved(hint33);
+                SetHintSolved(hint34);
+                SetHintSolved(hint35);
+                SetHintSolved(hint36);
+                SetHintSolved(hint37);
+            }
+        }
+        
+        else if((sender == srf_Cndl3_Launch) && (GetHintSolved(hint32) == 0) && (GetHintSolved(hint31) == 1)) SetHintSolved(hint32);
+        
+        else if((sender == sec_Bridge_Dock) && (GetHintSolved(hint33) == 0) && (GetHintSolved(hint32) == 1)) SetHintSolved(hint33);
+        
+        else if((sender == sec_Mash_Crumb1) && (GetHintSolved(hint34) == 0) && (GetHintSolved(hint33) == 1)) SetHintSolved(hint34);
+        
+        else if((sender == sec_Mash_Crumb2) && (GetHintSolved(hint35) == 0) && (GetHintSolved(hint34) == 1)) SetHintSolved(hint35);
+        
+        else if((sender == sec_Bridge_Launch) && (GetHintSolved(hint37) == 0) && (GetHintSolved(hint36) == 1)) SetHintSolved(hint37);
+        
+        else if((GetSenderID() == 1) && (GetHintSolved(hint38) == 0) && (GetHintSolved(hint37) == 1))  SetHintSolved(hint38);
+        
+        else if((sender == sec_PatchShack) && (GetHintSolved(hint39) == 0) && (GetHintSolved(hint38) == 1)) SetHintSolved(hint39);
+    }
+    
+    return;
+
+# ========================================================================================
+
+activated:
+
+    Print("hints: activated");
+    
+    if(source == player)
+    {    
+        if((GetSenderRef() == candel_Red) && (GetHintSolved(hint22) == 0))
+        {
+            solved_Hint22 = 1;
+            SetHintSolved(hint22);
+        }
+        
+        #else if((GetSenderRef() == candel_Yellow) && (GetHintSolved(hint25) == 0) && (GetHintSolved(hint22) == 1))
+        else if((GetSenderRef() == candel_Yellow) && (GetHintSolved(hint25) == 0))
+        {
+            if(solved_Hint22 == 1)
+            {
+                SetHintSolved(hint22);
+                SetHintSolved(hint23);
+                SetHintSolved(hint24);
+            }
+            SetHintSolved(hint25);
+        }
+        
+        else if((GetSenderRef() == candel_Green) && (GetHintSolved(hint31) == 0))
+        {
+            solved_Hint31 = 1;
+            SetHintSolved(hint31);
+        }
+        
+        else if((GetSenderRef() == candel_Violet) && (GetHintSolved(hint36) == 0))
+        {
+            solved_Hint36 = 1;
+            SetHintSolved(hint36);
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+end
+

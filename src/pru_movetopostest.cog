@@ -1,0 +1,62 @@
+# Jones 3D Cog Script
+#
+# PRU_MoveToPosTest.cog    
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message     entered
+message		startup
+message		arrived
+
+thing       boulder
+thing		ghost0
+thing		ghost1
+thing		ghost2
+thing		ghost3
+thing		ghost4
+thing		ghost5
+thing		ghost6
+
+
+sector	trigger
+
+sound		rolling=pru_boulder_rolling_c.wav	local
+keyframe	roll=gen_boulder.key		local
+
+int	nPos=0
+                         
+end
+
+# ========================================================================================
+code
+startup:
+Sleep(0.5);
+PlaySoundThing(rolling, boulder, 1, 4.0, 275.0, 0x81);
+return;
+
+entered:
+PlayKey(boulder, roll, 1, 0x0, 0);
+MoveThingToPos(boulder, GetThingPos(ghost0), 5.0);
+PlaySoundThing(rolling, boulder, 1, 4.0, 75.0, 0x81);
+return;
+
+arrived:
+	Print("arrived");
+	if ( nPos < 6 )
+	{
+		nPos = nPos + 1;
+		Print("Moving Boulder to Pos:");
+		PrintInt(nPos);
+		MoveThingToPos(boulder, GetThingPos(ghost0[nPos]), 3.5);
+	}
+	else
+	{
+		Print("end of line");
+	}
+	return;
+end

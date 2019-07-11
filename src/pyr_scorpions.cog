@@ -1,0 +1,107 @@
+# Jones 3D Cog Script
+#
+# pyr_scorpions
+#
+# generate scorpions as Indy runs around the level
+#
+# [RKD] [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+message	startup
+message timer
+message	killed
+
+thing	generator0	nolink
+thing	generator1	nolink
+thing	generator2	nolink
+thing	generator3	nolink
+thing	generator4	nolink
+thing	generator5	nolink
+thing	generator6	nolink
+thing	generator7	nolink
+thing	generator8	nolink
+thing	generator9	nolink
+thing	generator10	nolink
+thing	generator11	nolink
+thing	generator12	nolink
+thing	generator13	nolink
+thing	generator14	nolink
+thing	generator15	nolink
+
+thing	scorpion1	local
+thing	scorpion2	local
+
+template	bug=scorpian	local
+
+int		curtimer=5	local
+int		gennum=-1	local
+
+# subroutine
+flex	makescorps=0	local
+end
+# ........................................................................................
+code
+startup:
+	sleep(.01);
+
+	# hold off scorpion creation until opening has a chance to speed up
+	SetTimer(20);
+
+	scorpion1 = -1;
+	scorpion2 = -1;
+
+	return;
+	
+timer:
+	gennum = RandBetween(0, 15);
+	
+	# if indy is underground, make scorpions automatically
+	if (global11 == 1)
+	{
+		call makescorps;
+	}
+	else
+	{
+		# if indy is above ground, check to see if Indy is far enough away
+		if (VectorDist(GetThingPos(GetLocalPlayerThing()), GetThingPos(generator0[gennum])) > .5) #&& (IsGhostVisible)
+		{
+			call makescorps;
+		}
+	}
+
+	SetTimer(curtimer);
+	return;
+
+makescorps:
+	# make a scorpion, depending on which previous ones, if any, are dead
+	if (scorpion1 == -1)
+	{
+		scorpion1 = CreateThing(bug, generator0[gennum]);
+		CaptureThing(scorpion1);
+	}
+	else if (scorpion2 == -1)
+	{
+		scorpion2 = CreateThing(bug, generator0[gennum]);
+		CaptureThing(scorpion2);
+	}
+	
+	return;
+	
+killed:
+# ---> scorpions	
+	if (GetSenderRef() == scorpion1)
+	{
+		scorpion1 = -1;
+	}
+	else
+	{
+		scorpion2 = -1;
+	}
+
+	# delay creation a little more every time Indy kills a scorpion
+	curtimer = curtimer + 5;
+	
+	return;
+end

@@ -1,0 +1,81 @@
+# Jones 3D Cog Script
+#
+# pyr_sparkles.cog
+#
+# Sparkle animates periodically
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ==============================================================================
+
+symbols
+message 	startup
+message 	timer
+message		sighted
+message		entered
+message		removed
+
+surface		trigger1	linkid=2
+surface		trigger2	linkid=2
+
+sector		noflash1	nolink
+sector		noflash2	nolink
+
+thing		gem
+thing		sparkle		nolink
+
+material	animmat=pyr_a4_eye_gem_sparkle.mat	local
+end
+
+code
+startup:
+	#start sprite animating and hide it
+	MaterialAnim(animmat, 20, 1);
+    AnimateSpriteSize(sparkle, '0.2 0.2 1.0', '0.01 0.01 0.5', .01);
+	return;
+
+entered:
+# ---> trigger faces	
+	
+	if ((GetSenderRef() != trigger1) && (GetSenderRef() != trigger2)) return;
+	
+	# if gem is gone, exit
+	if (gem == -1) return;
+
+	# trigger faces will force sightings
+	ClearThingFlags(gem, 0x100000);
+	return;
+	
+sighted:
+# ---> gem	
+	
+	#prepare for next sighting
+	SetTimer(RandBetween(10, 20));
+
+	#if player is too close to it, don't flash
+	if (GetThingSector(GetLocalPlayerThing()) == noflash1) return;
+    if (GetThingSector(GetLocalPlayerThing()) == noflash2) return;
+	
+	#animate sprite up and down
+	AnimateSpriteSize(sparkle, '0.01 0.01 0.0', '0.2 0.2 1.0', .25);
+	sleep(.35);
+    AnimateSpriteSize(sparkle, '0.2 0.2 1.0', '0.01 0.01 0.0', .25);
+
+	return;
+
+timer:
+	# set thing to unseen
+	ClearThingFlags(gem, 0x100000);
+	return;
+
+removed:
+# ---> gem (or watch)
+
+	# if hornerwatch cog destroys the gem, get rid of the sparkle
+	DestroyThing(sparkle);
+	gem = -1;
+	SetTimer(0);
+	return;
+
+end

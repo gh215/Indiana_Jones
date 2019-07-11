@@ -1,0 +1,41 @@
+# Jones 3D Cog Script
+#
+# PRU_test3.cog    
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		damaged
+message		startup
+
+thing		rock			mask=0x08
+int			fovInt=120		local
+
+end
+
+# ========================================================================================
+code
+startup:
+Sleep(1.0);
+ResetCameraFOV(0, 0.0);
+damaged:
+Print("damaged");
+
+if (fovInt > 20)
+{
+    fovInt = fovInt - 10;
+	SetCameraFOV(fovInt, 0, 0.0);
+}
+else
+{
+fovInt = 120;
+}
+
+return;
+
+end
+

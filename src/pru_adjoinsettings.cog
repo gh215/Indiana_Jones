@@ -1,0 +1,31 @@
+# Jones 3D Cog Script
+#
+# PRU_adjoinSettings.cog    Adjoins are turned on and off again as Indy comes by
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+message entered
+
+sector	jeep	
+
+sector	plane
+
+sector	trigger
+
+
+
+end
+# ========================================================================================
+code
+entered:
+    if (GetSenderRef() == trigger)
+	{
+		SectorAdjoins(jeep, 0);
+	}
+return;
+
+end

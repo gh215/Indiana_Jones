@@ -1,0 +1,53 @@
+# Jones 3D Cog Script
+#
+# gen_Avalanche.cog
+#
+# This cog will createa minor cave-in effect if a switch is presed
+# Update will be made for IMP#1. Chris M. 12/1/97
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# =========================================================
+symbols
+
+message	    startup
+
+thing       horseman
+thing       clamps
+thing       movetgt
+
+keyframe    mr_wingkey=0mr_plugin.key               local
+keyframe    mr_clampkeys=inf_robot_stand.key        local
+keyframe    head_on_anim=0mr_headon.key             local
+
+end
+
+code
+
+#..........................................................
+
+startup:
+    
+    SetCollideType(horseman, 0);
+    AISetMoveSpeed(horseman, 0.75);
+    sleep(5);
+    AISetMoveFrame(horseman, 1);
+    //AISetMoveThing(horseman, movetgt, 0);
+    AIWaitForStop(horseman);
+    PlayKey(horseman, head_on_anim, 4, 0x14, 0);
+    Sleep(3);
+    PlayKey(horseman, mr_wingkey, 4, 0x14, 0);
+    PlayKey(clamps, mr_clampkeys, 4, 0x14, 0);
+    Sleep(5);
+    //StopThing(horseman);
+    print("I've stopped");
+    
+return;
+
+#..........................................................
+
+end
+    
+
+
+
+

@@ -1,0 +1,73 @@
+# Jones 3D Cog Script
+#
+# jep_commie_intro.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+	message		startup
+
+	thing		commiepos0								nolink
+	thing		commiepos1								nolink
+	thing		commiepos2								nolink
+	thing		movepos0								nolink
+	thing		movepos1								nolink
+	thing		movepos2								nolink
+	template	commie_tpl0=jungle_tokarev					local
+	template	commie_tpl1=Khaki_simonov					local
+	thing		player								local
+	thing		commie0								local
+	thing		commie1								local
+	thing		commie2								local
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	player=GetLocalPlayerThing(); 
+
+	# Make commies...
+			 commie0 = CreateThing(commie_tpl0, commiepos0);
+		AISetCutsceneMode(commie0);
+		CaptureThing(commie0);
+		ClearThingFlags(commie0, 0x80000);
+			 commie1 = CreateThing(commie_tpl1, commiepos1);
+		AISetCutsceneMode(commie1);
+		CaptureThing(commie1);
+		ClearThingFlags(commie1, 0x80000);
+			commie2 = CreateThing(commie_tpl0, commiepos2);
+		AISetCutsceneMode(commie2);
+		CaptureThing(commie2);
+		ClearThingFlags(commie2, 0x80000);
+		AISetCutsceneMode(commie0);
+		AISetCutsceneMode(commie1);
+		AISetCutsceneMode(commie2);
+
+	sleep(30.0);
+	AISetMoveSpeed(commie0, 0.8);
+	AISetMoveSpeed(commie1, 1.0);
+	AISetLookThingEyeLevel(commie0, movepos0);
+	AISetLookThingEyeLevel(commie1, movepos1);
+	AISetMoveThing(commie0, movepos0, 0);
+	sleep(0.5);
+	AISetMoveThing(commie1, movepos1, 1);
+	sleep(0.5);
+	AISetMoveSpeed(commie2, 1.0);
+	AISetLookThingEyeLevel(commie2, movepos2);
+	AISetMoveThing(commie2, movepos2, 0);
+
+		AIClearCutsceneMode(commie0);
+		AIClearCutsceneMode(commie1);
+		AIClearCutsceneMode(commie2);
+
+	return;
+
+end
+

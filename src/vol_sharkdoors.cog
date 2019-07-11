@@ -1,0 +1,223 @@
+# Jones 3D Cog Script
+#
+# VOL_sharkdoors.cog
+#
+# Open the doors in the shark area
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+
+	#.............MESSAGES.............
+	message	startup		
+	message	crossed	
+    message	blocked		
+    message	activated		
+
+    
+	#.............ACTORS.............
+	thing		player          				local
+    thing		indy	    
+	
+	
+	#.............COGS.............
+	cog			doortalkcog
+
+	
+	#.............PROPS.............
+	thing		door0		
+	thing		door1		
+	thing		keybox							linkid=3
+    thing		camtarget	    
+	thing		tempCam     				    local	    
+	thing       camPos      				    local		
+	thing       curCam      				    local		
+	sector	    doorSector						local
+    
+	
+	#.............TRIGGERS.............
+    surface		adjoin0    					  	linkid=1        mask=0x405
+	surface		adjoin1							linkid=2        mask=0x405
+    
+	
+	#.............VARIABLES.............
+	float		doorspeed=4.0
+	float		sleepTime=2.0
+    int			open=0							local
+	int			keyed=0							local
+	int			checked=0						local
+	int			keyPlace						local
+	
+    float		lightValueR=0.2
+	float		lightValueG=0.1
+	float		lightValueB=0.1
+        
+	#.............KEYFRAMES.............
+    keyframe    inReach=in_activate_medium.key  local
+        
+	#.............VECTORS.............
+	vector	    vecLightValue					local
+
+	#.............SOUNDS.............
+    sound       placement=tem_tikikey_place_c.wav        local
+    sound       locked1=INXJ081.WAV        		local
+    sound       locked2=INXJ076.WAV        		local
+    sound       locked3=INXJ077.WAV        		local
+	
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+
+	doorSector = GetThingSector(door0);
+	SetSectorAdjoins(doorSector, 0);
+
+	vecLightValue = VectorSet(lightValueR, lightValueG, lightValueB);
+	SetSectorLight(doorSector, vecLightValue, 0.0);		// add some light to door sector
+	return;
+
+# ........................................................................................
+
+crossed:
+
+        if (getSenderID() == 1)
+        {
+            if (keyed == 0) return;
+            if (open == 1) return;
+            if (IsThingMoving(door0)) return;
+            else
+	    {
+                open = 1;
+                SetSectorAdjoins(doorSector, 1);
+                Rotate(door0, -90, 1, doorspeed);
+                Rotate(door1, 90, 1, doorspeed);
+                waitforstop(door0);
+                sleep(sleeptime);
+                Rotate(door0, 90, 1, doorspeed);
+                Rotate(door1, -90, 1, doorspeed);
+                waitforstop(door0);
+                SetSectorAdjoins(doorSector, 0);
+                open = 0;
+                
+            }
+        }
+    else if (GetSenderID() == 2)
+        {
+                
+            print("opening check");
+            if (keyed == 0) return;
+            if (open == 1) return;
+            if (IsThingMoving(door0)) return;
+            else
+            {
+                open = 1;
+				SetSectorAdjoins(doorSector, 1);
+                Rotate(door0, 90, 1, doorspeed);
+                Rotate(door1, -90, 1, doorspeed);
+                waitforstop(door0);
+                sleep(sleeptime);
+                Rotate(door0, -90, 1, doorspeed);
+                Rotate(door1, 90, 1, doorspeed);
+                waitforstop(door0);
+                SetSectorAdjoins(doorSector, 0);
+                open = 0;
+             }
+        }
+return;        
+#========================================================
+activated:
+
+        If (keyed == 1) return;
+        if ((GetSenderRef() == keybox) && (keyed == 0) && (GetCurItem(player) == 59))
+                    {
+                          curCam = GetCurrentCamera();
+                          
+                          # Disable and hide player
+                          SetThingFlags(player, 0x80000);
+                                
+                          # Cut to cutscene camera
+                          camPos = VectorSet(-0.1, 0.0, 0.2);
+                          SetExtCamOffset(camPos);
+                          ClearThingFlags(indy, 0x80000);
+                          keyed = 1;
+                          open = 1;
+                          
+                          # Play the animations - wait for Indy's
+                          PlayKey(indy, inReach, 4, 0x12, 1);
+                          keyPlace = PlaySoundLocal(placement, 1.0, 0.0, 0x0, 0);
+                          ChangeInv(player, 58, -1);
+                          #new trick?
+						  SetCameraLookInterp(curCam, 1);
+						  SetCameraSecondaryFocus(curCam, camtarget);
+						  
+						  SetSectorAdjoins(doorSector, 1);
+                          Rotate(door0, -90, 1, doorspeed);
+                          Rotate(door1, 90, 1, doorspeed);
+                          waitforstop(door0);
+						  Sleep(.25);
+                          # Return control and camera to player
+                          SetThingFlags(indy, 0x80000);
+                          CopyOrientAndPos(indy, player);
+                          ClearThingFlags(player, 0x80000);
+                          RestoreExtCam();
+                          sleep(sleeptime);
+                          Rotate(door0, 90, 1, doorspeed);
+                          Rotate(door1, -90, 1, doorspeed);
+                          waitforstop(door0);
+                          SetSectorAdjoins(doorSector, 0);
+                          open = 0;
+                    }
+               else
+                {
+					If ((GetSenderRef() == keybox) && (checked == 0))
+						{
+						curCam = GetCurrentCamera();
+                        # Disable and hide player
+                        SetThingFlags(player, 0x80000);
+                              
+                        # Cut to cutscene camera
+                        camPos = VectorSet(-0.1, 0.0, 0.2);
+                        SetExtCamOffset(camPos);
+                        ClearThingFlags(indy, 0x80000);
+						PlayVoice(indy, locked1, 1.0, 1);
+                        SetThingFlags(indy, 0x80000);
+                        CopyOrientAndPos(indy, player);
+                        ClearThingFlags(player, 0x80000);
+                        RestoreExtCam();
+						checked = 1;
+						return;
+						}
+					If ((GetSenderRef() == keybox) && (checked == 1))
+						{
+						PlayVoice(player, locked2, 1.0, 1);
+						checked = 2;
+						return;
+						}
+					If ((GetSenderRef() == keybox) && (checked == 2))
+						{
+						PlayVoice(player, locked3, 1.0, 1);
+                        return;
+						} 
+				}
+       
+
+return;
+
+# ........................................................................................
+
+blocked:
+	print("????");
+	return;
+
+# ........................................................................................
+
+end
+

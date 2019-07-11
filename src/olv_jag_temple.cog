@@ -1,0 +1,466 @@
+# Jones 3D Cog Script
+#
+# olv_jag_temple.cog   
+#
+# [SCHOLL]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message entered
+message	startup
+message	aievent
+message	arrivedwpnt
+message timer
+message user0
+
+thing	t_Jag
+thing	t_Indy		local
+
+int		b_Operational=1	local
+int		n_eventType		local
+int		n_CrntAIMode 	local
+int		n_OldAIMode 	local
+int		n_Waypoint		local
+int		n_Temp			local
+int		b_Temp			local
+flex	f_Temp			local
+int		n_TimerID		local 
+int		n_idx			local
+int		b_WpntsActive=0	local
+int		n_IndyWaypoint	local
+int		n_FleeToWaypoint local
+
+vector	v_IndyPos		local
+vector	v_JagPos		local
+vector	v_JagToIndy		local
+vector	v_IndyLook		local
+vector	v_Temp			local
+
+
+
+# ===========================FLEE WAYPOINTS================================================
+int			NUM_FLEE_WAYPOINTS=11			local
+thing		t_Waypoint00
+thing		t_Waypoint01
+thing		t_Waypoint02
+thing		t_Waypoint03
+thing		t_Waypoint04
+thing		t_Waypoint05
+thing		t_Waypoint06
+thing		t_Waypoint07
+thing		t_Waypoint08
+thing		t_Waypoint09
+thing		t_Waypoint10
+
+
+# ===========================SECTORS================================================
+
+int			NUM_AUTO_FLEE_SECTORS=2 	local
+sector		s_AutoFlee00			mask=0x5 # need entered messages from jag
+sector		s_AutoFlee01			mask=0x5 # need entered messages from jag
+
+int			NUM_ACTIVATE_WPNT_SECTORS=2 local
+sector		s_ActivateWpnts00
+sector		s_ActivateWpnts01
+
+int			NUM_DEACTIVATE_WPNT_SECTORS=2 local
+sector		s_DeactivateWpnts00
+sector		s_DeactivateWpnts01
+
+
+# ===========================MISC CONSTANTS================================================
+
+
+
+	flex		activatewaypoints			local
+	flex		deactivatewaypoints		local
+	flex		choosefleewaypoint		local
+	flex		resetwaypointranks		local
+	int		f_disttoindy			local
+	flex		rankfor9				local
+	flex		rankfor10				local
+	flex		rankfor8				local
+	flex		rankfor2				local
+	flex		rankfor1				local
+	flex		rankfor0				local
+
+
+
+end
+# ========================================================================================
+
+code
+startup:
+	t_Indy=GetLocalPlayerThing();
+
+	return;
+
+# ========================================================================================
+entered:
+	if (!b_Operational)
+	{
+		return;
+	}
+
+	if (GetSourceRef() == t_Indy)
+	{
+		for (n_idx = 0; n_idx < NUM_ACTIVATE_WPNT_SECTORS; n_idx = n_idx + 1)
+		{
+			if (GetSenderRef() == s_ActivateWpnts00[n_idx])
+			{
+				call ActivateWaypoints;
+			}
+		}
+		for (n_idx = 0; n_idx < NUM_DEACTIVATE_WPNT_SECTORS; n_idx = n_idx + 1)
+		{
+			if (GetSenderRef() == s_DeactivateWpnts00[n_idx])
+			{
+				call DeactivateWaypoints;
+			}
+		}
+	}
+	else if (GetSourceRef() == t_Jag)
+	{
+		for (n_idx = 0; n_idx < NUM_AUTO_FLEE_SECTORS; n_idx = n_idx + 1)
+		{
+			if (GetSenderRef() == s_AutoFlee00[n_idx])
+			{
+				AIFlee(t_Jag, t_Indy);
+			}
+		}
+	}
+
+	return;
+
+# ========================================================================================
+aievent:
+	if (!b_Operational)
+	{
+		return;
+	}
+
+	n_eventType		= GetParam(0);
+	n_CrntAIMode	= GetParam(1);
+	n_OldAIMode		= GetParam(2);	// only valid for certain n_eventType values
+
+	if (n_eventType == 0x100)		// SITHAI_EVENTMODECHANGED
+	{
+		// if changing to flee mode
+		// turn on waypoints
+		if ( !BITTEST(n_OldAIMode, 0x800) && BITTEST(n_CrntAIMode, 0x800) )
+		{
+			AISetSubMode(t_Jag, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+			call ChooseFleeWaypoint;
+		}
+		// if exiting flee mode
+		// turn off waypoints
+		else if ( BITTEST(n_OldAIMode, 0x800) && !BITTEST(n_CrntAIMode, 0x800) )
+		{
+			AIClearSubMode(t_Jag, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+			call ResetWaypointRanks;
+		}
+	}
+
+return;
+
+# ========================================================================================
+timer:
+	if (!b_Operational)
+	{
+		return;
+	}
+
+	t_Indy = GetLocalPlayerThing();
+
+	n_TimerID = GetSenderID();
+
+	return;
+
+
+# ========================================================================================
+arrivedwpnt:
+	if (!b_Operational)
+	{
+		return;
+	}
+
+	n_Waypoint = GetParam(0);
+
+	if ( BITTEST(AIGetMode(t_Jag), 0x800))
+	{
+		call ChooseFleeWaypoint;
+
+		if (n_Waypoint == n_FleeToWaypoint)
+		{
+			StopThing(t_Jag);
+			AIStopFlee(t_Jag);
+		}
+	}
+	
+	return;
+
+# ========================================================================================
+user0:
+	b_Operational = 0;
+	SetThingFlags(t_Jag, 0x80000);
+	AISetMode(t_Jag, 0x2000);
+	return;
+
+# ========================================================================================
+ChooseFleeWaypoint:
+	v_IndyPos = GetThingPos(t_Indy);
+	v_JagPos = GetThingPos(t_Jag);
+
+	// If Indy is on second level then always go behind statue
+	if ((VectorZ(v_IndyPos) - VectorZ(v_JagPos)) > 0.2)
+	{
+		call RankFor9;
+		return;
+	}
+
+	n_IndyWaypoint = AIFindNearestWpnt(t_Indy);
+
+	if (n_IndyWaypoint == 0)
+	{
+		call RankFor9;
+	}
+	else if (n_IndyWaypoint == 1)
+	{
+		call RankFor9;
+	}
+	else if (n_IndyWaypoint == 2)
+	{
+		call RankFor9;
+	}
+	else if (n_IndyWaypoint == 3)
+	{
+		call RankFor10;
+	}
+	else if (n_IndyWaypoint == 4)
+	{
+		call RankFor9;
+	}
+	else if (n_IndyWaypoint == 5)
+	{
+		call RankFor9;
+	}
+	else if (n_IndyWaypoint == 6)
+	{
+		call RankFor10;
+	}
+	else if (n_IndyWaypoint == 7)
+	{
+		call RankFor8;
+	}
+	else if (n_IndyWaypoint == 8)
+	{
+		call RankFor2;
+	}
+	else if (n_IndyWaypoint == 9)
+	{
+		call RankFor1;
+	}
+	else if (n_IndyWaypoint == 10)
+	{
+		call RankFor1;
+	}
+
+	return;
+
+# ========================================================================================
+ActivateWaypoints:
+	if (b_WpntsActive)
+	{
+		return;
+	}
+
+	b_WpntsActive = 1;
+	AISetInstinctWpntMode(t_Jag);
+
+	for ( n_idx = 0; n_idx < NUM_FLEE_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx);
+	}
+
+	AIConnectWpnts(0, 1);
+	AIConnectWpnts(0, 3);
+	AIConnectWpnts(1, 2);
+	AIConnectWpnts(2, 5);
+	AIConnectWpnts(3, 4);
+	AIConnectWpnts(3, 6);
+	AIConnectWpnts(4, 5);
+	AIConnectWpnts(4, 6);
+	AIConnectWpnts(5, 7);
+	AIConnectWpnts(6, 8);
+	AIConnectWpnts(7, 10);
+	AIConnectWpnts(8, 9);
+	AIConnectWpnts(9, 10);
+
+	return;
+
+# ========================================================================================
+DeactivateWaypoints:
+	if (!b_WpntsActive)
+	{
+		return;
+	}
+
+	b_WpntsActive = 0;
+	AIClearInstinctWpntMode(t_Jag);
+	StopThing(t_Jag);
+
+	return;
+
+# ========================================================================================
+RankFor9:
+	n_FleeToWaypoint = 9;
+
+	AISetWpntRank(0, 0);
+	AISetWpntRank(1, 0);
+	AISetWpntRank(2, 0);
+
+	AISetWpntRank(3, 5);
+	AISetWpntRank(4, 5);
+	AISetWpntRank(5, 5);
+
+	AISetWpntRank(6, 10);
+	AISetWpntRank(7, 10);
+
+	AISetWpntRank(8, 15);
+	AISetWpntRank(10, 15);
+
+	AISetWpntRank(9, 20);
+
+
+	return;
+
+
+# ========================================================================================
+RankFor1:
+	n_FleeToWaypoint = 1;
+
+	AISetWpntRank(1, 20);
+
+	AISetWpntRank(0, 15);
+	AISetWpntRank(2, 15);
+
+	AISetWpntRank(3, 10);
+	AISetWpntRank(4, 10);
+	AISetWpntRank(5, 10);
+
+	AISetWpntRank(6, 5);
+	AISetWpntRank(7, 5);
+
+	AISetWpntRank(8, 0);
+	AISetWpntRank(9, 0);
+	AISetWpntRank(10, 0);
+
+	return;
+
+
+# ========================================================================================
+RankFor10:
+	n_FleeToWaypoint = 10;
+
+	AISetWpntRank(0, 0);
+
+	AISetWpntRank(1, 5);
+	AISetWpntRank(3, 5);
+
+	AISetWpntRank(6, 10);
+	AISetWpntRank(4, 10);
+	AISetWpntRank(2, 10);
+
+	AISetWpntRank(8, 15);
+	AISetWpntRank(5, 15);
+
+	AISetWpntRank(9, 20);
+	AISetWpntRank(7, 20);
+
+	AISetWpntRank(10, 25);
+
+	return;
+
+# ========================================================================================
+RankFor0:
+	n_FleeToWaypoint = 0;
+
+	AISetWpntRank(0, 25);
+
+	AISetWpntRank(1, 20);
+	AISetWpntRank(3, 20);
+
+	AISetWpntRank(6, 15);
+	AISetWpntRank(4, 15);
+	AISetWpntRank(2, 15);
+
+	AISetWpntRank(8, 10);
+	AISetWpntRank(5, 10);
+
+	AISetWpntRank(9, 5);
+	AISetWpntRank(7, 5);
+
+	AISetWpntRank(10, 0);
+
+	return;
+
+# ========================================================================================
+RankFor2:
+	n_FleeToWaypoint = 2;
+
+	AISetWpntRank(2, 25);
+
+	AISetWpntRank(1, 20);
+	AISetWpntRank(5, 20);
+
+	AISetWpntRank(0, 15);
+	AISetWpntRank(4, 15);
+	AISetWpntRank(7, 15);
+
+	AISetWpntRank(3, 10);
+	AISetWpntRank(10, 10);
+
+	AISetWpntRank(6, 5);
+	AISetWpntRank(9, 5);
+
+	AISetWpntRank(8, 0);
+
+	return;
+
+# ========================================================================================
+RankFor8:
+	n_FleeToWaypoint = 8;
+
+	AISetWpntRank(2, 0);
+
+	AISetWpntRank(1, 5);
+	AISetWpntRank(5, 5);
+
+	AISetWpntRank(0, 10);
+	AISetWpntRank(4, 10);
+	AISetWpntRank(7, 10);
+
+	AISetWpntRank(3, 15);
+	AISetWpntRank(10, 15);
+
+	AISetWpntRank(6, 20);
+	AISetWpntRank(9, 20);
+
+	AISetWpntRank(8, 25);
+
+	return;
+
+# ========================================================================================
+ResetWaypointRanks:	
+	for ( n_idx = 0; n_idx < NUM_FLEE_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpntRank(n_idx, 0);
+	}
+
+	return;
+
+end
+

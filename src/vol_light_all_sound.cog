@@ -1,0 +1,37 @@
+# Jones 3D Cog Script
+#
+# vol_Light-All_sound.cog
+#
+# This runs the generator sound for the light-alls.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message  startup
+
+	thing	soundobj 		
+			
+
+	int	soundfx	local
+	flex	volume=0.05	
+	
+
+	sound    lightrun=sol_minecar_motor_run.wav	local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:                
+	
+		sleep(3);
+		soundfx=PlaySoundThing(lightrun, soundobj, volume, 6, 12, 0x881);
+		return;
+end
+
+

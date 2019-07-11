@@ -1,0 +1,379 @@
+# Jones 3D Cog Script
+#
+# TEM_Boulder.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     entered
+    message     activated
+    message     damaged
+    message     sighted
+    message     pulse
+    
+    thing       player          local
+    thing       fragment        local
+    thing       victim          local
+    thing       boulder         local
+    thing       tempBoulder     local
+    thing       bang
+    thing       tiki
+    thing       cam1
+    thing       strut
+    thing       camTarget
+    thing       pedestal
+    thing       ghostPos
+    thing       rock_Solid      # final resting boulder
+
+    surface     explode         mask=0x004
+    surface     stopIt          mask=0x004
+    surface     surf_Blockout
+    
+    sector      safe
+    sector      fixCam
+    sector      cutCam
+    sector      lookAtMe
+    
+    keyframe    spin=gen_boulder.key            local
+    keyframe	smashed=in_die_fall.key         local
+    
+    template    debris0=stnshrapa_nc_ns         local
+    template    debris1=stnshrapb_nc_ns         local
+    template    debris2=stnshrapc_nc_ns         local
+    template    staticBoulder=nicebould         local
+    template    rollingBoulder=boulder_mc       local
+
+    # ** sound FX **
+    sound       sfxCrash=gen_grenade_explode.wav        local   # bang2
+    sound       sndQuake=pru_boulder_rolling_c.wav      local   # boulder roll
+    sound       sndBoulder=olv_rockhead_roll_c.wav      local   # boulder roll better
+    sound       sndStop=pru_boulder_crash_c.wav         local   # boulder stop
+    sound       sndDie=tem_temspikes_up_kill_c.wav      local   # squish
+    
+    # ** voice lines **
+    sound       upThere=INXJ003.wav                     local   # something's in there.
+    sound       whipThat=INXJ020.wav                    local   # I might be able to whip...
+    sound       say_Tiki=Tm03j01.wav                    local   # a tiki statue...
+    
+    # ** music **
+    sound       mus_Boulder=mus_gen_danger2.wav         local
+    sound       mus_Climb=mus_gen_indywhip1.wav         local
+    
+    vector      target              local
+    
+    cog         talkCog             local
+    cog         fallingDebris
+    cog         sharkDoor
+    cog         boulderShake
+    cog         boulderFog
+    cog         cog_Hint
+    
+    flex        distance            local
+    flex        minDistance=0.175   local
+    
+    # ** subroutines **
+    flex        rollBoulder         local
+    
+    int         i=0             local
+    int         safety=0        local
+    int         sound1          local
+    int         rolling=0       local
+    int         roll            local
+    int         curCam          local
+    int         gotIt=0         local
+    int         ready=0         local
+    int         once=0          local
+    int         closed=0        local
+    int         dif_Level       local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    tempBoulder = CreateThing(staticBoulder, ghostPos);
+    CaptureThing(tempBoulder);
+    
+    # hide final boulder position
+    SetThingFlags(rock_Solid, 0x80000);
+    
+    SetThingLight(strut, '0.45 0.45 0.2', 0.0, 0.1);
+    return;
+    
+# ========================================================================================
+
+user0:
+
+    ready = 1;
+    return;
+
+# ========================================================================================
+
+entered:
+
+    if(ready == 0)
+    {
+        if(GetSenderRef() == explode)
+        {
+            Print("explode");
+            PlaySoundLocal(sfxCrash, 1.0, 0.0, 0x0, 0);
+            DestroyThing(pedestal);
+            
+            # generate debris from block exploading
+            for(i=0; i<10; i=i+1)                                                        	            
+            {
+                fragment = CreateThing(debris0[RandBetween(0, 2)], bang);                                 
+                SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 2));
+                SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));    	            
+            }
+            
+            # solve hint8
+            SendMessage(cog_Hint, user0);
+        }
+            
+        else if(GetSenderRef() == stopIt)
+        {
+            if(rolling == 1)
+            {
+                rolling = 0;
+                
+                # stop the boulder
+                StopThing(boulder);
+                StopSound(sound1, 0.0);
+                PlaySoundLocal(sndStop, 1.0, 0.0, 0x0, 0);
+                StopKey(boulder, roll, 0.0);
+                
+                # destroy MC boulder
+                DestroyThing(boulder);
+                Sleep(0.01);
+                
+                # show static boulder
+                ClearThingFlags(rock_Solid, 0x80000);
+                
+                # mark surf_Blockout as no player move
+                SetAdjoinFlags(surf_Blockout, 0x10);     # no player move
+                
+                # turn off falling debris
+                SendMessage(fallingDebris, user1);
+                
+                # turn off camera shake
+                SendMessage(boulderShake, user1);
+    
+                # return camera to player
+                SetCurrentCamera(1);
+                
+                # return fog control to boulderFog
+                SendMessage(boulderFog, user1);
+                
+                # stop proximity pulse
+                SetPulse(0.0);
+                
+                # recheck difficutly level
+                UpdateDifficulty();
+            }
+        }
+        
+        else if(GetSenderRef() == fixCam)
+        {
+            if((rolling == 0) && (closed == 0))
+            {
+                closed = 1;
+                
+                # close shark door
+                SendMessage(sharkDoor, user0);
+                
+                # start music cue
+                PlaySoundLocal(mus_Boulder, 1.0, 0.0, 0x0, 0);
+            }
+            
+            else if(rolling == 1)
+            {
+                SetCurrentCamera(1);
+            }
+         }
+        
+        else if(GetSenderRef() == cutCam)
+        {
+            if(rolling == 1)
+            {
+                # switch to cam1
+                SetCameraFocus(2, cam1);
+                SetCameraSecondaryFocus(2, camTarget);
+                SetCurrentCamera(2);
+                SetCameraFOV(90, 0, 0.0);
+            }
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+activated:
+    
+    curCam = GetCurrentCamera();
+    
+    if((GetSenderRef() == tiki) ||(GetSenderRef() == pedestal))
+    {
+        if(gotIt == 0)
+        {
+            rolling = 1;
+            gotIt = 1;
+            once = 1;
+            Call rollBoulder;
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+rollBoulder:
+
+    dif_Level = GetDifficulty();
+    
+    # start proximity pulse
+    SetPulse(0.25);
+    
+    # override boulderFog
+    SendMessage(boulderFog, user0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # pick up the tiki
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    DestroyThing(tiki);
+    
+    # Call the Pickup Lines cog
+    talkCog = GetCogByIndex(0);
+    SendMessage(talkCog, 27);
+    
+    # sleep to wait for talkCog
+    Sleep(1.3);
+    
+    # add tiki2 to inventory
+    SetInvAvailable(player, 53, 1);
+    ChangeInv(player, 53, 1.0);
+    JonesInvItemChanged(53);
+    
+    # Johnny, tell the player what he's picked up
+    PlayVoice(player, say_Tiki, 1.0, 1);
+    
+    # turn on camera shake
+    SendMessage(boulderShake, user0);
+    
+    # turn on falling debris
+    SendMessage(fallingDebris, user0);
+    
+    # destroy static boulder, create rolling
+    DestroyThing(tempBoulder);
+    boulder = CreateThing(rollingBoulder, ghostPos);
+    CaptureThing(boulder);
+    
+    # adjust start time for difficulty
+    
+    # easy difficulty
+    if(dif_Level < 3)
+    {
+        Sleep(6.0);
+    }
+    
+    # medium to hard difficulty
+    else if(dif_Level >= 3)
+    {
+        Sleep(3.0);
+    }
+    
+    # roll the boulder
+    sound1 = PlaySoundThing(sndBoulder, boulder, 1.0, 15.0, 25.0, 0x81);
+    roll = PlayKey(boulder, spin, 4, 0x0, 0);
+    SetThingThrust(boulder, '0.0 2.0 0.0');
+    
+    return;
+
+# ========================================================================================
+
+damaged:
+
+    if((GetSenderRef() == strut) && (GetParam(1) == 0x10))
+    {
+        if(rolling == 1)
+        {
+            # start music cue
+            PlaySoundLocal(mus_Climb, 1.0, 0.0, 0x0, 0);
+            
+            # switch to statue cam1
+            SetCameraFocus(2, cam1);
+            SetCameraSecondaryFocus(2, camTarget);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+        }
+    }
+    
+    return;
+        
+# ========================================================================================
+
+sighted:
+
+    if((GetSenderRef() == lookAtMe) && (once == 0))
+	{
+		once = 1;
+		Print("sighted");
+		PlayVoice(player, upThere, 1.0, 1);
+        Sleep(0.25);
+        PlayVoice(player, whipThat, 1.0, 1);
+    }
+
+    return;
+    
+# ========================================================================================
+
+pulse:
+    
+    # get distance from player to center of boulder
+    distance = VectorDist(GetThingPos(player), GetThingPos(boulder));
+        
+	# if boulder center gets within 1.75m of player, crush him!
+	if(distance < minDistance)
+	{
+        if(rolling == 1)
+        {
+            Print("too close, you're dead");
+            SetCollideType(boulder, 0);
+            
+            # kill player and play keyframe
+            DamageThing(player, 1000.0, 0x1, victim);
+            PlayKey(player, smashed, 10, 0x14, 0);
+            
+            # play squished sfx
+            PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+            
+            # stop proximity pulse
+            SetPulse(0.0);
+        }
+	}
+    
+	else
+	{
+		#Print("safe distance");
+	}
+    
+    return;
+
+# ========================================================================================
+
+end
+

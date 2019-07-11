@@ -1,0 +1,335 @@
+# Jones 3D Cog Script
+#
+# shs_Elevator.cog     Move the elevator.  
+#
+# [JWC] [PKM]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+	message 	startup
+	message 	activated
+	message 	entered
+	message		exited
+	message		aievent
+
+
+	keyframe	leverDown=gen_lever_pull.key		local
+	keyframe    indypull=in_pull_lever.key			local
+
+	sound		leverPull=nub_lever_pull_c.wav		local
+	sound		leverBack=nub_lever_reset_c.wav		local
+	sound       liftmove=nub_elev_move_c.wav		local
+	sound       liftstop=nub_croc_stop_c.wav		local
+	sound		music=mus_gen_awesome3.wav			local
+
+	thing		player			local 
+	thing		indy
+	thing		indy1			
+	thing		lift 				 
+	thing		lever0
+	thing		rope0
+	thing		rope1
+	thing		rope2
+	thing		rope3
+
+	thing		cam1
+	thing		cam2
+	thing		cam3
+	thing		cam4
+	thing		dummy1
+	thing		dummy2
+  	thing		c1_t1
+	thing		walk_t1			
+	thing		walk_t2
+	thing		indy1_mk1
+
+	int			liftpos=0		local # 0=down, 1=up
+	int			liftloop		local     
+	int 		filter=0		local
+	int			bLeavingLift=0	local
+  	int			musicPlayed=0	local
+
+	cog			NoWorkTalkCog
+	
+	#SUB-ROUTINES
+	flex		ReturnControl	local
+	flex		Ride			local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	AttachThingToThing(rope0, lift);
+	AttachThingToThing(rope1, lift);
+	AttachThingToThing(rope2, lift);
+	AttachThingToThing(rope3, lift);
+
+	player = GetLocalPlayerThing();
+	return;
+
+activated:
+	if (GetCurItem(player) != 0)
+		return; # prevents activating with chalk
+
+	
+	# Handle potential "a" bug. lift upstairs, indy downstairs
+	if ((GetSenderRef() == lever0) && (filter == 0))
+	{
+        StartCutscene(0);
+		SetActorFlags(player, 0x200000);	# paralyze him
+		filter = 1;
+
+		# Disable and hide player...
+		StopThing(player);					# right now
+		PlayMode(player, 1, 0);				# get him into a nice stand
+		DeselectWeapon(player);				# stow any weapon or lighter
+		DeselectWeaponWait(player);
+		CopyPlayerHolsters(player, indy1);	# make sure our actor has matching props
+		Sleep(0.5);							# give him some time to do his stuff
+
+		# Switch actor indy for player...
+		TeleportThing(indy1, indy1_mk1);	# put actor in lever pull pos.
+		#SetActorHeadPYR(indy1,'0,0,0');		# reset actor head
+		
+		SetThingFlags(player, 0x80000);		# hide him
+		ClearThingFlags(indy1, 0x80000);	# reveal our actor
+
+		# Prep camera & cut...
+		SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+		SetCameraPosInterp(2, 0);			# kill dolly mode too
+		SetCameraFocus(2, cam4);
+		SetCameraSecondaryFocus(2, indy1_mk1);
+		Sleep(0.01);
+        SetCurrentCamera(2);
+		SetCameraFOV(55, 0, 0.0);
+		
+		# Indy pulls lever
+		PlayKey(indy1, indyPull, 4, 0x12, 0);
+		PlayKey(lever0, leverDown, 4, 0x12, 0);
+		Sleep(1.2);
+		PlaySoundLocal(leverPull, 1.0, 0, 0x0000, 0);
+		Sleep(1.4);
+		PlaySoundLocal(leverBack, 1.0, 0, 0x0000, 0);
+		Sleep(0.3);
+        
+		if (liftpos == 0)  # can't activate when elevator already down
+        {
+		    # Call NoWorkTalkCog
+			SendMessageEx(NoWorkTalkCog, user1, indy, 0, 0, 0);
+			global15 = 0; # per Randy
+			while (global15 == 0)
+			{
+				Sleep(0.01); # wait for line to finish
+			}
+        }
+		else
+		{
+            # Prep camera & cut...
+			SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+			SetCameraPosInterp(2, 0);			# kill dolly mode too
+			SetCameraFocus(2, cam1);
+			SetCameraSecondaryFocus(2, c1_t1);
+			Sleep(0.01);
+			SetCurrentCamera(2);
+            
+			# indy looks at lift
+		    TeleportThing(indy1, walk_t1);
+		   			
+			# Lift on way
+            MoveToFrame(lift, 0, 5);
+    		liftloop=PlaySoundLocal(liftmove, 1.0, 0, 0x1, 0); 
+    		sleep(.75);
+            MoveToFrame(cam1, 0, 5); 
+            WaitForStop(lift);
+    		StopSound(liftloop, 0.0);
+    		PlaySoundLocal(liftstop, 1.0, 0, 0x0, 0);
+            liftpos = 0;
+		}
+	    
+		# return control
+		SetCameraPosition(1, GetThingPos(dummy1));	# prep for camera to swing back
+        CopyOrientAndPos(indy1, player); # move player to actor's spot
+		SetThingFlags(indy1, 0x80000);
+        ClearThingFlags(player, 0x80000);
+		SetCameraLookInterp(2, 0); # kill pan & tilt mode
+		SetCameraPosInterp(2, 0); # kill dolly mode
+		Sleep(0.01);
+		ResetCameraFOV(0, 0.0);
+        SetCurrentCamera(1);
+        EndCutscene();
+		ClearActorFlags(player, 0x200000);
+        filter = 0;
+		
+	}
+	return;
+
+entered:
+	if ((GetSenderRef() == lift) && (filter == 0)) 	  
+	{
+		filter = 1;
+
+		call Ride;
+
+		if (liftpos == 0)
+		{
+			MoveToFrame(lift, 1, 5);
+			liftloop = PlaySoundLocal(liftmove, .9, 0, 0x1, 0);
+			sleep(.75);
+			MoveToFrame(cam1, 1, 5);
+			WaitForStop(lift);
+			StopSound(liftloop, 0.0);
+			PlaySoundLocal(liftstop, 1.0, 0, 0x0, 0);
+			liftpos = 1;
+			#return;
+		}
+		else
+		{
+			MoveToFrame(lift, 0, 5);
+			liftloop = PlaySoundLocal(liftmove, .9, 0, 0x1, 0);
+			sleep(.75);
+			MoveToFrame(cam1, 0, 5); 
+			WaitForStop(lift);
+			StopSound(liftloop, 0.0);
+			PlaySoundLocal(liftstop, 1.0, 0, 0x0, 0);
+			liftpos = 0;
+		}
+
+		# Cut to show Indy walking out of lift
+		WaitForStop(cam1);
+		sleep(.5);
+
+		# Prep camera & cut...
+		SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+		SetCameraPosInterp(2, 0);			# kill dolly mode too
+		Sleep(0.01);
+		if (liftpos == 0)
+		{
+			SetCameraFocus(2, cam2);		# downstairs
+		}
+		else
+		{
+			SetCameraFocus(2, cam3);		# upstairs
+		}
+
+		SetCameraSecondaryFocus(2, indy);
+
+		# Walk actor out of lift
+		bLeavingLift = 1;
+		if (liftpos == 0)
+		{
+			AISetMoveThing(indy, walk_t1, 1);
+		}
+		else
+		{
+			AISetMoveThing(indy, walk_t2, 1);
+		}
+	}
+	return;
+
+exited:
+	if (GetSenderRef() != lift)
+		return;
+	filter = 0;
+	return;
+
+aievent:
+	if  ((bLeavingLift) && (GetSenderRef() == indy) && (GetParam(0) == 0x800))
+	{
+		bLeavingLift = 0;
+        call ReturnControl;
+	}
+	return;
+
+Ride:
+	MakeMeStop();						# paralyze him
+	StartCutscene(0);
+
+	# Disable and hide player...
+
+//	DeselectWeaponWait(player);			# stow any weapon or lighter
+	CopyPlayerHolsters(player, indy);	# make sure our actor has matching props
+	CopyOrientAndPos(player, indy); 	# move actor to player's spot
+
+	Sleep(0.1);							# give him some time to do his stuff
+
+	# Switch actor indy for player...
+	SetThingFlags(player, 0x80000);		# hide him
+	AISetCutsceneMode(indy);
+	ClearThingFlags(indy, 0x80000);		# reveal our actor
+	TeleportThing(player, walk_t1);		# teleport player to safe place	prevents collision with geometry
+
+	# Prep camera & cut...
+	SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+	SetCameraPosInterp(2, 0);			# kill dolly mode too
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, c1_t1);
+	SetCurrentCamera(2);
+	Sleep(0.01);
+
+	AttachThingToThing(c1_t1, lift);		# glue camera on lift
+//	AttachThingToThing(cam1, lift); 
+
+	# Play some music
+	if (musicPlayed == 0)
+	{
+		musicPlayed=1;
+		PlaySoundLocal(music, 1.0, 0, 0x0, 0);
+	}
+	
+	# Move actor to center of elevator
+	AISetMoveSpeed(indy, 1.0);
+	AISetMoveThing(indy, c1_t1, 1);
+
+	# Spin Indy around
+	if (liftpos == 0)
+	{
+		AISetLookThing(indy, walk_t1);
+	}
+	else
+	{
+		AISetLookThing(indy, walk_t2);
+	}
+
+	sleep(1);
+
+	return;
+
+ReturnControl:
+	# Return control and camera to player
+
+//	SetThingMaxRotVel(indy, in_rotRate);# reset indy rotate velocity
+//	TeleportThing(indy, in_mk1);		# reset actor to original position
+	sleep(1);
+	CopyOrientAndPos(indy, player); # move player to actor's spot
+	SetActorHeadPYR(indy,'0,0,0');		# reset actor head
+	SetThingFlags(indy, 0x80000);
+	if (liftpos == 0)
+	{
+		SetCameraPosition(1, GetThingPos(dummy1));	# prep for camera to swing back
+	}
+	else
+	{
+		SetCameraPosition(1, GetThingPos(dummy2));	# prep for camera to swing back	
+	}
+	ClearThingFlags(player, 0x80000);
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	Sleep(0.01);
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+end
+
+
+

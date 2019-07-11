@@ -1,0 +1,370 @@
+# Jones 3D Cog Script
+#
+# PYR_HyenaMaker.cog
+#
+# Makes hyenas
+#
+# [RKD] & [Scholl]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message	startup
+message	killed
+message	timer
+message	user1
+
+#Group 0: upon startup, chase the kid into the pyramid
+thing	hyenastart1		mask=0x448 # Mask for player, weapons, and explosions
+thing	hyenastart2		mask=0x448 # Mask for player, weapons, and explosions
+thing	hyenastart3		mask=0x448 # Mask for player, weapons, and explosions
+
+# Near waypoint 0
+thing	hyenaghost1
+thing	hyenaghost2
+thing	hyenaghost3
+
+# Near waypoint 14
+thing	hyenaghost4
+thing	hyenaghost5
+thing	hyenaghost6
+
+#Near waypoint 20
+thing	hyenaghost7
+thing	hyenaghost8
+thing	hyenaghost9
+
+thing	hyena1		mask=0x448	local
+thing	hyena2		mask=0x448	local
+thing	hyena3		mask=0x448	local
+
+thing	sender					local
+
+# hyena sectors
+sector	group0sector	nolink
+sector	group1sector	nolink
+sector	group2sector	nolink
+
+thing	jeep
+
+cog		c_KidCog
+
+sound	victory=mus_gen_indy_b_motif1.wav	local
+
+thing	hint12
+
+template	hyenamodel=hyena	local
+
+int		groupnum	local
+int		killnum=0	local
+
+int			n_IndyLastWaypoint		local
+int			b_WpntsActive=0			local
+int			n_idx					local
+
+# ===========================WAYPOINTS================================================
+int			NUM_WAYPOINTS=24			local
+thing		t_Waypoint00
+thing		t_Waypoint01
+thing		t_Waypoint02
+thing		t_Waypoint03
+thing		t_Waypoint04
+thing		t_Waypoint05
+thing		t_Waypoint06
+thing		t_Waypoint07
+thing		t_Waypoint08
+thing		t_Waypoint09
+thing		t_Waypoint10
+thing		t_Waypoint11
+thing		t_Waypoint12
+thing		t_Waypoint13
+thing		t_Waypoint14
+thing		t_Waypoint15
+thing		t_Waypoint16
+thing		t_Waypoint17
+thing		t_Waypoint18
+thing		t_Waypoint19
+thing		t_Waypoint20
+thing		t_Waypoint21
+thing		t_Waypoint22
+thing		t_Waypoint23
+
+
+# ===========================TIMER STUFF================================================
+int			n_TimerID				local
+
+flex		HYENA_CREATION_DELAY=10.0			local
+int			TIMER_ID_CONSIDER_HYENA_CREATION=0	local
+
+
+# =========================== MISC CONSTANTS ================================================
+int			MAX_NUM_HYENAS=11					local
+
+# =========================== SUBROUTINES ================================================
+flex		MakeHyenas			local
+flex		ActivateWaypoints	local
+
+end
+
+# ========================================================================================
+code
+startup:
+	Sleep(.01);
+
+	#global8 keeps track of how many total hyenas have been killed
+	global8 = 0;
+	killnum = 0;
+
+	# assign hyenas
+	hyena1 = hyenastart1;
+	hyena2 = hyenastart2;
+	hyena3 = hyenastart3;
+
+	Sleep(45);
+	
+	call ActivateWaypoints;
+	return;
+
+# ========================================================================================
+
+killed:
+# ---> hyenas
+
+	sender = GetSenderRef();
+	
+	if (sender == hyena1)
+	{
+		hyena1 = -1;
+	}
+	else if (sender == hyena2)
+	{
+		hyena2 = -1;
+	}
+	else if (sender == hyena3)
+	{
+		hyena3 = -1;
+	}
+	
+	# update # of dead hyenas in this batch and overall
+	killnum = killnum + 1;
+	global8 = global8 + 1;
+
+	Print("hyenas killed =");
+	PrintInt(global8);
+
+	# Tell kid cog that a Hyena has died
+	SendMessageEx(c_KidCog, 28, 0, 0, 0, 0);
+
+	# if all have been killed, turn off hint12
+	if (global8 >= MAX_NUM_HYENAS)
+	{
+		Print("all hyenas killed");
+		SetHintSolved(hint12);
+		sleep(.75);
+		PlaySoundLocal(victory, 1, 0, 0, 0);
+		return;
+	}
+
+	# Don't generate any more if 3 sets of three have been killed
+	if (global8 >= 9)
+	{
+		return;
+	}
+
+	# if the previous batch was killed, prepare for next batch
+	if (killnum == 3)
+	{
+		killnum = -1;
+		n_IndyLastWaypoint = AIFindNearestWpnt(GetLocalPlayerThing());
+		SetTimerEx(HYENA_CREATION_DELAY, TIMER_ID_CONSIDER_HYENA_CREATION, 0, 0);
+	}
+
+	return;
+
+# ========================================================================================
+user1:
+# ---> KidVSIndy1 cog, when Indy enters hole
+	
+	if (hyena1 != -1)
+	{
+		AIFlee(hyena1, GetLocalPlayerThing());
+	}
+	
+	if (hyena2 != -1)
+	{
+		AIFlee(hyena2, GetLocalPlayerThing());
+	}
+	
+	if (hyena2 != -1)
+	{
+		AIFlee(hyena3, GetLocalPlayerThing());
+	}
+
+	return;
+
+
+# ========================================================================================
+timer:
+	n_TimerID = GetSenderID();
+	if (n_TimerID == TIMER_ID_CONSIDER_HYENA_CREATION)
+	{
+		if ( (n_IndyLastWaypoint != AIFindNearestWpnt(GetLocalPlayerThing()))
+			 || (n_IndyLastWaypoint == -1)	// only necessary until waypoints pasted into level
+			 )
+		{
+			# Indy has moved, lets make us some Hyenas
+			call MakeHyenas;
+		}
+		else
+		{
+			# Indy hasn't moved. Try again later
+			SetTimerEx(HYENA_CREATION_DELAY, TIMER_ID_CONSIDER_HYENA_CREATION, 0, 0);
+		}
+
+	}
+
+	return;
+
+# ========================================================================================
+ActivateWaypoints:
+	if (b_WpntsActive)
+	{
+		return;
+	}
+
+	b_WpntsActive = 1;
+	AISetInstinctWpntMode(hyenastart1);
+	AISetInstinctWpntMode(hyenastart2);
+	AISetInstinctWpntMode(hyenastart3);
+
+	for ( n_idx = 0; n_idx < NUM_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx);
+	}
+
+	AIConnectWpnts(0, 1);
+	AIConnectWpnts(0, 2);
+	AIConnectWpnts(1, 4);
+	AIConnectWpnts(1, 5);
+	AIConnectWpnts(2, 3);
+	AIConnectWpnts(2, 8);
+	AIConnectWpnts(2, 9);
+	AIConnectWpnts(2, 10);
+	AIConnectWpnts(3, 4);
+	AIConnectWpnts(3, 10);
+	AIConnectWpnts(4, 5);
+	AIConnectWpnts(5, 12);
+	AIConnectWpnts(6, 7);
+	AIConnectWpnts(6, 9);
+	AIConnectWpnts(6, 13);
+	AIConnectWpnts(6, 14);
+	AIConnectWpnts(7, 8);
+	AIConnectWpnts(8, 9);
+	AIConnectWpnts(8, 10);
+	AIConnectWpnts(9, 10);
+	AIConnectWpnts(9, 11);
+	AIConnectWpnts(9, 13);
+	AIConnectWpnts(9, 14);
+	AIConnectWpnts(10, 11);
+	AIConnectWpnts(10, 13);
+	AIConnectWpnts(11, 12);
+	AIConnectWpnts(11, 13);
+	AIConnectWpnts(11, 16);
+	AIConnectWpnts(11, 17);
+	AIConnectWpnts(12, 17);
+	AIConnectWpnts(13, 14);
+	AIConnectWpnts(13, 16);
+	AIConnectWpnts(14, 15);
+	AIConnectWpnts(15, 16);
+	AIConnectWpnts(15, 19);
+	AIConnectWpnts(16, 17);
+	AIConnectWpnts(16, 19);
+	AIConnectWpnts(17, 18);
+	AIConnectWpnts(18, 19);
+	AIConnectWpnts(18, 23);
+	AIConnectWpnts(19, 20);
+	AIConnectWpnts(20, 21);
+	AIConnectWpnts(20, 23);
+	AIConnectWpnts(21, 22);
+	AIConnectWpnts(22, 23);
+
+	AIWpntHuntTarget(hyenastart1, 1.0, 0.0);
+	AIWpntHuntTarget(hyenastart2, 1.0, 0.0);
+	AIWpntHuntTarget(hyenastart3, 1.0, 0.0);
+	
+	return;
+
+# ========================================================================================
+MakeHyenas:
+Print("creating hyenas");
+
+	n_IndyLastWaypoint = AIFindNearestWpnt(GetLocalPlayerThing());
+
+	if (n_IndyLastWaypoint <= 11)
+	{
+		Print("creating group 2");
+		groupnum = 2;
+
+		# if indy's not in the jeep and it's in the sector
+		# where the hyenas are due, set a new timer and bail out
+		if ((GetThingSector(jeep) == group2sector) && (global2 == 0))
+		{
+			Print("jeep in hyena creation sector; setting new timer and bailing out");
+			SetTimerEx(HYENA_CREATION_DELAY, TIMER_ID_CONSIDER_HYENA_CREATION, 0, 0);
+			return;
+		}
+
+	}
+	else if (n_IndyLastWaypoint <= 23)
+	{
+		Print("creating group 0");
+		groupnum = 0;
+		
+		# if indy's not in the jeep and it's in the sector
+		# where the hyenas are due, set a new timer and bail out
+		if ((GetThingSector(jeep) == group0sector) && (global2 == 0))
+		{
+			Print("jeep in hyena creation sector; setting new timer and bailing out");
+			SetTimerEx(HYENA_CREATION_DELAY, TIMER_ID_CONSIDER_HYENA_CREATION, 0, 0);
+			return;
+		}
+	}
+	else
+	{
+		# Just in case. Create them somewhere
+		groupnum = 1;
+		
+		# if indy's not in the jeep and it's in the sector
+		# where the hyenas are due, set a new timer and bail out
+		if ((GetThingSector(jeep) == group1sector) && (global2 == 0))
+		{
+			Print("jeep in hyena creation sector; setting new timer and bailing out");
+			SetTimerEx(HYENA_CREATION_DELAY, TIMER_ID_CONSIDER_HYENA_CREATION, 0, 0);
+			return;
+		}
+	}
+
+	hyena1 = CreateThing(hyenamodel, hyenaghost1[(groupnum * 3)]);
+	hyena2 = CreateThing(hyenamodel, hyenaghost1[(groupnum * 3) + 1]);
+	hyena3 = CreateThing(hyenamodel, hyenaghost1[(groupnum * 3) + 2]);
+		
+	CaptureThing(hyena1);
+	CaptureThing(hyena2);
+	CaptureThing(hyena3);
+	
+	AISetInstinctWpntMode(hyena1);
+	AISetInstinctWpntMode(hyena2);
+	AISetInstinctWpntMode(hyena3);
+
+	AIWpntHuntTarget(hyena1, 1.0, 0.0);
+	AIWpntHuntTarget(hyena2, 1.0, 0.0);
+	AIWpntHuntTarget(hyena3, 1.0, 0.0);
+	
+	killnum = 0;
+
+	return;
+
+end
+

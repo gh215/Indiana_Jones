@@ -1,0 +1,102 @@
+
+# Jones 3D Cog Script
+#
+# PRU_cavernShimmy.cog    Adjust camera's position while Indy shimmies across top of cavern.
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message     entered
+message		exited
+
+thing		cam1spot
+thing		cam1look
+thing		shimmyCam			local
+thing		player				local
+
+sector		targetsector		local
+surface		shimmyhang
+surface		slide
+
+template	ghostTpl=ghost		local
+
+sound		shimmyMus=mus_gen_danger2.wav		local
+sound		slideMus=mus_gen_indywhip1.wav		local
+
+vector	v_modvec				local
+vector	v_targetpos0			local
+int		once=0					local
+
+
+
+end
+
+# ========================================================================================
+code
+
+entered:
+player = GetLocalPlayerThing();
+if (GetSenderRef() == shimmyhang)
+{
+    #Create camera and target above and below Indy
+	v_modvec = VectorSet(0, -0.1, 0.25);
+	v_targetpos0 = VectorAdd(VectorTransformToOrient(player, v_modvec), GetThingPos(player));	
+	targetsector = FindNewSectorFromThing(player, v_targetpos0);
+	
+	shimmyCam = CreateThingAtPos(ghostTpl, targetsector, v_targetpos0, '0 0 0');
+	CaptureThing(shimmyCam); 				# no capture, no work
+	AttachThingToThing(shimmyCam, player);	# track his move
+    
+	
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0); 			# force snap if not sure already the case
+	SetCameraPosInterp(2, 0); 			# force snap if not sure already the case
+	SetCameraFocus(2, cam1spot); 		# cam 2 takes over here
+	SetCameraSecondaryFocus(2, cam1look); # looking same place
+    AttachThingToThing(cam1look, player);
+    AttachThingToThing(cam1spot, player);	# track his move
+	#viewangle = GetCameraFOV(); 		# it pays to be careful
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	#SetCameraFOV(viewangle, 0, 0.0); 	# start here anyway
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7); 		# about right
+	Sleep(0.01); 						# let engine work briefly
+	SetCameraFocus(2, shimmyCam); 		# slide out to new spot
+	#SetCameraSecondaryFocus(2, hangTarget); # slide over to new target
+	
+    if (once == 0)
+	{
+		PlaySoundLocal(shimmyMus, 1.0, 0.0, 0x0, 0);
+		once = 1;
+	}
+}
+
+if (GetSenderRef() == slide)
+{
+	Sleep(0.75);
+    PlaySoundLocal(slideMus, 1.0, 0.0, 0x0, 0);
+}
+return;
+
+exited:
+if (GetSenderRef() == shimmyhang)
+{
+	#SetCameraSecondaryFocus(2, cam1look);
+	#SetCameraFOV(viewangle, 1, 0.5); # transition back to follow-cam FOV
+    
+	SetCameraPosition(1, GetThingPos(shimmyCam));
+	SetCurrentCamera(1);
+
+    SetCameraLookInterp(2, 0); # exit in snap mode
+	SetCameraPosInterp(2, 0); # exit in snap mode
+
+}
+return;
+end
+

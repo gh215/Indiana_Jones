@@ -1,0 +1,43 @@
+# Jones 3D Cog Script
+#
+# gen_Conveyor.cog
+#
+# generic conveyor belt script
+#
+# This script will control 1-8 conveyor belts moving in the same direction
+# and with the same velocity.  The conveyors run continuously.
+#
+# [IS]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup
+
+	vector	vec0			desc=conveyor_direction
+	float		speed=2.0	desc=conveyor_speed
+
+	surface	convey0		nolink
+	surface	convey1		nolink
+	surface	convey2		nolink
+	surface	convey3		nolink
+	surface	convey4		nolink
+	surface	convey5		nolink
+	surface	convey6		nolink
+	surface	convey7		nolink
+
+	int		cnt			local
+end
+
+# ========================================================================================
+
+code
+startup:
+	for (cnt = 0; cnt<=7; cnt=cnt+1)
+	{
+		if (convey0[cnt] >= 0) SlideWall(convey0[cnt], vec0, speed);
+	}
+	return;
+end
+

@@ -1,0 +1,95 @@
+# Jones 3D Cog Script
+#
+# actor_Bug.cog
+#
+# [RT]
+#
+# Animates cute little bug legs.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		created
+	message		aievent
+	message		killed
+   
+# ************************** TEMPLATES *************************
+	material	legs=cbleg4.mat				local
+
+	model		liveBug=gen_cb.3do			local
+	model		deadBug=gen_cb_dead.3do		local
+
+# ************************** MISC LOCAL VARS *******************
+	thing		bug							local
+
+	int			newMode						local
+	int			oldMode						local
+
+end
+
+# ===================================================================
+code
+
+# -------------------------------------------------------------------
+created:
+
+	bug = GetSenderRef();
+
+	SetThingModel(bug, deadBug);
+    MaterialAnim(legs, 8.0, 0x1);
+
+	return;
+
+
+# -------------------------------------------------------------------
+aievent:
+
+	bug = GetSenderRef();
+
+	# See if the mode has changed
+	if (BITTEST(GetParam(0), 0x100))
+	{
+        newMode = GetParam(1);
+		oldMode = GetParam(2);
+
+        # See if he just started moving
+		if ((BITTEST(newMode, 0x1)) && (!BITTEST(oldMode, 0x1)))
+		{
+			PlaySoundClass(bug, RandBetween(6,7));							# play 'walk' sound
+
+			if (GetThingModel(bug) != liveBug)
+				SetThingModel(bug, liveBug);
+		}
+	}
+	# See if he just stopped
+    else if (BITTEST(GetParam(0), 0x800))
+	{
+		StopSoundClass(bug, 6);
+		StopSoundClass(bug, 7);
+
+       	if (GetThingModel(bug) != deadBug)
+		{
+			SetThingModel(bug, deadBug);
+		}
+    }
+
+	return;
+
+
+# -------------------------------------------------------------------
+killed:
+
+	bug = GetSenderRef();
+
+	if (GetThingModel(bug) != deadBug)
+	{
+		SetThingModel(bug, deadBug);
+	}
+
+    return;
+
+end
+

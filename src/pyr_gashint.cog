@@ -1,0 +1,37 @@
+# Jones 3D Cog Script
+#
+# pyr_gashint.cog
+#	
+# The hint for the gas can travels with the jeep
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	user0
+message	user1
+
+thing	actorjeep	nolink
+thing	staticjeep
+thing	hint57		nolink
+
+end
+
+code
+startup:
+	CaptureThing(staticjeep);
+	AttachThingToThing(hint57, actorjeep);
+	return;
+
+user0:
+	SetHintSolved(hint57);
+	return;
+
+user1:
+	SetHintUnsolved(hint57);
+	return;
+
+end

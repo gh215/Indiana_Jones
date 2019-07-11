@@ -1,0 +1,231 @@
+# Jones 3D Cog Script
+#
+# aet_MiniSophCut.cog
+#
+# [TL & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		entered
+message		user0									# Message for destroying plates.
+message		user1									# Message for destroying plates.
+message		user2									# Message for destroying plates.
+
+
+keyframe	in_rtarmup=0in_armsout_1_1.key	local    
+
+
+sound		success_cue=mus_gen_awechord1.wav	local
+sound		end_cue=mus_gen_awechord2.wav	local
+
+sound		sophia=AT04J01.WAV				local
+sound		getMeOut=AT04S02.WAV			local	# 5.3s
+
+
+thing		player							local
+thing		indy1									# Indy actor
+thing		soph0							nolink	# Sophia actor
+
+thing		plate0									# trigger plate						
+thing		plate1									# trigger plate
+thing		plate2									# trigger plate
+
+thing		cam1							nolink
+thing		cam1_target						nolink
+thing		cagetarg						nolink
+
+thing		offsetcam						local	# create on fly
+
+
+sector		camsector						local	# create on fly
+
+template	tpl_ghost=ghost					local
+
+
+vector		v_camspot						local
+
+flex		viewangle						local
+
+int			done0=0							local	# Flag for when scene is done.
+int			curcam							local
+int			cursound						local
+int			sender							local
+int			offcamexists=0					local
+int			plate0zapped=0					local
+int			plate1zapped=0					local
+int			plate2zapped=0					local
+            
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+player = GetLocalPlayerThing();
+
+SetThingFlags(plate2, 0x40);
+SetThingFlags(plate1, 0x40);
+SetThingFlags(plate0, 0x40);
+
+return;
+
+# ..............................................................................
+
+user0:
+
+	if (plate0zapped == 0)
+	{
+		DestroyThing(plate0);
+		plate0zapped = 1;
+	}
+
+	return;
+
+# ..............................................................................
+
+user1:
+
+	if (plate1zapped == 0)
+	{
+		DestroyThing(plate1);
+		plate1zapped = 1;
+	}
+
+	return;
+
+# ..............................................................................
+
+user2:
+
+	if (plate2zapped == 0)
+	{
+		DestroyThing(plate2);
+		plate2zapped = 1;
+	}
+
+	return;
+
+# ..............................................................................
+
+entered:
+	
+	sender = GetSenderRef();
+	
+	if ((sender != plate0) && (sender != plate1) && (sender != plate2)) 
+	{
+		return;
+	}
+
+	if (done0 == 1)
+	{
+		return;
+	}
+
+	done0 = 1;
+	
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutScene(1);
+
+	PlaySoundLocal(success_cue, 1.0, 0.0, 0x0, 0);
+	
+	curcam = GetCurrentCamera();
+	TeleportThing(indy1, player); 
+	CopyPlayerHolsters(player, indy1); 
+	SetThingFlags(player, 0x80000); 
+	ClearThingFlags(indy1, 0x80000);
+
+	# Aim Indy...
+	AISetLookThingEyeLevel(indy1, cagetarg);
+	AIWaitForStop(indy1); 
+
+	# Make a camera...
+	if (offcamexists != 0)
+	{
+		DestroyThing(offsetcam);
+	}
+	offcamexists = 1;
+	v_camspot =
+		VectorAdd(VectorTransformToOrient(indy1, '0.15 -0.18 0.0'), GetThingPos(indy1));	
+	camsector = FindNewSectorFromThing(player, v_camspot);
+	offsetcam =
+		CreateThingAtPos(tpl_ghost, camsector, v_camspot, '0 0 0');
+	CaptureThing(offsetcam);
+
+	MakeCamera2LikeCamera1(cam1, cam1_target);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, cam1_target);
+	viewangle = GetCameraFOV();
+	SetCurrentCamera(2);
+	SetCameraFOV(viewangle, 0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.8);
+	Sleep(0.01);
+
+	# Slide cam out...
+	SetCameraFocus(2, offsetcam);
+	SetCameraSecondaryFocus(2, cagetarg);
+	Sleep(0.4);
+	Sleep(0.8);
+
+	# Indy: "Sophia...?"
+	cursound = PlayVoice(indy1, sophia, 1.0, 0);
+	PlayKey(indy1, in_rtarmup, 4, 0x12, 0);
+	Sleep(0.3);
+
+	# Zoom in...
+	SetCameraFOV(35, 1, 5.0);
+	WaitForSound(cursound);
+
+	# Sophia: "Get me out of here...turning to stone..."
+	cursound = PlayVoice(soph0, getMeOut, 1.0, 0);
+	WaitForSound(cursound);
+	PlaySoundLocal(end_cue, 1.0, 0.0, 0x0, 0);
+	Sleep(1.0);	
+	
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(offsetcam));
+	SetCurrentCamera(1);
+	ResetCameraFOV(1, 0.5);
+
+	TeleportThing(player, indy1);	
+	ClearThingFlags(player, 0x80000);
+	SetThingFlags(indy1, 0x80000);
+
+	if (plate0zapped == 0)
+	{
+		DestroyThing(plate0);
+		plate0zapped = 1;
+	}
+
+	if (plate1zapped == 0)
+	{
+		DestroyThing(plate1);
+		plate1zapped = 1;
+	}
+
+	if (plate2zapped == 0)
+	{
+		DestroyThing(plate2);
+		plate2zapped = 1;
+	}
+	
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+end
+

@@ -1,0 +1,170 @@
+# Jones 3D Cog Script
+#
+# 14_INF_RotateCage.cog
+#
+# Rotate the Aethereal cage
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+    message     startup
+	message		user0
+	message		user1
+	message		user2
+	message		user3
+    message     user4
+	
+# ................................. KEYFRAMES ..................................
+
+	keyframe	cg_spin=inf_cage.key					local
+
+# ............................... OBJECT THINGS ................................
+
+	thing		cage									nolink
+
+# ............................... TARGET THINGS ................................
+
+	thing		cg_mk_1									nolink
+	thing		cg_mk_2									nolink
+	thing		cg_mk_3									nolink
+
+	thing		spin_tgt_1								nolink
+	thing		spin_tgt_2								nolink
+	thing		spin_tgt_3								nolink
+
+# ............................ OTHER REFERENCES ................................
+
+	cog			sophiaspincog
+
+# ............................... VARIABLES ....................................
+
+	int			iscagespinning=0						local
+#	int			alreadyspinning=0						local
+	int			exitcage=0								local
+	int			cg_keyTrack1							local
+	
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+    SetCollideType(cage, 0);
+    //SetThingLight(cage, '0.0 0.5 0.9', 0.75, 0);
+    ThingLightAnim(cage, '0.0 0.5 0.9', 0.65, '0.0 0.9 0.9', 0.65, 1);
+
+    
+return;
+
+# ..............................................................................
+
+user0:
+
+    SetCollideType(cage, 0);
+	if (iscagespinning == 0)
+	{
+		cg_keyTrack1 = PlayKey(cage, cg_spin, 4, 0x0, 0);
+		iscagespinning = 1;
+	}
+	else
+	{
+		StopKey(cage, cg_keyTrack1, 1.0);
+		iscagespinning = 0;
+	}	
+
+	return;
+
+# ..............................................................................
+
+user1:
+
+    SetCollideType(cage, 0);
+	# Haul Sophia's targets along...
+	AttachThingToThing(spin_tgt_1, cage);
+	AttachThingToThing(spin_tgt_2, cage);
+	AttachThingToThing(spin_tgt_3, cage);
+	
+	AISetMoveSpeed(cage, 0.5);
+	AISetMoveThing(cage, cg_mk_1, 0);	
+
+	return;
+
+# ..............................................................................
+
+user2:
+
+    SetCollideType(cage, 0);
+	AISetMoveSpeed(cage, 0.5);
+	AISetMoveThing(cage, cg_mk_2, 0);
+	AIWaitForStop(cage);
+
+	return;
+
+# ..............................................................................
+
+user3:
+
+    SetCollideType(cage, 0);
+	exitcage = 1;
+	AISetMoveSpeed(cage, 0.5);
+	AISetMoveThing(cage, cg_mk_3, 0);
+	Sleep(2.0);
+	AISetMoveSpeed(cage, 0.6);
+	Print("speed 0.6");
+	Sleep(1.0);
+	AISetMoveSpeed(cage, 0.8);
+	Print("speed 0.8");
+	Sleep(0.8);
+	AISetMoveSpeed(cage, 1.0);
+	Print("speed 1.0");
+	Sleep(0.7);
+	AISetMoveSpeed(cage, 1.5);
+	Print("speed 1.5");
+	Sleep(0.6);
+	AISetMoveSpeed(cage, 2.0);
+	Print("speed 2.0");
+	Sleep(0.5);
+	AISetMoveSpeed(cage, 3.0);
+	Print("speed 3.0");
+	Sleep(0.5);
+	AISetMoveSpeed(cage, 4.0);
+	Print("speed 4.0");
+	AIWaitForStop(cage);
+
+	# Get rid of cage & Sophia...
+	SendMessage(sophiaspincog, user0); # tell Sophia to zap herself
+	ThingFadeAnim(cage, 1.0, 0.0, 0.5, 0);
+	Sleep(0.5);
+	ResetThing(cage);
+	//DestroyThing(cage);
+
+	Print("cage gone");
+
+	return;
+    
+# ..............................................................................
+
+user4:
+
+    SetCollideType(cage, 0);
+	AISetMoveSpeed(cage, 5);
+	AISetMoveThing(cage, cg_mk_2, 0);
+	AIWaitForStop(cage);
+
+	return;
+
+# ..............................................................................
+
+
+end

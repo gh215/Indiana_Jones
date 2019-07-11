@@ -1,0 +1,70 @@
+# Jones 3D Cog Script
+#
+# class_Spatter.cog
+#
+# Animates & stretches fall foam sprite...
+#
+# [RT]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ===================================================================
+
+symbols
+	
+	message		sighted
+	message		pulse
+
+	material	mat=gen_a1_foamfall_spatter.mat	local
+
+	thing		foam							local
+
+	flex		animTime=0.25					local
+	flex		foamState						local
+	flex		fps=15.0						local
+
+	vector		startSize						local
+	vector		endSize							local
+
+end
+
+# ===================================================================
+
+code
+
+sighted:
+
+	startSize = VectorSet(0.23, 0.23, 1.0);
+	endSize = VectorSet(0.38, 0.38, 1.0);
+
+	foam = GetSenderRef();
+
+	AnimateSpriteSize(foam, startSize, endSize, animTime);
+    SetThingUserData(foam, 1);
+    SetThingPulse(foam, animTime);
+
+	MaterialAnim(mat, 12, 0x1);
+
+	return;
+
+# -------------------------------------------------------------------
+
+pulse:
+
+	foam = GetSenderRef();
+	foamState = GetThingUserData(foam);
+
+	if (foamState == 0)
+	{
+		AnimateSpriteSize(foam, endSize, startSize, animTime);
+	}
+	else
+	{
+		AnimateSpriteSize(foam, startSize, endSize, animTime);
+	}
+
+	foamState = 1 - foamState;
+
+	return;
+
+end
+

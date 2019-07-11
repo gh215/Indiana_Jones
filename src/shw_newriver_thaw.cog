@@ -1,0 +1,493 @@
+# Jones 3D Cog Script
+#
+# shw_river_thaw.cog
+#
+# River Thawing Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+		
+#.........................MESSAGES..........................
+	message		startup		
+	message		activated	
+	message		timer	
+	message		pulse	
+	message 	user0	
+	
+#.........................COGS..........................
+	cog     	sluice0	
+	cog     	river0	
+	cog     	camcog	
+	cog     	troopcog	
+	cog     	hintcog	
+	cog     	fallcog	
+	
+#.........................CAMERAS..........................
+	thing		camerapos
+	thing		lightercam
+	
+#.........................CAM TARGETS..........................
+	thing		strt1MoveTarg					local	
+	
+#.........................PROPS..........................
+    thing      	icedam 
+	thing		activateplate
+	thing      	blastpos 
+	thing      	damPIECE0							# thaw_damBACK 
+	thing      	damPIECE1 
+	thing      	damPIECE2 
+	thing      	damPIECE3
+	thing      	explodepos0 
+	thing      	explodepos1 
+	thing      	explodepos2
+	thing	   	dustthing							local
+	
+#.........................ACTORS..........................
+	thing   	player  							local
+	thing   	indyActor
+	
+#.........................ACTOR MARKS..........................
+	thing   	playerendpos 
+	thing		lighttarget
+	thing		runtarget
+
+	thing		in_mk0
+	
+#.........................EVENT LOCATIONS..........................
+	thing	   	projpos0
+	thing	   	projpos1
+	thing	   	projpos2
+
+	thing   	blastsys        					local 
+	thing   	flask           					local
+	thing   	explosion1       					local 
+	thing   	explosion2       					local 
+	thing   	explosion3       					local 
+
+				
+#.........................VARIABLES..........................
+	int     	thaw=0		        				local
+	int     	numSectors=13	        			local
+	int     	numSurfaces=35	        			local
+	int     	curCam 	        					local
+	int     	blasted=0              				local 	        
+	int     	jarspot=0              				local 	        
+	int     	blastvar1              				local 	        
+	int     	blastvar2              				local 	        
+	int     	blastvar3							local
+	int			swapref								local
+	int			jardebref							local
+	int			misty=0								local
+	int			index=0								local
+	int			i=0									local
+	
+
+#.........................H2O SECTORS..........................
+	sector		sect_0
+	sector		sect_1
+	sector		sect_2
+	sector		sect_3
+	sector		sect_4
+	sector		sect_5
+	sector		sect_6
+	sector		sect_7
+	sector		sect_8
+	sector		sect_9
+	sector		sect_10
+	sector		sect_11
+	sector		sect_12
+	sector		sect_13
+	
+#.........................H2O SURFACES..........................
+	surface 	surf_0
+	surface 	surf_1
+	surface 	surf_2
+	surface 	surf_3
+	surface 	surf_4
+	surface 	surf_5
+	surface 	surf_6
+	surface 	surf_7
+	surface 	surf_8
+	surface 	surf_9
+	surface 	surf_10
+	surface 	surf_11
+	surface 	surf_12
+	surface 	surf_13
+	surface 	surf_14
+	surface 	surf_15
+	surface 	surf_16
+	surface 	surf_17
+	surface 	surf_18
+	surface 	surf_19
+	surface 	surf_20
+	surface 	surf_21
+	surface 	surf_22
+	surface 	surf_23
+	surface 	surf_24
+	surface 	surf_25
+	surface 	surf_26
+	surface 	surf_27
+	surface 	surf_28
+	surface 	surf_29
+	surface 	surf_30
+	surface 	surf_31
+	surface 	surf_32
+	surface 	surf_33
+	surface 	surf_34
+	surface 	surf_35
+	
+#.........................TEMPLATES..........................
+	template    blamo=TitanicH2Ofx						local
+	template    exp=+megaflame	   						local
+	template    projectile=+dummy_debris     			local
+	template    jardebris=stnshrapas_nc_ns     			local
+	template	dust=dustcloud4ever						local
+	template	ghostTpl=ghost							local
+	
+#.........................KEYFRAMES..........................
+	keyframe	in_startfire=in_activate_low.key		local
+	keyframe	in_pull=0in_key_pull_1_hold.key			local
+	keyframe	in_smash=0in_smashjar1_1.key			local
+	
+#.........................MATERIALS..........................
+	material	dustmat=gen_a4sfx_dustcloud.mat			local
+	material	oilmat=dam_4ice_frnt.mat				local
+	
+#.........................MODELS..........................
+	model		jarhand=hand_in_oiljar.3do				local
+	
+#.........................SOUNDS..........................
+	sound       fwoosh=olv_waterfall_blast_c.wav      	local       # BAM! when the dam gives way
+	sound       breakjar=shs_glassbreak.wav    			local     	# BAM! when the jar breaks
+	sound		shatterdam=lag_torp_explo_c.wav			local
+	sound		melt_cue=mus_shw_meltice.wav			local		# music for the ice melt
+	
+#.........................VECTORS..........................
+	vector    	sect_light            					local	
+	vector		camPos									local
+	vector		duststart								local
+	vector		dustend									local
+	
+end
+
+# ========================================================================================
+
+code
+
+startup:
+        
+# Smoke cloud sprite vectors
+        duststart	= VectorSet(0.2, 0.2, 0.75);
+		dustend	= VectorSet(1.2, 1.2, 0.0);
+		
+# prep player and actor
+		AISetCutSceneMode(indyActor);
+        player = GetLocalPlayerThing();
+    
+    
+# Clear Water Sectors and Surfs
+    sect_light = VectorSet(0.0, 0.5, 1.0);
+	
+	for (index = 0; index <= numSectors; index = index + 1)
+	{
+		ClearSectorFlags(sect_0[index], 0x2);
+		ClearSectorSurfFlags(sect_0[index], 0x20000);
+    }
+        
+    for (index = 0; index <= numSurfaces; index = index + 1)
+	{
+		Setfacegeomode(surf_0[index], 0);
+    }
+
+# hide dam sub-sections
+	SetThingFlags(damPIECE0, 0x80000);
+	SetThingFlags(damPIECE1, 0x80000);
+	SetThingFlags(damPIECE2, 0x80000);
+	SetThingFlags(damPIECE3, 0x80000);
+
+return;
+# ........................................................................................
+
+activated:
+    
+
+    if (thaw == 1) return;	#if the river is already thawed
+    if ((GetSenderRef() == activateplate) && (GetCurItem(player) == 79))   #if player is on the dam, has the flask as curInv
+        {
+        StartCutScene(1);
+		SetActorFlags(player, 0x200000);
+		DeselectWeaponWait(player);
+		Sleep(0.25);
+
+        # replace the player with actor indy
+        CopyPlayerHolsters(player, indyActor);
+		CopyOrientAndPos(player, indyActor);
+		ClearThingFlags(indyActor, 0x80000);
+        SetThingFlags(player, 0x80000);
+		
+		#take control of the camera, swing out with an offset
+		SetExtCamOffsetToThing(lightercam);
+		# create target for secondary focus at indyActor position.
+		strt1MoveTarg = CreateThingAtPos(ghostTpl, GetThingSector(indyActor), GetThingPos(indyActor), '0 0 0');
+		# offset camera to thing.
+		SetExtCamLookOffsetToThing(strt1MoveTarg);
+        Sleep(0.5);
+        
+		# get to camera 2
+		RestoreExtCam();
+		SetCameraFocus(2, lightercam);
+		SetCameraSecondaryFocus(2, strt1MoveTarg);
+        Sendmessage(camcog, user0);		#camera becomes 2
+        
+		# move camera focus object up to strut
+		MoveThingToPos(strt1MoveTarg, GetThingPos(lighttarget), 1.0);
+		
+		# move the actor indy to the ignition position
+        AISetLookThingEyeLevel(indyActor, lighttarget);
+		AISetMoveSpeed(indyActor, 1.0);
+        AISetMoveThing(indyActor, in_mk0, 1);
+		Sleep(0.5);
+        
+        # play the animation of indy smashing the jar
+		PlayKey(indyActor, in_smash, 4, 0x12, 0);
+        Sleep(.5);
+        # swap the jarhand for indy's right hand
+		swapref=SetThingMesh(indyActor, 15, jarhand, 0);
+		Sleep(1.25);
+        
+		# swap the empty hand back in
+        RestoreThingMesh(indyActor, swapref);
+
+		# create the oil puddle
+		SetMaterialCel(oilmat, 0);
+        materialanim(oilmat, 10, 0);
+        
+		# create debris from the jar
+		for(i=0; i<6; i=i+1)
+		{
+            jardebref = CreateThing(jardebris, lighttarget);                                 
+			SetThingVel(jardebref, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 1));
+			SetThingRotVel(jardebref, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 200.0));
+        }
+        
+		PlaySoundLocal(breakjar, 1.0, 0.0, 0x0, 0);
+        Sleep(.25);
+        ChangeInv(player, 79, -1);
+        
+		
+		# swap the player for the indyActor
+		CopyOrientAndPos(indyActor, player);
+        ClearThingFlags(player, 0x80000);
+        SetThingFlags(indyActor, 0x80000);
+		SelectWeapon(player, 13);
+		Sleep(1.75);
+        PlayKey(player, in_startfire, 4, 0x12, 1);
+		PlaySoundLocal(fwoosh, 1.0, 0.0, 0x0, 0);
+		blastvar1=CreateThing(exp, explodepos0);
+		blastvar2=CreateThing(exp, explodepos1);
+		blastvar3=CreateThing(exp, explodepos2);
+        
+		# replace player with actorIndy
+		DeselectWeapon(player);
+		Sleep(1.0);
+		
+		CopyOrientAndPos(player, indyActor);
+		ClearThingFlags(indyActor, 0x80000);
+        SetThingFlags(player, 0x80000);
+		
+		
+        # move actorIndy away from blast area
+		AISetMoveSpeed(indyActor, 2.5);
+		AISetLookThing(indyActor, runtarget);
+		Sleep(0.25);
+        AISetMoveThing(indyActor, runtarget, 0);
+		Sleep(0.75);
+		
+		# begin screenshake
+		Setpulse(0.1);
+		misty = 0;
+
+		# John Woo camera-fu
+        RestoreExtCam();
+        SetCameraFocus(2, camerapos);
+        SetCamerasecondaryFocus(2, lighttarget);
+		MovetoFrame(camerapos, 1, 6);
+
+        thaw = 1;
+
+        #commies will be waiting in the power room
+		#Sendmessage(troopcog, user0);
+        
+		Sleep(.5);
+        SetCameraFOV(70, 1, 3.5);
+		Sleep(.5);
+        TeleportThing(player, playerendpos);
+        
+
+        # explosion events timing
+        SetTimerEx(2.0, 1, 0, 0);
+        SetTimerEx(2.5, 2, 0, 0);
+        SetTimerEx(3.5, 3, 0, 0);
+        SetTimerEx(4.5, 4, 0, 0);
+        
+	}
+        
+return;        
+
+# ........................................................................................
+timer:
+
+        If (GetSenderId() == 1)  # Large ice debris gets created, moved, and faded in here,        
+                {
+                        
+						# Set pulse for screenshake
+						#SetPulse(0.05);
+						misty=1;
+						# create a bazooka round, and fire it at the dam for explosion fx
+                        CreateThing(projectile, projpos0);
+                        CreateThing(projectile, projpos1);
+                        CreateThing(projectile, projpos2);
+						destroything(icedam);
+                        PlaySoundLocal(shatterdam, 1.0, 0.0, 0x0, 0);
+						SetThingFlags(indyActor, 0x80000);
+
+                        
+						# destroy the explosion sprites
+						DestroyThing(blastvar1);
+						DestroyThing(blastvar2);
+						DestroyThing(blastvar3);
+                        
+						# Create dust cloud and animate it
+						SetMaterialCel(dustmat, 0);
+						MaterialAnim(dustmat, 12.0, 1);
+						dustthing = CreateThing(dust, projpos1);
+						AnimateSpriteSize(dustthing, duststart, dustend, 4.0);
+						
+						
+						# Create and capture the large ice debris
+                        ClearThingFlags(damPIECE0, 0x80000);
+                        ClearThingFlags(damPIECE1, 0x80000);
+                        ClearThingFlags(damPIECE2, 0x80000);
+                        ClearThingFlags(damPIECE3, 0x80000);
+						
+						# move all large debris
+                        movetoframe(damPIECE0, 1, 1.0);
+                        movetoframe(damPIECE1, 1, 1.0);
+                        movetoframe(damPIECE2, 1, 1.0);
+                        movetoframe(damPIECE3, 1, 1.0);
+						
+						# fade the ice 3dos
+						ThingFadeAnim(damPIECE0, 1, 0, 2.0, 0);
+						ThingFadeAnim(damPIECE1, 1, 0, 2.0, 0);
+						ThingFadeAnim(damPIECE2, 1, 0, 2.0, 0);
+						ThingFadeAnim(damPIECE3, 1, 0, 2.0, 0);
+
+						#Sendmessage(sluice0,user1);
+						Sleep(0.5);
+                        
+						# 	play the music cue for the ice melting
+                        PlaySoundLocal(melt_cue, 1.0, 0.0, 0x0, 0);
+						
+						misty = 2;
+                }
+
+        
+        If (GetSenderId() == 2)		#water sectors get set, Div room 1 gets thawed message, and	river sectors get thrust
+                {
+                # water light the sectors
+                        for (index = 0; index <= numSectors; index = index + 1)
+                        {
+                        Setsectorlight(sect_0[index], sect_light, 7);
+						}
+                # Set sectors to water
+                    
+                        for (index = 0; index <= numSectors; index = index + 1)
+                        {
+                        SetSectorFlags(sect_0[index], 0x2);
+						SetSectorSurfFlags(sect_0[index], 0x20000);
+                        }
+						Sleep(0.5);
+                   
+                # Set water faces to water
+                        for (index = 0; index <= numSurfaces; index = index + 1)
+                        {
+						Setfacegeomode(surf_0[index], 4);
+                        }
+                
+                # light the water faces
+                        for (index = 0; index <= numSurfaces - 2; index = index + 1)
+                        {
+                        Setfacelightmode(surf_0[index], 0);
+                        }
+                        
+				# AllDIVROOMS cog gets it's thawed message
+                        #Sendmessage(sluice0,user0);
+                        Sleep(0.25);
+                        
+				# Riverthrust cog gets it's thawed message
+                        #Sendmessage(river0,user0);
+                        #Sendmessage(fallcog,user0);
+
+                }        
+
+
+
+        If (GetSenderId() == 3)         #screenshake settles
+                {
+                    misty = 0;
+					SetPulse(0);
+
+                        
+                }
+        
+        If (GetSenderId() == 4)         # end screenshake, restore camera angle, restore cam 1
+                {
+					#SendMessage(hintcog, user0);
+					#SetCameraFOV(90, 0, 0);
+					SendMessage(camcog, user1);
+					RestoreExtCam();
+					ClearActorFlags(player, 0x200000);
+					EndCutScene();
+
+					# destroy dam sub-sections
+                    DestroyThing(damPIECE0);
+                    DestroyThing(damPIECE1);
+                    DestroyThing(damPIECE2);
+                    DestroyThing(damPIECE3);
+					
+                }
+return;
+
+# ........................................................................................
+
+pulse:
+        
+	If (misty == 0)
+		{
+            SetPOVShake('0.0 0.0 0.02', '0.0 0.0 0.02', 0.80, 80.0);
+        }
+
+
+	If (misty == 1)
+		{
+			blastsys = CreateThing(blamo, blastpos);
+			SetPOVShake('0.0 0.0 0.02', '0.0 0.0 0.02', 0.80, 80.0);
+        }
+
+    If (misty == 2)
+		{
+			blastsys = CreateThing(blamo, blastpos);
+			SetPOVShake('0.0 0.0 0.00', '0.0 0.0 0.04', 0.80, 80.0);
+        }
+        return;
+# ........................................................................................
+# ........................................................................................
+# ........................................................................................
+# ........................................................................................
+
+end
+

@@ -1,0 +1,97 @@
+# Jones 3D Cog Script
+#
+# gen_Avalanche.cog
+#
+# This cog will createa minor cave-in effect if a switch is presed
+# Update will be made for IMP#1. Chris M. 12/1/97
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# =========================================================
+symbols
+
+message pulse
+message activated
+message timer
+message	startup
+
+thing   rock0
+thing   rock1
+thing   rock2
+thing   rock3
+thing   rock4
+thing   rock5
+thing   rock6
+thing   rock7
+thing   rock8
+thing   rock9
+
+thing   ghost0
+thing   ghost1
+
+surface switch0
+
+template        System=wfallbot
+
+flex	screenshake=1
+flex    dummy0   local
+flex    dummy1   local
+flex    pulsetime=.1
+flex    movespeed=2
+end
+#======================================
+
+code
+
+startup:
+screenshake = 1;
+return;
+
+activated:
+
+SetTimerEx(1.0, 1, 0, 0);
+SetTimerEx(2.5, 2, 0, 0);
+SetTimerEx(2.5, 3, 0, 0);
+SetTimerEx(5.0, 4, 0, 0);
+return;
+
+timer:
+if (GetSenderId() == 1)
+{
+movetoframe(rock0,1,movespeed);
+movetoframe(rock1,1,movespeed);
+movetoframe(rock2,1,movespeed);
+movetoframe(rock3,1,movespeed);
+movetoframe(rock4,1,movespeed);
+movetoframe(rock5,1,movespeed);
+}
+
+else
+if (GetSenderId() == 2)
+{
+setpulse(pulsetime);
+}
+
+else
+if (GetSenderId() == 3)
+{
+SetPOVShake('0.0 -.03 0.0', '1.0 0.0 0.0', .05, 80.0);
+
+if (screenshake == 1)
+SetTimerEx(.10, 3, 0, 0);
+
+}
+
+else
+if (GetSenderId() == 4)
+{
+screenshake = 0;
+Setpulse(0.0);
+}
+return;
+
+pulse:
+
+	dummy0=CreateThing(System, ghost0);
+	dummy1=CreateThing(System, ghost1);
+        return;
+

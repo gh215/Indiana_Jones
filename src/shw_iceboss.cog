@@ -1,0 +1,662 @@
+# Jones 3D Cog Script
+#
+# SHW_IceBoss.cog
+#
+# AI enhancements for Ice Boss
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+# ===================================================================
+symbols
+
+message		arrivedwpnt
+message		aievent
+message		entered
+message		exited
+message		damaged
+message		timer
+message		user0
+message		user1
+
+# *********************** SUBROUTINES **************************
+flex		Begin_GuardMarch			local
+flex		End_GuardMarch				local
+flex		Set_WallGuardMode			local
+
+# ************************** LINKED ITEMS **********************
+thing		t_wpnt00
+thing		t_wpnt01
+thing		t_wpnt02
+thing		t_wpnt03
+thing		t_wpnt04
+thing		t_wpnt05
+thing		t_wpnt06
+thing		t_wpnt07
+thing		t_wpnt08
+thing		t_wpnt09
+thing		t_wpnt10
+thing		t_wpnt11
+thing		t_wpnt12
+thing		t_wpnt13
+thing		t_wpnt14
+thing		t_wpnt15
+thing		t_wpnt16
+thing		t_wpnt17
+thing		t_wpnt18
+thing		t_wpnt19
+thing		t_wpnt20
+thing		t_wpnt21
+thing		t_wpnt22
+thing		t_wpnt23
+
+int			n_wpnts=24					local
+
+sector		sec_trigger00	linkid=1
+sector		sec_trigger01	linkid=1
+sector		sec_trigger02	linkid=1
+sector		sec_trigger03	linkid=1
+sector		sec_trigger04	linkid=1
+sector		sec_trigger05	linkid=1
+sector		sec_trigger06	linkid=1
+sector		sec_trigger07	linkid=1
+sector		sec_trigger08	linkid=1
+sector		sec_trigger09	linkid=1
+sector		sec_trigger10	linkid=1
+sector		sec_trigger11	linkid=1
+sector		sec_trigger12	linkid=1
+sector		sec_trigger13	linkid=1
+sector		sec_trigger14	linkid=1
+sector		sec_trigger15	linkid=1
+sector		sec_trigger16	linkid=1
+sector		sec_trigger17	linkid=1
+
+# ************************** TEMPLATES *************************
+template	tpl_Boss=ice_boss			local
+
+# ************************** MISC LOCAL VARS *******************
+cog			cog_cinematic				local				# ref to COG who called us
+thing		t_boss=-1					local
+thing		t_player					local
+thing		t_sender					local
+
+int			n_imp1Hits					local
+int			TIMERID_DEATH=1				local
+int			TIMERID_IMPHIT=2			local
+int			TIMERID_MARCH=3				local
+int			TIMERID_IMPHURT=4			local
+
+int			n_crntWpnt					local
+int			n_nextWpnt					local
+int			n_marchToWpnt				local
+int			b_goNow						local
+
+int			b_lockMotion				local
+
+int			n_event						local
+int			n_crntAIMode				local
+int			n_param						local
+
+float		f_val						local
+vector		vec_pos						local
+
+int			b_testmode=0				local
+
+end
+
+
+# ===================================================================
+code
+
+# ...................................................................
+aievent:
+
+	if ( GetSenderRef() != t_boss ) return;
+
+	n_event			= GetParam(0);
+	n_crntAIMode	= GetParam(1);
+	n_param			= GetParam(2);							# Value depends on n_event
+
+	if (n_event == 0x100)									#---- EVENT_MODECHANGED
+	{														#---- n_param == old AI mode
+
+		if ( !BITTEST(n_param, 0x2) && BITTEST(n_crntAIMode, 0x2) )
+		{														# Switched to MODE_ATTACKING?
+#			DEBUGPRINT("AIEVENT:: Switched to ATTACK mode");
+			KillTimerEx(TIMERID_MARCH);
+		}
+		else if ( !BITTEST(n_param, 0x4) && BITTEST(n_crntAIMode, 0x4) )
+		{														# Switched to MODE_SEARCHING?
+#			DEBUGPRINT("AIEVENT:: Switched to SEARCH mode");
+
+			KillTimerEx(TIMERID_MARCH);
+			SetTimerEx(0.1, TIMERID_MARCH, 0, 0);
+		}
+		else if ( !BITTEST(n_param, 0x200000) && BITTEST(n_crntAIMode, 0x200000) )
+		{														# Switched to MODE_WALLCRAWL?
+#			DEBUGPRINT("AIEVENT:: Switched to wallcrawl mode");
+
+			SetArmedMode(t_boss, 2);							# Disable roll attack
+			AISetSubMode(t_boss, 0x20);							# Set SUBMODE_SKIPCHECKFIREFOV
+		}
+		else if ( BITTEST(n_param, 0x200000) && !BITTEST(n_crntAIMode, 0x200000) )
+		{														# Switched out of MODE_WALLCRAWL?
+#			DEBUGPRINT("AIEVENT:: Switched out of wallcrawl mode");
+
+			SetArmedMode(t_boss, 1);							# Enable roll attack
+			AIClearSubMode(t_boss, 0x20);						# Clear SUBMODE_SKIPCHECKFIREFOV
+		}
+	}
+	else if ( BITTEST(n_event, 0x100200) )					#---- EVENT_HIT(WALL|FLOOR) ----
+	{
+		if ( AIGetArmedMode(t_boss) == 0 )
+			return;
+
+		b_lockMotion = 0;
+
+		if ( (n_crntWpnt==0 && n_nextWpnt==8) || (n_crntWpnt==2 && n_nextWpnt==10) )
+		{
+			# Dont lock if not wall crawling yet
+			if ( !BITTEST(AIGetMode(t_boss), 0x200000) )
+				return;
+
+			b_lockMotion = 1;
+		}
+		if ( (n_crntWpnt==10 && n_nextWpnt==2) || (n_crntWpnt==8 && n_nextWpnt==0) )
+		{
+			# Dont lock if HITFLOOR
+			if ( BITTEST(n_event, 0x100000) )
+				return;
+
+			b_lockMotion = 1;
+		}
+		if ( (n_crntWpnt==12 && n_nextWpnt==17) || (n_crntWpnt==17 && n_nextWpnt==12) )
+		{
+			b_lockMotion = 1;
+		}
+		if ( (n_crntWpnt==20 && n_nextWpnt==16) || (n_crntWpnt==16 && n_nextWpnt==20) )
+		{
+			b_lockMotion = 1;
+		}
+		if ( (n_crntWpnt==16 && n_nextWpnt==12) || (n_crntWpnt==12 && n_nextWpnt==16) )
+		{
+			b_lockMotion = 1;
+		}
+		if ( (n_crntWpnt==20 && n_nextWpnt==18) || (n_crntWpnt==18 && n_nextWpnt==20) )
+		{
+			b_lockMotion = 1;
+		}
+		if ( (n_crntWpnt==5 && n_nextWpnt==23) || (n_crntWpnt==23 && n_nextWpnt==5) )
+		{
+			b_lockMotion = 1;
+		}
+
+		if ( b_lockMotion == 1 )
+		{
+			AISetSubmode(t_boss, 0x8000000);					# Set SUBMODE_WALLCRAWLLOCKED
+			SetThingMoveSize(t_boss, 0.15);
+			ReturnEx(1);
+		}
+	}
+
+	return;
+
+
+# ...................................................................
+timer:
+
+	if ( t_boss == -1 )
+		return;
+
+	#***  Start marching Timer  ***#
+	if ( GetSenderID() == TIMERID_MARCH )
+	{
+#		KillTimerEx(TIMERID_MARCH);
+
+		# Wall mount transistion in progress... try again later
+		if ( GetMoveStatus(t_boss) == 20 )
+		{
+#			DEBUGPRINT("TIMERID_MARCH:: waiting for climb transition");
+			SetTimerEx(1.0, TIMERID_MARCH, 0, 0);
+			return;
+		}
+		# Roll attack in progress... try again later
+		if ( AIGetArmedMode(t_boss) == 0 )
+		{
+#			DEBUGPRINT("TIMERID_MARCH:: waiting to end roll attack");
+			SetTimerEx(1.0, TIMERID_MARCH, 0, 0);
+			return;
+		}
+
+		if ( n_marchToWpnt == -1 )
+		{
+#			DEBUGPRINT("TIMERID_MARCH:: no march to location");
+			AISetLookThingEyeLevel(t_boss, t_wpnt01);
+			return;
+		}
+
+		#***  Clear to start marching  ***#
+		call Begin_GuardMarch;
+	}
+
+
+	#***  IMP1 HIT safety check timer  ***#
+	if ( GetSenderID() == TIMERID_IMPHIT )
+	{
+		#***  Make sure boss is on the arena floor before hit cutscene   ***#
+		if ( BITTEST(AIGetMode(t_boss), 0x200000) || (GetMoveStatus(t_boss) == 20) )
+		{
+#			DEBUGPRINT("SHW_IceBoss.cog (AI Cog) preping to send IMP HIT msg");
+			SetTimerEx(1.0, TIMERID_IMPHIT, 0, 0);
+			return;
+		}
+
+#		DEBUGPRINT("TIMERID_IMPHURT:: HURT time started");
+		StopMode(t_boss, 65, 0.1);								# Halt attack anim
+        SendMessage(cog_cinematic, USER0);						# Notify cinematic COG of imp1 hit
+		SetActorFlags(t_boss, 0xC00);							# Set AF_DEAF+BLIND
+
+		SetTimerEx(8.0, TIMERID_IMPHURT, 0, 0);					# Give Boss time to 'rest'
+	}
+
+
+	#***  HURT period ended Timer  ***#
+	if ( GetSenderID() == TIMERID_IMPHURT )
+	{
+#		DEBUGPRINT("TIMERID_IMPHURT:: HURT time elapsed");
+		ClearActorFlags(t_boss, 0xC00);							# Clear AF_DEAF+BLIND
+		AISetFireTarget(t_boss, t_player);
+	}
+
+
+	#***  IMP1 DEATH safety check timer  ***#
+	if ( GetSenderID() == TIMERID_DEATH )
+	{
+		# Make sure boss is on the arena floor before death
+		if ( BITTEST(AIGetMode(t_boss), 0x200000) || (GetMoveStatus(t_boss) == 20) )
+		{
+#			DEBUGPRINT("SHW_IceBoss.cog (AI Cog) preping to send KILLED msg");
+			SetTimerEx(1.0, TIMERID_DEATH, 0, 0);
+			return;
+		}
+
+		KillTimerEx(TIMERID_MARCH);
+
+		StopMode(t_boss, 65, 0.1);										# Halt attack anim
+		SendMessage(cog_cinematic, KILLED);								# Notify cinematic COG of boss death
+
+		SendMessageEx(GetInvCog(t_player, 14), USER0, 0, 0, 0, 0);		# Reset IMP1 shot range
+
+		ReleaseThing(t_boss);
+		t_boss = -1;
+#		DEBUGPRINT("SHW_IceBoss.cog (AI Cog) sending KILLED msg");
+	}
+
+	return;
+
+
+# ...................................................................
+arrivedwpnt:
+
+	n_crntWpnt = GetParam(0);
+	n_nextWpnt = GetParam(1);
+
+#	DEBUGFLEX(n_crntWpnt, "Arrived Wpnt");
+#	DEBUGFLEX(n_nextWpnt, "Next Wpnt");
+#	DEBUGPRINT("---------");
+
+	AIClearSubmode(t_boss, 0x8000000);							# Clear SUBMODE_WALLCRAWLLOCKED
+	SetThingMoveSize(t_boss, 0.18);
+
+	if ( (n_marchToWpnt == 1) && (n_crntWpnt >= 0 && n_crntWpnt <= 4) )
+	{
+#		DEBUGPRINT("Arrived at arena floor.  Clearing forced march.");
+		call End_GuardMarch;
+		return;
+	}
+
+	if ( n_crntWpnt == n_marchToWpnt )
+	{
+		call End_GuardMarch;
+		call Set_WallGuardMode;
+	}
+
+	return;
+
+
+# ...................................................................
+entered:
+
+	if ( b_testmode==1 )
+		return;
+
+	if ( t_boss == -1 )
+		return;
+
+	if ( GetSenderID() != 1 )
+		return;
+
+	t_sender = GetSenderRef();
+	b_goNow  = 0;
+	n_param  = -1;
+
+	if ( (t_sender == sec_trigger00) || (t_sender == sec_trigger17) )
+	{
+#		DEBUGPRINT("Entered sector0 or 17");
+		n_param = 12;
+	}
+	else if ( t_sender == sec_trigger01 || t_sender == sec_trigger16 )
+	{
+#		DEBUGPRINT("Entered sector1 or 16");
+		n_param = 23;
+	}
+	else if ( t_sender == sec_trigger02 )
+	{
+#		DEBUGPRINT("Entered sector2");
+		n_param = 22;
+	}
+	else if ( t_sender == sec_trigger03 )
+	{
+#		DEBUGPRINT("Entered sector3");
+		n_param = 11;
+	}
+	else if ( t_sender == sec_trigger04 )			# First ground trig
+	{
+#		DEBUGPRINT("Entered sector4");
+		vec_pos = VectorSub(GetThingPos(t_player), GetThingPos(t_wpnt01));
+		if ( VectorZ(vec_pos) > 0.3 )
+		{
+			n_param = 19;
+			b_goNow = 1;
+		}
+		else
+		{
+			n_param = 1;
+		}
+	}
+	else if ( t_sender == sec_trigger05 )
+	{
+#		DEBUGPRINT("Entered sector5");
+		n_param = 1;
+	}
+	else if ( t_sender == sec_trigger06 )
+	{
+#		DEBUGPRINT("Entered sector6");
+		n_param = 1;
+	}
+	else if ( t_sender == sec_trigger07 )
+	{
+#		DEBUGPRINT("Entered sector7");
+		n_param = 1;
+	}
+	else if ( t_sender == sec_trigger08 )
+	{
+#		DEBUGPRINT("Entered sector8");
+		n_param = 1;
+	}
+	else if ( t_sender == sec_trigger09 )
+	{
+#		DEBUGPRINT("Entered sector9");
+		n_param = 1;
+	}
+	else if ( t_sender == sec_trigger10 )			# Last ground trig
+	{
+#		DEBUGPRINT("Entered sector10");
+		n_param = 1;
+	}
+	else if ( t_sender == sec_trigger11 )
+	{
+#		PRINT("Entered sector11");
+		n_param = 21;
+	}
+	else if ( t_sender == sec_trigger12 )
+	{
+#		PRINT("Entered sector12");
+		n_param = 13;
+	}
+	else if ( t_sender == sec_trigger13 )
+	{
+#		PRINT("Entered sector13");
+		n_param = 15;
+	}
+	else if ( t_sender == sec_trigger14 )
+	{
+#		PRINT("Entered sector14");
+#		n_param = 1;
+		n_param = 13;
+	}
+	else if ( t_sender == sec_trigger15 )
+	{
+#		PRINT("Entered sector15");
+		n_param = 7;
+		b_goNow = 1;
+	}
+
+	if ( (n_param > -1) && (n_param != n_marchToWpnt) )
+	{
+		#***  Check for conditions to ignore trigger  ***#
+		if ( n_param == 1 )
+		{
+			# Ignore floor trigger in roll attack mode
+			if (AIGetArmedMode(t_boss) == 0)
+				return;
+
+			# Ignore floor trigger if not in WALLCRAWL mode
+			if ( !BITTEST(AIGetMode(t_boss), 0x200000) )
+				return;
+		}
+
+
+		#***  Set the new march location  ***#
+#		DEBUGFLEX(n_param, "*** Setting march to");
+		n_marchToWpnt = n_param;
+
+
+		#***  Check conditions for immediate marching  ***#
+		# Go now flag set
+		if ( b_goNow == 1 )
+		{
+#			KillTimerEx(TIMERID_MARCH);
+			SetTimerEx(0.1, TIMERID_MARCH, 0, 0);
+		}
+
+		# If SEARCHING, start moving now
+		if ( BITTEST(AIGetMode(t_boss), 0x04) )
+		{
+#			KillTimerEx(TIMERID_MARCH);
+			SetTimerEx(0.1, TIMERID_MARCH, 0, 0);
+		}
+
+		# If FLEEING (ie, already marching), move to new pos now
+		if ( BITTEST(AIGetMode(t_boss), 0x800) )
+		{
+#			KillTimerEx(TIMERID_MARCH);
+			SetTimerEx(0.1, TIMERID_MARCH, 0, 0);
+		}
+
+		# If WALLCRAWLING and player hit arena center, start moving now
+		if ( BITTEST(AIGetMode(t_boss), 0x200000) && (n_marchToWpnt==1) )
+		{
+#			KillTimerEx(TIMERID_MARCH);
+			SetTimerEx(0.1, TIMERID_MARCH, 0, 0);
+		}
+	}
+
+	return;
+
+
+# ...................................................................
+exited:
+
+	return;
+
+
+# ...................................................................
+damaged:
+
+	n_param = GetParam(1);
+	if (n_param == 0x1000)									#---- SITH_DAMAGE_IMP1 ?
+	{
+		n_imp1Hits = n_imp1Hits + 1;
+		if ( n_imp1Hits < 3 )
+		{
+			SetTimerEx(0.1, TIMERID_IMPHIT, 0, 0);
+			return;
+		}
+
+		SetActorFlags(t_boss, 0xC00);							# Set DEAF and BLIND in prep for death
+		SetTimerEx(0.1, TIMERID_DEATH, 0, 0);
+    }
+
+	return;
+
+
+# ...................................................................
+# Create an Ice Boss at location-THING == GetParam(0)		[must be a valid GHOST THING]
+user0:
+
+	cog_cinematic	= GetSenderRef();						# Remember who called us
+
+	t_boss = CreateThing(tpl_Boss, GetParam(0));
+	CaptureThing(t_boss);
+
+	ClearActorFlags(t_boss, 0x80000);						# Make boss visible
+	AISetCutsceneMode(t_boss);								# Put him into cutscene mode until further notice
+
+	ReturnEx(t_boss);										# Return Boss THING index to caller
+
+	return;
+
+
+# ...................................................................
+# Put Ice Boss "into play"
+user1:
+
+	# Initialize waypoint system for this section
+	for ( n_param = 0; n_param < n_wpnts; n_param = n_param + 1 )
+	{
+		AISetWpnt(t_wpnt00[n_param], n_param);
+	}
+
+	AIConnectWpnts(0, 8);
+	AIConnectWpnts(8, 14);
+	AIConnectWpnts(14, 5);
+	AIConnectWpnts(5, 7);
+	AIConnectWpnts(7, 21);
+	AIConnectWpnts(21, 22);
+	AIConnectWpnts(21, 9);
+
+	AIConnectWpnts(1, 0);
+	AIConnectWpnts(1, 2);
+	AIConnectWpnts(1, 3);
+	AIConnectWpnts(1, 4);
+
+	AIConnectWpnts(2, 10);
+	AIConnectWpnts(10, 6);
+	AIConnectWpnts(6, 13);
+
+	AIConnectWpnts(3, 20);
+	AIConnectWpnts(20, 16);
+	AIConnectWpnts(20, 18);
+	AIConnectWpnts(23, 5);
+
+	AIConnectWpnts(4, 19);
+	AIConnectWpnts(19, 9);
+	AIConnectWpnts(9, 11);
+	AIConnectWpnts(11, 13);
+	AIConnectWpnts(13, 15);
+	AIConnectWpnts(15, 12);
+	AIConnectWpnts(12, 16);
+
+	t_player		= GetLocalPlayerThing();					# Initialize vars
+	n_marchToWpnt	= -1;
+	n_crntWpnt		= 1;
+	n_imp1Hits		= 0;
+
+	f_val	= CheckFloorDistance(t_boss);
+	vec_pos	= GetThingPos(t_boss);
+	vec_pos	= VectorSet(VectorX(vec_pos), VectorY(vec_pos), VectorZ(vec_pos) - f_val);
+	SetThingPosEx(t_boss, vec_pos, FindNewSectorFromThing(t_boss, vec_pos));
+
+	AIClearCutsceneMode(t_boss);
+
+	SendMessage(GetThingClassCog(t_boss), USER1);				# Send "in play" msg along to class COG
+	SendMessageEx(GetInvCog(t_player, 14), USER0, 1, 0, 0, 0);	# Modify IMP1 shot range
+
+	if ( b_testmode==1 )
+	{
+		SetActorFlags(t_boss, 0xC00);							# DEAF and BLIND
+		AITraverseWpnts(t_boss, 1, 1.7, 0, 1);
+	}
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+Begin_GuardMarch:
+
+	if ( n_marchToWpnt > -1 )
+	{
+#		DEBUGFLEX(n_marchToWpnt, "Begin_GuardMarch to wpnt");
+
+		Reset();
+
+		if ( !BITTEST(AIGetMode(t_boss), 0x200000) )			# Look to center if not wall crawling
+		{
+			AISetLookThingEyeLevel(t_boss, t_wpnt01);
+		}
+
+		AIEnableInstinct(t_boss, "wallcrawl", 1);
+		AISetInstinctWpntMode(t_boss);
+		AISetSubMode(t_boss, 0x8000);							# Set SUBMODE_CONTINUOUSWPNTMOTION
+		AIFleeToWpnt(t_boss, n_marchToWpnt);
+	}
+
+	return;
+
+
+# ...................................................................
+End_GuardMarch:
+
+#	DEBUGFLEX(n_marchToWpnt, "End_GuardMarch at wpnt");
+
+	n_marchToWpnt = -1;
+	AIClearSubMode(t_boss, 0x8000);								# Clear SUBMODE_CONTINUOUSWPNTMOTION
+	AIStopFlee(t_boss);
+	AISetFireTarget(t_boss, t_player);
+
+	if ( BITTEST(AIGetMode(t_boss), 0x200000) )
+	{
+		PlaySoundClass(t_boss, 98);								# Play 'roar' sound
+	}
+
+	return;
+
+
+# ...................................................................
+Set_WallGuardMode:
+
+	if ( BITTEST(AIGetMode(t_boss), 0x200000) )
+	{
+#		DEBUGPRINT("Set_WallGuardMode");
+
+		AIEnableInstinct(t_boss, "wallcrawl", 0);				# Disable follow ability
+		AIClearInstinctWpntMode(t_boss);
+
+		vec_pos = GetThingPos(t_boss);
+		vec_pos = VectorSet(VectorX(vec_pos), VectorY(vec_pos), VectorZ(GetThingPos(t_wpnt01)));
+		AISetLookPos(t_boss, vec_pos);
+	}
+
+	return;
+
+
+end
+

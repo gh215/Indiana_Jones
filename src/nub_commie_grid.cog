@@ -1,0 +1,799 @@
+
+# Jones 3D Cog Script
+#
+# NUB_Commie_Grid.cog
+# 
+# Cog to control the AI and patrol behavior of the commies in Nub's tomb
+# 
+#
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message         startup
+message         crossed                                          
+message         killed
+message         entered
+message         damaged
+message         User0
+message         User1
+message         User2
+message         User3
+message         User4
+message         User5
+message         arrivedwpnt
+
+# =============================== SUBROUTINES ================================
+
+flex            MakeMainGrid    local
+flex            MakeLabGrid     local
+
+flex            EnablePillarAI  local
+flex            DisablePillarAI local
+
+flex            EnableElevAI    local
+flex            DisableElevAI   local
+
+flex            EnableLabAI     local
+flex            DisableLabAI    local
+
+flex            RubbleAIOn      local
+flex            RubbleAIOff     local
+
+# ============================ MISC LOCAL VARIABLES ==========================
+
+int             counter         local
+int             SwitchCheck=0   local
+
+int             PillarAIActivated=0     local
+int             TakingRubble=0          local       #this is if the player goes back through start instead of lowering the coffin... after getting the Anubis arm that is
+
+int             User4Done=0             local
+int             Lab01Arrived=0          local
+int             Lab02Arrived=0          local
+
+int             AfterVolod=0            local
+int             AlreadyHunted=0         local
+
+# =========================== WORLD GEOMETRY REFERENCES ======================
+
+surface         EnableLab00         LinkID=1
+surface         EnableLab01         LinkID=1
+surface         DisableLab00        LinkID=2
+surface         DisableLab01        LinkID=2
+
+surface         EnableMain00        LinkID=3
+surface         EnableMain01        LinkID=3
+surface         DisableMain00       LinkID=4
+surface         DisableMain01       LinkID=4
+
+thing           RubbleTeleporter00  
+thing           RubbleTeleporter01
+thing           RubbleTeleporter02
+
+surface         RubbleRouteOn       
+surface         RubbleRouteOff 
+
+sector          AfterVolodAttack0   LinkID=5
+sector          AfterVolodAttack1   LinKID=5
+sector          AfterVolodAttack2   LinKID=5
+
+thing           CommieCreate0
+thing           CommieCreate1
+thing           CommieCreate2
+
+# =============================== CONSTANTS ==================================
+
+int             WAYPOINT_TOTAL_MAIN=43      local
+int             WAYPOINT_TOTAL_LAB=28       local
+
+int             WAYPOINT_CLEAR=60           local
+
+int             TOTAL_COMMIES=16            local
+
+int             NUMBER_OF_COMMIES_LAB=3     local
+int             NUMBER_OF_COMMIES_PILLAR=6  local
+int             NUMBER_OF_COMMIES_ELEV=7    local
+int             NUMBER_OF_ROBOTS=2          local
+
+int             COMMIE_ONE_FLEE_TO_WPNT=27  local
+int             COMMIE_TWO_FLEE_TO_WPNT=6   local
+
+int             NUMBER_COMMIES_AFTER_VOLOD=3    local
+
+# =============================== COMMIES ====================================
+
+thing           TempCurWpnt             local
+thing           TempCommie              local
+
+thing           CommieLab00=-1          local
+thing           CommieLab01=-1          local
+thing           CommieLab02=-1          local
+
+thing           CommiePillar00=-1       local
+thing           CommiePillar01=-1       local
+thing           CommiePillar02=-1       local
+thing           CommiePillar03=-1       local
+thing           CommiePillar04=-1       local
+thing           CommiePillar05=-1       local
+
+thing           CommieElev00=-1         local
+thing           CommieElev01=-1         local
+thing           CommieElev02=-1         local
+thing           CommieElev03=-1         local
+
+thing           AfterVolodCommie0=-1    local
+thing           AfterVolodCommie1=-1    local
+thing           AfterVolodCommie2=-1    local
+
+#thing           SpinnerRobot00      
+#thing           SpinnerRobot01      
+
+# ============================= WAYPOINTS - THE GRID =========================
+
+thing           TempWpnt 
+
+thing           Wpnt00
+thing           Wpnt01
+thing           Wpnt02
+thing           Wpnt03
+thing           Wpnt04
+thing           Wpnt05
+thing           Wpnt06
+thing           Wpnt07
+thing           Wpnt08
+thing           Wpnt09
+thing           Wpnt10
+thing           Wpnt11
+thing           Wpnt12
+thing           Wpnt13
+thing           Wpnt14
+thing           Wpnt15
+thing           Wpnt16
+thing           Wpnt17
+thing           Wpnt18
+thing           Wpnt19
+thing           Wpnt20
+thing           Wpnt21
+thing           Wpnt22
+thing           Wpnt23
+thing           Wpnt24
+thing           Wpnt25
+thing           Wpnt26
+thing           Wpnt27
+thing           Wpnt28
+thing           Wpnt29
+thing           Wpnt30
+thing           Wpnt31
+thing           Wpnt32
+thing           Wpnt33
+thing           Wpnt34
+thing           Wpnt35
+thing           Wpnt36
+thing           Wpnt37
+thing           Wpnt38
+thing           Wpnt39
+thing           Wpnt40
+thing           Wpnt41
+thing           Wpnt42
+
+thing           LabWpnt00
+thing           LabWpnt01
+thing           LabWpnt02
+thing           LabWpnt03
+thing           LabWpnt04
+thing           LabWpnt05
+thing           LabWpnt06
+thing           LabWpnt07
+thing           LabWpnt08
+thing           LabWpnt09
+thing           LabWpnt10
+thing           LabWpnt11
+thing           LabWpnt12
+thing           LabWpnt13
+thing           LabWpnt14
+thing           LabWpnt15
+thing           LabWpnt16
+thing           LabWpnt17
+thing           LabWpnt18
+thing           LabWpnt19
+thing           LabWpnt20
+thing           LabWpnt21
+thing           LabWpnt22
+thing           LabWpnt23
+thing           LabWpnt24
+thing           LabWpnt25
+thing           LabWpnt26
+thing           LabWpnt27
+
+# ============================= TEMPLATES ====================================
+template        ShotgunGuy0=khaki_shotgun4      local
+template        ShotgunGuy1=khaki_shotgun3      local
+template        Bruiser=bruiser                 local
+
+sound           Yell0=Inxh3019.wav        local
+sound           Yell1=Inxh2019.wav        local
+                
+# ============================================================================
+
+end 
+
+# ============================================================================
+# ================================= CODE =====================================
+# ============================================================================
+code
+# ============================================================================
+startup:
+
+    Call MakeMainGrid;
+
+    return;
+    
+# ============================================================================
+crossed:
+
+    if(GetSenderID() == 3)
+    {
+        Call MakeMainGrid;
+        
+        Call EnableElevAI;
+        Call EnablePillarAI;
+    }
+    
+    else if(GetSenderID() == 4)
+    {
+        Call DisableElevAI;
+        Call DisablePillarAI;
+    }
+    
+    else if(GetSenderID() == 1)
+    {
+        
+        Call DisablePillarAI;
+        
+        Call DisableElevAI;
+        
+        Call MakeLabGrid;
+        
+        if(SwitchCheck == 1)
+        {
+            Call EnableLabAI;  
+        }
+    }        
+    
+    else if(GetsenderID() == 2)
+    {
+        if(SwitchCheck == 1)
+        {
+            Call DisableLabAI;
+        }
+        
+        Call MakeMainGrid;
+        
+        Call EnableElevAI;
+        
+        Call EnablePillarAI;
+    }
+        
+    else if(GetSenderRef() == RubbleRouteOff)
+    {
+        if(PillarAIActivated == 0) return;
+        if(TakingRubble != 1) return;
+                
+        Call RubbleAIOff;
+    }
+
+    return;
+
+# ============================================================================
+killed:
+
+    TempCommie = GetSenderRef();
+    
+    for(counter = 0; counter < TOTAL_COMMIES; counter = counter + 1)
+    {
+        if(CommieLab00[counter] == TempCommie)
+        {   
+            CommieLab00[counter] = -1;
+        }    
+    }    
+    
+    return;
+    
+# ============================================================================
+entered:
+
+    if(GetSenderRef() == RubbleRouteOn)
+    {
+        if(PillarAIActivated == 0) return;
+        if(TakingRubble != 0) return;
+        
+        Call RubbleAIOn;
+    }
+    
+    else if(GetSenderID() == 5)
+    {
+        if(AfterVolod != 1) return;
+        
+        if(AlreadyHunted == 1) return;
+        
+        for(counter = 0; counter < NUMBER_COMMIES_AFTER_VOLOD; counter = counter + 1)
+        {
+            ClearActorFlags(AfterVolodCommie0[counter], 0x800);
+            ClearActorFlags(AfterVolodCommie0[counter], 0x400);
+            AIWpntHuntTarget(AfterVolodCommie0[counter], 1.5, 0.0);
+        }              
+        AlreadyHunted = 1;
+    }
+
+    return;
+        
+# ======================================================
+damaged:
+
+    if(TakingRubble != 1) return;
+    
+    Call RubbleAIOff;
+    
+    return;
+# ======================================================
+//Sent by NUB_Commie_Gen_ManagerX
+user0:
+    
+    //First param is the officer and the other two are the soldiers...
+    CommiePillar00 = GetParam(0);
+    CommiePillar01 = GetParam(1);
+    CommiePillar02 = GetParam(2);
+    
+    CaptureThing(CommiePillar00);
+    CaptureThing(CommiePillar01);
+    CaptureThing(CommiePillar02);
+    
+    sleep(1.0);  //just make sure that user1 get's recieved as well
+    
+    Call EnablePillarAI;
+    
+    PillarAIActivated = 1;
+    
+    return;
+    
+# ============================================================================
+//Sent by NUB_Commie_Gen_ManagerX
+user1:
+    
+    CommiePillar03 = GetParam(0);
+    CommiePillar04 = GetParam(1);
+    CommiePillar05 = GetParam(2);
+    
+    CaptureThing(CommiePillar03);
+    CaptureThing(CommiePillar04);
+    CaptureThing(CommiePillar05);
+    
+    return;    
+    
+# ============================================================================
+//Sent by the NUB_MazeSteps cog
+user2:
+    
+    for(counter = 0; counter < (NUMBER_OF_COMMIES_ELEV - NUMBER_COMMIES_AFTER_VOLOD); counter = counter + 1)
+    {
+        CommieElev00[counter] = Getparam(counter);
+        CaptureThing(CommieElev00[counter]);
+    }
+    
+    Call EnableElevAI;
+
+    return;    
+    
+# ============================================================================
+//Sent by the Lightning cog in the Lab
+user3:
+
+    for(counter = 0; counter < NUMBER_OF_COMMIES_LAB; counter = counter + 1)
+    {
+        CommieLab00[counter] = GetParam(counter);
+        CaptureThing(Commielab00[counter]);
+    }
+
+    TeleportThing(CommieLab00, Labwpnt08);
+    TeleportThing(CommieLab01, LabWpnt27);
+    TeleportThing(CommieLab02, LabWpnt22);
+            
+    SwitchCheck = 1;
+    
+    Call EnableLabAI;
+    
+    return;
+
+# ============================================================================
+//Sent by Lightning cog in the lab
+user4:
+
+    Sleep(0.25);
+    
+    if(CommieLab01 != -1)
+    {
+	AISetLookThing(CommieLab01, LabWpnt02);
+	PlaySoundThing(Yell0, CommieLab01, 1.0, 10, 30, 0x0080);
+    }
+    
+    Sleep(0.25);
+    
+    if(CommieLab02 != -1)
+    {
+       	AISetLookThing(CommieLab02, LabWpnt02);
+       	PlaySoundThing(Yell1, CommieLab02, 1.0, 10, 30, 0x0080);
+    }
+
+    Sleep(0.75);
+    
+    if(CommieLab01 != -1)
+    {
+        AISetSubMode(CommieLab01, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION. Required for FleeToWpnt
+        AIFleeToWpnt(CommieLab01, COMMIE_ONE_FLEE_TO_WPNT);
+    }
+    
+    if(CommieLab02 != -1)
+    {
+        AISetSubMode(CommieLab02, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION. Required for FleeToWpnt
+        AIFleeToWpnt(CommieLab02, COMMIE_TWO_FLEE_TO_WPNT);
+    }
+    
+    User4Done = 1;
+
+    return;
+
+# ============================================================================
+//Message recieved from Nub_Vol_cutscene.cog after stone gera has ben acquired from Volodnikov
+user5:           
+      
+    AfterVolodCommie0 = CreateThing(Bruiser, CommieCreate0);
+    AfterVolodCommie1 = CreateThing(ShotgunGuy0, CommieCreate1);
+    AfterVolodCommie2 = CreateThing(ShotgunGuy1, CommieCreate2);
+    
+    for(counter = 0; counter < NUMBER_COMMIES_AFTER_VOLOD; counter = counter + 1)
+    {
+        CaptureThing(AfterVolodCommie0[counter]);
+        SetActorFlags(AfterVolodCommie0[counter], 0x800);
+        SetActorFlags(AfterVolodCommie0[counter], 0x400);
+        AISetLookThing(AfterVolodCommie0[counter], wpnt29);
+        AISetInstinctWpntMode(AfterVolodCommie0[counter]);
+    }
+    
+    AfterVolod = 1;
+    
+    return;
+
+# ============================================================================
+arrivedwpnt:
+
+    if(User4Done == 0) return;
+    
+    if(GetSenderRef() == CommieLab01 && GetParam(0) == COMMIE_ONE_FLEE_TO_WPNT)
+    {   
+	if(CommieLab01 != -1)
+        {
+            AIStopFlee(CommieLab01);
+	    AIClearSubMode(CommieLab01, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION. Was need for FleeToWpnt
+            
+            Lab01Arrived = 1;
+            
+            if(Lab02Arrived == 1) User4Done = 0;
+        }
+    }
+    
+    else if(GetSenderRef() == CommieLab00 && GetParam(0) == COMMIE_TWO_FLEE_TO_WPNT)
+    {
+        if(CommieLab02 != -1)
+        {
+            AIStopFlee(CommieLab02);
+	    AIClearSubMode(CommieLab02, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION. Was need for FleeToWpnt
+            
+            Lab02Arrived = 1;
+            
+            if(Lab01Arrived == 1) User4Done = 0;
+        }
+    }
+
+    return;
+            
+# ============================================================================
+# ============================= SUBROUTINES ==================================
+# ============================================================================
+EnablePillarAI:
+
+    for(counter = 0; counter < NUMBER_OF_COMMIES_PILLAR; counter = counter + 1)
+    {
+        if(CommiePillar00[counter] != -1)
+        {
+            AISetInstinctWpntMode(CommiePillar00[counter]);
+        
+            if(counter > (NUMBER_OF_COMMIES_PILLAR - 2))   //last two commies roam
+            {
+                AIEnableInstinct(CommiePillar00[counter], "roam", 1);
+            }
+        }
+    }
+
+    return;
+
+# ============================================================================
+DisablePillarAI:
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES_PILLAR; counter = counter + 1)
+    {
+        if(CommiePillar00[counter] != -1)
+        {
+            AIClearInstinctWpntMode(CommiePillar00[counter]);
+            
+            if(counter < 2)
+            {
+                AIEnableInstinct(CommiePillar00[counter], "roam", 0);
+            }
+        }
+    }
+    
+    return;
+    
+# ============================================================================
+EnableElevAI:
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES_ELEV; counter = counter + 1)
+    {
+        if(CommieElev00[counter] != -1)
+        {   
+            AISetInstinctWpntMode(CommieElev00[counter]);
+            AIClearCutsceneMode(CommieElev00[counter]);
+            
+//            if(counter < 2)
+//            {
+//                AIEnableInstinct(CommieElev00[counter], "roam", 1);
+//                DebugPrint("Commie Roaming");
+//            }
+        }
+    }  
+    return;
+
+# ============================================================================
+DisableElevAI:
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES_ELEV; counter = counter + 1)
+    {
+        if(CommieElev00[counter] != -1)
+        {
+            AIClearInstinctWpntMode(CommieElev00[counter]);
+            AIEnableInstinct(CommieElev00[counter], "roam", 0);
+            AISetCutsceneMode(CommieElev00[counter]);
+        }
+    }  
+    
+    if(AlreadyHunted == 1)
+    {
+        for(counter = 0; counter < NUMBER_COMMIES_AFTER_VOLOD; counter = counter + 1)
+        {
+            if(AfterVolodCommie0[counter] != -1)
+            {
+                TeleportThing(AfterVolodCommie0[counter], CommieCreate0[counter]);
+            }
+        }
+    }
+    
+    return;    
+
+# ============================================================================
+EnableLabAI:
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES_LAB; counter = counter + 1)
+    {
+        if(CommieLab00[counter] != -1)
+        {   
+            AISetInstinctWpntMode(CommieLab00[counter]);
+            
+//            if(counter >= (NUMBER_OF_COMMIES_LAB - 1))
+//            {
+//                AIEnableInstinct(CommieLab00[counter], "roam", 1);
+//                DebugPrint("Lab Commie Roaming");
+//            }                                
+        }
+    }  
+    return;
+    
+# ============================================================================
+DisableLabAI:
+
+    for(counter = 0; counter < NUMBER_OF_COMMIES_LAB; counter = counter + 1)
+    {
+        if(CommieLab00[counter] != -1)
+        {
+            AIClearInstinctWpntMode(CommieLab00[counter]);
+            AIEnableInstinct(CommieLab00[counter], "roam", 0);
+        }
+    }  
+    
+    return;        
+    
+# ============================================================================
+//Temporarily teleports and disables the AI around the pillars if the player decides to take the wrong way back from Anubis
+RubbleAIOn:
+
+    TakingRubble = 1;
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES_PILLAR; counter = counter + 1)
+    {
+        if(CommiePillar00[counter] != -1)
+        {
+            SetActorFlags(CommiePillar00[counter], 0x800);
+            SetActorFlags(CommiePillar00[counter], 0x400);
+        }
+    }
+    
+    if(CommiePillar04 != -1)
+    {
+        TeleportThing(CommiePillar04, RubbleTeleporter00);
+        AIEnableInstinct(CommiePillar04, "Roam", 0);
+    }
+    
+    if(CommiePillar05 != -1)
+    {
+        TeleportThing(CommiePillar05, RubbleTeleporter01);
+        AIEnableInstinct(CommiePillar05, "Roam", 0);
+    }
+    
+    
+    return;
+    
+# ============================================================================
+//ReEnables the AI around the pillars if the player decided to take the wrong way back from Anubis
+RubbleAIOff:
+    
+    TakingRubble = 0;
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES_PILLAR; counter = counter + 1)
+    {
+        if(CommiePillar00[counter] != -1)
+        {
+            ClearActorFlags(CommiePillar00[counter], 0x800);
+            ClearActorFlags(CommiePillar00[counter], 0x400);
+        }
+    }
+    
+    if(CommiePillar04 != -1)
+    {
+        AIEnableInstinct(CommiePillar04, "Roam", 1);
+    }
+    
+    if(CommiePillar05 != -1)
+    {
+        AIEnableInstinct(CommiePillar05, "Roam", 1);
+    }
+
+
+    return;
+
+# ============================================================================
+MakeMainGrid:
+
+    for(counter = 0; counter < WAYPOINT_CLEAR; counter = counter + 1)
+    {
+        AISetwpnt(TempWpnt, counter);       //Clear any waypoints that might already exist
+    }
+    
+    for(counter = 0; counter < WAYPOINT_TOTAL_MAIN; counter = counter + 1)
+    {
+        AISetWpnt(Wpnt00[counter], counter);    //Set ghost objects as wpnts
+    }
+    
+    //Grid for the forest of pillars
+    AIConnectWpnts(0, 1);
+    AIConnectWpnts(1, 2);
+    AIConnectWpnts(2, 3);
+    AIConnectWpnts(3, 4);
+    AIConnectWpnts(3, 8);
+    AIConnectWpnts(4, 7);
+    AIConnectWpnts(4, 5);
+    AIConnectWpnts(5, 6);
+    AIConnectWpnts(6, 7);
+    AIConnectWpnts(7, 8);
+    AIConnectWpnts(8, 9);
+    AIConnectWpnts(9, 10);
+    AIConnectWpnts(10, 11);
+    AIConnectWpnts(11, 12);
+    AIConnectWpnts(11, 19);
+    AIConnectWpnts(12, 13);
+    AIConnectWpnts(13, 14);
+    AIConnectWpnts(13, 15);
+    AIConnectWpnts(15, 16);
+    AIConnectWpnts(15, 17);
+    AIConnectWpnts(17, 18);
+    AIConnectWpnts(19, 20);
+    AIConnectWpnts(20, 21);
+    
+    AIConnectWpnts(22, 23);
+    AIConnectWpnts(22, 25);
+    AIConnectWpnts(23, 24);
+    AIConnectWpnts(23, 26);
+    AIConnectWpnts(24, 27);
+    AIConnectWpnts(25, 26);
+    AIConnectWpnts(25, 28);
+    AIConnectWpnts(26, 27);
+    //AIConnectWpnts(26, 29);
+    AIConnectWpnts(27, 30);
+    //AIConnectWpnts(28, 29);
+    //AIConnectWpnts(29, 30);
+    //AIConnectWpnts(29, 31);
+    //AIConnectWpnts(29, 32);
+    //AIConnectWpnts(29, 33);
+    AIConnectWpnts(30, 35);
+    AIConnectWpnts(31, 34);
+    AIConnectWpnts(32, 34);
+    AIConnectWpnts(33, 34);
+    AIConnectWpnts(34, 35);
+    AIConnectWpnts(34, 37);
+    AIConnectWpnts(35, 36);
+    
+    AIConnectWpnts(23, 38);
+    AIConnectWpnts(38, 39);
+    AIConnectWpnts(38, 40);
+    AIConnectWpnts(38, 41);
+    AIConnectWpnts(39, 40);
+    AIConnectWpnts(39, 42);
+    AIConnectWpnts(40, 41);
+    AIConnectWpnts(40, 42);
+    AIConnectWpnts(41, 42);
+    
+    return;
+
+# ============================================================================
+MakeLabGrid:
+
+    for(counter = 0; counter < WAYPOINT_CLEAR; counter = counter + 1)
+    {
+        AISetwpnt(TempWpnt, counter);       //Clear any waypoints that might already exist
+    }
+    
+    for(counter = 0; counter < WAYPOINT_TOTAL_LAB; counter = counter + 1)
+    {
+        AISetWpnt(LabWpnt00[counter], counter);    //Set ghost objects as wpnts
+    }
+    
+    AIConnectWpnts(0, 1);
+    AIConnectWpnts(1, 2);
+    AIConnectWpnts(1, 27);
+    AIConnectWpnts(2, 3);
+    AIConnectWpnts(2, 8);
+    AIConnectWpnts(3, 4);
+    AIConnectWpnts(4, 5);
+    AIConnectWpnts(5, 6);
+    AIConnectWpnts(6, 7);
+    AIConnectWpnts(7, 9);
+    AIConnectWpnts(7, 11);
+    AIConnectWpnts(8, 9);
+    AIConnectWpnts(9, 10);
+    AIConnectWpnts(10, 11);
+    AIConnectWpnts(10, 14);
+    AIConnectWpnts(11, 12);
+    AIConnectWpnts(12, 13);
+    AIConnectWpnts(13, 15);
+    AIConnectWpnts(14, 17);
+    AIConnectWpnts(15, 16);
+    AIConnectWpnts(16, 17);
+    AIConnectWpnts(16, 19);
+    AIConnectWpnts(17, 18);
+    AIConnectWpnts(18, 19);
+    AIConnectWpnts(18, 21);
+    AIConnectWpnts(19, 20);
+    AIConnectWpnts(20, 22);
+    AIConnectWpnts(21, 24);
+    AIConnectWpnts(22, 23);
+    AIConnectWpnts(23, 24);
+    AIConnectWpnts(24, 26);
+    AIConnectWpnts(25, 26);
+    AIConnectWpnts(26, 27);
+    
+    return;
+# ======================================================================================
+    
+end

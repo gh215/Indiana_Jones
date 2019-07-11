@@ -1,0 +1,149 @@
+# Jones 3D Cog Script
+#
+# aet_Rotate.cog
+#
+# [RKD] [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	startup
+message	arrived
+message	entered
+message	exited
+
+thing	gear0						# Rings that rotate.
+thing	gear1
+thing	gear2
+thing	ghost0						# Ghosts to teleport the rings to to reset pos.
+thing	ghost1
+thing	ghost2
+
+sector	northSec0		linkid=2	# Sectors to trigger to open the rings in a certain direction.
+sector	southSec0		linkid=2
+sector	eastSec0		linkid=4
+sector	westSec0		linkid=4
+
+sound	snd=aet_ring_spin.wav	local
+
+flex	speed=1.0
+flex	speedstop=1.0	
+int		nsInt=0			local		# Ints to show which sectors Indy has triggered.
+int		ewInt=0			local
+int		done0=0			local		# Int to make sure he doesn't trigger multiple times.
+int		looping			local		
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+# No collision on rings.
+SetCollideType(gear0, 0);
+SetCollideType(gear1, 0);
+SetCollideType(gear2, 0);
+# Begin rotation on rings.
+Rotate(gear0, 360, 0, speed);
+Rotate(gear1, 360, 2, speed);
+Rotate(gear2, 360, 1, speed);
+# Start looping sound.
+Sleep(0.01);
+# Playing sound on rings.
+looping = PlaySoundThing(snd, ghost0, 1.0, 7.0, 15.0, 0x881);
+ChangeSoundPitch(looping, 0.1, 0.01);
+
+return;
+
+#........................................................................................
+arrived:
+
+if (GetSenderRef() == gear0)
+	{
+	if (done0 == 1) return;
+	# If north or south sector triggered...then rotate as such.
+	if (nsInt == 1) 
+		{
+		TeleportThing(gear0, ghost0);
+		Rotate(gear0, 90, 0, speedstop);
+		TeleportThing(gear1, ghost1);
+		Rotate(gear1, 90, 0, speedstop);
+		TeleportThing(gear2, ghost2);
+		Rotate(gear2, 90, 1, speedstop);
+		done0 = 1;	
+		return;
+		}
+	# If east or west sector triggered...then rotate as such.
+	if (ewInt == 1) 
+		{
+		TeleportThing(gear0, ghost0);
+		Rotate(gear0, 90, 2, speedstop);
+		TeleportThing(gear1, ghost1);
+		Rotate(gear1, 90, 2, speedstop);
+		TeleportThing(gear2, ghost2);
+		Rotate(gear2, 90, 0, speedstop);
+		done0 = 1;	
+		return;
+		}
+	# General rotation code.  Teleport is to make sure the rings don't wander.
+	TeleportThing(gear0, ghost0);
+	Rotate(gear0, 360, 0, speed);
+	TeleportThing(gear1, ghost1);
+	Rotate(gear1, 360, 2, speed);
+	TeleportThing(gear2, ghost2);
+	Rotate(gear2, 360, 1, speed);
+	}
+
+return;
+
+#........................................................................................
+entered:
+
+# Code to trigger rings to stop.
+if (GetSenderID() == 2)
+	{
+	nsInt = 1;
+	}
+if (GetSenderID() == 4)
+	{
+	ewInt = 1;
+	}
+
+return;
+
+#........................................................................................
+exited:
+
+# Code to start them up again.
+if (GetSenderID() == 2)
+	{
+	if (done0 == 1) 
+		{
+		Rotate(gear0, 90, 0, speed);
+		Rotate(gear1, 90, 0, speed);
+		Rotate(gear2, 90, 1, speed);
+        done0 = 0;
+		nsInt = 0;
+		return;
+		}
+	}
+if (GetSenderID() == 4)
+	{
+	if (done0 == 1) 
+		{
+		Rotate(gear0, 90, 2, speed);
+		Rotate(gear1, 90, 2, speed);
+		Rotate(gear2, 90, 0, speed);
+        done0 = 0;
+		ewInt = 0;
+		return;
+		}
+	}
+return;
+
+#........................................................................................
+end
+

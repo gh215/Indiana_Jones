@@ -1,0 +1,131 @@
+# ===================================================================
+# Jones 3D Cog Script
+#
+# actor_AIBruiser.cog
+#
+# [MDR] [RT]
+#
+# Actor script for Bruiser AI's.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ===================================================================
+
+symbols
+
+message		created
+message		timer
+message		damaged
+message		killed
+
+# ************************** TEMPLATES *************************
+template	tplFire=+bazooka_exp_fire	local
+template	tplSmoke=+bazooka_exp_smoke	local
+template	tplSparks=lavadeathsparks	local
+
+# ************************** WEAPON HANDLERS *******************
+int			weaponNum=23				local
+
+# ************************** MISC LOCAL VARS *******************
+thing		bandito						local
+int			index						local
+int			damageType					local
+int			TIMER_ID_WAKEUP_AND_DIE=1	local
+int			timerID						local 
+
+end
+
+# ===================================================================
+code
+
+# -------------------------------------------------------------------
+created:
+
+	bandito = GetSenderRef();
+
+	SetThingFireOffset(bandito, '-0.005 0.05 0.008');
+	SetWeaponModel(bandito, weaponNum);
+	SelectWeapon(bandito, weaponNum);
+
+	AIEnableInstinct(bandito, "circlestrafe", 0);
+	AIEnableInstinct(bandito, "roam", 0);
+
+	return;
+
+
+# -------------------------------------------------------------------
+timer:
+
+	bandito = GetParam(0);
+	timerID = GetSenderId();
+
+	if (timerID == TIMER_ID_WAKEUP_AND_DIE)
+	{
+		# Make sure not invulnerable
+		ClearActorFlags(bandito, 0x8);
+		# Using scrape damage to avoid infinite loop
+		DamageThing(bandito, GetThingMaxHealth(bandito), 0x1000000, GetLocalPlayerThing());
+	}
+
+	return;
+
+
+# -------------------------------------------------------------------
+damaged:
+
+	bandito = GetSenderRef();
+	damageType = GetParam(1);
+
+	# Jeep or MineCar hit us
+	if (damageType == 0x02000000)
+	{
+		# If invulnerable or immobile, ignore -- avoids multiple collision problem
+		if (BITTEST(GetActorFlags(bandito), 0x40008))
+		{ 
+			ReturnEx(0);
+			return;
+		}
+		else if (GetParam(0) >= GetThingHealth(bandito))
+		{
+			# Get rid of his gun, says Hal...
+			ResetWeaponModel(bandito);
+
+			# Pause long enough to land
+			AIRunOver(bandito, RandBetween(5, 6), TIMER_ID_WAKEUP_AND_DIE);
+			ReturnEx(0);
+			return;
+		}
+	}
+
+	return;
+
+
+# -------------------------------------------------------------------
+killed:
+
+	bandito = GetSenderRef();
+
+	# Killed by lava?
+	if (GetParam(1) == 0x200)
+	{
+		Sleep(0.1);
+		CreateThing(tplFire, bandito);
+		Sleep(0.3);
+		CreateThing(tplSmoke, bandito);
+		SetThingFlags(bandito, 0x80000);
+
+		for (index = 0; index < 10; index = index + 1)
+		{
+			CreateThing(tplSparks, bandito);
+			Sleep(0.03);
+		}
+	}
+	else
+	{
+		# Get rid of his gun, says Hal...
+		ResetWeaponModel(bandito);
+	}
+
+	return;
+
+end
+

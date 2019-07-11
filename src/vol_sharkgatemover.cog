@@ -1,0 +1,177 @@
+# Jones 3D Cog Script
+#
+# vol_SharkGateMover.cog
+#
+# This cog will take the camera to a frame in fron tof the shark gate,watch 
+# it move then jump back to the player.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+   
+#................MESSAGES..............
+	message  startup
+	message  activated
+	message  arrived
+	message  pulse
+
+
+#................ACTORS..............
+	thing   player										local 		
+	thing   indy
+
+
+#................PROPS..............
+    thing   button 		
+	thing	gate			
+	thing	poles			
+	
+
+
+#................CAMERAS..............
+	thing	look1
+	thing	cam1
+	thing	camtarget
+
+
+#................CAMERA TARGETS..............
+	thing	indytarget									local
+#................VARIABLES..............
+    int     done=0										local
+    int     curCam										local
+
+	int		i_playerCT									local
+
+#................KEYFRAMES..............
+	keyframe	inReach=in_activate_medium.key        	local
+	
+
+#................VECTORS..............
+	vector	look1										local
+	vector	indyTargPos									local
+
+	
+#................TEMPLATES..............
+	template	ghostTpl=ghost							local
+
+
+#................SOUNDS..............
+    sound	ancientdevice=nub_aethdoorarm_start_c.wav	local
+	sound	music=mus_gen_awesome3.wav					local
+
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	done = 0;
+    AttachThingToThingEx(poles, gate, 0x000C);
+return;
+
+# ========================================================================================
+activated:
+                 // If player activates block
+   
+If (done == 1) return;
+If (GetSenderRef() == button)
+ 	{
+        StartCutScene(1);
+		done = 1;
+		
+		# get camera to known position
+		curCam = GetCurrentCamera();
+        SetExtCamOffsetToThing(cam1);
+        DeselectWeaponWait(player);
+		Sleep(0.5);
+		
+		# line up the actor
+		CopyOrientAndPos(player, indy);
+        CopyPlayerHolsters(player, indy);
+		SetThingFlags(player, 0x80000);
+		SetActorFlags(player, 0x200000);
+		ClearThingFlags(indy, 0x80000);
+		AISetLookThing(indy, button);
+		AIWaitForStop(indy);
+		i_playerCT = GetCollideType(indy);
+		SetCollideType(indy, 0);
+
+        # create a target right above and in front of indy actor
+		indyTargPos = VectorAdd(VectorTransformToOrient(indy, '0.0 0.02 0.02'), GetThingPos(indy));
+		indytarget = CreateThingAtPos(ghostTpl, GetThingSector(indy), indyTargPos, '0 0 0');
+		CaptureThing(indytarget);
+
+
+        PlayKey(indy, inReach, 4, 0x12, 0);
+		Sleep(0.5);
+		MovetoFrame(button, 1, .5);
+		Sleep(1.0);
+        # cameratricks
+		SetCameraFocus(2, cam1);
+		SetCameraSecondaryFocus(2, indytarget);
+		SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 4);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		Sleep(1.0);
+		SetCameraSecondaryFocus(2, camtarget);
+		
+		
+        Sleep(0.25);
+        # camera flies toward gate
+		MovetoFrame(cam1, 2, 3.0);
+		SetCameraFOV(80, 1, 3.0);
+		Sleep(0.25);
+        # machinery runs
+		PlaySoundLocal(ancientdevice, 0.5, 1, 0x0, 0);
+		Sleep(0.5);
+		# music cue plays
+		PlaySoundLocal(music, 1.0, 0.0, 0x0, 0);
+    	Sleep(3.0);
+		
+		# screenshake starts as gate moves
+		SetPulse(.05);
+        MovetoFrame(gate, 1, 0.75);
+        return;
+	}
+
+return;
+
+# ========================================================================================
+arrived:
+
+    If ((GetSenderRef() == gate) && (GetCurFrame(gate) == 1))
+		{
+			SetPulse(0);
+			Sleep(2.0);
+			ResetCameraFOV(0, 0.0);
+            SetCurrentCamera(curCam);
+            RestoreExtCam();
+			SetCollideType(indy, i_playerCT);
+			SetThingFlags(indy, 0x80000);
+			ClearThingFlags(player, 0x80000);
+			ClearActorFlags(player, 0x200000);
+			MovetoFrame(cam1, 0, 100);
+			EndCutScene();
+		}
+
+return;
+				
+# ========================================================================================
+pulse:
+
+	SetPOVShake('0.0 0.0 0.01', '0.0 0.0 0.0', 80.0, 0.80);
+	return;
+
+# ========================================================================================
+
+
+end
+
+

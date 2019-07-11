@@ -1,0 +1,57 @@
+# Jones 3D Cog Script
+#
+# nub_DynaLight.cog
+#
+# [TRM] [TL]
+#
+# 10/21/98 RT: Added radius		8/29/99 GGJ:  Changed radius.  : )
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	startup
+
+thing	thing0
+thing	thing1
+thing	thing2
+thing	thing3
+thing	thing4
+thing	thing5
+thing	thing6
+
+flex	rval=0.5	local
+flex	gval=0.5	local
+flex	bval=0.5	local
+flex	radius=0.001	local			#GGJ  changed from 0.1
+flex	speed=1.0	local
+
+vector	color		local
+
+int		numThings=7	local
+int		index		local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+Sleep(5.0); #remove this later
+
+color = VectorSet(rval, gval, bval);
+
+for (index = 0; index <= numThings; index = index + 1)
+	{
+	if (thing0[index] > -1)
+		{
+		SetThingLight(thing0[index], color, radius, speed);
+		}
+	}
+
+return;
+
+# ........................................................................................
+end

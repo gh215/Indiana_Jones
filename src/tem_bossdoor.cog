@@ -1,0 +1,904 @@
+# Jones 3D Cog Script
+#
+# TEM_BossDoor.cog
+#
+# Tiki1 = left (bin 53)
+# Tiki2 = Right (bin 99)
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     exited
+    message     activated
+    message     arrived
+    
+    # ** local things **
+    thing       tiki1           local
+    thing       tiki2           local
+    thing       player          local
+    
+    # ** things **
+    thing       lDoor
+    thing       rDoor
+    thing       tiki1Ghost
+    thing       tiki2Ghost       
+    thing       camera          
+    thing       camTarget       
+    thing       walkTarg1
+    thing       LDoorOffset
+    thing       RDoorOffset
+    thing       centerOffset
+    thing       indyL
+    thing       indyR
+    
+    # ** surfaces **
+    surface     lSpot0      linkID=1
+    surface     lSpot1      linkID=1
+    surface     lSpot2      linkID=1
+    surface     lSpot3      linkID=1
+    surface     lSpot4      linkID=1
+    surface     lSpot5      linkID=1
+    surface     lSpot6      linkID=1
+    surface     lSpot7      linkID=1
+    surface     lSpot8      linkID=1
+    
+    surface     rSpot0      linkID=2
+    surface     rSpot1      linkID=2
+    surface     rSpot2      linkID=2
+    surface     rSpot3      linkID=2
+    surface     rSpot4      linkID=2
+    surface     rSpot5      linkID=2
+    surface     rSpot6      linkID=2
+    surface     rSpot7      linkID=2
+    surface     rSpot8      linkID=2
+    
+    surface     groove1
+    surface     groove2
+    
+    # ** sectors **
+    sector      doorSec
+    sector      closeSec         
+        
+    # ** templates **
+    template    tikiKey1=tikikeymove            local
+    template    tikiKey2=tikikeybmove           local
+    template    tplActor=indy_sh_actor          local
+    
+    # ** keys **
+    keyframe    inReach=in_pickup.key	        local
+    
+    # ** using the wrong or no item lines (whichLine = 1) **
+	sound	    in_WrongLine0=Inxj089.wav       local # That didn't work
+	sound	    in_WrongLine1=Inxj090.wav		local # ...something wrong.
+	sound	    in_WrongLine2=Inxj092.wav		local # Hmm...didn't quite work.
+	sound	    in_WrongLine3=Inxj060.wav		local # I don't think...right answer
+	sound	    in_WrongLine4=Inxj091.wav		local # Of course that didn't work.
+    
+    # ** locked door lines (whichLine = 2) **
+    sound	    in_DoorLocked0=Inxj081.wav		local # Oh no...why...always locked?
+    sound       in_DoorLocked1=Inxj076.wav      local # This door is locked
+    sound       in_DoorLocked2=Inxj077.wav      local # it's locked
+    sound	    in_DoorLocked3=Inxj078.wav		local # Locked.
+	sound	    in_DoorLocked4=Inxj080.wav		local # Locked...luck never changes.
+    
+    # ** wrong spot lines **
+	sound	    in_WrongSpot0=Inxj093.wav		local # Good idea...
+	sound	    in_WrongSpot1=Inxj094.wav		local # Perfect world...but not this one
+	sound	    in_WrongSpot2=Inxj095.wav		local # Must be a different way
+	sound	    in_WrongSpot3=Inxj092.wav		local # Hmm, didn't quite work
+    
+    # ** success key lines **
+	sound	    in_Success0=Inxj110.wav			local # Success!
+	sound	    in_Success1=Inxj108.wav			local # There!
+	sound	    in_Success2=Inxj109.wav			local # It fits!
+    
+    # ** misc voice lines **
+    sound       in_Stubby=Tm03j04.wav           local   # this door has stubby little...
+    sound       in_Help=Tm03j05.wav             local   # now... get these things... move...
+    
+    # ** misc sound fx **
+    sound       sndRotate=tem_tikikeymove_rotate_c.wav  local
+    
+    # ** music **
+    sound       mus_Cue=mus_gen_awesome2.wav    local
+    sound       mus_CloseCue=mus_gen_eerie2.wav local
+    
+    cog         cog_Hint
+    
+    # ** subroutines **
+    flex        readyTiki1_53       local
+    flex        readyTiki1_99       local
+    flex        readyTiki2_53       local
+    flex        readyTiki2_99       local
+    flex        hideplayer          local
+    flex        restoreplayer       local
+    flex        rotatetikis         local
+    flex        firstspeak          local
+    flex        speak               local
+    flex        wrongSpot           local
+        
+    # ** integers **
+    int         tikiTurned=0        local
+    int         doorClosed=1        local
+    int         lastFrame=0         local
+    int         lSpot=0             local
+    int         rSpot=0             local
+    int         playing=0           local
+    int         closed=0            local
+    int         whichLine=0         local
+    int         firstTime=0         local
+    int         tiki1Down=0         local
+    int         tiki2Down=0         local
+    int         LDoorActivated=0    local
+    int         RDoorActivated=0    local
+    
+    int         sender              local
+    int         newComment          local
+    int         oldComment          local
+    int         curItem             local
+    int         curCam              local
+    int         firstVisit=1        local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetThingLight(lDoor, '0.4 0.25 0.25', 0.001, 0.1);
+    SetThingLight(rDoor, '0.4 0.25 0.25', 0.001, 0.1);
+    SectorAdjoins(doorSec, 0);
+    
+    # hide actors at startup
+    SetThingFlags(indyL, 0x80000);
+    SetThingFlags(indyR, 0x80000);
+    
+    return;
+        
+# ========================================================================================
+
+entered:
+
+    if(GetSenderID() == 1)
+    {
+        lSpot = 1;
+    }
+        
+    if(GetSenderID() == 2)
+    {
+        rSpot = 1;
+    }
+    
+    # close the doors behind the player so he can't escape!
+    if((GetSenderRef() == closeSec) && (closed == 0) && (lastFrame == 1))
+    {
+        PlaySoundLocal(mus_CloseCue, 1.0, 0.0, 0x0, 0);
+        MoveToFrame(tiki1, 0, 3.0);
+        MoveToFrame(tiki2, 0, 3.0);
+        MoveToFrame(lDoor, 0, 3.0);
+        MoveToFrame(rDoor, 0, 3.0);
+        WaitForStop(lDoor);
+        SectorAdjoins(doorSec, 0);
+        closed = 1;
+    }
+        
+    return;
+
+# ========================================================================================
+
+exited:
+
+    player = GetLocalPlayerThing();
+    
+    if (GetSourceRef() == player)
+    {
+        if(GetSenderID() == 1) 
+        {
+            lSpot = 0;
+        }
+            
+        if(GetSenderID() == 2) 
+        {
+            rSpot = 0;
+        }
+    }
+        
+    return;
+    
+# ========================================================================================
+
+activated:
+    
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+    curItem = GetCurItem(player);
+
+# *********************
+# ** Begin Left Door **
+# *********************
+    if((GetSenderRef() == lDoor) && (lSpot == 1) && (playing == 0))
+    {
+        # first visit to door and is not using a tiki key
+        if((firstVisit == 1) && (closed == 0) && (curItem != 53) && (curItem != 99))
+        {
+            firstVisit = 0;
+            LDoorActivated = 1;
+            playing = 1;
+            Call firstSpeak;
+        }
+            
+        else if(curItem == 53)
+        {
+            LDoorActivated = 1;
+            playing = 1;
+            Call readyTiki1_53;
+        }
+        
+        else if(curItem == 99)
+        {
+            LDoorActivated = 1;
+            playing = 1;
+            Call readyTiki1_99;
+        }
+        
+        # player doesn't have or isn't using tiki key
+        else if(curItem == 0)
+        {
+            LDoorActivated = 1;
+            playing = 1;
+            whichLine = 2;
+            Call speak;
+            whichLine = 0;
+        }
+            
+        # player is using something other than tiki key
+        else
+        {
+            LDoorActivated = 1;
+            playing = 1;
+            whichLine = 1;
+            Call speak;
+            whichLine = 0;
+        }
+        
+        LDoorActivated = 0;
+    }
+    
+    # standing on wrong spot
+    else if((GetSenderRef() == lDoor) && (lSpot == 0) && (playing == 0))
+    {
+        # first visit to door
+        if((firstVisit == 1) && (closed == 0) && (curItem != 53) && (curItem != 99))
+        {
+            firstVisit = 0;
+            LDoorActivated = 1;
+            playing = 1;
+            Call firstSpeak;
+        }
+        
+        # player is using tiki key in wrong spot
+        else if((curItem == 53) || (curItem == 99))
+        {
+            LDoorActivated = 1;
+            playing = 1;
+            Call wrongSpot;
+        }
+        
+        # player doesn't have or isn't using tiki key
+        else if(curItem == 0)
+        {
+            LDoorActivated = 1;
+            playing = 1;
+            whichLine = 2;
+            Call speak;
+            whichLine = 0;
+        }
+            
+        # player is using something other than tiki key
+        else
+        {
+            LDoorActivated = 1;
+            playing = 1;
+            whichLine = 1;
+            Call speak;
+            whichLine = 0;
+        }
+        
+        LDoorActivated = 0;
+    }
+    
+# **********************    
+# ** Begin Right Door **
+# **********************
+    else if((GetSenderRef() == rDoor) && (rSpot == 1) && (playing == 0))
+    {
+        # first visit to door and is not using a tiki key
+        if((firstVisit == 1) && (closed == 0) && (curItem != 53) && (curItem != 99))
+        {
+            firstVisit = 0;
+            RDoorActivated = 1;
+            playing = 1;
+            Call firstSpeak;
+        }
+        
+        else if(curItem == 53)
+        {
+            RDoorActivated = 1;
+            playing = 1;
+            Call readyTiki2_53;
+        }
+        
+        else if(curItem == 99)
+        {
+            RDoorActivated = 1;
+            playing = 1;
+            Call readyTiki2_99;
+        }
+        
+        # player doesn't have or isn't using tiki key
+        else if(curItem == 0)
+        {
+            RDoorActivated = 1;
+            playing = 1;
+            whichLine = 2;
+            Call speak;
+            whichLine = 0;
+        }
+            
+        # player is using something other than tiki key
+        else
+        {
+            RDoorActivated = 1;
+            playing = 1;
+            whichLine = 1;
+            Call speak;
+            whichLine = 0;
+        }
+        
+        RDoorActivated = 0;
+    }
+    
+    # standing on the wrong spot
+    else if((GetSenderRef() == rDoor) && (rSpot == 0) && (playing == 0))
+    {
+        # first visit to door
+        if((firstVisit == 1) && (closed == 0) && (curItem != 53) && (curItem != 99))
+        {
+            firstVisit = 0;
+            RDoorActivated = 1;
+            playing = 1;
+            Call firstSpeak;
+        }
+        
+        # player is using tiki key in wrong spot
+        else if((curItem == 53) || (curItem == 99))
+        {
+            RDoorActivated = 1;
+            playing = 1;
+            Call wrongSpot;
+        }
+        
+        # player doesn't have or isn't using tiki key
+        else if(curItem == 0)
+        {
+            RDoorActivated = 1;
+            playing = 1;
+            whichLine = 2;
+            Call speak;
+            whichLine = 0;
+        }
+            
+        # player is using something other than tiki key
+        else
+        {
+            RDoorActivated = 1;
+            playing = 1;
+            whichLine = 1;
+            Call speak;
+            whichLine = 0;
+        }
+        
+        RDoorActivated = 0;
+    }
+    
+    return;
+
+# ========================================================================================
+
+readyTiki1_53:
+
+    # hide player, create actor
+    Call hideplayer;
+        
+    tiki1Down = 1;
+            
+    # kneel down
+    PlayKey(indyL, inReach, 4, 0x12, 0);
+    Sleep(1.0);
+    
+    # create tiki
+    tiki1 = CreateThing(tikiKey1, tiki1Ghost);
+    CaptureThing(tiki1);
+    
+    # say success line
+    PlayVoice(indyL, in_Success0[RandBetween(0, 2)], 1.0, 0);
+    
+    # remove tiki from inventory
+    ChangeInv(player, 53, -1);
+    
+    Sleep(1.0);
+    
+    # both tikis down, open doors
+    if((tiki1Down == 1) && (tiki2Down == 1))
+    {
+        Call rotatetikis;
+    }
+    
+    # only one tiki down so restore player
+    else
+    {
+        Call restoreplayer;
+    }
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+readyTiki1_99:
+
+    # hide player, create actor
+    Call hideplayer;
+    
+    tiki1Down = 1;
+            
+    # kneel down
+    PlayKey(indyL, inReach, 4, 0x12, 0);
+    Sleep(1.0);
+    
+    # create tiki
+    tiki1 = CreateThing(tikiKey2, tiki1Ghost);
+    CaptureThing(tiki1);
+    
+    # say success line
+    PlayVoice(indyL, in_Success0[RandBetween(0, 2)], 1.0, 0);
+    
+    # remove tiki from inventory
+    ChangeInv(player, 99, -1);
+    
+    Sleep(1.0);
+    
+    # both tikis down, open doors
+    if((tiki1Down == 1) && (tiki2Down == 1))
+    {
+        Call rotatetikis;
+    }
+    
+    # only one tiki down so restore player
+    else
+    {
+        Call restoreplayer;
+    }
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+readyTiki2_53:
+
+    # hide right player and offset camera
+    Call hideplayer;
+    
+    tiki2Down = 1;
+
+    # kneel down
+    PlayKey(indyR, inReach, 4, 0x12, 0);
+    Sleep(1.0);
+    
+    # create tiki
+    tiki2 = CreateThing(tikiKey1, tiki2Ghost);
+    CaptureThing(tiki2);
+    
+    # say success line
+    PlayVoice(indyR, in_Success0[RandBetween(0, 2)], 1.0, 0);
+    
+    # remove tiki from inventory
+    ChangeInv(player, 53, -1);
+    
+    Sleep(1.0);
+    
+    # both tikis down, open doors
+    if((tiki1Down == 1) && (tiki2Down == 1))
+    {
+        Call rotatetikis;
+    }
+    
+    # only one tiki down so restore player
+    else
+    {
+        Call restoreplayer;
+    }
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+readyTiki2_99:
+
+    # hide right player and offset camera
+    Call hideplayer;
+    
+    tiki2Down = 1;
+            
+    # kneel down
+    PlayKey(indyR, inReach, 4, 0x12, 0);
+    Sleep(1.0);
+    
+    # create tiki
+    tiki2 = CreateThing(tikiKey2, tiki2Ghost);
+    CaptureThing(tiki2);
+    
+    # say success line
+    PlayVoice(indyR, in_Success0[RandBetween(0, 2)], 1.0, 0);
+    
+    # remove tiki from inventory
+    ChangeInv(player, 99, -1);
+    Sleep(1.0);
+    
+    # both tikis down, open doors
+    if((tiki1Down == 1) && (tiki2Down == 1))
+    {
+        Call rotatetikis;
+    }
+    
+    # only one tiki down, restore player
+    else
+    {
+        Call restoreplayer;
+    }
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+hideplayer:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # hide player
+    SetThingFlags(player, 0x80000);
+    
+    # create actor at player position
+    if(LDoorActivated == 1)
+    {
+        # move ext cam around actor indy
+        #SetExtCamOffsetToThing(RDoorOffset);
+        
+        SetCameraFocus(2, RDoorOffset);
+        SetCameraSecondaryFocus(2, indyL);
+        SetCurrentCamera(2);
+        
+        # outfit indyL actor
+        CopyPlayerHolsters(player, indyL);
+    
+        # show indyL actor
+        ClearThingFlags(indyL, 0x80000);
+    }
+    
+    else if(RDoorActivated == 1)
+    {
+        # move ext cam around actor indy
+        #SetExtCamOffsetToThing(LDoorOffset);
+        
+        SetCameraFocus(2, LDoorOffset);
+        SetCameraSecondaryFocus(2, indyR);
+        SetCurrentCamera(2);
+        
+        # outfit indyR actor
+        CopyPlayerHolsters(player, indyR);
+        
+        # show indyR actor
+        ClearThingFlags(indyR, 0x80000);
+    }
+    
+    return;
+    
+# ========================================================================================
+
+restoreplayer:
+
+    Print("restoreplayer");
+    
+    if(LDoorActivated == 1)
+    {
+        # get player into position
+        CopyOrientAndPos(indyL, player);
+        
+        # hide indyL
+        SetThingFlags(indyL, 0x80000);
+        
+        #LDoorActivated = 0;
+    }
+    
+    else if(RDoorActivated == 1)
+    {
+        # get player into position
+        CopyOrientAndPos(indyR, player);
+        
+        # hide indyR
+        SetThingFlags(indyR, 0x80000);
+        
+        #RDoorActivated = 0;
+    }
+    
+    # show player
+    ClearThingFlags(player, 0x80000);
+    
+    # restore camera
+    SetCameraPosition(curCam, GetThingPos(camera));
+    SetCurrentCamera(curCam);
+    RestoreExtCam();
+    
+    # restore player controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    return;
+    
+# ========================================================================================
+
+rotatetikis:
+
+    if((tiki1Down == 1) && (tiki2Down == 1))
+    {
+        tikiturned = 1;
+        
+        Sleep(1.0);
+        
+        # solve hint 36
+        SendMessage(cog_Hint, user0);
+        
+        # Switch to external cam
+        SetCameraFocus(2, camera);
+        SetCameraSecondaryFocus(2, camTarget);
+        SetCurrentCamera(2);
+        
+        # actor takes a step back
+        if(LDoorActivated == 1)
+        {
+            #PlayVoice(indyL, in_Help, 1.0, 1);
+            
+            AISetMoveSpeed(indyL, 0.65);
+            AISetMoveThing(indyL, walkTarg1, 1);
+            CopyOrientAndPos(indyL, player);
+            SetThingFlags(indyL, 0x80000);
+            ClearThingFlags(player, 0x80000);
+        }
+        
+        else if(RDoorActivated == 1)
+        {
+            #PlayVoice(indyR, in_Help, 1.0, 1);
+            
+            AISetMoveSpeed(indyR, 0.65);
+            AISetMoveThing(indyR, walkTarg1, 1);
+            CopyOrientAndPos(indyR, player);
+            SetThingFlags(indyR, 0x80000);
+            ClearThingFlags(player, 0x80000);
+        }
+        
+        # mark grooves move so tikis will slide
+        SetAdjoinFlags(groove1, 2);
+        SetAdjoinFlags(groove2, 2);
+        SetAdjoinFlags(lSpot3, 2);
+        SetAdjoinFlags(lSpot6, 2);
+        SetAdjoinFlags(rSpot3, 2);
+        SetAdjoinFlags(rSpot6, 2);
+        
+        # play music cue
+        PlaySoundLocal(mus_Cue, 1.0, 0.0, 0x0, 0);
+    
+        # rotate the tiki's
+        Rotate(tiki1, -90, 1, 2.0);
+        PlaySoundThing(sndRotate, tiki1, 1.0, 5.0, 10.0, 0);
+        Rotate(tiki2, 90, 1, 2.0);
+        PlaySoundThing(sndRotate, tiki2, 1.0, 5.0, 10.0, 0);
+    }
+        
+    return;
+
+# ========================================================================================
+
+firstSpeak:
+
+    Print("firstVisit");
+            
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # move ext cam around player
+    if(LDoorActivated == 1) SetExtCamOffsetToThing(RDoorOffset);
+    
+    else if(RDoorActivated == 1) SetExtCamOffsetToThing(LDoorOffset);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # say voice line
+    PlayVoice(player, in_Stubby, 1.0, 1);
+    
+    # return camera to normal
+    RestoreExtCam();
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+speak:
+
+    while (newComment == oldComment) 
+    {
+        newComment = RandBetween(0, 4);
+    }
+    
+    oldComment = newComment;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # move ext cam around player
+    if(LDoorActivated == 1) SetExtCamOffsetToThing(RDoorOffset);
+    
+    else if(RDoorActivated == 1) SetExtCamOffsetToThing(LDoorOffset);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    if(whichLine == 1)
+    {
+        if(LDoorActivated == 1)
+        {
+            PlayVoice(indyL, in_WrongLine0[newComment], 1.0, 1);
+        }
+        
+        if(RDoorActivated == 1)
+        {
+            PlayVoice(indyR, in_WrongLine0[newComment], 1.0, 1);
+        }
+    }
+    
+    else if(whichLine == 2)
+    {
+        if(LDoorActivated == 1)
+        {
+            PlayVoice(indyL, in_DoorLocked0[newComment], 1.0, 1);
+        }
+        
+        if(RDoorActivated == 1)
+        {
+            PlayVoice(indyR, in_DoorLocked0[newComment], 1.0, 1);
+        }
+    }
+    
+    # return camera to normal
+    RestoreExtCam();
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+
+# ========================================================================================
+
+wrongSpot:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # move ext cam around player
+    if(LDoorActivated == 1) SetExtCamOffsetToThing(RDoorOffset);
+    
+    else if(RDoorActivated == 1) SetExtCamOffsetToThing(LDoorOffset);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # nudge door
+    #PlayMode(player, 60, 0);
+    #Sleep(0.3);
+    
+    # say voice line
+    PlayVoice(player, in_WrongSpot0[RandBetween(0, 3)], 1.0, 1);
+    
+    # return camera to normal
+    RestoreExtCam();
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+arrived:
+
+    if((lastFrame == 1) && (doorClosed == 0))
+    {
+        return;
+    }
+        
+    if((GetSenderRef() == tiki1) && (tikiTurned == 1 ))
+    {       
+        # open the doors
+        doorClosed = 0;
+        SectorAdjoins(doorSec, 1);
+        MoveToFrame(tiki1, 1, 1.0);
+        MoveToFrame(tiki2, 1, 1.0);
+        MoveToFrame(lDoor, 1, 1.0);
+        MoveToFrame(rDoor, 1, 1.0);
+    }
+        
+    if((doorClosed == 0) && (GetSenderRef() == lDoor))
+    {
+        lastFrame = 1;
+        
+        # Return control and camera to player
+        #SetCurrentCamera(curCam);
+        Sleep(1.0);
+        Call restoreplayer;
+        
+        # mark grooves no move
+        ClearAdjoinFlags(groove1, 2);
+        ClearAdjoinFlags(groove2, 2);
+        ClearAdjoinFlags(lSpot3, 2);
+        ClearAdjoinFlags(lSpot6, 2);
+        ClearAdjoinFlags(rSpot3, 2);
+        ClearAdjoinFlags(rSpot6, 2);
+    }
+         
+    return;    
+
+# ========================================================================================
+
+end
+

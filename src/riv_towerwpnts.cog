@@ -1,0 +1,329 @@
+# Jones 3D Cog Script
+#
+# Riv_TowerWpnts.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#========================================================================================
+
+symbols
+   
+    message     startup
+    message		user0  	
+    message		user1
+    message     entered
+    message     killed
+    
+    # ** commies **
+    thing       com1
+    thing       com2
+    thing       com3
+    thing       com4
+    
+    # ** com3 waypoints **
+    thing       t_Wpnt0
+    thing       t_Wpnt1
+    thing       t_Wpnt2
+    thing       t_Wpnt3
+    thing       t_Wpnt4
+    thing       t_Wpnt5
+    thing       t_Wpnt6
+    thing       t_Wpnt7
+    thing       t_Wpnt8
+    thing       t_Wpnt9
+    thing       t_Wpnt10
+    thing       t_Wpnt11
+    thing       t_Wpnt12
+    thing       t_Wpnt13
+    thing       t_Wpnt14
+    thing       t_Wpnt15
+    thing       t_Wpnt16
+    thing       t_Wpnt17
+    thing       t_Wpnt18
+    thing       t_Wpnt19
+    thing       t_Wpnt20
+    thing       t_Wpnt21
+    thing       t_Wpnt22
+    thing       t_Wpnt23
+    thing       t_Wpnt24
+    thing       t_Wpnt25
+    thing       t_Wpnt26
+    thing       t_Wpnt27
+    thing       t_Wpnt28
+    thing       t_Wpnt29
+    thing       t_Wpnt30
+    
+    sector      sec_Activate1       linkID=1
+    sector      sec_Activate2       linkID=1
+    sector      sec_Activate3       linkID=1        # raft house
+    sector      sec_Deactivate1     linkID=0
+    sector      sec_Deactivate2     linkID=0
+    sector      sec_Deactivate3     linkID=0        # raft house
+    
+    int         n_pos=0         local
+    int         n_Wpnts=31      local
+    int         wpntsActive=1   local
+    
+    # ** subroutines **
+    flex        activate_Wpnts      local
+    flex        deactivate_Wpnts    local
+	
+end
+
+#========================================================================================
+
+code
+
+startup:
+
+    # prepare commies for boarder cutscene
+    
+    if(GetPerformanceLevel() == 0)
+    {
+        SetThingFlags(com1, 0x80000);
+        SetThingFlags(com2, 0x80000);   
+    }
+    
+    else
+    {
+        AISetCutsceneMode(com1);
+        AISetCutsceneMode(com2);
+    }
+    
+    AISetCutsceneMode(com3);
+    
+    return;
+
+#========================================================================================
+
+entered:
+
+    if(GetSenderID() == 1)
+    {
+        call activate_Wpnts;
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        call deactivate_Wpnts;
+    }
+    
+    return;
+    
+#========================================================================================
+
+user0:
+
+    # restore commie 'brains'
+    
+    if(GetPerformanceLevel() > 0)
+    {
+        AIClearCutsceneMode(com1);
+        AIClearCutsceneMode(com2);
+    }
+    
+    AIClearCutsceneMode(com3);
+    
+    Sleep(0.01);
+    
+    for(n_pos = 0; n_pos < n_Wpnts; n_pos = n_pos + 1)
+    {
+        AISetWpnt(t_Wpnt0[n_pos], n_pos);
+    }
+
+    # com3 waypoints (on tower)
+    AIConnectWpnts(0, 1);
+    AIConnectWpnts(1, 2);
+    
+    # com2 waypoints (near river)
+    AIConnectWpnts(3, 4);
+    AIConnectWpnts(4, 5);
+    AIConnectWpnts(5, 6);
+    AIConnectWpnts(6, 7);
+    
+    AIConnectWpnts(8, 9);
+    AIConnectWpnts(8, 10);
+    AIConnectWpnts(9, 10);
+    AIConnectWpnts(10,11);
+    
+    # com1 waypoints (near gate)
+    AIConnectWpnts(12, 13);
+    AIConnectWpnts(13, 14);
+    AIConnectWpnts(14, 15);
+    
+    # behind tower
+    AIConnectWpnts(16, 17);
+    AIConnectWpnts(16, 15);
+    AIConnectWpnts(17, 18);
+    
+    # other side of bridge
+    AIConnectWpnts(19, 20);
+    AIConnectWpnts(19, 21);
+    AIConnectWpnts(20, 21);
+    AIConnectWpnts(21, 22);
+    AIConnectWpnts(21, 19);
+    AIConnectWpnts(22, 23);
+    AIConnectWpnts(22, 19);
+    AIConnectWpnts(23, 24);
+    AIConnectWpnts(23, 21);
+    AIConnectWpnts(23, 22);
+    AIConnectWpnts(24, 25);
+    AIConnectWpnts(25, 23);
+    AIConnectWpnts(25, 26);
+    AIConnectWpnts(26, 27);
+    AIConnectWpnts(26, 28);
+    AIConnectWpnts(27, 28);
+    AIConnectWpnts(27, 25);
+    AIConnectWpnts(28, 29);
+    AIConnectWpnts(29, 30);
+    AIConnectWpnts(30, 27);
+    AIConnectWpnts(30, 28);
+    
+    if(GetPerformanceLevel() > 0)
+    {
+        AITraverseWpnts(com2, 3, 1.0, 20.0, 1);
+    }
+    
+    AITraverseWpnts(com3, 0, 1.0, 20.0, 1);
+    
+    Sleep(4.0);
+    
+    if(GetPerformanceLevel() > 0)
+    {
+        AITraverseWpnts(com1, 12, 1.0, 20.0, 1);
+    }
+    
+    return;
+
+#========================================================================================
+
+user1:
+
+    if(GetPerformanceLevel() > 0)
+    {
+        AISetInstinctWpntMode(com1);
+        AIEnableInstinct(com1, "roam", 1);
+        
+        AISetInstinctWpntMode(com2);
+        AIEnableInstinct(com2, "roam", 1);
+    }
+    
+    AISetInstinctWpntMode(com3);
+    AIEnableInstinct(com3, "roam", 1);
+    
+    AISetInstinctWpntMode(com4);
+    
+    AIConnectWpnts(5, 7);
+    AIConnectWpnts(6, 4);
+    #AIConnectWpnts(5, 19);
+    #AIConnectWpnts(6, 20);
+    AIConnectWpnts(4, 8);
+    AIConnectWpnts(7, 9);
+    AIConnectWpnts(11, 8);
+    AIConnectWpnts(11, 12);
+    AIConnectWpnts(11, 13);
+    
+    AIConnectWpnts(18, 3);
+    
+    return;
+
+#========================================================================================
+
+killed:
+
+    if(GetSenderRef() == com1) com1 = -1;
+    if(GetSenderRef() == com2) com2 = -1;
+    if(GetSenderRef() == com3) com3 = -1;
+    if(GetSenderRef() == com4) com4 = -1;
+    
+    return;
+
+#========================================================================================
+
+activate_Wpnts:
+
+    if(wpntsActive == 1) return;
+    
+#    DebugPrint("TowerWpnts Activated!");
+    
+    wpntsActive = 1;
+
+    if(GetPerformanceLevel() > 0)
+    {
+        if(com1 > -1)
+        {
+            AIClearCutsceneMode(com1);
+            AISetInstinctWpntMode(com1);
+            AIEnableInstinct(com1, "roam", 1);
+        }
+        
+        if(com2 > -1)
+        {
+            AIClearCutsceneMode(com2);
+            AISetInstinctWpntMode(com2);
+            AIEnableInstinct(com2, "roam", 1);
+        }
+    }
+    
+    if(com3 > -1)
+    {
+        AIClearCutsceneMode(com3);
+        AISetInstinctWpntMode(com3);
+        AIEnableInstinct(com3, "roam", 1);
+    }
+    
+    if(com4 > -1)
+    {
+        AIClearCutsceneMode(com4);
+        AISetInstinctWpntMode(com4);
+    }
+    
+    return;
+
+#========================================================================================
+
+deactivate_Wpnts:
+
+    if(wpntsActive == 0) return;
+    
+#    DebugPrint("TowerWpnts Deactivated!");
+    
+    wpntsActive = 0;
+
+    if(GetPerformanceLevel() > 0)
+    {
+        if(com1 > -1)
+        {
+            AIClearInstinctWpntMode(com1);
+            SetActorFlags(com1, 0x400);		# 0x400 = DEAF
+            AISetCutsceneMode(com1);
+        }
+        
+        if(com2 > -1)
+        {
+            AIClearInstinctWpntMode(com2);
+            SetActorFlags(com2, 0x400);		# 0x400 = DEAF
+            AISetCutsceneMode(com2);
+        }
+    }
+    
+    if(com3 > -1)
+    {
+        AIClearInstinctWpntMode(com3);
+        SetActorFlags(com3, 0x400);		# 0x400 = DEAF
+        AISetCutsceneMode(com3);
+    }
+    
+    if(com4 > -1)
+    {
+        AIClearInstinctWpntMode(com4);
+        SetActorFlags(com4, 0x400);		# 0x400 = DEAF
+        AISetCutsceneMode(com4);
+    }
+
+    return;
+
+#========================================================================================
+
+end

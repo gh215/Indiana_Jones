@@ -1,0 +1,195 @@
+# Jones 3d Cog Script
+#
+# gen_ExplodingDebris.cog
+#
+# Generic debris/sub explosions generation script
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    message     damaged
+    message     startup
+    message     activate
+    message     pulse    
+
+    thing       player                              local 
+    thing       dust                              local 
+    thing       extcampos                           
+    thing		bombpos     			            desc=explode_thing
+    thing       smokepos                            
+    thing       bombcampos                          desc=position for bombcam
+                                                    
+    surface     outerwall                           mask=0x408      desc=hit_this_thing
+                                                    
+    sector      holesector                          		
+                                                    
+    template	debris0=stoneshrapa_nc              local 		
+    template	debris1=stoneshrapb_nc              local 		
+    template	debris2=stoneshrapc_nc              local 		
+    template	debris3=stoneshrapa_nc              local 		
+    template	debris4=stoneshrapb_nc              local
+                                                    
+    template    smoke0=dustcloud                    local
+#    template    smoke1=+pistol_smoke2               local
+#    template    smoke2=+pistol_smoke2               local 		
+    		                                        
+    vector      liteval                             local
+    vector      nolite                              local
+                                                    
+    int		    dummy				                local
+    int         hitit=0                             local
+    int		    pieces=40			                desc=num_debris
+    int		    i				                    local
+    int		    fragment			                local
+    int         vibe                                local
+    int         wepnum=1                            local
+    vector      posOffset                           local      
+    vector      angOffset                           local
+    
+    sound		explode_snd=gen_bazooka_fire.wav	local
+    sound       charging=nub_aethlight_on_c.wav     local
+    
+    sound       indyline0=inxj025.wav               local
+    sound       indyline1=inxj026.wav               local
+    
+    sound       indylineb0=inxj058.wav              local
+    sound       indylineb1=inxj059.wav              local
+    sound       indylineb2=inxj060.wav              local
+    sound       indylineb3=inxj061.wav              local
+    sound       indylineb4=inxj090.wav              local
+    sound       indylineb5=inxj095.wav              local
+
+end
+# ========================================================================================
+
+code
+
+# ========================================================================================
+activate:
+    //handles indy just activating the wall with nothing in his hand
+    //print("Indy is knocking on the door");
+    if ((GetSenderRef() == outerwall) && 
+        (GetSourceRef() == player) && 
+        (GetCurWeapon(player) != 14) && 
+        (GetCurItem(player) == 0))
+    {
+        StartCutscene(0);
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        PlayMode(player, 60, 0);
+        SetExtCamOffsetToThing(extcampos);
+        PlayVoice(player, indyline0[RandBetween(0,1)], 1, 1);
+        Sleep(1);
+        RestoreExtCam();
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+        
+    }
+    
+    if  ((GetSenderRef() == outerwall) &&
+         (GetSourceRef() == player) &&   
+         (GetCurItem(player) != 0))      
+    {
+        StopThing(player);
+        StartCutscene(0);
+        SetActorFlags(player, 0x200000);
+        PlayVoice(player, indylineb0[(RandBetween(0, 5))], 1, 1);
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }
+return;
+# ========================================================================================
+
+startup:
+    player=GetLocalPlayerThing();
+    liteval=VectorSet(0.25, 0.55, 1.0);
+    nolite=VectorSet(0, 0, 0);
+    SetFaceGeoMode(outerwall, 4);               //draw on
+    ClearAdjoinFlags(outerwall, 2);             //no move
+    return;
+    
+# ========================================================================================
+
+damaged:
+
+    //printint(GetCurItem(player));
+    if (GetCurWeapon(player) != 14) return;     //checking for imp1
+    if (GetParam(1) != 0x1000) return;          //checking for damage type
+    hitit=1;
+    StartCutscene(1);
+    SetActorFlags(player, 0x200000);
+    SetActorFlags(player, 0x8);
+    SetCameraFocus(0, bombcampos);
+    SetCurrentCamera(0);
+    SetPulse(0.1);
+    vibe=2;
+    SetCameraFOV(120, 1, 3.0);
+    PlaySoundPOS(charging, (GetSurfaceCenter(outerwall)), 1.0, 10.0, 20.0, 0);
+    SetThingLight(player, liteval, 2.0, 2);
+    Sleep(3);                                                                        	            
+    dummy = PlaySoundThing(explode_snd, bombpos, 1.0, 10.0, 20.0, 0);
+
+	dust = CreateThing(smoke0, smokepos);
+    AnimateSpriteSize(dust, '0.02 0.02 1.0', '0.8 0.8 0.0', 2.0);
+    
+    //fragment generator
+    for(i=0; i<pieces; i=i+1)                                                        	            
+    {                                                                                    	            
+        fragment = CreateThing(debris0[RandBetween(0, 4)], bombpos);                                 
+        SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.0'), 2));
+        SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));    	            
+    }
+
+    //render through the adjoin
+    SetFaceGeoMode(outerwall, 0);
+    SetAdjoinFlags(outerwall, 2);
+    sleep(1);
+    SetThingLight(player, nolite, 2.0, 2);
+    
+    //reset camera elements
+    SetPulse(0);
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0);
+    ClearActorFlags(player, 0x200000);                                                     	            
+    ClearActorFlags(player, 0x8);
+    EndCutscene();
+    
+    return;
+    
+# ========================================================================================
+
+pulse:
+
+	vibe = RandBetween(1, 4);
+	if (vibe == 1)
+	{
+		posOffset = '-0.005 0.00 -0.002';
+		angOffset = '0.00 -0.002 0.002';
+	}
+	if (vibe == 2)
+	{
+		posOffset = '0.005 -0.005 0.002';
+		angOffset = '0.002 0.00 -0.002';
+	}
+	if (vibe == 3)
+	{
+		posOffset = '0.002 0.005 -0.005';
+		angOffset = '-0.002 0.002 -0.002';
+	}
+	if (vibe == 4)
+	{
+		posOffset = '-0.002 0.00 0.005';
+		angOffset = '0.00 0.00 0.002';
+	}
+
+	SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+
+return;    
+                                                                          	            
+# ========================================================================================
+
+end
+

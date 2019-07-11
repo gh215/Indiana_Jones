@@ -1,0 +1,60 @@
+# Jones 3D Cog Script
+#
+# sea_holdcrates.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message     startup
+	message	activated
+	message	entered
+	message	exited
+    
+	thing		crate0
+	thing		crate1
+	thing		crate2
+	thing		crate3
+	thing		crate4
+	keyframe	nopush=in_pushpull_anticipate.key	local
+	thing		player					local
+	int		i=0						local
+	int		on_top=0					local
+	sound		nope=inxj098.wav				local	#It won't budge.
+        
+end
+
+# ========================================================================================
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	for (i=0; i<=4; i=i+1)
+	{
+	ClearThingFlags(crate0[i], 0x40000000);
+	}
+	return;
+
+entered:
+	on_top=1;
+	return;
+exited:
+	on_top=0;
+	return;
+
+activated:
+	if(on_top == 1) return;
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(0);
+	PlayKey(player, nopush, 4, 0x12, 1);
+	PlayVoice(player, nope, 1.0, 1);
+		EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	return;
+      
+end
+

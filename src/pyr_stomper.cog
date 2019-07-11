@@ -1,0 +1,190 @@
+# Jones 3D Cog Script
+#
+# pyr_stomper.cog
+#
+# Control stomper block puzzle in pyramid 1
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ==============================================================================
+
+symbols
+message	activated
+message	arrived
+message	entered
+message	pulse
+
+thing	stomper
+thing	button
+
+thing	pushcam	  	nolink
+thing	stompercam	nolink
+thing	ghostlook	nolink
+thing	deathcam	nolink
+
+thing	player		local
+
+surface	blockface
+
+sound	stomperdown=olv_rockhead_hitearth_c.wav	local
+sound	indycrush=fol_in_landhurt.wav			local
+sound	indycrush2=fol_in_landpuddle.wav		local
+
+int		counter=10	local
+
+# subroutines
+flex	startscene=0.0		local
+flex	endscene=0.0		local
+flex	fixcams=0.0			local
+flex	blockmove=0.0		local
+end
+
+
+code
+activated:
+	if (GetSenderRef() != button) return;
+
+	player = GetLocalPlayerThing();
+	DeselectWeaponWait(GetLocalPlayerThing());
+	
+	call startscene;
+	
+	sleep(.5);
+	PlayMode(player, 60, 0);
+	Sleep(.25);
+	MoveToFrame(button, 1, 2);
+	WaitForStop(button);
+	
+	call blockmove;
+	call endscene;
+	
+	return;
+	
+arrived:
+# ---> stomper
+
+	if (GetSenderRef() != stomper) return;
+
+	if (GetCurFrame(stomper) == 1)
+	{
+		PlaySoundThing(stomperdown, stomper, 1, -1, -1, 0);
+		SetPulse(.1);
+	}
+	
+	return;
+
+entered:
+# ---> BlockFace (entered by Indy)
+	if (GetSenderRef() != blockface) return;
+
+	player = GetLocalPlayerThing();
+	
+	StartCutscene(1);
+	MoveToFrame(stomper, 1, 12);
+	SetCameraFocus(2, deathcam);
+	SetCameraSecondaryFocus(2, ghostlook);
+	SetCurrentCamera(2);	
+	Sleep(.35);
+	
+	#kill indy
+	EndCutscene();
+	DamageThing(player, 1000, 0x1, player);
+	PlaySoundLocal(indycrush, 1, 0, 0x0, 0);
+	PlaySoundLocal(indycrush2, 1, 0, 0x0, 0);
+	
+	sleep(.01);
+
+	SetThingFlags(player, 0x80000);
+
+	return;
+
+blockmove:
+	#if block is up, move it down, and vice-versa
+	if (GetCurFrame(stomper) == 0)
+	{
+		#switch cameras
+		SetCameraFocus(2, stompercam);
+		SetCameraSecondaryFocus(2, ghostlook);
+		SetCurrentCamera(2);
+		
+		MoveToFrame(stomper, 1, 12);
+		WaitForStop(stomper);
+		counter = 5;
+		SetPulse(.1);
+		
+		MoveToFrame(button, 0, 1);
+		MoveToFrame(stompercam, 1, 1);
+		WaitForStop(stompercam);
+	}
+	else
+	{
+		SetCameraFocus(2, stompercam);
+		SetCameraSecondaryFocus(2, ghostlook);
+		SetCurrentCamera(2);
+		
+		MoveToFrame(button, 0, 1);
+		MoveToFrame(stomper, 0, 4);
+		Sleep(1);
+	}
+
+	sleep(1);
+	
+	return;
+	
+startscene:
+	call fixcams;
+
+	StartCutscene(1);
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	SetExtCamOffsetToThing(pushcam);	
+
+	return;
+			
+endscene:
+	call fixcams;
+
+	ClearActorFlags(player, 0x200000);
+
+	SetCurrentCamera(1);
+	if (GetCurFrame(stomper) == 0)
+	{
+		MoveToFrame(stompercam, 0, 10);
+	}
+	
+	EndCutscene();
+	RestoreExtCam();
+
+	return;
+
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(1, 0);
+	SetCameraLookInterp(1, 0);
+	RestoreExtCam();
+	return;
+
+pulse:
+	
+	if (counter > 1)
+	{
+		counter = counter - 1;
+		
+		SetPOVShake(VectorScale(VectorSet(RandBetween(-2, 2), RandBetween(-2, 2), RandBetween(-2, 2)), .0007 * counter),
+					VectorScale(VectorSet(RandBetween(-4, 4), RandBetween(-4, 4), RandBetween(-4, 4)), .07 * counter),
+					10, 180);
+	}
+	else
+	{
+		SetPulse(0);
+		counter=10;
+	}
+
+	return;
+
+end
+

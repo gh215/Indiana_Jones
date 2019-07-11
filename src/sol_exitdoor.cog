@@ -1,0 +1,108 @@
+# Jones 3D Cog Script
+#
+# SOL_ExitDoor.cog
+#
+# Thank you.  Come again.
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    
+    thing       player      local
+    thing       indy        local
+    
+    thing       exitCam
+    thing       fadeThing
+    thing       targ1
+    
+    thing       door
+    
+    sector      sec_Open
+    
+    sound       mus_Cue=mus_pyr_shinyobject.wav     local
+    
+    template    tpl_Actor=indy_sh_actor     local
+    
+    int         open=0          local
+        
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetThingLight(door, '0.5 0.5 0.5', 0.001, 0.1);
+    SetThingAlpha(fadeThing, 0);
+    return;
+
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    
+    if((GetSenderRef() == sec_Open) && (open == 0))
+    {
+        open = 1;
+        
+        # do cutscene stuff
+        MakeMeStop();
+        StartCutscene(2);
+        
+        # Cut to exitCam
+        SetCameraFocus(2, exitCam);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+            
+        # open the door
+        MoveToFrame(door, 1, 1.0);
+        #WaitForStop(door);
+        
+        # create indy actor
+        indy = CreateThing(tpl_Actor, player);
+        CaptureThing(indy);
+        
+        # outfit indy actor
+        CopyPlayerHolsters(player, indy);
+        
+        # hide player show actor
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(indy, 0x80000);
+        SetCameraSecondaryFocus(2, indy);
+        
+        # walk actor to target1
+        AISetMoveSpeed(indy, 1.0);
+        AISetLookThing(indy, targ1);
+        AISetMoveThing(indy, targ1, 0);
+        
+        PlaySoundLocal(mus_Cue, 1.0, 0.0, 0x0, 0);
+        
+        Sleep(4.5);
+        
+        ThingFadeAnim(fadeThing, 0, 1, 2.0, 0);
+        
+        Sleep(2.0);
+        
+        EndCutscene();
+        JonesEndLevel();
+        
+        # debug purposes only
+        #ClearActorFlags(player, 0x200000);
+        #SetCurrentCamera(1);
+    }
+    
+    return;
+        
+# ========================================================================================
+
+end
+

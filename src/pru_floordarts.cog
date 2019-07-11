@@ -1,0 +1,156 @@
+# Jones 3D Cog Script
+#
+# PRU_floordarts.cog
+# 
+# "We must hurry!  There is nothing to fear here!"
+# "That's what scares me."
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    message     entered
+    message		touched
+	message		arrived
+	message		startup
+    
+    surface		floortrigger0
+	surface		floortrigger1
+	surface		floortrigger2
+    surface		floortrigger3
+	surface		floortrigger4
+	surface		floortrigger5
+	surface		floortrigger6
+	
+	cog			hadIdol
+    
+    thing		dart=-1			local
+	thing		smoke			local
+	thing		dartspot		nolink				//ghost object where dart is created
+	thing		dartspot2		nolink				//ghost object where dart is created
+	thing		player			local
+    
+	template	darttemplate=dart						local
+	template	smoketemplate=+dartsmoke_spr			local
+    
+	sound		shot=pru_dart_fired_c.wav				local
+    
+	sound		hit0=INXJ013A.wav						local
+	sound		hit1=INXJ016e.wav						local
+	sound		hit2=INXJ016f.wav						local
+	sound		hit3=INXJ016g.wav						local
+	sound		hit4=INXJ017.wav						local
+	sound		hit5=INXJ017a.wav						local
+	sound		hit6=INXJ017d.wav						local
+	sound		hit7=INXJ017e.wav						local
+	sound		hit8=INXJ017f.wav						local
+	sound		hit9=INXJ017g.wav						local
+	sound		hit10=INXJ018a.wav						local
+	sound		hit11=INXJ018d.wav						local
+	
+	
+	
+	sound		oops=tem_tikidoor_tikikeymove_c.wav		local		#was olv_presswitch_c.wav
+    
+    int			triggered0=0		local		//has this surface been triggered?  0=no, 1=yes
+	int			triggered1=0		local
+	int			triggered2=0		local
+	int			triggered3=0		local
+	int			triggered4=0		local
+	int			triggered5=0		local
+	int			triggered6=0		local
+	            
+	int			index				local
+    int			numTrigs=7			local
+	int			sender				local
+	int			special=0
+	vector		senderpos			local
+	
+end
+       
+# ========================================================================================
+
+code
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+entered:
+    sender = GetSenderRef();							//face Indy stepped on becomes "sender"
+    senderPos = GetThingPos(player);
+    
+	for (index = 0; index < numTrigs; index = index + 1)  
+			//first pass:  Start with:  index equals 0! Check that index is less than 7, run thru stuff
+			//subsequent passes:  add 1 to index and check that index is less than 7.
+	{
+		if(sender == floortrigger0[index])	//if sender is the same as a particular floor trigger...
+		{   
+			
+			if(triggered0[index] == 0)		// and if triggered(x index) is 0...
+			{
+				PlaySoundPos(oops, senderPos, 1.0, -1.0, -1.0, 0x0);
+				#Sleep(0.3);
+				
+				if (Rand() > 0.5)			//and if a random number is less than .5
+				{
+					if (dart != -1)
+					DestroyThing(dart);
+				    dart = CreateThing(darttemplate, dartspot);	//create a thing called dart at the dartspot, using the 3do designated by darttemplate
+					smoke = CreateThing(smoketemplate, dartspot);
+                }
+                else
+				{
+					if (dart != -1)
+					DestroyThing(dart);
+					dart = CreateThing(darttemplate, dartspot2);  // or do the same thing at the other dartspot
+					smoke = CreateThing(smoketemplate, dartspot2);
+                } 
+				CaptureThing(smoke);
+				AnimateSpriteSize(smoke, '0.01 0.01 1.0', '0.15 0.15 0.0', 0.75);
+				CaptureThing(dart);							//"capture" the thing
+				SetThingLight(dart, '0.5 0.5 0.5', 0.01, 0.1);
+                PlaySoundThing(shot, dart, 1.0, -1.0, -1.0, 0x0);
+				MoveToFrame(dart, 1, 12);					//shoot it
+				triggered0[index] = 1;						//add one to "triggered"
+				special = 1;
+				#dart is flying
+				SendMessage(HadIdol, user0);
+			}
+		}
+	}
+	
+	return;
+# ........................................................................................	
+touched:
+	if ((GetSenderRef() == dart) && (GetSourceRef() == GetLocalPlayerThing()))
+	{
+        Print("ouch");
+		DamageThing(GetSourceRef(), 150.0, 0x1, dart);
+        PlaySoundlocal(hit0[RandBetween(0, 11)], 1.0, -1.0, -1.0, 0x0, 0);
+		DestroyThing(dart);
+		dart = -1;
+		if (special == 1)
+		{
+			#dart not flying 
+			SendMessage(HadIdol, user1);
+			special = 0;
+		}
+    }
+	return;
+
+# ........................................................................................
+arrived:
+    DestroyThing(dart);
+	dart = -1;
+	if (special == 1)
+		{
+			#dart not flying 
+			SendMessage(HadIdol, user1);
+			special = 0;
+		}
+    return;
+
+# ........................................................................................
+end

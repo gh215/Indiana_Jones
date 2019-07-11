@@ -1,0 +1,73 @@
+# Jones 3D Cog Script
+#
+# actor_Scorpian.cog
+#
+# [MDR] [RT]
+#
+# Special behavior for Scorpians.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		created
+	message		touched
+	message		timer
+
+	thing		scorpian					local
+	thing		source						local
+
+	flex		crushDamage					local
+
+end
+
+# ===================================================================
+code
+
+# -------------------------------------------------------------------
+created:
+
+	AISetMode(GetSenderRef(), 0x2000000);		# Set MODE_NOCHASING
+#	SetThingMoveSize(GetSenderRef(), 0.05);
+
+	return;
+
+# -------------------------------------------------------------------
+touched:
+
+	scorpian = GetSenderRef();
+	source = GetSourceRef();
+
+	if (source == GetLocalPlayerThing())
+	{
+		# Ignore touch if Indy's standing still...
+		if ( VectorLen(GetThingVel(source)) == 0 )
+			return;
+
+		# If we weren't just stepped on...
+		if (GetThingUserData(scorpian) == 0)
+		{
+			# Remember what the fiend did!
+			SetThingUserData(scorpian, 1);
+			SetThingTimer(scorpian, 2.0);
+
+			# Apply some damage... 
+			crushDamage = GetThingMaxHealth(scorpian) / 2;
+			DamageThing(scorpian, crushDamage, 0x8, source);
+		}
+	}
+	return;
+
+# -------------------------------------------------------------------
+timer:
+
+	scorpian = GetSenderRef();
+
+	# We're eligible to be stepped on again...how nice
+	SetThingUserData(scorpian, 0);
+
+	return;
+
+end

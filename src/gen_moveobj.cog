@@ -1,0 +1,185 @@
+# Jones 3D Cog Script
+#
+# gen_MoveObj.cog
+#
+#
+# A hack for pushing blocks around. Inspired by Reed Derleth
+# 
+# IMPORTANT. Make sure you attach the cog to a valid object.
+# Make sure that the ghostthing is assigned to a ghost object.
+#
+# Usage:
+# -Get behind the object (face the direction you want it to go)
+# -Activate once to push forward.
+# -Activate twice rapidly to pull. (the object will materialise on top of you just walk forward)
+# -You can teleport things out of the world so be careful
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message  startup
+	message  activate
+	message	timer
+
+	vector   playervec            local
+	vector   dudpyrvec            local
+	vector   origvec              local
+	vector   newthingvec          local
+	vector   newvector            local
+
+	template ghostthing = ghost
+
+	thing    player0              local
+	thing    pushobj
+	thing    newposthing          local
+
+	int      direction = 	0     local
+	int		pullFlag = 		0		local
+
+	float    playery = 		0     local
+	float    playerx = 		0     local
+	float    xpos = 			0     local
+	float    ypos = 			0     local
+	float    zpos = 			0     local
+	float		timeSpan=		
+
+	sector   gensector            local
+
+end
+
+
+# ========================================================================================
+
+code
+
+startup:
+	dudpyrvec = VectorSet(0, 0, 0);
+	return;
+
+# ........................................................................................
+
+activate:
+	pullFlag = pullFlag + 1;
+	SetTimer(timeSpan);	
+	playervec = GetThingLVec(player0);
+	playery = VectorY(playervec);
+//	printflex(playery);
+	playerx = VectorX(playervec);
+//	printflex(playerx);
+
+	if ((playery > 0) &&
+		((playerx > -0.7) && (playerx < 0.7))) {
+			direction = 1;                               //north
+			//print("reached 1 north");
+		}
+	else if ((playery < 0) &&
+			  ((playerx > -0.7) && (playerx < 0.7))) {
+				  direction = 3;                          //south
+				 //print("reached 2 south");
+			  }
+	else if ((playerx > 0) &&
+			  ((playery > -0.7) && (playery < 0.7))) {
+				  direction = 2;                          //east
+				  //print("reached 3 east");
+			  }
+	else if ((playerx < 0) &&
+			  ((playery > -0.7) && (playery < 0.7))) {
+				  direction = 4;                          //west
+				  //print("reached 4 west");
+	}
+
+	//print("direction is");
+	//printint(direction);
+	pushobj = GetSenderRef();                          //get vectors
+	origvec = GetThingPos(pushobj);
+	gensector = GetThingSector(pushobj);
+
+	xpos = VectorX(origvec);                           //get positions
+	//printflex(xpos);
+	ypos = Vectory(origvec);
+	//printflex(ypos);
+	zpos = Vectorz(origvec);
+	//printflex(zpos);
+
+	return;
+
+	# .....................................................................................
+
+	timer:
+
+		//print("reached timer");
+		if (pullFlag == 2)
+		{
+			if (direction == 1)
+		 {
+			 ypos = ypos - 0.2;
+			 //print("move South");
+			 //printint(ypos);
+		 }
+		 else if (direction == 2)
+       {
+			 xpos = xpos - 0.2;
+			 //print("move West");
+			 //printint(xpos);
+		 }
+		 else if (direction == 3)
+       {
+          ypos = ypos + 0.2;
+			 //print("move North");
+			 //printint(xpos);  		
+		 }
+		 else if (direction == 4)
+       {
+          xpos = xpos + 0.2;
+			 //print("move East");
+			 //printint(ypos);			
+		 }	
+		}
+		else if (pullFlag == 1)
+		{
+			if (direction == 1)
+			{
+				ypos = ypos + 0.2;
+		   	//print("move North");
+				//printint(xpos);
+			}
+			else if (direction == 2)
+         {
+				xpos = xpos + 0.2;
+				//print("move East");
+				//printint(ypos);
+			}
+			else if (direction == 3)
+         {
+				ypos = ypos - 0.2;
+				//print("move South");
+				//printint(ypos);
+			}
+			else if (direction == 4)
+         {
+				xpos = xpos - 0.2;
+				//print("move West");
+				//printint(xpos);
+			}
+      }
+	direction = 0;
+	pullFlag = 0;
+	newvector = VectorSet(xpos, ypos, zpos);
+	newposthing = CreateThingAtPos(ghostthing, gensector, newvector, dudpyrvec);
+	TeleportThing(pushobj, newposthing);
+	DestroyThing(newposthing);
+
+	return;
+
+	end
+
+
+
+
+
+
+
+

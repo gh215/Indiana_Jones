@@ -1,0 +1,568 @@
+# Jones 3D Cog Script
+#
+# PRU_boulderfall.cog    Boulder falls straight down and smashes Indy.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message     startup
+message     entered
+message		touched
+message		arrived
+message		damaged
+message		pulse
+
+cog			voicelineWE
+                     
+thing       player  		local
+thing		deadindy	    local		nolink           
+thing       rubble			mask=0x08
+thing       boulder
+thing		debris
+thing 		camera0
+thing		camera1
+thing		camera2
+thing		camera3
+thing		camera4
+thing		fallingrubble	local
+thing		smashedghost
+thing		columnTarget0
+thing		columnTarget1
+thing		columnTarget2
+thing		columnTarget3
+thing		whipCam
+thing		fallTarget0
+thing		smokeGhost0
+thing		smoke0			local
+thing		smokeGhost1
+thing		smoke1			local
+thing		hangTarget
+thing		standboulder	local
+thing		cam1spot	nolink # ghost anywhere in a level
+thing		cam1look	nolink # ghost anywhere in a level
+thing		phonyGhost
+
+
+surface		skull0			linkID=4
+surface		entry
+surface		boulderplatform0
+surface		boulderplatform1
+surface		boulderLedge
+surface		exitLedge
+surface		cubbyLedge
+surface		rubbleFace		mask=0x08
+
+sector		columnbottom	mask=0x080
+
+keyframe	smashed=in_die_buckle.key					local
+
+sound		sndDie=tem_temspikes_up_kill_c.wav			local
+sound		bldrshift=teo_teobut_pull_c.wav				local
+sound		debrisfall=tem_tikidoor_tikikeymove_c.wav	local
+sound		boulderfall=pru_boulder_crash_c.wav			local
+sound		rubblefall=olv_rockhead_hitearth_c.wav		local
+sound		triggeredSound=olv_presswitch_c.wav			local
+sound		eagleFallsnd=gen_fallingrock_c.wav			local
+sound		successMus=mus_gen_indyrelief.wav			local
+sound		danger=inxj057.wav							local
+sound		uhoh=INXJ011.wav							local
+sound		whoops=INXJ087.wav							local
+
+
+template    tempRef=indy_sh_actor			       		local
+template	fallrbletemplate=physrbl					local						
+template	standbouldertpl=bldrsmash					local
+template	smoketemplate=+bouldersmoke_spr				local
+template	phonyTpl=bldrnvelop							local
+
+template	debris0=stoneshrapa	local
+template	debris1=stoneshrapb	local
+template	debris2=stoneshrapc	local
+
+
+int			once=0		local	
+int			deadIndy	local
+int			curCam		local
+int			indy		local
+int			fallen=0	local
+int			hit=0		local
+int			tempCam		local
+int			fragment	local
+int			i			local
+int			triggered=0	local
+int			coin		local
+int			multiplier	local
+int			boulderDown=0	local
+int			vibe		local
+int			dangerTrack=-1	local
+
+vector		posOffset	local
+vector		angOffset	local
+
+flex		posDelta=100.0	local
+flex		angDelta=180.0	local
+flex		shakerandom		local
+flex		viewangle		local
+flex		boulderSize		local
+
+end
+
+# ========================================================================================
+code
+startup:
+	player = GetLocalPlayerThing();
+	ClearSurfaceFlags(exitLedge, 0x1000000);
+	ClearSurfaceFlags(cubbyLedge, 0x1000000);
+	SetCollideType(rubble, 0);
+	boulderSize = GetThingCollideSize(boulder);
+    SetCollideType(boulder, 1);
+	SetThingCollideSize(boulder, (bouldersize * 0.75));
+    
+	return;
+# =========================================================================================
+entered:
+	if ((GetSenderRef() == entry) && (once == 0) && (boulderDown == 0))
+	{
+        once = 1;
+		curCam = GetCurrentCamera();
+		ResetCameraFOV(0, 0.0);
+
+        StartCutscene(1);
+		
+		#Stop the player from moving and put him in a standing position
+        SetActorFlags(player, 0x200000);
+		StopThing(player);
+		MakeMeStop();
+//		PlayMode(player, 1, 0);
+//		DeselectWeapon(player);
+		DeselectWeaponWait(player);
+        
+		#create an actor
+		indy = CreateThing(TempRef, player);
+		CaptureThing(indy);
+		AISetCutsceneMode(indy);
+        CopyPlayerHolsters(player, indy);
+		SetThingFlags(player, 0x80000);
+        ClearThingFlags(indy, 0x80000);
+		AISetMoveSpeed(indy, 1.0);
+		
+		#set a camera looking at the actor
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, camera0);
+        SetCameraSecondaryFocus(2, columnTarget3);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+		#Walk the actor to the column
+        AIEnableBodyTracking(indy, columnTarget2);
+		#AISetlookThing(indy, columnTarget2);
+		AISetMoveThing(indy, columnTarget2, 1);
+        
+        #Indy knocks the debris onto the trigger plate on the floor
+        SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 1.0);					#was 2
+
+        Sleep(0.1);										#was .3
+		MoveToFrame(debris, 1, 2);						#was 1
+        PlaySoundThing(debrisfall, debris, 1.0, -1.0, -1.0, 0x0);
+        
+		Sleep(0.2);
+		SetCameraFOV(40, 1, 0.75);						#was 1.0
+        
+		SetCameraSecondaryFocus(2, columnTarget0);
+        
+        Sleep(1.0);
+
+        SetCameraFOV(70, 1, 5.0);
+        WaitForStop(debris);
+		Sleep(0.2);
+        AISetLookThing(indy, debris);
+        if (RandBetween(0, 1) == 0)
+		{
+            PlayVoice(indy, uhoh, 1, 0);
+		}
+		else
+		{
+            PlayVoice(indy, whoops, 1, 0);
+		}
+        MoveToFrame(debris, 2, 5);
+        MoveToFrame(columnTarget0, 1, 3.5);				#was 4.0
+		return;
+	}
+
+    if ((GetSourceRef() == player) && ((GetSenderID() == 4) || (GetSenderRef() == debris)))
+	{ 
+        if (boulderDown == 1) return;
+		if ((once == 0) && (GetSenderRef() == debris)) return;
+
+		PlaySoundThing(triggeredSound, player, 1.0, -1.0, -1.0, 0x0);
+		triggered=1;
+        PlaySoundThing(boulderfall, boulder, 0.0, -1.0, -1.0, 0x0);			#play sound at 0 to lessen hitching...
+		
+		#Indy steps on the trigger plate, causing the boulder to fall on him
+		StartCutscene(1);
+		SetCameraFocus(2, camera1);
+		SetCameraSecondaryFocus(2, fallTarget0);
+		SetCurrentCamera(2);
+        SetCameraFOV(90, 1, 1.0);
+        MoveToFrame(boulder, 3, 20);
+        Sleep(2.0);
+		posOffSet = VectorSet(0.0, 0.0, 0.0);
+		angOffSet = VectorSet(7, RandBetween(-2, 2), RandBetween(-2, 2));
+		SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+		Sleep(1.5);
+        EndCutscene();					  
+		return;
+	}
+	 
+	#when the rubble falls on the skull face, the boulder will fall
+	if (GetSourceRef() == fallingRubble)
+	{
+        SetThingVel(fallingRubble, '0.0 0.0 0.0');
+		PlaySoundThing(rubblefall, fallingRubble, 1.0, -1.0, -1.0, 0x0);
+		PlaySoundThing(triggeredSound, fallingRubble, 1.0, -1.0, -1.0, 0x0);
+        Sleep(0.5);
+		
+		SetCameraLookInterp(2, 0);
+		SetCameraSecondaryFocus(2, boulder);
+		SetCameraFOV(100, 0, 0.0);
+		Sleep(1.0);
+		
+		MoveToFrame(boulder, 3, 20);
+        PlaySoundThing(bldrshift, boulder, 1.0, -1.0, -1.0, 0x0);
+		triggered=1;
+        fallen = 1;
+        once = 1;
+		return;
+    }
+	
+	#Boulder shifts frighteningly if player hangs from ledge under it.
+	if ((GetSenderRef() == boulderLedge) && (fallen == 0))
+	{
+        StartCutscene(0);
+		Sleep(0.5);
+        SetActorFlags(player, 0x200000);
+
+		MakeCamera2LikeCamera1(cam1spot, cam1look);
+		SetCameraLookInterp(2, 0); 			# force snap if not sure already the case
+		SetCameraPosInterp(2, 0); 			# force snap if not sure already the case
+		SetCameraFocus(2, cam1spot); 		# cam 2 takes over here
+		SetCameraSecondaryFocus(2, cam1look); # looking same place
+		#viewangle = GetCameraFOV(); 		# it pays to be careful
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		#SetCameraFOV(viewangle, 0, 0.0); 	# start here anyway
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 0.7); 		# about right
+		Sleep(0.01); 						# let engine work briefly
+		#SetCameraFocus(2, offsetcam); 		# slide out to new spot
+		SetCameraSecondaryFocus(2, hangTarget); # slide over to new target
+        
+		#SetExtCamLookOffsetToThing(hangTarget);
+		Sleep(1.0);
+		SetPulse(0.01);
+
+#		posOffSet = VectorSet(RandBetween(-1, 1) * 0.001, RandBetween(-1, 1) * 0.001, RandBetween(-1, 1) * 0.001);
+#        angOffSet = VectorSet(RandBetween(-1, 1) * 0.01, RandBetween(-1, 1) * 0.01, RandBetween(-1, 1) * 0.01);
+#		Sleep(0.5);
+		MoveToFrame(Boulder, 2, 1.0);
+		PlaySoundThing(bldrshift, boulder, 1.0, -1.0, -1.0, 0x0);
+#		SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+#		Sleep(0.05);
+#		SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+#		Sleep(0.05);
+#		SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+#		Sleep(1.0);
+		Sleep(1.0);
+		SetPulse(0.0);
+		
+		SetCameraInterpSpeed(2, 0.5); # quicker going back, please
+        SetCameraSecondaryFocus(2, cam1look);
+		#SetCameraFOV(viewangle, 1, 0.5); # transition back to follow-cam FOV
+		Sleep(0.5);
+		SetCameraLookInterp(2, 0); # exit in snap mode
+		SetCameraPosInterp(2, 0); # exit in snap mode
+		SetCurrentCamera(1);
+        
+		#RestoreExtCam();
+        ClearActorFlags(player, 0x200000);
+		EndCutscene();
+		return;
+    }
+        
+	return;
+# =========================================================================================
+arrived:
+    if ((GetSenderRef() == debris) && (GetCurFrame(debris) == 1))
+		{
+			#angOffSet = VectorSet(0.05, 0.05, 0.05);
+            #PlaySoundThing(debrisfall, debris, 1.0, -1.0, -1.0, 0x0);
+			Call ShakeRandom;
+			Sleep(0.01);
+			SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+			Sleep(0.05);
+			Call ShakeRandom;
+			SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+		}
+
+	if ((GetSenderRef() == debris) && (GetCurFrame(debris) == 2))
+		{
+            #Sleep(0.75);
+			#SetCameraFOV(70, 1, 2.0);
+			
+			#Debris hits the floor, triggering the boulder
+			PlaySoundThing(rubbleFall, debris, 0.7, -1.0, -1.0, 0x0);
+			Sleep(0.75);
+			PlaySoundThing(triggeredSound, debris, 1.0, -1.0, -1.0, 0x0);
+            
+			#shake the camera as the trap is partially triggered
+			#angOffSet = VectorSet(0.1, 0.1, 0.1);
+			#posOffSet = VectorSet(0.01, 0.01, 0.01);
+            SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+            Call ShakeRandom;
+			Sleep(0.025);
+            SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+            Call ShakeRandom;
+			Sleep(0.025);
+            SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+            Call ShakeRandom;
+			Sleep(0.025);
+            SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+			Call ShakeRandom;
+            Sleep(0.025);
+            SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+            
+			Sleep(0.75);
+            
+			SetCameraLookInterp(2, 1);
+            SetCameraPosInterp(2, 1);
+			SetCameraInterpSpeed(2, 2.5);
+			Sleep(0.1);
+			SetCameraSecondaryFocus(2, columnTarget1);
+			Sleep(0.5);
+			
+			SetCameraFocus(2, camera3);
+			#SetCameraSecondaryFocus(2, columnTarget1);
+			SetCurrentCamera(2);
+			#MoveToFrame(columnTarget1, 1, 0.8);
+			
+			
+            MoveToFrame(boulder, 1, 0.2);
+            AISetLookThing(indy, boulder);
+			Sleep(2.0);
+            
+			PlaySoundThing(bldrshift, boulder, 1.0, -1.0, -1.0, 0x0);
+			posOffset = VectorSet(Rand()*0.1, Rand()*0.1, Rand()*0.1);
+			angOffset = VectorSet(Rand(), Rand(), Rand());
+			#SetPOVShake(posOffset, angOffset, .5, 80.0);
+            
+			Sleep(2.5);
+            
+			ResetCameraFOV(0, 0.0);
+			SetCameraLookInterp(2, 0);
+			SetCameraPosInterp(2, 0);
+			CopyOrientandPos(indy, player);
+			tempCam = GetThingPos(camera4);
+			SetCameraPosition(curcam, tempCam);
+			SetCurrentCamera(curCam);
+			SetThingFlags(indy, 0x80000);
+            ClearThingFlags(player, 0x80000);
+			ClearActorFlags(player, 0x200000);
+            if (boulderdown != 1)
+			{
+				dangerTrack = PlayVoice(player, danger, 1, 0);
+			}
+			
+            
+			#debugprint("leaving boulder arrived");
+			
+			EndCutscene();
+        }
+
+if ((GetSenderRef() == boulder) && (GetCurFrame(boulder) == 3))
+{
+	if (dangerTrack != -1)
+	{
+		StopSound(dangerTrack, 0.0);
+		dangerTrack = -1;
+	}
+	boulderDown = 1;
+	once = 1;
+	PlaySoundThing(boulderfall, boulder, 1.0, -1.0, -1.0, 0x0);
+	posOffSet = VectorSet(0.0, 0.0, 0.25);
+	angOffSet = VectorSet(0, 0, 0);
+	SetPOVShake(posOffSet, angOffSet, 6.0, angDelta);
+	#ClearAdjoinFlags(boulderplatform0, 0x2);
+	#ClearAdjoinFlags(boulderplatform1, 0x2);
+    SetAdjoinFlags(boulderplatform0, 0x10);
+    SetAdjoinFlags(boulderplatform1, 0x10);
+
+    
+	smoke0 = CreateThing(smoketemplate, smokeGhost0);
+	AnimateSpriteSize(smoke0, '0.25 0.25 1.0', '0.75 0.75 0.0', 3.0);
+	
+	smoke1 = CreateThing(smoketemplate, smokeGhost1);
+	AnimateSpriteSize(smoke1, '0.25 0.25 1.0', '0.75 0.75 0.0', 3.0);
+	
+    
+	
+	for(i=0; i<20; i=i+1)                                                        	            
+    {
+        fragment = CreateThing(debris0[3.0 * rand()], smokeghost1);
+		SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.05'), 2.0));
+		SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));    	            
+    }
+    
+    
+	standBoulder = CreateThing(standbouldertpl, smashedghost);
+    SetCameraSecondaryFocus(2, standBoulder);
+    DestroyThing(boulder);
+    CaptureThing(standBoulder);
+	SetCollideType(standBoulder, 0);
+	CreateThing(phonyTpl, phonyGhost);
+    Sleep(3.0);
+    SetCurrentCamera(curCam);
+	ResetCameraFOV(0, 0.0);
+    SetSurfaceFlags(exitLedge, 0x1000000);
+    SetSurfaceFlags(cubbyLedge, 0x1000000);
+
+    ClearActorFlags(player, 0x200000);
+	EndCutscene();
+
+    return;
+}
+return;
+# =========================================================================================
+touched:
+    if ((GetSenderRef() == boulder) && (GetSourceRef() == player) && (fallen == 0) && (triggered == 1))
+	{
+		#Print("boulder touched player");
+		DamageThing(player, 1000, 0x80, boulder);
+        SetCollideType(boulder, 0);
+        PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+        StartCutscene(1);
+        SetCameraFocus(2, camera2);
+		SetCameraSecondaryFocus(2, smashedGhost);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 1, 1.0);
+        Sleep(1.0);
+        posOffset = VectorSet(Rand()*0.01, Rand()*0.01, Rand()*0.01);
+		angOffset = VectorSet(Rand(), Rand(), Rand());
+		SetPOVShake(posOffset, angOffset, .5, 80.0);
+		Sleep(1.5);
+        EndCutscene();	
+	}
+    return;
+
+# ========================================================================================
+damaged:
+	
+	if (hit == 1) return;
+
+    
+	if ((GetSenderRef() == rubbleFace) && (GetParam(1) == 0x10))
+    {
+		#tell the voiceline cog to shut down.
+		SetCollideType(rubble, 1);
+		SendMessage(voiceLineWE, user0);
+		hit = 1;
+		fallen = 1;
+		
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+		
+		curCam = GetCurrentCamera();
+        
+        fallingRubble = CreateThing(fallrbletemplate, rubble);
+		CaptureThing(fallingRubble);
+		SetThingMass(fallingRubble, 4.0);
+        DestroyThing(rubble);
+		
+        SetCameraFocus(2, whipCam);
+        #SetCameraSecondaryFocus(2, rubble);
+        SetCurrentCamera(2);
+        SetCameraSecondaryFocus(2, fallingRubble);
+        
+		Sleep(0.5);
+		
+        PlaySoundLocal(successMus, 1.0, 0.0, 0x0, 0);
+		
+		DetachThing(fallingrubble);
+		ApplyForce(fallingrubble, '-1.0 -2.0 1.0');
+        PlaySoundLocal(eagleFallSnd, 1.0, 0.0, 0x0, 0);
+		Sleep(0.1);
+		ApplyForce(fallingrubble, '0.0 0.0 -3.0');
+		SetThingMass(fallingRubble, 100.0);
+        SetPhysicsFlags(fallingRubble, 0x41);
+        PlaySoundThing(boulderfall, boulder, 0.0, -1.0, -1.0, 0x0);			#play sound at 0 to lessen hitching...
+		
+	}
+	return;
+	
+# ======================================================================================== 
+pulse:
+if (boulderdown == 1)
+{
+	smoke0 = CreateThing(smoketemplate, smokeGhost0);
+	AnimateSpriteSize(smoke0, '0.01 0.01 1.0', '0.3 0.3 0.0', 2.0);
+	return;
+}
+
+vibe = randBetween(1, 4);
+
+if (vibe == 1)
+{
+	posOffset = '-0.002 0.00 -0.001';
+	angOffset = '0.00 -0.001 0.001';
+}
+if (vibe == 2)
+{
+	posOffset = '0.002 -0.002 0.001';
+	angOffset = '0.001 0.00 -0.001';
+}
+if (vibe == 3)
+{
+	posOffset = '0.001 0.002 -0.002';
+	angOffset = '-0.001 0.001 -0.001';
+}
+if (vibe == 4)
+{
+	posOffset = '-0.001 0.00 0.002';
+	angOffset = '0.00 0.00 0.001';
+}
+
+SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+
+return;
+
+# ======================================================================================== 
+ShakeRandom:
+coin=Randbetween(1, 2);
+if (coin == 1)
+{
+	multiplier = 1;
+}
+else
+{
+	multiplier = -1;
+}
+
+posOffSet = VectorSet(multiplier * 0.007, multiplier * 0.007, multiplier * 0.007);
+angOffSet = VectorSet(multiplier * 0.07, multiplier * 0.07, multiplier * 0.07);
+#Print("posOffSet=");
+#PrintVector(posOffSet);
+#Print("angOffSet=");
+#PrintVector(angOffSet);
+
+return;
+
+
+end
+# ======================================================================================== 

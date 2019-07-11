@@ -1,0 +1,88 @@
+# Jones 3D Cog Script
+#
+# SHW_CommieCreator.cog
+#
+# Creates a bunch of enemies after various events in the waterworks
+#
+# [CM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	#	MESSAGES
+	message     startup
+    message     taken
+    message     entered
+    
+	#	TRIGGERS
+	sector		triggersect	    
+	thing		D3key	    
+    
+	#	ACTORS
+	thing		player      local
+    thing	    enemy0		nolink          
+    thing	    enemy1      nolink    
+    
+    #	ACTOR MARKS
+	thing		enemy_mv0
+	thing		enemy_mv1
+    
+	#	SOUNDS
+	sound		dangercue1=mus_gen_russbold_shrt4.wav	local
+    
+	#	VARIABLES
+    int         keytook=0      local
+    int         charged=0      local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+    
+		player = GetLocalPlayerThing();
+        SetThingFlags(enemy0, 0x80000);
+		SetThingFlags(enemy1, 0x80000);
+        
+return;
+# ........................................................................................
+taken:
+
+	If (GetSenderRef() == D3key)
+	keytook = 1;
+	
+return;
+# ........................................................................................
+# ........................................................................................
+entered:
+	
+	If (GetSenderRef() != triggersect) return;
+    If (keytook == 0) return;
+	If (charged == 1) return;
+		
+	
+    charged = 1;
+	PlaySoundLocal(dangercue1, 1.0, 0.0, 0x0, 0);
+	
+    Sleep(0.5);
+	# bring the commie into play and charge him in
+	ClearThingFlags(enemy0,0x80000);
+	AISetLookThing(enemy0, enemy_mv0);
+    AISetMoveSpeed(enemy0, 3.2);
+    AISetMoveThing(enemy0, enemy_mv0, 0);
+
+    ClearThingFlags(enemy1,0x80000);
+	AISetLookThing(enemy1, enemy_mv1);
+    AISetMoveSpeed(enemy1, 1.0);
+    AISetMoveThing(enemy1, enemy_mv1, 1);
+
+return;
+
+# ........................................................................................
+
+end
+
+

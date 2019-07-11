@@ -1,0 +1,389 @@
+# Jones 3D Cog Script
+#
+# Shs_Maindoor.cog      Make the door to the big nave open/close.  
+#
+# [JWC, SXC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message 	activated
+	message		startup
+	message		touched
+	message		timer
+	message		arrived
+
+	keyframe	leverDown=gen_lever_pull.key		local
+	keyframe    indypull=in_pull_lever.key			local
+
+	sound		leverPull=nub_lever_pull_c.wav		local
+	sound		leverBack=nub_lever_reset_c.wav		local
+	sound   	doormove=shs_door_double.wav		local
+	sound   	doorstop=shs_door_double_stop.wav	local
+
+
+	sector  	doorsector
+	sector		door0OpenSector						local
+	sector		door1OpenSector						local
+	sector		door0ClosedSector					local
+	sector		door1ClosedSector					local
+
+	thing		door0
+	thing   	door1
+	thing   	lever
+	thing		indy
+	thing		in_mk1
+    thing		player								local
+	thing		cam1
+	thing		c1_t1
+	thing		c1_t2
+	thing		touchedDoor							local
+
+	vector		v_dpos								local # door position
+	vector		v_ipos								local # indy position
+	vector		v_idvec								local # indy-to-door vec
+	vector		v_drvec								local # door right vec
+	vector		v_opendoor0PYR						local
+	vector		v_opendoor1PYR						local
+	vector		v_currentDoor0PYR					local
+	vector		v_closedoor0PYR						local # door aim
+	vector		v_closedoor1PYR						local # door aim
+	vector		v_door0OpenPosition					local
+	vector		v_door1OpenPosition					local
+	vector		v_door0ClosedPosition				local
+	vector		v_door1ClosedPosition				local
+
+	int			doorSound=-1						local
+	int			pl_rotrate							local
+	int			bCutscenePlayed=0					local
+	int  		filter=0							local # prevent multiple activates	
+	int			curcam								local
+	int			alreadytouched=0					local
+	int			stopclose=0							local # default to allow closing!
+	int			open=0								local
+    # NOTE:  doors have 4 states...
+	# closed	--> open == 0 (init state)
+	# opening	--> open == 1
+	# open		--> open == 2
+	# closing	--> open == 3
+
+	flex		f_arrdoorY							local # door yaw at arrival
+	flex		f_iposcheck							local # dot result indy relative to door
+	flex		touchangle							local
+	flex		closeangle							local
+	flex		reopenangle							local
+	flex		timeratio							local
+	flex		reopentime							local
+	flex		doortime=4.0						local
+	flex		timeTillClose=15.0					local
+
+# SUB-ROUTINES
+	flex		ReturnControl	local
+	flex		CloseDoors		local
+	flex		OpenDoors		local
+
+end
+
+# ========================================================================================
+
+code
+
+
+startup:
+   
+    #turn off sector
+    SetSectorAdjoins(doorsector, 0);
+    player= GetLocalPlayerThing();
+
+	// Save off the position, PYR, and sector of the door when closed.
+
+	v_closedoor0PYR = GetThingLVecPYR(door0);
+	v_closedoor1PYR = GetThingLVecPYR(door1);
+	v_door0ClosedPosition = GetThingPos(door0);
+	v_door1ClosedPosition = GetThingPos(door1);
+	door0ClosedSector = GetThingSector(door0);
+	door1ClosedSector = GetThingSector(door1);
+
+	// Now compute the PYR of the door when it's open.
+
+	v_opendoor0PYR = VectorSet(VectorX(v_closedoor0PYR), VectorY(v_closedoor0PYR) + 90, VectorZ(v_closedoor0PYR));
+	v_opendoor1PYR = VectorSet(VectorX(v_closedoor1PYR), VectorY(v_closedoor1PYR) - 90, VectorZ(v_closedoor1PYR));
+
+    return;
+
+activated:
+   
+	if (GetCurItem(player) != 0)
+		return;								# prevents activating with chalk
+
+    if ((GetSenderRef() == lever) && (filter == 0))
+	{
+		pl_rotrate = GetThingMaxRotVel(player);
+        filter = 1;							// Only one activate message at a time, please.
+		curCam = GetCurrentCamera();
+		StartCutscene(0);
+		SetActorFlags(player, 0x200000);	# paralyze him
+
+		# Disable and hide player...
+		StopThing(player);					# right now
+		PlayMode(player, 1, 0);				# get him into a nice stand
+		DeselectWeapon(player);				# stow any weapon or lighter
+		DeselectWeaponWait(player);
+	    CopyPlayerHolsters(player, indy);	# make sure our actor has matching props
+        Sleep(0.5);							# give him some time to do his stuff
+        
+        
+        # Prep camera & cut...
+		SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+		SetCameraPosInterp(2, 0);			# kill dolly mode too
+		SetCameraFocus(2, cam1);
+		SetCameraSecondaryFocus(2, c1_t1);
+		Sleep(0.01);
+		SetCurrentCamera(2);
+		SetCameraFOV(65, 0, 0.0);
+        
+		# Switch actor indy for player...
+        SetThingFlags(player, 0x80000);		# hide him
+		ClearThingFlags(indy, 0x80000);		# reveal our actor
+        		
+		# Indy pulls lever
+		PlayKey(indy, indypull, 4, 0x12, 0);
+		PlayKey(lever, leverDown, 4, 0x12, 0);
+		Sleep(1.2);
+		PlaySoundLocal(leverPull, 1.0, 0, 0x0000, 0);
+		Sleep(1.4);
+		PlaySoundLocal(leverBack, 1.0, 0, 0x0000, 0);
+		Sleep(0.3);
+
+		if (!bCutscenePlayed)
+		{
+			// Only show the doors opening the first time the player pulls the lever.
+			# camera moves to show doors opening
+			SetCameraLookInterp(2, 1);			# pan & tilt 
+			SetCameraInterpSpeed(2, 3.0);
+			Sleep(0.01);
+			SetCameraSecondaryFocus(2, c1_t2);
+			SetCameraFOV(80, 1, 3.0);
+			Sleep(2.0); #start before move finishes
+		
+            # Look at door
+			SetThingMaxRotVel(indy, 100.0);
+			AISetLookThingEyeLevel(indy, door0);
+        }
+
+		SetSectorAdjoins(doorsector, 1);
+        
+		# open doors		    		     
+        Call OpenDoors;
+		SetTimer(timeTillClose);		// Timer message will close doors automatically.
+
+		if (!bCutscenePlayed)
+		{
+			// If we're showing the doors, wait 'till they finish opening before returning control to player.
+			WaitForStop(door0);
+			bCutscenePlayed = 1;
+		}
+
+		Call ReturnControl;
+
+		filter = 0;						// Activate messages are cool again
+    }
+    		     
+    return;
+    
+ReturnControl:
+   	
+    # Return control and camera to player
+    sleep(.5);
+	SetActorHeadPYR(indy,'0,0,0');		# reset actor head
+    CopyOrientAndPos(indy, player); # move player to actor's spot
+    SetThingFlags(indy, 0x80000);
+    TeleportThing(indy, in_mk1);	# put actor back in spot
+	SetThingMaxRotVel(indy, pl_rotrate);
+    
+	# prep for camera to swing back
+	SetCameraPosition(1, VectorAdd(VectorTransformToOrient(player, '-0.25 -0.1 0.0'), GetThingPos(player)));	 # x= -.25 means the camera is on the left
+	ClearThingFlags(player, 0x80000);
+    SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	Sleep(0.01);
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	
+	return;
+
+arrived:
+	if ((GetSenderRef() == door0) && open == 1)
+	{
+		// The doors were opening and have arrived.
+
+		v_currentDoor0PYR = GetThingLVecPYR(door0);
+		f_arrdoorY = Truncate(VectorY(v_currentDoor0PYR)); # to lowest integer degree
+		if (f_arrdoorY == 90)
+		{
+			// We're fully open, time to slam the position and orientation of the doors.
+			if (!bCutscenePlayed)
+			{
+				// This is the first time the doors have opened, so just save off the PYR and pos.
+				v_door0OpenPosition = GetThingPos(door0);
+				v_door1OpenPosition = GetThingPos(door1);
+				door0OpenSector = GetThingSector(door0);
+				door1OpenSector = GetThingSector(door1);
+			}
+			else
+			{
+				// Doors have opened before, force them to previous position and orientation.
+				SetThingPosEx(door0, v_door0OpenPosition, door0OpenSector);
+				SetThingPosEx(door1, v_door1OpenPosition, door1OpenSector);
+				SetThingLVecPYR(door0, v_opendoor0PYR); # slam it open for sure
+				SetThingLVecPYR(door1, v_opendoor1PYR); # slam it open for sure
+			}
+
+			open = 2; # doors are now open
+			StopSound(doorSound, 0.5);
+			doorSound = PlaySoundThing(doorstop, door0, 1.0, 4, 8, 0);
+		}
+
+		SetTimer(timeTillClose);
+		return;
+	}
+
+	if ((GetSenderRef() == door0) && open == 3)
+	{		
+		// The doors were closing and have arrived.
+
+		if (alreadytouched == 1)
+		{
+			return;
+		}
+
+		v_currentDoor0PYR = GetThingLVecPYR(door0);
+		f_arrdoorY = Truncate(VectorY(v_currentDoor0PYR)); # to lowest integer degree
+		if (f_arrdoorY == 0)
+		{
+			// We're fully closed, time to slam the position and orientation of the doors.
+
+			SetThingLVecPYR(door0, v_closedoor0PYR); # slam it closed for sure
+			SetThingLVecPYR(door1, v_closedoor1PYR); # slam it closed for sure
+			SetThingPosEx(door0, v_door0ClosedPosition, door0ClosedSector);
+			SetThingPosEx(door1, v_door1ClosedPosition, door1ClosedSector);
+		}
+
+		open = 0; # door is now closed
+		StopSound(doorSound, 0.5);
+		doorSound = PlaySoundThing(doorstop, door0, 1.0, 4, 8, 0);
+		SetSectorAdjoins(doorsector, 0);
+	}
+
+	return;
+
+# ..............................................................................
+
+touched:
+	if ((GetSenderRef() == door0 || GetSenderRef() == door1) && open == 3 && alreadytouched == 0)
+	{
+		// The player has run into us, see if we need to re-open the doors.
+
+		touchedDoor = GetSenderRef();
+		alreadytouched = 1;									# suppress multiple hits
+
+		# check if Indy is touching back side of door...
+		v_dpos = GetThingPos(touchedDoor);					# Position of door
+		v_ipos = GetThingPos(player);						# our hero
+ 		v_idvec = VectorNorm(VectorSub(v_dpos, v_ipos));	# direction between indy & door 
+		v_drvec = GetThingLVec(touchedDoor);				# check 90 to door plane
+		f_iposcheck = VectorDot(v_idvec, v_drvec); # places indy in- or outside door
+
+		if (((GetSenderRef() == door0) && (f_iposcheck < 0)) || ((GetSenderRef() == door1) && (f_iposcheck > 0)))
+		{
+			# Don't re-open if Indy is touching back side...
+			alreadytouched = 0;
+			return;
+		}
+
+		// Indy is in the way - better re-open...			
+
+		StopThing(door0);	# but first we stop it
+		StopThing(door1);	# but first we stop it
+		Sleep(0.1);			# let engine update
+		open = 1;			# door is going to open again
+
+		# Get door angle at moment it's touched...
+
+		v_currentDoor0PYR = GetThingLVecPYR(door0);
+		closeangle = VectorY(v_closedoor0PYR);
+		touchangle = VectorY(v_currentDoor0PYR);
+
+		# Get rotation angle door needs to fully re-open...	
+		# PRO TIP:  the engine uses angles *backwards* from the Rotate() verb	
+
+		reopenangle = ((closeangle + 90) - touchangle); # for L-doors 
+		if (reopenangle < -360)
+		{
+			reopenangle = (reopenangle + 360);
+		}
+
+		# How far open...?
+		timeratio = (Abs(reopenangle) / 90); # what percentage?
+		reopentime = (doortime * timeratio); # calculate time
+
+		StopSound(doorSound, 0.5);
+		doorSound = PlaySoundThing(doormove, door0, 1.0, 4, 8, 0);
+		Rotate(door0, -reopenangle, 1, reopentime); # re-open 
+		Rotate(door1,  reopenangle, 1, reopentime); # re-open 
+	}
+
+	return;
+
+timer:
+	if (stopclose != 0)
+	{
+		# Don't close door, but start the timer again...
+		SetTimer(2.0); # this amounts to a pulse
+		return;
+	}
+
+	Call CloseDoors;
+
+	return;
+
+# ..............................................................................
+
+OpenDoors:
+	if (open == 0)
+	{
+		Rotate(door0, -90, 1, doortime);
+		Rotate(door1,  90, 1, doortime);
+
+		StopSound(doorSound, 0.5);
+		doorSound = PlaySoundThing(doormove, door0, 1.0, 4, 8, 0);
+		open = 1;
+		alreadytouched = 0; # init every time door opens
+	}
+
+	return;
+
+# ..............................................................................
+
+CloseDoors:
+	if (open == 2)
+	{
+		Rotate(door0,  90, 1, doortime);
+		Rotate(door1, -90, 1, doortime);
+
+		StopSound(doorSound, 0.5);
+		doorSound = PlaySoundThing(doormove, door0, 1.0, 4, 8, 0);
+		open = 3;
+		alreadytouched = 0; # Indy can stop it again
+	}
+
+	return;
+
+# ..............................................................................
+end
+

@@ -1,0 +1,72 @@
+
+# Jones 3D Cog Script
+#
+# shs_UNwindow.cog "Scheiá das Fenster." for the UN seed prep area 
+# 
+#  [JWC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     damaged
+    
+	material	brokenout
+	material	brokenin
+
+	surface     insidewindow	mask=0x408		
+	surface	    outsidewindow	mask=0x408	
+    
+	sound		shatter=shs_glassbreak.wav	local
+
+	template	shards=iceshrapa		local
+
+	thing		shardpos	mask=0x8  # aimable object to allow Indy to target
+    thing       chain       mask=0x8  # any close shot should break window
+    thing       player		local
+	
+	int			broken=0	local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+    player = GetLocalPlayerThing();
+    
+	return;
+    
+# ========================================================================================
+
+damaged:
+    	
+		if(broken == 0)
+		{
+			Print("damaged");
+			broken=1;
+			PlaySoundLocal(shatter, 1.0, 0, 0, 0);
+			
+			# Make stuff
+			CreateThing(shards, shardpos);
+			
+			# Swap Texture
+			SetSurfaceMat(insidewindow, brokenin);
+			SetSurfaceMat(outsidewindow,brokenout);
+			
+			# Make adjoin move
+			SetAdjoinFlags(insidewindow, 0x02);
+			SetAdjoinflags(outsidewindow, 0x02);
+
+			DestroyThing(shardpos); 
+		}
+	return;
+
+# ========================================================================================
+
+end
+

@@ -1,0 +1,103 @@
+# Jones 3D Cog Script
+#
+# actor_IndyJeep.cog
+#
+# [RT] [MDR]
+#
+# Indy's script while driving the jeep.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		user0
+message		user1
+message		boarded
+message		killed
+message		timer
+message		pulse
+
+# ************************** DEATH VARS *****************************
+
+template	tpl_explosion=+jeep_exp_blast	local
+
+template	tpl_wreckjeep=wreckjeep			local			
+
+template	tpl_ghost=ghost					local
+
+template	sparks=paddlesplash				local	# for tire dust
+
+# ************************ MISC LOCAL VARS **************************
+
+thing		indy							local
+thing		t_WreckedJeep					local
+thing		t_Ghost							local
+vector		v_Vel							local
+
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	indy = GetLocalPlayerThing();
+	return;
+
+# -------------------------------------------------------------------
+user0:
+
+	StartCutScene(2);
+	return;
+# -------------------------------------------------------------------
+
+user1:
+
+	EndCutScene();
+	return;
+
+# -------------------------------------------------------------------
+
+boarded:
+
+	CopyPlayerHolsters(GetSourceRef(), GetSenderRef());
+	
+	return;
+
+# -------------------------------------------------------------------
+killed:
+
+	# If not death by poison then blow up the jeep	
+	if (!BITTEST(GetParam(1), 0x100))
+	{
+		CreateThing(tpl_explosion, GetLocalPlayerThing());
+		SetTimer(0.4);
+		SetPulse(0.15);
+		
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+timer:
+
+	CreateThing(tpl_explosion, GetLocalPlayerThing());
+	t_WreckedJeep = CreateThing(tpl_wreckjeep, GetLocalPlayerThing());
+	v_Vel = GetThingVel(GetLocalPlayerThing());
+	SetThingVel(t_WreckedJeep, v_Vel);
+	SetThingFlags(GetLocalPlayerThing(), 0x80000);
+	SetPulse(0.0);
+	return;
+
+# -------------------------------------------------------------------
+pulse:
+	CreateThing(tpl_explosion, GetLocalPlayerThing());
+	return;
+
+end
+

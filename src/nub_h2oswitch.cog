@@ -1,0 +1,713 @@
+# Jones 3D Cog Script
+#
+# nub_h2oswitch2.cog
+#
+# [TL] [GGJ] [RT]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ===================================================================
+symbols
+
+message	startup
+message	arrived
+message	activated
+message	entered
+message	taken
+message	timer
+
+# ***** COGS ********************************************************
+
+cog		lightningcog	# Cog which controls the lightning strikes.
+
+# ***** LINKED GEOMETRY *********************************************
+
+sector	trigger
+
+sector	twater0		linkID=1	# Top water sectors.
+sector	twater1		linkID=1
+sector	twater2		linkID=1
+sector	twater3		linkID=1
+sector	twater4		linkID=1
+sector	twater5		linkID=1
+sector	twater6		linkID=1
+sector	twater7		linkID=1
+
+surface	killSurf0	linkID=2
+surface	killSurf1	linkID=2
+surface	killSurf2	linkID=2
+surface	killSurf3	linkID=2
+surface	killSurf4	linkID=2
+surface	killSurf5	linkID=2
+surface	killSurf6	linkID=2
+surface	killSurf7	linkID=2
+surface	killSurf8	linkID=2
+surface	killSurf9	linkID=2
+
+# ***** NO LINK GEOMETRY ********************************************
+
+sector	currentSector	local
+
+sector	bwater0			nolink	# Bottom water sectors.
+sector	bwater1			nolink
+sector	bwater2			nolink
+sector	bwater3			nolink
+
+sector	ptsec0			nolink
+sector	ptsec1			nolink
+sector	ptsec2			nolink
+
+sector	pbsec0			nolink
+sector	pbsec1			nolink
+sector	pbsec2			nolink
+
+surface	surface0a		nolink	# Top water surface adjoins.
+surface	surface0b		nolink
+surface	surface0c		nolink
+surface	surface0d		nolink
+surface	surface0e		nolink
+surface	surface0f		nolink
+surface	surface0g		nolink
+surface	surface0h		nolink
+surface	surface0i		nolink
+
+surface	surface1a		nolink	# Middle water surface adjoins.
+surface	surface1b		nolink
+surface	surface1c		nolink
+surface	surface1d		nolink
+surface	surface1e		nolink
+surface	surface1f		nolink
+surface	surface1g		nolink
+surface	surface1h		nolink
+
+# ***** LINKED THINGS ***********************************************
+
+thing	switchA			linkID=3 # Controls A paddles
+thing	switchB			linkID=3 # Controls B paddles
+
+thing	paddleAtop		linkID=4
+thing	paddleAbottom	linkID=4
+thing	paddleBtop		linkID=4
+thing	paddleBbottom	linkID=4
+
+thing	h2o				linkID=5 # Water surface 3do
+
+thing	IMP4
+
+# ***** NO LINK THINGS **********************************************
+
+thing	camera0			nolink
+thing	camera1			nolink
+
+thing	drainWater0		nolink
+thing	drainWater1		nolink
+thing	drainWater2		nolink
+
+thing	origin0			nolink
+thing	origin1			nolink
+thing	origin2			nolink
+thing	origin3			nolink
+
+thing	paddleTarget	nolink
+
+thing	spicket			nolink
+
+thing	targetArray00	nolink
+thing	targetArray01	nolink
+thing	targetArray02	nolink
+
+thing	targetArray10	nolink
+thing	targetArray11	nolink
+thing	targetArray12	nolink
+
+thing	targetArray20	nolink
+thing	targetArray21	nolink
+thing	targetArray22	nolink
+
+thing	targetArray30	nolink
+thing	targetArray31	nolink
+thing	targetArray32	nolink
+
+# ***** LOCAL THINGS ************************************************
+
+thing	player		local
+thing	sender		local
+thing	target		local
+
+# ***** MATERIALS ***************************************************
+
+material	electroMat=nub_a_plate_electric.mat			local
+material	lightningmat0=aet_4sfx_lightning_v2_a.mat	local
+material	lightningmat1=aet_4sfx_lightning_v2_b.mat	local
+material	lightningmat2=aet_4sfx_lightning_v2_c.mat	local
+material	lightningmat3=aet_4sfx_lightning_v2_d.mat	local
+material	lightningmat4=aet_4sfx_lightning_v2_e.mat	local
+
+# ***** SOUNDS ******************************************************
+
+sound	strike0=aet_lightning_01.wav		local
+sound	strike1=aet_lightning_02.wav		local
+sound	strike2=aet_lightning_03.wav		local
+sound	strike3=aet_lightning_04.wav		local
+sound	drainSnd=riv_rapid_cave_a.wav		local
+sound	fillSnd=riv_rapid_cave2_a.wav		local
+sound	buttonSnd=gen_stonebutt_push_c.wav	local
+
+# ***** BOOLS *******************************************************
+
+int		disabled=0		local
+int		firstEnter=0	local
+int		lightning=0		local
+
+int		toggle=0		local
+int		waterMoving=0	local
+
+# ***** MISC. LOCAL VARIABLES ***************************************
+
+int		originIndex		local
+
+int		drainTrack=-1	local
+
+int		open=1			local
+int		closed=0		local
+
+int		index			local
+int		count			local
+
+int		senderID		local
+
+int		padAState=0		local
+int		padBState=0		local
+
+int		waterLevel=2	local	# 0 = empty, 1 = mid level, 2 = full
+
+int		curPaddle		local
+int		curSwitch		local
+int		curFrame		local
+
+int		randInt			local
+
+flex	countdown=0.75	local	# Speed of water draining or filling.
+
+vector	veclight		local
+vector	lesslight		local
+
+# ***** SUBROUTINES *************************************************
+
+flex	ShowPaddles		local
+flex	PaddleCheck		local
+flex	StopLightning	local
+
+end
+
+# ===================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+# Initialize variables
+veclight = VectorSet(0, 0.2, 0.8);
+lesslight = VectorSet(0, 0.1, 0.5);
+
+# Do stuff
+for (index = 0; index < 8; index = index + 1)
+{
+	SetSectorLight(twater0[index], veclight, 5); # top sector light on 
+	SetFaceGeoMode(surface1a[index], 0); # mid level adjoins off
+}
+for (index = 0; index < 4; index = index + 1)
+{
+	SetThingLight(paddleAtop[index], '1.0 1.0 1.0', 0.01, 1.0); # paddle lights on
+	SetSectorLight(bwater0[index], veclight, 5); # bottom water sector light on
+}
+for (index = 0; index < 3; index = index + 1)
+{
+	SetThingLight(drainWater0[index], '0.8 0.8 0.8', 0.01, 1.0); # drain lights on
+}
+for (index = 0; index < 2; index = index + 1)
+{
+	SetThingLight(switchA[index], '1.0 1.0 1.0', 0.01, 1.0); # switch lights on
+	SetSectorLight(ptsec0[index], veclight, 5); # top paddle sector light on
+	SetSectorLight(pbsec0[index], veclight, 5); # bottom paddle sector light on
+}
+SetSectorlight(ptsec2, lesslight, 5);
+SetSectorlight(pbsec2, lesslight, 5);
+
+# Hide water 3DOs
+SetCollideType(h2o, 0);
+SetThingFlags(h2o, 0x80000);
+SetThingFlags(drainwater1, 0x80000);
+SetThingFlags(drainwater2, 0x80000);
+
+# Start sounds
+Sleep(0.01);
+PlaySoundThing(fillSnd, spicket, 1.0, -1, -1, 0x881);
+drainTrack = PlaySoundThing(drainSnd, drainWater0, 0.7, 1.0, 20.0, 0x881);
+
+return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+if (disabled) return;
+if (waterMoving) return;
+
+# Check switches
+if (GetSenderID() != 3) return;
+
+sender = GetSenderRef();
+if (sender == switchA)
+{
+	if (padAState < 2)
+		curPaddle = 0 ;
+	else
+		curPaddle = 1;
+
+	call ShowPaddles;
+
+	padAState = padAState + 1;
+	if (padAState > 3)
+		padAState = 0 ;
+}
+else if (sender == switchB)
+{
+	if (padBState < 2)
+		curPaddle = 3;
+	else
+		curPaddle = 2;
+
+	call ShowPaddles;
+
+	padBState = padBState + 1;
+	if (padBState > 3)
+		padBState = 0 ;
+}
+
+return;
+
+# -------------------------------------------------------------------
+	
+ShowPaddles:	
+
+if (MakeMeStop() == -1) return;
+StartCutscene(1);
+DeselectWeaponWait(player);
+
+PlayMode(player, 60, 0);
+Sleep(0.5);
+
+curSwitch = curPaddle / 2;
+MoveToFrame(switchA[curSwitch], 1, 0.5);
+PlaySoundThing(buttonSnd, switchA[curSwitch], 1.0, -1, -1, 0x880);
+Sleep(0.55);
+
+SetCameraFocus(2, camera1);
+SetCameraSecondaryFocus(2, paddletarget);
+SetCurrentCamera(2);
+SetCameraFOV(120, 0, 0.0);
+
+MoveToFrame(paddleAtop[curPaddle], 1 - GetCurFrame(paddleAtop[curPaddle]), 0.5);
+
+return;
+
+# -------------------------------------------------------------------
+
+arrived:
+
+senderID = GetSenderID();
+
+# Check paddles
+if (senderID == 4)
+{
+	call PaddleCheck;
+
+	Sleep(0.5);
+	ResetCameraFOV(0, 0.0);
+	SetCurrentCamera(1);
+
+	if (!waterMoving)
+	{
+		PlaySoundThing(buttonSnd, switchA[curSwitch], 1.0, -1, -1, 0x880);
+		MoveToFrame(switchA[curSwitch], 0, 1.0);
+	}
+
+	Sleep(0.5);
+    ClearActorFlags(player, 0x200000);
+	EndCutscene();
+
+	return;
+}
+
+sender = GetSenderRef();
+curFrame = GetCurFrame(sender);
+
+# Check water
+if (senderID == 5)
+{
+    waterMoving = 0;
+
+	# Fade old drain sound & start the new one
+	if (drainTrack != -1)
+	{
+		StopSound(drainTrack, 0.0);
+	}
+	drainTrack = PlaySoundThing(drainSnd, drainWater0[curFrame], 0.7, 1.0, 20.0, 0x881);
+
+	PlaySoundThing(buttonSnd, switchA[curSwitch], 1.0, -1, -1, 0x880);
+	MoveToFrame(switchA[curSwitch], 0, 1.0);
+
+	if (curFrame == 0) # Top level
+	{
+#		Print("Water arrived at top");
+		SendMessage(lightningcog, user1);
+
+		SetThingFlags(h2o, 0x80000);
+		SetThingFlags(drainWater1, 0x80000);
+		SetThingFlags(drainWater2, 0x80000);
+		ClearThingFlags(drainWater0, 0x80000);
+
+		# Turn on adjoins and sectors
+		for (index = 0; index < 8; index = index + 1)
+		{
+			SetFaceGeoMode(surface0a[index], 4);
+			SetSectorFlags(twater0[index], 0x2);
+		}
+		SetFaceGeoMode(surface0i, 4); # One extra...
+	}
+	else if (curFrame == 1) # Middle level
+	{
+#		Print("Water arrived at middle");
+		SetThingFlags(h2o, 0x80000);
+		SetThingFlags(drainWater0, 0x80000);
+		SetThingFlags(drainWater2, 0x80000);
+		ClearThingFlags(drainWater1, 0x80000);
+
+		for (index = 0; index < 8; index = index + 1)
+		{
+			SetFaceGeoMode(surface1a[index], 4); #middle water level adjoins on
+		}
+	}
+	else# if (curFrame == 2) # Bottom level
+	{
+#		Print("Water arrived at bottom");
+		SetThingFlags(drainWater0, 0x80000);
+		SetThingFlags(drainWater1, 0x80000);
+		ClearThingFlags(drainWater2, 0x80000);
+	}
+}
+return;
+
+# -------------------------------------------------------------------
+
+entered:
+
+if (GetSourceRef() != player) return;
+
+senderID = GetSenderID();
+sender = GetSenderRef();
+
+# If player enters pool while it's full, kill him
+if (senderID == 1)
+{
+	if (waterLevel != 2) return;
+	
+	DamageThing(player, 1000, 0x02, 0);
+	toggle = 1;
+}
+
+# If player falls into pool, kill him
+if (senderID == 2)
+{
+	DamageThing(player, 1000, 0x02, 0);
+	return;
+}
+
+if (firstEnter != 0) return;
+
+if (sender == trigger)
+{
+	firstEnter = 1;
+	lightning = 1;
+
+	SetTimer(Rand() * 2.5);
+	MaterialAnim(electroMat, 3.8, 0x1); 
+}
+
+return;
+
+# -------------------------------------------------------------------
+
+taken:
+
+if (GetSenderRef() != IMP4) return;
+{
+	# Once the IMP is taken, everything shuts down.
+	disabled = 1;
+    SendMessage(lightningcog, user2);
+}
+
+return;
+
+# -------------------------------------------------------------------
+
+timer:
+
+# Lightning code
+if (toggle == 0)
+{
+	for (count = 2; count <= RandBetween(2, 5); count = count + 1)
+	{
+		originIndex = RandBetween(0, 3);
+		randInt = RandBetween(0, 2);
+		if (originIndex == 0)
+		{
+			target = targetArray00[randInt];
+		}
+		else if (originIndex == 1)
+		{
+			target = targetArray10[randInt];
+		}
+		else if (originIndex == 2)
+		{
+			target = targetArray20[randInt];
+		}
+		else if (originIndex == 3)
+		{
+			target = targetArray30[randInt];
+		}
+
+		CreatePolylineThing(origin0[originIndex], target, '0 0 0', lightningmat0[RandBetween(0, 4)], 0.1, 0.1, 0.05);
+		PlaySoundThing(strike0[RandBetween(0, 3)], target, 0.8, 5, 15, 0x80);
+		Sleep(0.05);
+	}
+}
+else
+{
+	currentSector = GetThingSector(player);
+	randInt = RandBetween(0, 2);
+
+	if (currentSector == twater0)
+	{
+		originIndex = 0;
+		target = targetArray00[randInt];
+	}
+	else if (currentSector == twater1)
+	{
+		originIndex = 1;
+		target = targetArray10[randInt];
+	}
+	else if (currentSector == twater2)
+	{
+		originIndex = 2;
+		target = targetArray20[randInt];
+	}
+	else if (currentSector == twater3)
+	{
+		originIndex = 3;
+		target = targetArray30[randInt];
+	}
+
+	CreatePolylineThing(origin0[originIndex], player, '0 0 0', lightningmat0[RandBetween(0, 4)], 0.1, 0.1, 0.15);
+	CreatePolylineThing(player, target, '0 0 0', lightningmat0[RandBetween(0, 4)], 0.1, 0.1, 0.15);
+	PlaySoundThing(strike0[RandBetween(0, 3)], target, 1.0, 5, 10, 0x80);
+}
+
+if (lightning == 1)
+{
+	SetTimer(Rand() * 2.5);
+}
+
+return;
+
+# -------------------------------------------------------------------
+
+PaddleCheck:
+
+#DebugLocalSymbols("PaddleCheck");
+if (GetCurFrame(paddleAbottom) == 1) # Bottom right is open
+{
+	if (GetCurFrame(paddleBbottom) == 1) # Bottom left is open
+	{
+		waterMoving = 1;
+		waterLevel = 0;
+
+		SetCameraFocus(2, camera0);
+		SetCameraSecondaryFocus(2, h2o);
+		SetCurrentCamera(2);
+		#SetCameraFOV(90, 1, 5.0);
+		SetCameraFOV(90, 0, 0.0);
+
+		for (index = 0; index < 8; index = index + 1)
+		{
+			SetFaceGeoMode(surface0a[index], 0); # surface adjoins off
+			SetFaceGeoMode(surface1a[index], 0); # mid level adjoins off
+			ClearSectorFlags(twater0[index], 0x2); # top sectors off
+			SetSectorLight(twater0[index], '0 0 0', 5); # top sector light off
+		}
+		SetFaceGeoMode(surface0i, 0); # One extra...
+
+		for (index = 0; index < 4; index = index + 1)
+		{
+			ClearSectorFlags(bwater0[index], 0x2); # bottom sectors off
+			SetSectorLight(bwater0[index], '0 0 0', 5); # bottom sector light off
+		}
+
+		for (index = 0; index < 3; index = index + 1)
+		{
+			SetSectorLight(ptsec0[index], '0 0 0', 5); # top paddle sector light off
+			SetSectorLight(pbsec0[index], '0 0 0', 5); # bottom paddle sector light off
+		}
+
+		# Move water to bottom position
+		ClearThingFlags(h2o, 0x80000);
+		MoveToFrame(h2o, 2, countdown);
+
+		if (drainTrack != -1)
+		{
+			StopSound(drainTrack, 2.0);
+		}
+		drainTrack = PlaySoundThing(drainSnd, h2o, 0.7, 1.0, 18.0, 0x881);
+
+		# Stop lightning as water passes
+		Sleep(2.5);
+		Call StopLightning;
+		Sleep(12.0);							#was 10.0
+		
+		return;
+	}
+}
+else if (GetCurFrame(paddleAtop) == 1) # Top right is open
+{
+	if (GetCurFrame(paddleBtop) == 1) # Top left is open
+	{
+		if (waterLevel == 0) return;
+
+		waterMoving = 1;
+		waterLevel = 1;
+		
+		SetCameraFocus(2, camera0);
+		SetCameraSecondaryFocus(2, h2o);
+		SetCurrentCamera(2);
+		SetCameraFOV(90, 1, 5.0);
+		
+		for (index = 0; index < 8; index = index + 1)
+		{
+			SetFaceGeoMode(surface0a[index], 0); # surface adjoins off
+			ClearSectorFlags(twater0[index], 0x2); # top sectors off
+			SetSectorLight(twater0[index], '0 0 0', 35); # top sector light off
+		}
+		SetFaceGeoMode(surface0i, 0); # One extra...
+
+		for (index = 0; index < 4; index = index + 1)
+		{
+			SetSectorFlags(bwater0[index], 0x2); # bottom water sectors on
+			SetSectorLight(bwater0[index], veclight, 15); # bottom sector light on
+		}
+
+		for (index = 0; index < 3; index = index + 1)
+		{
+			SetSectorLight(ptsec0[index], '0 0 0', 35); # top paddle sector light off
+		}
+
+		SetSectorLight(pbsec0, veclight, 15); # bottom paddle sector light on
+		SetSectorLight(pbsec0, veclight, 15);
+		SetSectorLight(pbsec0, lesslight, 15);
+
+		# Turn on water 3do and move it to center position...
+		ClearThingFlags(h2o, 0x80000);
+		MoveToFrame(h2o, 1, countdown);
+
+		if (drainTrack != -1)
+		{
+			StopSound(drainTrack, 2.0);
+		}
+		drainTrack = PlaySoundThing(drainSnd, h2o, 0.4, 1.0, 20.0, 0x881);
+
+		# Stop lightning as water passes
+		Sleep(2.5);
+		Call StopLightning;
+		Sleep(8.5);							#was 7.0
+
+		return;
+	}
+}
+
+# If we made it this far, neither drain is open
+if (waterLevel != 2) # water is down, so bring it back up
+{
+	waterMoving = 1;
+	waterLevel = 2;
+
+	SetCameraFocus(2, camera0);
+	SetCameraSecondaryFocus(2, h2o);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 1, 5.0);
+	
+	for (index = 0; index < 8; index = index + 1)
+	{
+		SetFaceGeoMode(surface1a[index], 0); # mid level adjoins off
+		SetSectorFlags(twater0[index], 0x2); # top sectors on
+		SetSectorLight(twater0[index], veclight, 5); # top sector light on
+	}
+
+	for (index = 0; index < 4; index = index + 1)
+	{
+		SetSectorFlags(bwater0[index], 0x2); # bottom water sectors on
+		SetSectorLight(bwater0[index], veclight, 5); # bottom water sector light on
+	}
+
+	SetSectorlight(pbsec0, veclight, 5); # bottom paddle sector light on
+	SetSectorlight(pbsec1, veclight, 5);
+	SetSectorlight(pbsec2, lesslight, 5);
+
+	SetSectorlight(ptsec0, veclight, 5); # top paddle sector light on
+	SetSectorlight(ptsec1, veclight, 5);
+	SetSectorlight(ptsec2, lesslight, 5);
+
+	# ...turn on water 3do and move it to top position...
+	ClearThingFlags(h2o, 0x80000);
+	MoveToFrame(h2o, 0, countdown * 1.5);
+
+	if (drainTrack != -1)
+	{
+		StopSound(drainTrack, 2.0);
+	}
+		
+	# Restart lightning as water passes
+	if (GetCurFrame(h2o) == 2)
+	{
+		drainTrack = PlaySoundThing(drainSnd, h2o, 0.7, 1.0, 30.0, 0x881);
+		Sleep(11.3);
+	}
+	else
+	{
+		drainTrack = PlaySoundThing(drainSnd, h2o, 0.5, 0.1, 20.0, 0x881);
+		Sleep(4.8);
+	}
+	
+#	Print("Starting mat track");
+	MaterialAnim(electroMat, 3.8, 0x1);
+	SetTimer(Rand() * 2.5);
+	Sleep(2.5);					#was 1.0
+}
+return;
+
+# -------------------------------------------------------------------
+
+StopLightning:
+
+lightning = 0;
+
+#Print("Stopping mat track");
+StopMaterialAnim(electroMat); # stop animating surfaces
+SetMaterialCel(electroMat, 0); # reset cel
+
+SendMessage(lightningcog, user0);
+SetTimer(0.0);
+
+return;
+
+end

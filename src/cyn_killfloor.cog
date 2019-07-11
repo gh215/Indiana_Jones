@@ -1,0 +1,79 @@
+# Jones 3D Cog Script
+#
+# 00_CYN_Killfloor.cog
+#
+# Main Title & Indy goes to work...
+#
+# [CMG]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		entered
+
+
+# ............................... SURFACES ....................................
+	surface		killfloor0
+	surface		killfloor1
+	surface		killfloor2
+	surface		killfloor3
+	surface		killfloor4
+	surface		killfloor5
+	surface		killfloor6
+	surface		killfloor7
+	surface		killfloor8
+	surface		killfloor9
+	surface		killfloor10
+	surface		killfloor11
+	surface		killfloor12
+	surface		killfloor13
+	surface		killfloor14
+	surface		killfloor15
+	surface		killfloor16
+	surface		killfloor17
+	surface		killfloor18
+	surface		killfloor19
+	surface		killfloor20
+
+# ............................... TRIGGERS ....................................
+	sector		safetysect
+
+# ............................... VARIABLES ....................................
+
+    int			index=0									local
+    int			safemode=0								local
+
+end
+
+# ==============================================================================
+code
+
+startup:
+
+	for (index = 0; index <= 20 ; index = index + 1)
+		{
+		SetSurfaceFlags(killfloor0[index], 0x1000);
+		}
+
+	return;
+
+# ==============================================================================
+entered: 
+
+	if (GetSenderRef() != safetysect) return;
+	
+	for (index = 0; index <= 20 ; index = index + 1)
+		{
+		ClearSurfaceFlags(killfloor0[index], 0x1000);
+		}
+
+    return;
+
+# ==============================================================================
+end

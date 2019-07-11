@@ -1,0 +1,112 @@
+# Jones 3D Cog Script
+#
+# Vol_SophiaRoom_door.cog
+#
+# Generic Door Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup		
+	message	crossed	
+    message	blocked		
+
+	thing		door0		linkid=0
+	surface		adjoin0         linkid=1        mask=0x405
+	surface		adjoin1         linkid=2        mask=0x405
+
+
+	float	doorspeed=4.0
+	float	sleepTime=2.0
+	
+	int		open=0	local
+	int		checked=0	local
+    
+	sector	doorSector			local
+
+	sound	locked1=INXJ081.WAV        local
+	sound	locked2=INXJ076.WAV        local
+    sound	locked3=INXJ077.WAV        local
+
+	vector	campos					local
+	thing	player					local
+	int		curCam					local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	doorSector = GetThingSector(door0);
+	SetSectorAdjoins(doorSector, 0);
+    return;
+
+# ........................................................................................
+
+crossed:
+
+		if (getSenderID() == 1)
+        {
+        if (open == 1) return;
+	    if (IsThingMoving(door0)) return;
+            
+	    {
+                open = 1;
+                SetSectorAdjoins(doorSector, 1);
+                Rotate(door0, 90, 1, doorspeed);
+                waitforstop(door0);
+                sleep(sleeptime);
+                Rotate(door0, -90, 1, doorspeed);
+                waitforstop(door0);
+                SetSectorAdjoins(doorSector, 0);
+                open = 0;
+                return;
+            }
+        }
+    else
+        
+        if (GetSenderID() == 2)
+        {
+                
+                if (open == 1) return;
+                if (IsThingMoving(door0)) return;
+                
+            {
+                If (checked == 0)
+				{
+                curCam = GetCurrentCamera();
+                # Disable and hide player
+                SetThingFlags(player, 0x80000);
+                      
+                # Cut to cutscene camera
+                camPos = VectorSet(-0.15, 0.0, 0.065);
+                SetExtCamOffset(camPos);
+                SetThingFlags(player, 0x200000);
+				PlayVoice(player, locked1, 1.0, 1);
+                RestoreExtCam();
+				checked = 1;
+				return;
+				}
+				else If (checked == 1)
+				{
+                    PlayVoice(player, locked3, 1.0, 1);
+                    return;
+				}
+            }
+        }
+        
+# ........................................................................................
+
+blocked:
+	rotatepivot(door0, 1, doorspeed);
+	return;
+
+# ........................................................................................
+
+end
+

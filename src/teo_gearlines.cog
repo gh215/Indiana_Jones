@@ -1,0 +1,123 @@
+# Jones 3D Cog Script
+#
+# TEO_GearLines.cog
+# 
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		activated
+	message		startup
+
+	cog			gearSwitchCog
+	cog			spinSwitchCog
+
+	sound		azerimline=to03j02.wav	local
+
+	sound		indyline0=inxj090.wav	local
+	sound		indyline1=inxj050.wav	local
+	sound		indyline2=inxj058.wav	local
+	sound		indyline3=inxj032a.wav	local
+
+	sound		indylineb0=inxj058.wav	local
+	sound		indylineb1=inxj059.wav	local
+	sound		indylineb2=inxj060.wav	local
+	sound		indylineb3=inxj061.wav	local
+	sound		indylineb4=inxj090.wav	local
+	sound		indylineb5=inxj095.wav	local
+
+	thing		indy					nolink
+	thing		player					local
+
+	thing		gearswitch				linkid=2
+	thing		spinswitch				linkid=2
+
+	thing		statue					nolink
+
+	int			switchcheck=0			local
+	int			lastrand=-1				local
+	int			currand=0				local
+	int			bSpoken=0				local
+
+end
+
+
+# ========================================================================================
+
+code
+# ........................................................................................
+startup:
+
+	player = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+activated:
+
+	# Message must be from one of the switches
+	if (GetSenderID() != 2) return;
+	if (switchcheck != 0) return; 
+
+	switchcheck = 1;
+
+	if (GetCurItem(player) == 0)
+	{
+		if (GetCurFrame(statue) == 3) # statue is up and in position
+		{
+			# Say Azerim line only once...
+			if (!bSpoken)
+			{
+				bSpoken = 1;
+				Sleep(2.0);
+				PlayVoice(indy, azerimline, 1, 1);
+
+				# Let the switch cogs know the line has been spoken
+				SendMessage(gearSwitchCog, user0);
+				SendMessage(spinSwitchCog, user0);
+
+				# These are set by the switch cogs...time to clean up
+				ClearActorFlags(player, 0x200000);
+				EndCutscene();
+			}
+		}
+		else # statue not up yet
+		{
+			StopThing(player);
+			SetActorFlags(player, 0x200000);
+			DeselectWeaponWait(player);
+			StartCutscene(1);
+
+			PlayMode(player, 60, 1);
+
+			currand = RandBetween(0, 3);
+			while (lastrand == currand)
+			{
+				currand = RandBetween(0, 3);
+			}
+			lastrand = currand;
+
+			PlayVoice(player, indyline0[currand], 1, 1);
+			ClearActorFlags(player, 0x200000);
+			EndCutscene();
+		}
+	}
+	else # activates with the wrong item
+	{
+		currand = RandBetween(0, 5);
+		while (lastrand == currand)
+		{
+			currand = RandBetween(0, 5);
+		}
+		lastrand = currand;
+
+		PlayVoice(player, indylineb0[currand], 1, 1);
+	}
+	switchcheck = 0;
+
+	return;
+
+end

@@ -1,0 +1,128 @@
+# Jones 3D Cog Script
+#
+# pyr_4spiketrap.cog
+#	
+# Pyramid 4 trap-door-and-spikes gag
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message		startup
+message		activated
+message		timer
+
+# actors
+thing	player		nolink	local
+
+# world things
+thing	trap		nolink
+thing	traphinge	nolink
+thing	button
+
+# camera stuff
+thing	buttoncam	nolink
+thing	buttonlook	nolink
+thing	cam1spot	local
+thing	cam1look	local
+
+# sound effects
+sound	flapdown=pyr_sarcophagus_lid.wav	local
+sound	flapup=teo_teobut_pull_c.wav		local
+sound	flapstop=gen_stone_stop_c.wav		local
+
+# variables
+int		locked=0		local
+
+# subroutines
+flex	fixcams=0.0		local
+end
+
+
+code
+startup:
+	SetThingLight(trap, '.1 .1 .2', .001, .01);
+
+	return;
+
+activated:
+# ---> button
+
+	if (locked) return;
+	player = GetLocalPlayerThing();
+	
+	call fixcams;
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+
+	locked = 1;
+	StartCutscene(0);
+	
+	# setup offset camera
+	cam1spot = CreateThing(GetThingTemplate(buttoncam), buttoncam);
+	cam1look = CreateThing(GetThingTemplate(buttoncam), buttoncam);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+	SetCameraFocus(2, buttoncam);
+	SetCameraSecondaryFocus(2, buttonlook);
+
+	# indy activates
+	PlayMode(player, 60, 0);
+	Sleep(.25);
+	MoveToFrame(button, 1, 2);
+
+	# move the trap up
+	PlaySoundThing(flapup, trap, 1, -1, -1, 0);
+	AttachThingToThing(trap, traphinge);
+	Rotate(traphinge, -90, 0, 2);	
+	WaitForStop(traphinge);
+	PlaySoundThing(flapstop, trap, 1, -1, -1, 0);
+	
+	# trap drops faster at higher difficulty
+	SetTimer(11 - GetDifficulty());
+	
+	Sleep(.7);
+
+	# restore camera and get rid of objects
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(buttoncam));
+	SetCurrentCamera(1);
+	DestroyThing(cam1spot);
+	DestroyThing(cam1look);
+	
+	# finish up
+	call fixcams;
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	
+	return;
+	
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	return;
+	
+timer:
+	#send trap back up, button back out
+	PlaySoundThing(flapdown, trap, 1, -1, -1, 0);
+	Rotate(traphinge, 90, 0, .5);
+	MoveToFrame(button, 0, 2);
+	WaitForStop(traphinge);
+	PlaySoundThing(flapstop, trap, 1, -1, -1, 0);
+	locked = 0;
+	return;
+	
+end
+

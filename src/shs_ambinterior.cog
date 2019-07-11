@@ -1,0 +1,113 @@
+# Jones 3D Cog Script
+#
+# shs_AmbInterior.cog
+#
+# Plays a random sound at random intervals with random volume and panning
+#
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		startup
+   	message	    entered
+    message     pulse
+
+	# Entry Tower
+    
+	sector      start_ETladder      linkID=1
+    sector      stop_ETladder       linkID=0
+    
+	# Clock Tower
+	
+		# By the ladder
+	sector      start_CTladder      linkID=1
+    sector      stop_CTladder       linkID=0
+        # By the gate
+	sector      start_CTgate      	linkID=1
+    sector      stop_CTgate   		linkID=0
+    	# By the door
+	sector      start_CTdoor      	linkID=1
+    sector      stop_CTdoor   		linkID=0
+	
+    # Bell Tower
+	 	# By the gate
+	sector      start_BTgate      	linkID=1
+    sector      stop_BTgate  		linkID=0
+		# By the door
+	sector      start_BTdoor      	linkID=1
+    sector      stop_BTdoor   		linkID=0
+		
+		# By the window
+	sector      start_BTwin      	linkID=1
+    sector      stop_BTwin   		linkID=0
+	
+	# Big Nave
+		# By the big door
+	sector      start_BNdoor      	linkID=1
+    sector      stop_BNdoor   		linkID=0
+    
+	# Upper Nave
+		# By the windows
+	sector      start_UNwin1      	linkID=1
+	sector      stop_UNwin1   		linkID=0
+	sector      start_UNwin2      	linkID=1
+    sector      stop_UNwin2   		linkID=0
+	 
+	sound		ambient0=shw_amb1.wav   local
+	sound		ambient1=shw_amb2.wav   local
+	sound		ambient2=shw_amb3.wav   local
+	sound		ambient3=shw_amb4.wav   local
+	sound		ambient4=shw_amb5.wav   local
+    sound		ambient5=shw_amb6.wav   local
+    sound		ambient6=shw_amb7.wav   local
+    
+    thing		player					local
+
+end
+
+# ========================================================================================
+
+
+code
+
+# ........................................................................................
+
+startup:
+    
+	player = GetLocalPlayerThing();
+    Sleep(25); #until opening scene is over
+	SetPulse(3.0);
+return;
+
+# ........................................................................................
+
+	entered:
+	
+		if(GetSenderID() == 1)
+		{
+			SetPulse(3.0);
+			
+		}
+		
+		if(GetSenderID() == 0)
+		{
+			SetPulse(0.0);
+		}
+		
+		return;
+	
+	# ========================================================================================
+	
+	pulse:
+		
+		#Play a random sound, random volume, random pan
+		PlaySoundLocal(ambient0[RandBetween(0, 6)], ((RandBetween(1, 3)*.1)), ((rand()*2)-1.0), 0x0, 0);
+		return;
+	
+	# ========================================================================================
+	
+	end
+	
+

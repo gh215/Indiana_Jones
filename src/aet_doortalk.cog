@@ -1,0 +1,580 @@
+# Jones 3D Cog Script
+#
+# aet_DoorTalk.cog
+#
+# Indy talks a lot around doors
+#
+# [HB; thanks to Pat M & Tim M] and [TL] for small additions...
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+# NOTE: This is a random verbal door reaction cog.  Glue it into your level and
+# reach it from a calling cog like this:
+#
+# 1. Create a valid reference to this cog in your calling cog;
+#
+# 2. Use the following verb:
+#    SendMessageEx(thiscogREF, i_userMessage, f_parm0, f_parm1, f_parm2, f_parm3);
+#    (see each section below for details...)
+#
+# 3. Use global15 as a semaphore and return value where neeeded;
+#
+# The resulting chatter is pre-approved by HB...
+#
+# PRODUCT SUPPORT:  cogsrus x8371
+
+# ==============================================================================
+
+symbols
+
+# ................................. MESSAGES ...................................
+
+	message user0	# locked door reaction: right key, wrong key, wrong item, no item
+	message user1	# right key
+	message user2	# wrong key
+	message user3	# wrong item
+	message user4	# no item
+	message user5	# things that won't open
+
+# ................................. SAY LINES ..................................
+
+	# right key lines...
+	sound	in_sayline=Inxj110.wav				local # Success!-->in_sayline[0]
+	sound	in_there=Inxj108.wav				local # There!
+	sound	in_fits=Inxj108.wav					local # There! **bug fix...changed line here [TL]**
+	sound	in_whoaopen=Inxj103.wav				local # Whoa! It opened.
+	sound	in_worked=Inxj111.wav				local # what...know...worked!
+	sound	in_gotlucky=Inxj106.wav				local # ...got lucky.
+	sound	in_damnopen=Inxj105.wav				local # ...be damned...opened.
+	
+	# wrong key lines...
+	sound	in_mustwrongkey=Inxj083.wav			local # Hmm...wrong key-->in_sayline[7]
+	sound	in_wrongkey=Inxj084.wav				local # Wrong key.
+	sound	in_guesswrongkey=Inxj085.wav		local # I guess...wrong key.
+	sound	in_ifkeywrong=Inxj086.wav			local # If key...wrong key.
+
+	# wrong item lines...
+	sound	in_nowork=Inxj089.wav				local # That didn't work-->in_sayline[11]
+	sound	in_somethingwrong=Inxj090.wav		local # ...something wrong.
+	sound	in_hmnotquite=Inxj092.wav			local # Hmm...didn't quite work.
+	sound	in_notright=Inxj060.wav				local # I don't think...right answer
+	sound	in_whoops=Inxj087.wav				local # Whoops.
+	sound	in_nope=Inxj088.wav					local # Nope.
+	sound	in_ofcourseno=Inxj091.wav			local # Of course that didn't work.	
+
+	# door locked lines...
+	sound	in_doorlocked=Inxj076.wav			local # This...locked-->in_sayline[18]
+	sound	in_islocked=Inxj077.wav				local # It's locked.
+	sound	in_locked=Inxj078.wav				local # Locked.
+	sound	in_keyhole=Inxj078.wav				local # Locked. **bug fix...changed line here [TL]**
+	sound	in_lockedagain=Inxj079.wav			local # Locked again.
+	sound	in_lockedluck=Inxj080.wav			local # Locked...luck never changes.
+	sound	in_whyalwayslocked=Inxj081.wav		local # Oh no...why...always locked?
+
+	# just won't open lines...
+	sound	in_cantopen=Inxj096.wav				local # I can't open it-->insayline[25]
+	sound	in_somereadon=Inxj097.wav			local # For some reason...won't open.
+	sound	in_nobudge=Inxj098.wav				local # It won't budge.
+	sound	in_holdingdoor=Inxj099.wav			local # Something is holding this door closed.
+	sound	in_dontknow=Inxj102.wav				local # must be way...don't know how.
+
+# ............................... VARIABLES ....................................
+
+	flex	talkerREF							local
+	flex	rightItem							local
+	flex	triedItem							local
+	flex	forceTalk							local
+	flex	forceLine							local
+	
+	int		key=53								local # tikikey == key[0]
+	int		monkeykey=54						local
+	int		h20key=55							local
+	int		divrm1key=58						local
+	int		divrm2key=59						local
+	int		padkey=61							local
+	int		elevkey=68							local
+	int		pyramidkey=84						local
+	int		sharkkey=85							local
+	int		sealkey=87							local
+	int		squarekeys=98						local # keys plural?
+	int		tikikey2=99							local
+	int		turnerkey=102						local
+	int		bronzekey=103						local
+	int		cuffkey=110							local
+	int		oldladykey=115						local
+	int		sharkgatekey=116					local
+
+	int		keyindex							local # indexes int array
+	int		keyItem								local # flags wrong key use
+	int		keytotal=17							local # define total number of keys
+
+	int		lineindex							local # indexes sound array
+	int		rightkeyoffset=0					local # define
+	int		wrongkeyoffset=7					local # define 
+	int		wrongitemoffset=11					local # define
+	int		lockoffset=18						local # define
+	int		wontopenoffset=25					local # define
+
+	int		alreadyworking=0					local
+
+	int		rk_newline=50						local # init outside actual range
+	int		rk_oldline=50						local
+	int		wk_newline=50						local
+	int		wk_oldline=50						local
+	int		wi_newline=50						local
+	int		wi_oldline=50						local
+	int		dl_newline=50						local
+	int		dl_oldline=50						local
+	int		wo_newline=50						local
+	int		wo_oldline=50						local
+
+	int		dummy
+	
+	flex	checkforkey							local
+	flex	randrightkeylines					local
+	flex	randwrongkeylines					local
+	flex	randwrongitemlines					local
+	flex	randlocklines						local
+	flex	randwontopenlines					local
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+user0:
+
+	# Indy reacts verbally to a locked door player has ACTIVATED in some way...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(lockdoorcogREF, user0, f_talkerREF, f_rightItem, f_triedItem, 0);
+	#
+	# global15 is used by this cog and the calling cog, like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return if the player failed to open the door
+	# global15 == 2 upon return if the player succeeded
+	#
+	# The calling cog can use the 0 value as a semaphore to pause execution, thus:
+	#
+	# while (global15 == 0)
+	# {
+	#	# Wait for line to finish...
+	#	Sleep(0.01);
+	# }
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast!)
+	rightItem = GetParam(1); # what player must use
+	triedItem = GetParam(2); # what player did use
+	
+	alreadyworking = 1; # stall multiple calls
+	
+	if (rightItem == triedItem)
+	{
+		# player has right key and is using it properly
+		call randrightkeylines;
+		global15 = 2;
+	}
+	else
+	{
+		if (triedItem == 0)
+		{
+			# player isn't using anything
+			call randlocklines;
+			global15 = 1;
+		}
+		else
+		{
+			call checkforkey;
+			if (keyItem != 0)
+			{
+				# player is using the wrong key
+				call randwrongkeylines;
+				global15 = 1;
+			}
+			else
+			{
+				# player is using a wrong non-key item
+				call randwrongitemlines;
+				global15 = 1;
+			}
+		}
+	}
+		
+	alreadyworking = 0; # clear to call again
+
+	return;
+		
+# ........................................................................................
+
+user1:
+
+	# NOTE: Indy notes success with RIGHT KEY without taking any other action...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(doortalkcogREF, user1, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, the calling cog can use global15 as a semaphore
+	#
+	# Hey!  You can also force a line choice.  Here's how:
+	# 1. Note your intention by setting f_forceTalk parm to some non-zero value
+	# 2. Examine the available lines to find the one you want (counting from 0)
+	# 3. Pass that number in the forceLine parameter (parm2) 
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	alreadyworking = 1; # stall multiple calls
+
+	if (forceTalk > 0)
+	{
+		rk_newline = forceLine; # choose this line
+		rk_oldline = 0;
+	}
+
+	call randrightkeylines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ........................................................................................
+
+user2:
+
+	# NOTE: Indy notes player has tried WRONG KEY... 
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(doortalkcogREF, user2, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, the calling cog can use global15 as a semaphore;
+	#
+	# As discussed in user1 section, you can also force a line choice.
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	alreadyworking = 1; # stall multiple calls
+
+	if (forceTalk > 0)
+	{
+		wk_newline = forceLine; # choose this line
+		wk_oldline = 0;
+	}
+
+	call randwrongkeylines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ........................................................................................
+
+user3:
+
+	# NOTE: Indy notes use of a WRONG ITEM...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(doortalkcogREF, user3, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, the calling cog can use global15 as a semaphore;
+	#
+	# As discussed in user1 section, you can also force a line choice.
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	alreadyworking = 1; # stall multiple calls
+
+	if (forceTalk > 0)
+	{
+		wi_newline = forceLine; # choose this line
+		wi_oldline = 0;
+	}
+
+	call randwrongitemlines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ........................................................................................
+
+user4:
+
+	# NOTE: Indy acknowledges a LOCKED DOOR...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(doortalkcogREF, user4, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, the calling cog can use global15 as a semaphore;
+	#
+	# As discussed in user1 section, you can also force a line choice.
+ 
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	alreadyworking = 1; # stall multiple calls
+
+	if (forceTalk > 0)
+	{
+		dl_newline = forceLine; # choose this line
+		dl_oldline = 0;
+	}
+
+	call randlocklines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ........................................................................................
+
+user5:
+
+	# NOTE: Indy notes a DOOR with no obvious lock that JUST WON'T OPEN...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(doortalkcogREF, user5, f_talkerREF, f_forceTalk, f_forceLine, 0);
+	#
+	# global15 is used here like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# As discussed in user0 section, the calling cog can use global15 as a semaphore;
+	#
+	# As discussed in user1 section, you can also force a line choice.
+
+	if (alreadyworking > 0)
+	{
+		return;
+	}
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	alreadyworking = 1; # stall multiple calls
+
+	if (forceTalk > 0)
+	{
+		wo_newline = forceLine; # choose this line
+		wo_oldline = 0;
+	}
+
+	call randwontopenlines;
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+# ........................................................................................
+
+checkforkey:
+
+	keyItem = 0; # init each time thru
+
+	for (keyindex = 0; keyindex < keytotal; keyindex = keyindex + 1)
+	{
+		if (triedItem == key[keyindex])
+		{
+			keyItem = key[keyindex];
+		}
+	}
+			
+	return;
+
+# ........................................................................................
+
+randrightkeylines:
+
+	# NOTE: never say same line twice in a row
+	# and say some lines less frequently than others
+	
+	while (rk_newline == rk_oldline)
+	{		
+		rk_newline = RandBetween(0, 9);
+		if (rk_newline > 7)
+		{
+			rk_newline = (rk_newline - 3); # 1/10 chance for lines 5 or 6
+		}
+ 		else
+		{	
+			rk_newline = RandBetween(0, 4); # 1/5 chance for lines 0 thru 4
+		}
+	}
+	rk_oldline = rk_newline; # remember choice
+	lineindex = rightkeyoffset + rk_newline;
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+# ..............................................................................
+
+randwrongkeylines:
+
+	while (wk_newline == wk_oldline)
+	{		
+		wk_newline = RandBetween(0, 3);
+	}
+	wk_oldline = wk_newline;
+	lineindex = wrongkeyoffset + wk_newline; # 1/4 chance
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+# ..............................................................................
+
+randwrongitemlines:
+
+	while (wi_newline == wi_oldline)
+	{		
+		wi_newline = RandBetween(0, 19);
+		if (wi_newline < 15)
+		{	
+			wi_newline = RandBetween(0, 3); # ~1/5 chance for lines 0 thru 3
+		}
+
+		if (wi_newline == 19)
+		{
+			wi_newline = 6; # 1/20 chance for line 6 
+		}
+		if (wi_newline > 16)
+		{
+			wi_newline = 5; # 1/10 chance for line 5 
+		}
+		if (wi_newline > 14)
+		{
+			wi_newline = 4; # 1/10 chance for line 4
+		}
+	}
+	wi_oldline = wi_newline;	
+	lineindex = wrongitemoffset + wi_newline;
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+# ..............................................................................
+
+randlocklines:
+
+	while (dl_newline == dl_oldline)
+	{		
+		dl_newline = RandBetween(0, 19);
+		if (dl_newline < 14)
+		{	
+			dl_newline = RandBetween(0, 2); # ~1/4 chance for 0 thru 2
+		}
+
+		if (dl_newline > 17)
+		{
+			dl_newline = (dl_newline - 13); # 1/20 chance for 5 or 6 
+		}	
+		if (dl_newline > 15)
+		{
+			dl_newline = 4; # 1/10 chance
+		}
+		if (dl_newline > 13)
+		{
+			dl_newline = 3; # 1/10 chance
+		}
+	}
+	dl_oldline = dl_newline;
+	lineindex = lockoffset + dl_newline;
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+# ..............................................................................
+
+randwontopenlines:
+
+	while (wo_newline == wo_oldline)
+	{		
+		wo_newline = RandBetween(0, 4);
+	}
+	wo_oldline = wo_newline;
+	lineindex = wontopenoffset + wo_newline; # 1/5 chance
+
+	PlayVoice(talkerREF, in_sayline[lineindex], 1, 1);
+
+	return;
+
+end
+

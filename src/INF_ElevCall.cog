@@ -1,0 +1,340 @@
+# Jones 3D Cog Script
+#
+# gen_ElevCall.cog
+#
+# This Cog controls one elevator that can be summoned to any number of floors
+# A cog must be placed at each floor to be attached to the call button, the up and down
+# buttons, and the elevator.
+# You have to manually assign to each cog what floor level it is on.
+# Remember that the elevator's first frame is 0 even though your first floor may be one.
+#
+# [SxC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+
+symbols
+
+    message     startup
+	message     activate
+    message     arrived
+    message     blocked
+    message     user0
+
+    thing       player                             local
+	thing	    callbutton                                      //calls elevator to level
+	thing	    upbutton                                        //sends elevator up
+	thing	    dnbutton                                        //sends elevator down
+                                                                
+	thing		elevator                                        //currently handles only one elevator
+    thing       elevatorcap
+    
+    keyframe    elevanim=inf_elvtr_gears.key        local
+    keyframe    elevanimup=inf_elvtr_gearup.key     local
+                                                                
+	float		speed=5.0                                       
+    float       butspeed=3                                      //sets speed default is 5
+	int 		floorlevel=0.0                                  //sets floor level for each cog
+	int	    	totalfloors=0.0                                 //lastfloor + 1
+                                                                
+    sound       gearplatmove=nub_weight_move_c.wav  local
+    sound       gearplatstart=nub_elev_start_c.wav  local
+    sound       gearplatstop=nub_elev_stop_c.wav    local
+    sound       offbuttonsound=aet_gem_place.wav    local                           
+                                           
+	int		    switch			                    local       //check variable for cog internal use
+	int		    bnosound=0		                    local
+    int         upsound=0                           local
+    int         dnsound=0                           local
+    int         elevchan                            local
+    int         wepnum=1                            local
+    int         lastrand=-1                         local
+    int         currand=0                           local
+    int         keychan                             local
+    int         movechan                            local
+    int         startchan                           local
+    int         curpos
+    int         lastbutton                          local
+    int         buttonpush=0                        local
+    int         screenit=0                          local
+    int         powered                             local 
+    int         completecount=0                     local                             
+                                                    
+    sound       indylineb0=inxj058.wav              local
+    sound       indylineb1=inxj059.wav              local
+    sound       indylineb2=inxj060.wav              local
+    sound       indylineb3=inxj061.wav              local
+    sound       indylineb4=inxj090.wav              local
+    sound       indylineb5=inxj095.wav              local
+    
+end
+
+# ........................................................................................
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    
+    //move switches in and disable elevators
+    If (callbutton != -1)
+    {
+        MoveToFrame(callbutton, 1, 10);
+    }    
+    
+    If (upbutton != -1)
+    {
+        MoveToFrame(upbutton, 1, 10);
+    }
+    
+    If (dnbutton != -1)
+    {
+        MovetoFrame(dnbutton, 1, 10);
+    }    
+    
+    powered = 0;
+    
+    ClearThingFlags(elevator, 0x80000);
+    SetCollideType(elevator, 0);
+    AISetCutsceneMode(elevator);
+    AttachThingToThing(elevatorcap, elevator);
+    
+return;
+
+# ........................................................................................
+
+user0:
+
+    completecount = completecount + 1;
+    if (completecount != 2) return;
+    
+    //move switches to activatable position
+    If (callbutton != -1)
+    {
+        MoveToFrame(callbutton, 0, 10);
+    }    
+    
+    If (upbutton != -1)
+    {
+        MoveToFrame(upbutton, 0, 10);
+    }
+    
+    If (dnbutton != -1)
+    {
+        MovetoFrame(dnbutton, 0, 10);
+    }
+    
+    //remove flag on stop switches
+    powered = 1;
+
+return;
+
+# ........................................................................................
+
+activate:
+
+    switch = GetSenderRef();
+    if (screenit == 1) return;
+    
+    If (powered == 0)
+    {
+        screenit = 1;
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        StartCutscene(1);
+        PlayMode(player, 60, 0);
+        Sleep(0.35);
+        PlaySoundThing(offbuttonsound, switch, 1, 10, 20, 0x0080);
+        Sleep(0.35);
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+        screenit=0;
+        return;    
+    }
+    
+    if ((switch == callbutton) &&                               //if callbutton is pushed
+        (bnosound == 0) &&
+        (GetCurItem(player) == 0))
+        {
+        
+            bnosound = 1;
+            lastbutton = 2;
+            buttonpush = 1;
+            StartCutscene(1);
+            SetActorFlags(player, 0x200000);
+            StopThing(player);
+            While(wepnum !=0)
+            {
+                wepnum = GetCurWeapon(player);
+                DeselectWeaponWait(player);
+                DeselectWeapon(player);
+            }
+            PlayMode(player, 60, 0); 
+            PlaySoundThing(offbuttonsound, switch, 1, 10, 20, 0x0080);   	                    // changed from 58
+            MoveToFrame(callbutton, 1, butspeed);
+            WaitForStop(callbutton);
+            EndCutscene();
+            ClearActorFlags(player, 0x200000);
+            startchan=PlaySoundThing(gearplatstart, elevator, 1, 10, 20, 0x0080);
+            WaitForSound(startchan);
+            AISetMoveSpeed(elevator, 0.65);
+            AISetMoveFrame(elevator, floorlevel);
+            keychan = PlayKey(elevator, elevanimup, 2, 0x00, 0);
+            movechan = PlaySoundThing(gearplatmove, elevator, 1, 5, 10, 0x0081);
+            AIWaitForStop(elevator);
+            StopKey(elevator, keychan, 0.2);
+            StopSound(movechan, 0);
+            PlaySoundThing(gearplatstop, elevator, 1, 10, 20, 0x0080);
+            MoveToFrame(callbutton, 0, butspeed);
+            bnosound = 0;
+            curpos = floorlevel;
+            wepnum=1;
+        }
+        else if ((switch == upbutton) &&                        //if upbutton is pushed
+             (floorlevel == curpos) &&
+             (curpos < totalfloors) &&
+             (upsound == 0) &&
+             (GetCurItem(player) == 0))
+        {
+        
+            upsound = 1;
+            lastbutton = 1;
+            buttonpush=1;
+            StopThing(player);
+            SetActorFlags(player, 0x200000);
+            StartCutscene(1);
+            While(wepnum !=0)
+            {
+                wepnum = GetCurWeapon(player);
+                DeselectWeaponWait(player);
+                DeselectWeapon(player);
+            }
+            PlayMode(player, 60, 0);              // changed from 58
+            PlaySoundThing(offbuttonsound, switch, 1, 10, 20, 0x0080);
+            MoveToFrame(upbutton, 1, butspeed);
+            WaitForStop(upbutton);
+            EndCutscene();
+            ClearActorFlags(player, 0x200000);
+             
+            startchan=PlaySoundThing(gearplatstart, elevator, 1, 10, 20, 0x0080);
+            WaitForSound(startchan);
+            AISetMoveSpeed(elevator, 0.65);
+            AISetMoveFrame(elevator, (floorlevel+1));
+            keychan = PlayKey(elevator, elevanimup, 2, 0x00, 0);
+            movechan = PlaySoundThing(gearplatmove, elevator, 1, 5, 10, 0x0081);
+            AIWaitForStop(elevator);
+            StopKey(elevator, keychan, 0.2);
+            StopSound(movechan, 0);
+            PlaySoundThing(gearplatstop, elevator, 1, 10, 20, 0x0080);
+            upsound = 0;
+            wepnum=1;
+            MoveToFrame(upbutton, 0, butspeed);
+            WaitForStop(upbutton);
+        }
+        else if ((switch == dnbutton) &&                        //if down button is pushed
+             (floorlevel == curpos) &&
+             (floorlevel > 0) &&
+             (dnsound == 0) &&
+             (GetCurItem(player) == 0))
+        {
+        
+            dnsound = 1;
+            lastbutton = 0;
+            buttonpush=1;
+            StopThing(player);
+            SetActorFlags(player, 0x200000);
+            StartCutscene(1);
+            While(wepnum !=0)
+            {
+            
+               wepnum = GetCurWeapon(player);
+               DeselectWeaponWait(player);
+               DeselectWeapon(player);
+               
+            }
+            PlayMode(player, 60, 0);			// changed from 58
+            PlaySoundThing(offbuttonsound, switch, 1, 10, 20, 0x0080);
+            MoveToFrame(dnbutton, 1, butspeed);
+            WaitForStop(dnbutton);
+            EndCutscene();
+            ClearActorFlags(player, 0x200000);
+            
+            startchan=PlaySoundThing(gearplatstart, elevator, 1, 10, 20, 0x0080);
+            WaitForSound(startchan);
+            AISetMoveSpeed(elevator, 0.65);
+            AISetMoveFrame(elevator, (floorlevel-1));
+            keychan = PlayKey(elevator, elevanim, 2, 0x00, 0);
+            movechan = PlaySoundThing(gearplatmove, elevator, 1, 5, 10, 0x0081);
+            AIWaitForStop(elevator);
+            StopKey(elevator, keychan, 0.2);
+            StopSound(movechan, 0);
+            PlaySoundThing(gearplatstop, elevator, 1, 10, 20, 0x0080);
+            
+            MoveToFrame(dnbutton, 0, butspeed);
+            dnsound = 0;
+            wepnum = 1;
+        }
+    
+     if ((GetCurItem(player) != 0) && (GetSenderID() == 1))
+     {
+         StopThing(player);
+         SetActorFlags(player, 0x200000);
+         StartCutscene(1);
+         currand = RandBetween(0, 5);
+         While (lastrand == currand)
+         {
+             currand = RandBetween(0, 5);
+         }
+         PlayVoice(player, indylineb0[currand], 1, 1);
+         lastrand = currand;
+         EndCutscene();
+         ClearActorFlags(player, 0x200000);
+     }     
+    
+return;
+
+# ........................................................................................
+
+arrived:
+
+    If (powered == 0) return;
+    curpos = floorlevel;
+    //callbutton
+    if ((GetSenderRef() == elevator) && (lastbutton == 2) && (buttonpush == 1))
+    {
+        curpos = floorlevel;
+        buttonpush=0;
+    }
+
+    //upbutton
+    if ((GetSenderRef() == elevator) && (lastbutton == 1) && (buttonpush == 1))
+    {
+        curpos = floorlevel + 1;
+        buttonpush=0;
+    }
+    
+    //downbutton
+    if ((GetSenderRef() == elevator) && (lastbutton == 0) && (buttonpush == 1))
+    {
+        curpos = floorlevel - 1;
+        buttonpush=0;
+    }
+    
+return;
+
+# ........................................................................................
+blocked:
+    if ((GetSenderRef() == elevatorcap) && (GetSourceRef() == player))
+    {
+        DamageThing(player, 1000, 0x80, elevatorcap);
+    }
+    
+return;
+
+# ........................................................................................
+
+end
+
+

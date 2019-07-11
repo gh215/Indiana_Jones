@@ -1,0 +1,48 @@
+# Jones 3D Cog Script
+#
+# PRU_SectorsOff.cog
+#
+# Turns off sector adjoins as you move past them.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message		entered
+message		startup
+
+thing      	player		local
+
+sector		CurrentSector0		linkid=1
+sector		CurrentSector1		linkid=1
+sector		FarSector0
+sector		FarSector1
+sector		FarSector2
+sector		FarSector3
+sector		FarSector4
+
+end
+
+# ========================================================================================
+
+code
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+entered:
+if (GetSourceRef() != player) return;
+if (GetSenderID() != 1) return;
+
+if (FarSector0 >= 0) SectorAdjoins(FarSector0, 0);
+if (FarSector1 >= 0) SectorAdjoins(FarSector1, 0);
+if (FarSector2 >= 0) SectorAdjoins(FarSector2, 0);
+if (FarSector3 >= 0) SectorAdjoins(FarSector3, 0);
+
+return;
+	
+end

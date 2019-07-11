@@ -1,0 +1,106 @@
+# Jones 3D Cog Script
+#
+# SHW_entranceAmb.cog
+#
+# Produces random ambient cave sounds when attatched to a ghost object.
+# Based on code from TEO_Drops.cog by SXC.
+#
+# [TRM & SXC]  modified 12/3 by [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     crossed
+    message     pulse
+    
+    
+    surface       oncross               linkID=2
+    surface       oncross1              linkID=2
+    surface       offcross              linkID=3
+    surface       offcross1             linkID=3
+    
+            
+    sound       sndCave0=shw_amb2.wav    local
+    sound       sndCave1=shw_amb3.wav    local
+    sound       sndCave2=shw_amb4.wav    local
+    sound       sndCave3=shw_amb5.wav    local
+    sound       sndCave4=shw_amb6.wav    local
+    sound       sndCave5=shw_amb7.wav    local
+        
+    float       caveFreq        local
+    
+    flex        pulseTime=4.0
+    flex        vol=1.0
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+       SetPulse(pulseTime);
+       return;
+       
+# ========================================================================================
+
+
+
+crossed:
+
+    If (GetSenderID() == 2)
+            {
+            SetPulse(pulseTime);
+            }
+    
+    If (GetSenderID() == 3)
+            {
+            SetPulse(0);
+            }
+
+return;
+# ========================================================================================
+
+pulse:
+    
+    caveFreq = Rand();
+
+    if (caveFreq < 0.16)
+        {
+            PlaySoundLocal(sndCave0, vol, 1, 0, 0);
+        }
+        
+    if ((caveFreq > 0.16) && (caveFreq < 0.32))
+        {
+            PlaySoundLocal(sndCave1, vol, 0, 0, 0);
+        }
+        
+    if ((caveFreq > 0.32) && (caveFreq < 0.48))
+        {
+            PlaySoundLocal(sndCave2, vol, -1, 0, 0);
+        }
+    
+    if ((caveFreq > 0.48) && (caveFreq < 0.64))
+        {
+            PlaySoundLocal(sndCave3, vol, 0, 0, 0);
+        }
+    
+    if ((caveFreq > 0.64) && (caveFreq < 0.80))
+        {
+            PlaySoundLocal(sndCave4, vol, 1, 0, 0);
+        }
+    
+    if ((caveFreq > 0.80) && (caveFreq < 0.96))
+        {
+            PlaySoundLocal(sndCave5, vol, -1, 0, 0);
+        }
+        
+    return;
+    
+# ========================================================================================
+        
+end

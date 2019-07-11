@@ -1,0 +1,186 @@
+# ===================================================================
+# Jones 3D Cog Script
+#
+# actor_AIGrenade.cog
+#
+# [RandyT]
+#
+# Actor script for any AI with grenades.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ===================================================================
+
+symbols
+
+message		created
+message		damaged
+message		killed
+message		callback
+message		timer
+
+# ************************** TEMPLATES *************************
+template	tplWeap=grenade				local
+template	tplPoisonKit=poisonkit		local
+template	tplHealthKit=hlthsml		local
+template	tplFire=+bazooka_exp_fire	local
+template	tplSmoke=+bazooka_exp_smoke	local
+template	tplSparks=lavadeathsparks	local
+
+# ************************** AI VARS ***************************
+int			TIMER_ID_WAKEUP_NORMAL=0	local
+int			TIMER_ID_WAKEUP_AND_DIE=1	local
+
+# ************************** MISC LOCAL VARS *******************
+thing		bandito						local
+thing		indy						local
+thing		powerup						local
+
+int			damageType					local
+int			timerID						local 
+int			index						local
+
+flex		indyHealth					local
+flex		kitChance					local
+
+vector		dir							local
+vector		randVec						local
+
+end
+
+# ===================================================================
+code
+
+# -------------------------------------------------------------------
+created:
+
+	bandito = GetSenderRef();
+	indy = GetLocalPlayerThing();
+
+	SetThingFireOffset(bandito, '0.015 0.01 0.045');
+
+	AIEnableInstinct(bandito, "roam", 0);
+
+	return;
+
+# -------------------------------------------------------------------
+damaged:
+
+	bandito = GetSenderRef();
+	damageType = GetParam(1);
+
+	# Been punched?
+	if (damageType == 0x08)
+	{
+		if ((GetParam(0) < GetThingHealth(bandito)) && (GetParam(0) * 2) > GetThingHealth(bandito))
+		{
+			# Make sure thing's not already disabled
+			if (BitTest(GetActorFlags(bandito), 0x40008)) return;
+
+			# Play dead
+			AIKnockOut(bandito, RandBetween(10, 30), TIMER_ID_WAKEUP_NORMAL);
+		}
+	}
+	# Jeep or MineCar hit us
+	else if (damageType == 0x02000000)
+	{
+		# If invulnerable or immobile, ignore -- avoids multiple collision problem
+		if (BitTest(GetActorFlags(bandito), 0x40008))
+		{ 
+			ReturnEx(0);
+			return;
+		}
+		else if (GetParam(0) >= GetThingHealth(bandito))
+		{
+			# long enough to land
+			AIRunOver(bandito, RandBetween(5, 6), TIMER_ID_WAKEUP_AND_DIE);
+			ReturnEx(0);
+			return;
+		}
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+killed:
+
+	bandito = GetSenderRef();
+
+	# Killed by lava?
+	if (GetParam(1) == 0x200)
+	{
+		Sleep(0.1);
+		CreateThing(tplFire, bandito);
+		Sleep(0.3);
+		CreateThing(tplSmoke, bandito);
+		SetThingFlags(bandito, 0x80000);
+
+		for (index = 0; index < 10; index = index + 1)
+		{
+			CreateThing(tplSparks, bandito);
+			Sleep(0.03);
+		}
+	}
+	else
+	{
+		# Create a health or snake bite kit, else just drop a grenade
+		indyHealth = GetThingHealth(indy);
+		if (indyHealth >= 750.0) kitChance = 0.05; 
+		else if (indyHealth >= 500.0) kitChance = 0.1;
+		else if (indyHealth >= 250.0) kitChance = 0.15;
+		else kitChance = 0.25;
+
+		if (Rand() <= kitChance)
+		{
+			if ((BitTest(GetActorFlags(indy), 0x2000)) && (Rand() > 0.25))
+			{
+				powerup = CreateThing(tplPoisonKit, bandito);
+			}
+			else
+			{
+				powerup = CreateThing(tplHealthKit, bandito);
+			}
+		}
+		else
+		{
+			powerup = CreateThing(tplWeap, bandito);
+		}
+
+		# Push it away a little...
+		dir = VectorTransformToOrient(bandito, '-0.17 0.0 0.0');
+		randVec = VectorSet(0, Rand() * 360, 0);
+		dir = VectorRotate(dir, randVec);
+		SetThingVel(powerup, dir);
+	}
+
+	return;
+
+
+# -------------------------------------------------------------------
+callback:
+
+	bandito = GetSenderRef();
+
+	if (GetParam(1) == 21) SetWeaponModel(bandito, 11);
+	else ResetWeaponModel(bandito);
+
+	return;
+
+# -------------------------------------------------------------------
+timer:
+
+	bandito = GetParam(0);
+	timerID = GetSenderId();
+	if (timerID == TIMER_ID_WAKEUP_NORMAL) # was knocked out but not killed
+	{
+		AIKnockOut(bandito, 0, TIMER_ID_WAKEUP_NORMAL);
+		SetHealth(bandito, 100.0);
+	}
+	else if (timerID == TIMER_ID_WAKEUP_AND_DIE)
+	{
+		ClearActorFlags(bandito, 0x8); # make sure not invulnerable
+		DamageThing(bandito, GetThingMaxHealth(bandito), 0x1, GetLocalPlayerThing()); # using impact damage to avoid infinite loop
+	}
+
+	return;
+
+end

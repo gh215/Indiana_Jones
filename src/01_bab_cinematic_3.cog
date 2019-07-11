@@ -1,0 +1,546 @@
+# Jones 3D Cog Script
+#
+# 01_BAB_Cinematic_3.cog
+#
+# Introduce Turner 
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# ................................ MESSAGES ....................................
+
+	message		startup
+	message		crossed
+    message		callback
+	
+# ................................ KEYFRAMES ...................................
+	
+	keyframe	in_PushHat=0in_figithat_4_4.key			local # 84x
+	keyframe	in_ArmsOut=0in_armsout_1_1.key			local
+	keyframe	in_leftout=0in_leftarm_1_1.key			local
+	keyframe	in_raiseHands=0in_stand1_bd_3.key		local
+	keyframe	in_handsUp=0in_stand3.key				local # replace
+	keyframe	in_pointBack=0in_pointback_3.key		local
+	keyframe	in_dropHands=0in_stand3_bd_1.key		local
+	keyframe	in_handsSide=0in_stand1.key				local
+	keyframe	in_armsCrossed=0in_stand2.key			local
+	keyframe	in_handsOnHips=0in_stand4.key			local
+	keyframe	in_crossArms=0in_stand1_bd_2.key	   	local
+	keyframe	in_handsToHips=0in_stand1_bd_4.key	   	local # 26x
+	keyframe	in_handsToSide=0in_stand4_bd_1.key	   	local
+	keyframe	in_kneelDown=0in_stand1_bd_6.key	   	local
+	keyframe	in_kneeling=0in_stand6.key				local
+	keyframe	in_kneel_to_stand=0in_stand6_bd_1.key	local
+	keyframe	in_shake=0in_hndshak_1_1.key			local
+	keyframe	in_getkey=0in_takeobj_1_1.key			local
+	
+	keyframe	grd_walk=2h_walk_fwd.key				local
+	keyframe	grd_holdrifle=2h_attack_pull_rifle.key	local
+	keyframe	grd_aimrifle=02h_aimgun.key				local
+	keyframe	grd_die1=02h_die1.key					local
+	keyframe	grd_die2=02h_die2.key					local
+
+	keyframe	trn_handsHips=0tu_stand1.key			local
+	keyframe	trn_handsSide=0tu_stand3.key			local
+	keyframe	trn_shakeReady=0tu_stand7.key			local
+	keyframe	trn_handsToHips=0tu_stand3_bd_1.key		local # 20x
+	keyframe	trn_putawayGun=0tu_c_putgun_3_3.key		local # 84x
+	keyframe	trn_cia=0tu_rightgest_1_7.key			local # 15x
+	keyframe	trn_shake=0tu_hndshak_7_3.key			local
+	keyframe	trn_hopeless=0tu_hopeless_1_1.key		local # 90x
+	keyframe	trn_justspy=0tu_pointout_1_3.key		local # 169x
+	keyframe	trn_marduk=0tu_marduk_3_1.key			local
+	keyframe	trn_givekey=0tu_hndkey_1_1.key			local
+	keyframe	trn_patback=0tu_patback_1.key			local # 133x
+	keyframe	trn_leftUp=0tu_leftarm_1_1.key			local
+	   
+# ................................. MODELS .....................................
+		
+    model  		mod_in=gen_in_shirt.3do					local
+	model  		mod_grd=com_2h_kaki.3do					local 
+	model		mod_trn=gen_tu.3do						local
+    model       tu_gun=weap_tu_tokarev.3do              local
+    model       tu_hand=hand_in.3do                     local
+    
+    model       inhand_tukey=hand_in_tukey.3do          local
+    model       tuhand_tukey=hand_tu_tukey.3do          local
+    
+    model       tu_torso_nogun=torso_tu_nogun.3do       local
+
+# ................................. SOUNDS .....................................
+    
+	sound		grd_halt=Bb04n01.wav					local
+	sound		in_hithere=Bb04J02.wav					local
+	sound		grd_shootspies=Bb04n03.wav				local
+	sound		in_wha=Bb04j04.wav						local
+	sound		trn_welcome=Bb04t05.wav					local
+	sound		trn_remember=Bb04t06.wav				local
+	sound		in_youstole=Bb04j07.wav					local
+	sound		trn_commiefriends=Bb04t08a.wav			local # And our commie friends..."
+	sound		trn_whytapped=Bb04t08b.wav				local # That's why you got tapped..."
+	sound		trn_key=Bb04t09a.wav					local
+	sound		trn_statue=Bb04t09b.wav					local
+	sound		in_museum=Bb04j10.wav					local
+	sound		trn_hive=Bb04t11.wav					local
+	sound		in_ibet=Bb04j12.wav						local
+	sound		silencer_shot=gen_pistol_fire.wav		local
+    sound       com_bodyfall=fol_bodyfall_fall.wav       local
+
+    sound       surprise=mus_gen_surprisechord1.wav     local
+     
+# ................................ TEMPLATE ....................................
+    
+    template    bloodsplash=+pistol_hit                 local
+    template    rifle_item=simonov                      local
+
+# ................................. THINGS .....................................
+
+	thing		player									local
+							
+	thing		indy	    							linkid=0
+    thing		turner	    							linkid=1
+	thing		guard									linkid=2
+    thing       splortpos
+												
+	thing		in_mov_tgt1  							nolink
+	thing		in_mov_tgt2  							nolink
+	
+	thing		grd_mov_tgt1							nolink
+	thing		grd_mov_tgt2							nolink
+
+	thing		trn_mov_tgt1							nolink
+	thing		trn_mov_tgt2							nolink
+	thing		trn_mov_tgt3							nolink
+
+	thing		cam_1									nolink
+	thing		cam_2									nolink
+	thing		cam_3									nolink
+	thing		cam_4									nolink
+	thing		cam_5									nolink
+	thing		cam_6									nolink
+	thing		cam_7									nolink
+	thing		cam_8									nolink
+	thing		bab3_poscam								nolink
+	
+	thing		cam_look_tgt1  							nolink
+	thing		cam_look_tgt2  							nolink
+	thing		cam_look_tgt3 							nolink
+	thing		cam_look_tgt4							nolink
+	thing		cam_look_tgt5							nolink
+	thing		cam_look_tgt6							nolink
+	thing		cam_look_tgt7							nolink
+	thing		cam_look_tgt8							nolink
+    
+    thing       door0
+						   
+# ............................... WORLD STUFF ..................................
+			
+	# material	gearMat=rigear.mat						local
+	
+	surface		trigger         						linkid=3
+						
+# ................................ VARIABLES ...................................
+
+	vector		camPos									local
+
+	int			in_keyTrack1							local
+	int			in_keyTrack2							local
+
+	int			grd_keyTrack1							local
+
+	int			trn_keyTrack1							local
+	int			trn_keyTrack2							local
+	int			trn_keyTrack3							local
+
+						
+	int			in_ArmTrack								local
+	int			trn_ArmTrack							local
+			
+	int			in_swap=0								local
+	int			trn_swap=0								local
+    					
+	int			sender									local
+	int			cursound								local
+	int			matAnimNum								local
+	int			didThisBefore=0							local
+
+	int			curCam									local
+
+	int			in_swapitem_1							local
+	int			tu_swapitem_1							local
+    int         tu_swapitem_2                           local
+
+	int			in_headRate								local
+	int			in_rotRate								local
+	int			trn_rotRate								local
+	int			grd_rotRate								local
+        
+        cog                     BAB_Commie_Grid             #Added by JM
+	
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+
+	
+	return;
+
+# ..............................................................................
+
+crossed:
+
+	if (didThisBefore)
+	{
+		return;
+	}
+
+	player = GetLocalPlayerThing();
+	SetActorFlags(player, 0x200000);
+	StartCutscene(1);
+	didThisBefore = 1; # only perform this cut scene one time
+	curCam = GetCurrentCamera();	
+	
+    AISetCutsceneMode(guard);
+
+	# Change player into state we want & disable...
+    MakeMeStop();
+	DeselectWeaponWait(player); # stow any weapon or lighter
+	Sleep(0.1);
+	CopyPlayerHolsters(player, indy);
+	in_headRate = GetThingMaxHeadVel(player);
+	in_rotRate = GetThingMaxRotVel(player);
+	SetThingFlags(player, 0x80000);
+
+	# Prep actor indy...
+	ClearThingFlags(indy, 0x80000); # our actor
+	SetThingMaxHeadVel(indy, 200.0);
+	SetThingMaxRotVel(indy, 100.0);
+	    
+    # Prep Guard...
+    ClearThingFlags(guard, 0x80000);
+	grd_rotRate = GetThingMaxRotVel(guard);
+	SetWeaponModel(guard, 22); # Simonov rifle
+    grd_keyTrack1 = PlayKey(guard, grd_holdrifle, 2, 0x14, 0);
+
+	# Prep Turner...
+	trn_rotRate = GetThingMaxRotVel(turner);
+		
+	# Prep camera..
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	 
+    # Cut to shot of Indy in stairwell...
+	SetCameraFocus(2, cam_1);
+	SetCameraSecondaryFocus(2, cam_look_tgt1);
+	SetCurrentCamera(2);
+	SetCameraFOV(35, 0, 0.0);
+
+	# Indy walks toward camera...
+    AISetMoveSpeed(indy, 1.1);
+	AISetLookThing(indy, guard); # look up the stairs
+    AISetMoveThing(indy, in_mov_tgt1, 0);
+
+	# And a guard steps into frame to intercept him...
+	Sleep(0.5);
+	AISetMoveSpeed(guard, 1.1);
+	AISetLookThing(guard, indy);
+    AISetMoveThing(guard, grd_mov_tgt1, 1);
+
+	# Guard:  "You, halt!"
+    PlaySoundLocal(surprise, 1, 0, 0, 0); # music
+	cursound = PlayVoice(guard, grd_halt, 1.0, 0);
+	AIWaitForStop(indy); # shot continues until Indy hits his mark
+	Sleep(0.1);
+	
+	# Prep camera here...
+	SetCameraLookInterp(2, 1); # enable pan & tilt mode
+	SetCameraPosInterp(2, 1); # enable dolly mode
+	SetCameraInterpSpeed(2, 6.0);
+	
+	# Indy raises his hands to surrender...
+	PlayKey(indy, in_raiseHands, 2, 0x12, 1);
+	in_keyTrack1 = PlayKey(indy, in_handsUp, 2, 0x10, 0);
+	WaitForSound(cursound);
+	
+	# Dolly closer to Indy: "Hey, open the door, I'm here to deliver dig stuff..."
+	cursound = PlayVoice(indy, in_hithere, 1.0, 0);
+	SetCameraFocus(2, cam_2);
+	SetCameraSecondaryFocus(2, cam_look_tgt2);
+	SetCameraFOV(30, 1, 6.0); # temp
+	Sleep(5.0);
+	PlayKey(indy, in_pointBack, 4, 0x12, 1);
+	WaitForSound(cursound);
+	Sleep(0.1); # plus a beat
+
+	# Cut to guard...
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	SetCameraFocus(2, cam_3);
+	SetCameraSecondaryFocus(2, cam_look_tgt3);
+	SetCameraFOV(32, 0, 0.0); # was 40, then 35
+	MoveToFrame(cam_3, 1, 0.7); # dolly anyway!
+	
+	# Guard: "You are spy...we shoot spies!"
+	cursound = PlayVoice(guard, grd_shootspies, 1.0, 0);
+	Sleep(1.0);
+	StopKey(guard, grd_keyTrack1, 0.0);
+	grd_keyTrack1 = PlayKey(guard, grd_aimrifle, 4, 0x14, 0);
+	WaitForSound(cursound);
+	Sleep(0.2);
+	PlaySoundLocal(silencer_shot, 1.0, 0.0, 0x0, 0);
+    CreateThing(bloodsplash, splortpos);
+	Sleep(0.1);
+
+	# Guard starts to fall...
+	StopKey(guard, grd_keyTrack1, 0.0);
+	PlayKey(guard, grd_die1, 4, 0x12, 1);
+
+	# Cut to Indy...
+	SetCameraFocus(2, cam_4);
+	SetCameraSecondaryFocus(2, cam_look_tgt4);
+	SetCameraFOV(35, 0, 0.0);
+	
+	# Guard finishes dying...
+	TeleportThing(guard, grd_mov_tgt2); # fall in the right spot
+	AISetLookThing(guard, indy); # keep the commie facing correctly
+	SetCollideType(guard, 0); # don't disturb the corpse!
+	grd_keyTrack1 = PlayKey(guard, grd_die2, 6, 0x14, 0);
+	Sleep(0.5);
+    PlaySoundLocal(com_bodyfall, 1.0, 0.0, 0x0, 0);
+	StopThing(guard);
+	StopKey(indy, in_keyTrack1, 0.5);
+	
+	# Indy:  "Wha--?"
+	Sleep(0.2);
+	PlayVoice(indy, in_wha, 1.0, 1);
+
+	Sleep(0.5);
+	
+	# Indy approaches the fallen guard...
+	AISetLookThing(indy, cam_look_tgt5);
+	AISetMoveSpeed(indy, 2.0);
+	MoveToFrame(cam_look_tgt4, 1, 2.5); # tilt up
+	AISetMoveThing(indy, in_mov_tgt2, 1);
+	AISetLookThing(indy, trn_mov_tgt1);
+	AISetMoveSpeed(indy, 1.1);
+	Sleep(0.2);
+
+    RestoreThingMesh(guard, -99);
+    CreateThing(rifle_item, cam_look_tgt5);
+
+	# Cut to shot over Indy's shoulder...
+	SetCameraFocus(2, cam_5);
+	SetCameraSecondaryFocus(2, cam_look_tgt5);
+	SetCameraFOV(35, 0, 0.0);
+	TeleportThing(indy, in_mov_tgt2);
+	PlayKey(indy, in_kneelDown, 2, 0x12, 1);
+	in_keyTrack1 = PlayKey(indy, in_kneeling, 2, 0x14, 0);
+
+	# Enter Turner...
+	ClearThingFlags(turner, 0x80010); # active and visible at last
+    tu_swapitem_1 = SetThingMesh(turner, 5, tu_gun, 0);
+    tu_swapitem_2 = SetThingMesh(turner, 0, tu_torso_nogun, 0);
+	AISetLookThing(turner, indy);
+	AISetMoveSpeed(turner, 1.0);
+	Sleep(0.01); # generate a frame
+	AISetMoveThing(turner, trn_mov_tgt1, 1); # wait until turner hits his mark
+
+	# Indy looks up...
+	AIEnableHeadTracking(indy, turner);
+	
+	# Turner:  "Hello, Dr. Jones.  Welcome to Babel..."
+	cursound = PlayVoice(turner, trn_welcome, 1.0, 0);
+	Sleep(1.0);
+
+	# Cut to Indy & Turner...
+	SetThingFlags(turner, 0x10); # briefly invisible to avoid a visible teleport
+	TeleportThing(turner, trn_mov_tgt2); # get our actors near each other
+	
+	AISetLookThing(indy, turner);
+	AISetLookThing(turner, indy);
+	ClearThingFlags(turner, 0x10); # turner visible again
+	SetCameraFocus(2, cam_6);
+	SetCameraSecondaryFocus(2, cam_look_tgt6);
+	SetCameraFOV(65, 0, 0.0);
+	StopKey(indy, in_keyTrack1, 0.0); # no longer kneeling
+	PlayKey(indy, in_kneel_to_stand, 2, 0x12, 1); # indy stands up
+	Sleep(0.5);
+	PlayKey(turner, trn_putawayGun, 4, 0x12, 0); # holster gun
+	Sleep(0.6);
+
+	# Indy is dubious about this guy...
+	in_keyTrack1 = PlayKey(indy, in_armsCrossed, 2, 0x0, 0); # cycle
+    PlayKey(indy, in_crossArms, 4, 0x12, 0);
+    Sleep(1.05);
+  
+    RestoreThingMesh(turner, tu_swapitem_1);
+    RestoreThingMesh(turner, tu_swapitem_2);
+	AIDisableHeadtracking(indy);
+	Sleep(0.2);
+		
+	# Turner: "Remember?  C.I.A...?"
+	cursound = PlayVoice(turner, trn_remember, 1.0, 0);
+	Sleep(0.5);
+	trn_keyTrack3 = PlayKey(turner, trn_shakeReady, 2, 0x10, 0);
+	PlayKey(turner, trn_cia, 4, 0x12, 0);
+	Sleep(2.3);
+	StopKey(indy, in_keyTrack1, 0.5); # indy relaxes
+	WaitForSound(cursound);
+	
+	# Indy: "Ahh, you stole the cog wheel."
+	cursound = PlayVoice(indy, in_youstole, 1.0, 0);
+	
+	# Turner and Indy shake hands...
+	PlayKey(turner, trn_shake, 6, 0x12, 0); # turner shakes
+	PlayKey(indy, in_shake, 4, 0x12, 0); # indy shakes
+	# Sleep(0.1);
+	StopKey(turner, trn_keyTrack3, 0.0); # end shake stand
+
+	trn_keyTrack2 = PlayKey(turner, trn_handsSide, 2, 0x10, 0); # hands at side
+	
+	# Turner: "And our Commie friends don't even know it's gone..."
+	WaitForSound(cursound);
+	cursound = PlayVoice(turner, trn_commiefriends, 1.0, 0);
+	StopKey(turner, trn_keyTrack2, 0.0); # stop hands at sides
+	trn_keyTrack1 = PlayKey(turner, trn_handsHips, 2, 0x0, 0); # prep hands back on hips
+	PlayKey(turner, trn_handsToHips, 4, 0x12, 0); # breakdown hands to hips
+	Sleep(2.5); # take a beat
+	
+	# Cut to Turner close up...
+	SetCameraFocus(2, cam_8);
+	SetCameraSecondaryFocus(2, cam_look_tgt8);
+	SetThingFlags(indy, 0x10); # indy is temporarily invisible
+	SetCameraFOV(35, 0, 0.0); # was 50, then 40
+	PlayKey(turner, trn_hopeless, 4, 0x12, 1); # trn rt-hand gesture takes 3 secs
+	Sleep(2.0);
+	WaitForSound(cursound);
+	cursound = PlayVoice(turner, trn_whytapped, 1.0, 0);
+	StopKey(turner, trn_keyTrack1, 0.0); # lose hands on hips
+	PlayKey(turner, trn_justspy, 4, 0x12, 1);
+	trn_keyTrack1 = PlayKey(turner, trn_handsHips, 2, 0x0, 0); # prep hands back on hips
+	PlayKey(turner, trn_handsToHips, 4, 0x12, 0); # breakdown hands to hips
+	
+	# Back to side two-shot...
+	WaitForSound(cursound);
+	ClearThingFlags(indy, 0x10); # indy visible again
+	SetCameraFocus(2, cam_6);
+	SetCameraSecondaryFocus(2, cam_look_tgt6);
+	SetCameraFOV(65, 0, 0.0);
+	
+	# Turner:  "This should get you through the door..."
+    tu_swapitem_1 = SetThingMesh(turner, 5, tuhand_tukey, 0); 
+	PlayKey(turner, trn_givekey, 4, 0x12, 0); # turner hands over key
+	Sleep(0.5);
+	cursound = PlayVoice(turner, trn_key, 1.0, 0);
+	Sleep(0.5);
+	PlayKey(indy, in_getkey, 4, 0x12, 0); # indy takes it
+    Sleep(0.75); # was 0.25
+	RestoreThingMesh(turner, tu_swapitem_1);
+    in_swapitem_1 = SetThingMesh(indy, 15, inhand_tukey, 0);
+    Sleep(1.5); # was 2.35
+	RestoreThingMesh(indy, in_swapitem_1);
+	WaitForSound(cursound);
+
+	# Show key is taken, deactivate it again here...
+    ChangeInv(player, 103, 1.0);
+	SetInvAvailable(player, 103, 1);
+    JonesInvItemChanged(103);
+	Sleep(2.0);
+    
+   	# Turner: "By the way, rumor has it they've found...gold Marduk..."
+	cursound = PlayVoice(turner, trn_statue, 1.0, 0);
+	Sleep(2.0);
+	PlayKey(turner, trn_marduk, 4, 0x12, 1);
+	WaitForSound(cursound);
+
+	# Indy: "CIA runs a museum?"
+	cursound = PlayVoice(indy, in_museum, 1.0, 0);
+	PlayKey(indy, in_leftOut, 4, 0x12, 1); # indy gestures vaguely
+	WaitForSound(cursound);
+	
+	# Turner: "The Company runs a hive..."
+	PlayVoice(turner, trn_hive, 1.0, 0);
+	PlayKey(turner, trn_leftUp, 4, 0x12, 0);
+	Sleep(2.0);
+
+	# Exit Turner...
+	SetThingMaxHeadVel(indy, 50.0);
+	PlayKey(turner, trn_patback, 4, 0x12, 0); # turner pats indy
+	Sleep(3.0);
+	AISetLookThing(indy, trn_mov_tgt3);
+	AIWaitForStop(indy);
+	in_keyTrack1 = PlayKey(indy, in_handsOnHips, 2, 0x0, 0);
+	PlayKey(indy, in_handsToHips, 4, 0x12, 0); # 0.87 sec
+	Sleep(0.5);
+	StopKey(turner, trn_keyTrack1, 0.0);
+	DestroyThing(turner);
+	
+	# Cut to close-up of Indy...
+	SetCameraFocus(2, cam_7);
+	SetCameraSecondaryFocus(2, cam_look_tgt7);
+	SetCameraFOV(30, 0, 0.0);
+	Sleep(0.4);
+	in_keyTrack2 = PlayKey(indy, in_PushHat, 4, 0x12, 0);
+	Sleep(1.0);
+
+	# Indy: "I'll bet you are..."
+	PlayVoice(indy, in_ibet, 1.0, 0); 
+	Sleep(1.5); # to cover hat anim until...
+	StopKey(indy, in_keyTrack1, 0.5);
+	StopKey(indy, in_keyTrack2, 0.5);
+
+	Sleep(0.5);
+
+	# Clean up...
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	
+	# TO DO:  the guard needs to be handled:  he's not really dead yet!
+
+	# restore camera & player control...
+	TelePortThing(player, indy);
+	Sleep(0.01);
+	SetThingMaxHeadVel(indy, in_headRate);
+	SetThingMaxRotVel(indy, in_rotRate);
+	SetThingFlags(indy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	camPos = GetThingPos(bab3_poscam);
+	SetCameraPosition(1, camPos); # prep follow-cam to swing behind indy
+	Sleep(0.01);
+	SetCurrentCamera(curCam);
+	ResetCameraFOV(0, 0.0);
+
+	EndCutscene();
+    RotatePivot(door0, 1, -1);
+    ClearActorFlags(player, 0x200000);
+    
+    SendMessage(BAB_Commie_Grid, User2);    //Added by JM
+    
+	return;
+
+# ..............................................................................
+
+callback:
+
+    
+    return;
+
+# ..............................................................................
+
+timer:
+	
+
+	return;
+    
+end

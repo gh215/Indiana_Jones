@@ -1,0 +1,230 @@
+# Jones 3D Cog Script
+#
+# weap_Simonov.cog
+#
+# This COG controls the Simonov SKS Automatic Rifle.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		aim
+message		activated
+message		deactivated
+message		selected
+message		deselected
+message		callback
+
+sound		bang=gen_simonov_fire.wav	local	# Autoloaded
+sound		pull=gen_rifle_pull.wav		local	# Autoloaded
+sound		put=gen_rifle_put.wav		local	# Autoloaded
+
+template	projectile=+simonov			local	# Autoloaded
+template	smoke1=+pistol_smoke1		local	# Autoloaded
+template	smoke2=+pistol_smoke2		local	# Autoloaded
+
+thing		player						local
+thing		bullet						local
+
+flex		aimFOV=10.0					local
+flex		aimMax=90.0					local
+flex		aimWait=0.0001					local
+flex		fireWait=0.00000000000000000000001				local
+
+int			handNode					local
+int			holsterMesh					local
+int			weaponNum=6					local
+int			callNum						local
+
+int			bActivated=0				local
+
+vector		firePos						local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	handNode = GetNodeByName(player, "inrhand");
+	holsterMesh = GetMeshByName(player, "intorso");
+
+	if (IsThingModelName(player, "gen_in_shirt.3do"))
+	{
+		LoadHolsterModel(weaponNum, "torso_shirt_simonov.3do");
+	}
+	else if (IsThingModelName(player, "gen_in.3do"))
+	{
+		LoadHolsterModel(weaponNum, "torso_in_simonov.3do");
+	}
+	else
+	{
+		LoadHolsterModel(weaponNum, "torso_guy_simonov.3do");
+	}
+
+	if (GetLastRifle(player) == weaponNum)
+	{
+		SetHolsterModel(player, weaponNum, holsterMesh);
+	}
+    
+	if (GetSenderRef() == 9999) # Call is from Guybrush cheat...
+	{
+		if (GetCurWeapon(player) == weaponNum)
+		{
+			ResetHolsterModel(player, 3);
+		}
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+fire:
+
+	# Make sure Indy's not out of ammo
+	if (GetInv(player, weaponNum) < 1)
+	{
+		PlayVoiceMode(player, 123);
+		SelectWeapon(player, 3);
+		return;
+	}
+
+	# Fire away...
+	firePos = GetThingJointPos(player, handNode);
+	bullet = FireProjectile(player, projectile, bang, 65, firePos, '-1.6 41.5 0.0', 1.0, 0x320, aimFOV, aimMax);
+
+	if (Rand() < 0.5) CreateThing(smoke1, bullet);
+	else CreateThing(smoke2, bullet);
+
+	ChangeInv(player, weaponNum, -1.0);
+	SetFireWait(player, fireWait);
+
+	return;
+
+# -------------------------------------------------------------------
+
+aim:
+
+	if (GetParam(0))
+	{
+		if (!IsAiming(player) && !bActivated)
+		{
+			while ((PlayMode(player, 63, 0) == -99) && (!bActivated))
+			{
+				Sleep(0.01);
+			}
+		}
+	}
+	else if (IsModePlaying(player, 63) && !bActivated)
+	{
+		SetAimWait(player, aimWait);
+		StopMode(player, 63, aimWait);
+		PlayMode(player, 68, 0);
+	}
+
+	return;	
+
+# -------------------------------------------------------------------
+
+activated:
+
+	bActivated = 1;
+	SetAimWait(player, aimWait);
+
+	if (!IsAiming(player))
+	{
+		while (PlayMode(player, 63, 0) == -99)
+		{
+			Sleep(0.01);
+		}
+	}
+	
+	ActivateWeapon(player, aimWait);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deactivated:
+
+	bActivated = 0;
+
+	if (!IsAiming(player))
+	{
+		SetAimWait(player, aimWait);
+		StopMode(player, 63, aimWait);
+		PlayMode(player, 68, 0);
+	}
+
+	DeactivateWeapon(player);
+
+	return;
+
+# -------------------------------------------------------------------
+
+selected:
+
+	SetMountWait(player, 0.8);
+
+	SetArmedMode(player, 3);
+	SetCurWeapon(player, weaponNum);
+	SetThingFireOffset(player, '-0.048 0.048 0.015'); 
+
+	CaptureThing(player);
+	PlayMode(player, 62, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deselected:
+
+	if (IsAiming(player))
+	{
+		SetAimWait(player, aimWait);
+		StopMode(player, 63, aimWait);
+	}
+
+	SetMountWait(player, 1.0);
+
+	StopMode(player, 62, 0);
+
+	CaptureThing(player);
+	PlayMode(player, 64, 0);
+
+	SetArmedMode(player, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	callNum = GetParam(1);
+	ReleaseThing(player);
+
+	if (callNum == 28)
+	{
+		PlaySoundThing(pull, player, 1, -1, -1, 0x880);
+		ResetHolsterModel(player, 3);
+		SetWeaponModel(player, weaponNum);
+	}
+	else if (callNum == 29)
+	{
+		PlaySoundThing(put, player, 1, -1, -1, 0x880);
+		SetHolsterModel(player, weaponNum, holsterMesh);
+		ResetWeaponModel(player);
+	}
+
+	return;
+
+end

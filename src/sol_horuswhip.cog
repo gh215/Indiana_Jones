@@ -1,0 +1,244 @@
+# Jones 3D Cog Script
+#
+# SOL_HorusWhip.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     damaged
+    message     entered
+        
+    thing       player      local
+    thing       indy        local       # actor
+    thing       bird                    # strut
+    thing       whipCam1
+    thing       whipCam2
+    thing       target1
+    thing       crate
+    
+    thing       splash1
+    thing       splash2
+    thing       splash3
+    
+    sector      inside
+    sector      waterfall
+    
+    sector      watSec0
+    sector      watSec1
+    sector      watSec2
+    
+    surface     floor1
+    surface     floor2
+    
+    template    tplActor=indy_sh_actor              local
+    
+    material    mat0=riv_a4sprite_rocksplash_b.mat  local
+    
+    sound       mus_Cue=mus_pyr_shinyobject.wav     local
+    sound       sfx_Splash=fol_in_enterwater.wav    local
+    
+    int         gemRoom=0       local
+    int         onCrate=1       local
+    int         animTrack       local
+    int         played=0        local
+    
+end
+
+
+# ========================================================================================
+
+code
+
+startup:
+
+    # hide splashes at startup
+    SetThingFlags(splash1, 0x10);
+    SetThingFlags(splash2, 0x10);
+    SetThingFlags(splash3, 0x10);
+    return;
+
+# ========================================================================================
+
+damaged:
+
+    player = GetLocalPlayerThing();
+    
+    if(GetParam(1) == 0x10)
+    {
+        # from crate to pyramid room
+        if(onCrate == 1)
+        {
+            onCrate = 0;
+            
+            # do cutscene stuff
+            StartCutscene(0);
+            SetActorFlags(player, 0x200000);
+            
+            # switch to whipCam1
+            SetCameraFocus(2, whipCam1);
+            SetCameraSecondaryFocus(2, player);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+            
+            Sleep(2.8);
+            
+            Print("splash1");
+            # show water splash and play sfx
+            PlaySoundThing(sfx_Splash, splash1, 1.0, 8.0, 16.0, 0x0);
+            ClearThingFlags(splash1, 0x10);
+            SetMaterialCel(mat0, 0);
+            animTrack = MaterialAnim(mat0, 10.0, 1);
+            
+            Sleep(0.5);
+            SetThingFlags(splash1, 0x10);
+            StopAnim(animTrack);
+        }
+            
+        # from pyramid room to crate
+        else if(onCrate == 0)
+        {
+            # do cutscene stuff
+            StartCutscene(0);
+            SetActorFlags(player, 0x200000);
+            
+            # switch to whipCam1
+            SetCameraFocus(2, whipCam1);
+            SetCameraSecondaryFocus(2, player);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+            
+            # turn off water sectors
+            ClearSectorFlags(watSec0, 0x2);
+            ClearSectorFlags(watSec1, 0x2);
+            ClearSectorFlags(watSec2, 0x2);
+            
+            Sleep(1.5);
+            Print("splash3");
+            # show water splash and play sfx
+            PlaySoundThing(sfx_Splash, splash3, 1.0, 8.0, 16.0, 0x0);
+            ClearThingFlags(splash3, 0x10);
+            SetMaterialCel(mat0, 0);
+            animTrack = MaterialAnim(mat0, 10.0, 1);
+            
+            Sleep(0.5);
+            SetThingFlags(splash3, 0x10);
+            StopAnim(animTrack);
+            
+            Sleep(0.5);
+            Print("splash1 tim");
+            # show water splash and play sfx
+            PlaySoundThing(sfx_Splash, splash1, 1.0, 8.0, 16.0, 0x0);
+            ClearThingFlags(splash1, 0x10);
+            SetMaterialCel(mat0, 0);
+            animTrack = MaterialAnim(mat0, 10.0, 1);
+            
+            Sleep(0.5);
+            SetThingFlags(splash1, 0x10);
+            StopAnim(animTrack);
+            
+            # Reset the camera
+            SetCameraPosition(1, GetThingPos(whipCam1));
+            SetCurrentCamera(1);
+            
+            # restore controls
+            ClearActorFlags(player, 0x200000);
+            EndCutscene();
+        }
+    }
+                
+    return;
+
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    
+    if(gemRoom == 0)
+    {
+        if(GetSenderRef() == waterfall)
+        {
+            # switch to whipCam2 inside key room
+            SetCameraFocus(2, whipCam2);
+            SetCameraSecondaryFocus(2, player);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+            
+            # show water splash and play sfx
+            Print("splash2");
+            PlaySoundThing(sfx_Splash, splash2, 1.0, 8.0, 16.0, 0x0);
+            ClearThingFlags(splash2, 0x10);
+            SetMaterialCel(mat0, 0);
+            animTrack = MaterialAnim(mat0, 10.0, 1);
+            
+            Sleep(0.5);
+            SetThingFlags(splash2, 0x10);
+            StopAnim(animTrack);
+        }
+        
+        else if((GetSenderRef() == floor1) || (GetSenderRef() == floor2))
+        {
+            gemRoom = 1;
+            
+            # turn on water sectors
+            SetSectorFlags(watSec0, 0x2);
+            SetSectorFlags(watSec1, 0x2);
+            SetSectorFlags(watSec2, 0x2);
+            
+            # hide player and create actor
+            indy = CreateThing(tplActor, player);
+            CaptureThing(indy);
+            CopyPlayerHolsters(player, indy);
+            SetThingFlags(player, 0x80000);
+            ClearThingFlags(indy, 0x80000);
+            SetCameraSecondaryFocus(2, indy);
+            
+            # actor takes a step forward
+            AISetMoveSpeed(indy, 1.0);
+            AISetLookThing(indy, target1);
+            AISetMoveThing(indy, target1, 1);
+            #Sleep(1.0);
+            
+            # Get the player into position
+            CopyOrientAndPos(indy, player);
+            SetThingFlags(indy, 0x80000);
+            ClearThingFlags(player, 0x80000);
+            ClearActorFlags(player, 0x200000);
+            
+            # Reset the camera
+            SetCameraPosition(1, GetThingPos(whipCam2));
+            SetCurrentCamera(1);
+            EndCutscene();
+            
+            # play music cue
+            if(played == 0)
+            {
+                played = 1;
+                PlaySoundLocal(mus_Cue, 1.0, 0.0, 0x0, 0);
+            }
+        }
+    }
+        
+    else if(GetSenderRef() == crate)
+    {
+        # turn on water sectors
+        SetSectorFlags(watSec0, 0x2);
+        SetSectorFlags(watSec1, 0x2);
+        SetSectorFlags(watSec2, 0x2);
+            
+        onCrate = 1;
+        gemRoom = 0;
+    }
+    
+    return;
+               
+# ========================================================================================
+
+
+end
+

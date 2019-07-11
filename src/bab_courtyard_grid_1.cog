@@ -1,0 +1,324 @@
+# Jones 3D Cog Script
+#
+# BAB_Courtyard_Grid_1.cog
+# 
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+
+symbols
+
+
+message         startup
+message         entered
+message         arrived
+message         activated
+message         killed 
+message         crossed
+
+# ========================================================================================
+
+
+# GHOST OBJECTS - THE GRID
+
+thing   t_ghost00
+thing   t_ghost01
+thing   t_ghost02
+thing   t_ghost03
+thing   t_ghost04
+thing   t_ghost05
+thing   t_ghost06
+thing   t_ghost07
+thing   t_ghost08
+thing   t_ghost09
+thing   t_ghost10
+thing   t_ghost11
+thing   t_ghost12
+thing   t_ghost13
+thing   t_ghost14
+thing   t_ghost15
+thing   t_ghost16
+thing   t_ghost17
+thing   t_ghost18
+thing   t_ghost19
+thing   t_ghost20
+thing   t_ghost21
+thing   t_ghost22
+thing   t_ghost23
+
+
+# ALL COMMIES - Patrolling and Guarding
+
+thing   t_commie00      LinkID=1  
+thing   t_commie01      LinkID=1
+thing   t_commie02      LinkID=1
+thing   t_commie03      LinkID=1    
+thing   t_commie04      LinkID=1
+thing   t_commie05      LinkID=1
+thing   t_commie06      LinkID=1    
+thing   t_commie07      LinkID=1    
+thing   t_commie08      LinkID=1
+thing   t_commie09      LinkID=1
+thing   t_commie10      LinkID=1
+
+# PATROLLING COMMIES - Redundant with commies above
+
+thing   t_patrol00
+thing   t_patrol01
+
+thing   AfterTurnerCommie00     #Commies that roam after the turner cutscene.
+thing   AfterTurnerCommie01
+
+# OTHER REFERENCES
+
+thing   turner_door
+
+thing   power_switch
+
+sector  sec_trigger
+
+sector  SecLinkGrid0    LinkID=2    #Sector checks to link upper and lower grids if Indy gets to the lower area.
+sector  SecLinkGrid1    LinkID=2
+sector  SecLinkGrid2    LinkID=2
+sector  SecLinkGrid3    LinkID=2
+
+surface     Turner_cutscene_trigger 
+
+#------------------------LOCAL VARIABLES-----------------------
+
+thing   t_player        local
+
+int     n_wpnts=24      local   # number of waypoints in the grid
+int     n_commies=11    local   # number of commies to use the grid                                       
+int     n_pos           local
+
+int     counter         local
+
+int     check0=0        local
+int     check1=0        local
+
+int     TurnerCheck=0   local
+
+int     cur_wpnt        local
+int     next_wpnt       local
+
+flex    grid_create     local
+flex    assign_instinct local
+flex    start_patrol    local
+
+end
+# ========================================================================================
+
+code
+//----------------------------------------------------------------------------------------
+
+startup:
+    
+    t_player = GetLocalPlayerThing();
+                             
+    SetThingFlags(AfterTurnerCommie00, 0x80000); # Commies don't exist until after the turner cutscene
+    SetThingFlags(AfterTurnerCommie01, 0x80000);
+        
+    return;                                                                        
+                                                                        
+
+//----------------------------------------------------------------------------------------
+     
+entered:    
+    
+    //Initial Sector Trigger to set up the grid                                                                
+    if (GetSenderRef() == sec_trigger)  
+    {   
+        if(check0 == 0)
+        {
+            
+            check0 = 1;
+     
+            //print("Activating courtyard patrol grid");
+       
+            call grid_create;
+            
+            call assign_instinct;
+        }
+    }    
+    
+    //Link Upper and lower Grids so that patrolling commies dont go into the wrong area until they're supposed to
+    if (GetSenderID() == 2)
+    {
+        if(Check1 == 0)
+        {
+            Check1 = 1;
+            
+            AIConnectWpnts(6, 7);
+            
+            call start_patrol; 
+            
+            //print("Grids Linked");
+        }
+    }  
+    return;        
+    
+ # ====================================================================
+crossed:
+    
+    if(GetSenderRef() == Turner_cutscene_trigger)
+    {
+        if(TurnerCheck == 1) return;
+        TurnerCheck = 1;
+        
+        for(counter = 0; counter < n_commies; counter = counter + 1)
+        {
+            if(Commie00[counter] != -1)
+            {
+                AISetCutsceneMode(Commie00[counter]);
+            }                  
+        }
+    }       
+    return;
+                        
+//----------------------------------------------------------------------------------------
+arrived:
+    
+    //Link sub_grids once Turner cutscene has played... i.e. door is now open.
+    if (GetSenderRef() == turner_door)
+    {
+        //print("Linked Turner sub-Grid");
+        AIConnectWpnts(17, 19);     
+        
+        for(counter = 0; counter < n_commies; counter = counter + 1)
+        {
+            if(Commie00[counter] != -1)
+            {
+                AIClearCutsceneMode(Commie00[counter]);
+            }
+        }
+            
+        
+        //Wake up two sleeping commies and set them a roamin'
+        
+        ClearThingFlags(AfterTurnerCommie00, 0x80000);  
+        ClearThingFlags(AfterTurnerCommie01, 0x80000);    
+        
+        AISetInstinctWpntMode(AfterTurnerCommie00);
+        AISetInstinctWpntMode(AfterTurnerCommie01);
+        
+        AIEnableInstinct(AfterTurnerCommie00, "roam", 1);
+        AIEnableInstinct(AfterTurnerCOmmie01, "roam", 1);
+    }                                                    
+    
+    return;
+
+        
+//----------------------------------------------------------------------------------------
+activated:
+
+    //Comimes up top begin to roam once Indy pulls the lever
+    if(GetSenderRef() == power_switch)  
+    {
+        //print("AI turned on and roaming");
+        
+        for(n_pos = 0; n_pos < 5; n_pos = n_pos+1)
+        {
+            if(t_commie00[n_pos] != -1)     //Check ot see if the commie is dead
+            {
+                AIClearCutsceneMode(t_commie00[n_pos]);
+                AIEnableInstinct(t_commie00[n_pos], "roam", 1);
+            }
+        }
+    }
+    
+    return;
+//----------------------------------------------------------------------------------------
+killed:
+    
+    //Check for dead commies so as not to assign an instinct to a commie that no longer exists
+    for(n_pos = 0; n_pos < n_commies; n_pos = n_pos+1)
+    {
+        if(GetSenderRef() == t_commie00[n_pos])
+        {
+            t_commie00[n_pos] = -1;
+        }
+    }
+
+    return;
+
+//----------------------------------------------------------------------------------------
+
+grid_create:        
+    
+    //ASSIGNMENT OF SLOTS, RANKS AND LINKS THAT DEFINE THE GRID
+
+    
+    for (n_pos = 0; n_pos < n_wpnts; n_pos = n_pos+1)
+    {
+        AISetWpnt(t_ghost00[n_pos], n_pos);     //assigns each waypoint slot a ghost object 
+        //AISetWpntRank(n_pos, 1);                //Set all waypoints equal rank (1) for now... 
+    }
+    
+    // LINK WAYPOINTS TO FORM THE GRID STRUCTURE
+    // Upper Grid
+    AIConnectWpnts(0, 1);
+    AIConnectWpnts(1, 2);
+    AIConnectWpnts(1, 3);
+    AIConnectWpnts(2, 4);
+    AIConnectWpnts(3, 6);
+    AIConnectWpnts(4, 5);
+    AIConnectWpnts(4, 6);
+    
+    //Lower Grid
+    //AIConnectWpnts(6, 7);
+    AIConnectWpnts(7, 8);
+    AIConnectWpnts(8, 9);
+    AIConnectWpnts(9, 10);
+    AIConnectWpnts(10, 11);
+    AIConnectWpnts(10, 13);
+    AIConnectWpnts(10, 14);
+    AIConnectWpnts(11, 12);
+    AIConnectWpnts(14, 15);
+    AIConnectWpnts(14, 16);                                             
+    AIConnectWpnts(16, 17);
+    AIConnectWpnts(17, 18);
+    
+    // Sub-Grid on other side of Turner Door.
+    AIConnectWpnts(19, 20);     
+    AIConnectWpnts(20, 21);
+    AIConnectWpnts(20, 22);
+    AIConnectWpnts(22, 23);
+  
+    //print("Grid created");
+    
+    return;
+
+//----------------------------------------------------------------------------------------
+
+assign_instinct:    
+    
+    //SET ALL COMMIES TO USE THE GRID FOR FLEEING AND PURSUING
+    //print("Instinct set");
+    
+    for (n_pos = 0; n_pos < n_commies; n_pos = n_pos+1)
+    {       
+        AISetInstinctWpntMode(t_commie00[n_pos]); 
+    } 
+    
+    return;
+
+//----------------------------------------------------------------------------------------
+        
+start_patrol:
+
+    //Set some of the commies to patrol, or 'roam' in this case
+    //print("Commies Patrolling");
+              
+    AIEnableInstinct(t_patrol00, "roam", 1);
+    AIEnableInstinct(t_patrol01, "roam", 1);
+    
+    return;
+    
+//----------------------------------------------------------------------------------------
+
+end    
+    

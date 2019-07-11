@@ -1,0 +1,163 @@
+# Jones 3D Cog Script
+#
+# PRU_treasuredoor.cog
+#
+# Open treasure door with key.
+#
+# (GGJ)
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+message     activated
+message		startup
+message		arrived
+
+thing		player	local
+thing		actor
+thing		door0
+thing		junctionCam0
+thing		junctionTarget0
+thing		junctionTarget1
+thing		junctionTarget2
+thing		key
+thing		junRevertCam
+thing		pitdoor
+        
+surface		lock
+
+keyframe	unlock=in_activate_medium.key		local
+
+sound		dialogue=inxj082.wav				local		#keyhole here...just need key
+sound		dialogue2=inxj077.wav				local
+
+sound    startdoor=nub_stonedoor_start_c.wav	local
+sound    movedoor=teo_stonebar_slide_c.wav		local
+sound    stopdoor=nub_stonedoor_stop_c.wav		local
+sound    openwav=inxj108.wav					local
+sound	keySnd=tem_monkeykey_unlock_c.wav		local
+
+flex		moveSpeed=1.0						local
+flex		tempRotVel							local
+
+float   speed=1.0								local
+
+int		talking=0								local
+int		curCam									local
+int		move0channel							local
+int		open=0									local
+int		tempCam									local
+
+cog		hint
+        
+end
+#=================================================================================================
+code
+startup:
+	Sleep(0.01);	
+	player = GetLocalPlayerThing();
+    SetThingFlags(actor, 0x80000);
+    SetThingFlags(key, 0x80000);
+    return;
+#=================================================================================================
+activated:
+
+PRINT("activated");
+if ((open) == 1) return;    
+    
+if ((GetSenderRef() == lock) && (GetCurItem(player) != 98) && (talking == 0))
+{
+	talking = 1;
+	Print("no key");
+	PlayVoice(player, dialogue, 1, 1);
+    Sleep(0.5);
+	talking = 0;
+
+}
+
+if ((GetSenderRef() == lock) && (GetCurItem(player) == 98))
+{
+	curCam = GetCurrentCamera();
+    StartCutscene(1);
+	open = 1;
+	
+    SetCameraLookInterp(2, 0);
+	SetCameraFocus(2, junctionCam0);
+    SetCameraSecondaryFocus(2, junctionTarget0);
+	SetCurrentCamera(2);
+	SetCameraFOV(60, 0, 0.0);
+    SetCameraLookInterp(2, 1);
+	
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+    PlayMode(player, 1, 0);
+    CopyPlayerHolsters(player, actor);
+	SetThingFlags(player, 0x80000);
+    ClearThingFlags(actor, 0x80000);
+	
+	PlayKey(actor, unlock, 4, 0x12, 0);
+	
+	Sleep(0.5);
+	ClearThingFlags(key, 0x80000);
+	SetThingLight(key, '0.8 0.8 0.8', 0.01, 0.01);
+    MoveToFrame(key, 1, 0.5);
+	PlaySoundThing(keySnd, key, .75, -1, -1, 0);
+
+	Sleep(1.0);
+	#DestroyThing(key);
+	
+	#remove key from inventory
+	ChangeInv(player, 98, -1);
+
+    
+	SetCameraFOV(90, 1, 2.0);
+    SetCameraSecondaryFocus(2, junctionTarget1);
+	Sleep(1.0);
+	
+    tempRotVel=GetThingMaxRotVel(actor);
+    SetThingMaxRotVel(actor, 200.0);
+    
+	
+	AISetLookThing(actor, junctionTarget2);
+	PlaySoundLocal(startdoor, 1.0, 0, 0x0000, 0);
+    move0channel = PlaySoundLocal(movedoor, 1.0, 0, 0x0001, 0);
+    MoveToFrame(door0, 1 - GetCurFrame(door0), moveSpeed);
+    MoveToFrame(junctionCam0, 1, 1.0);
+            
+}
+return;
+	
+arrived:	
+if (GetSenderRef() != door0) return;
+
+StopSound(move0channel, 0.0);
+
+PlayVoice(actor, openwav, 1, 0);
+
+PlaySoundLocal(stopdoor, 1.0, 0, 0x0000, 1);
+
+tempCam = GetThingPos(junRevertCam);
+SetCameraPosition(curCam, tempCam);
+SetCurrentCamera(curCam);
+
+CopyOrientandPos(actor, player);
+SetThingMaxRotVel(actor, tempRotVel);
+SetThingFlags(actor, 0x80000);
+ClearThingFlags(player, 0x80000);
+ClearActorFlags(player, 0x200000);
+EndCutscene();
+SendMessage(hint, user4);
+
+#close off door to 1st portion of level to prevent confused players from going back too far.
+if (GetDifficulty() < 5)
+{
+    MoveToFrame(pitDoor, 1, 1.0);
+}
+
+SetCollideType(door0, 0);
+
+return;
+
+
+end

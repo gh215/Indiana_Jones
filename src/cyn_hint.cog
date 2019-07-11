@@ -1,0 +1,149 @@
+# Jones 3D Cog Script
+#
+# CYN_Hint.cog
+#
+# Solves hints    
+#
+# [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		entered
+	message		removed
+	message		user0
+
+	thing		player			local
+	thing		sender			local
+
+	# HINT OBJECTS / SURFACES / SECTORS / THINGS
+
+	thing		hint1
+
+	thing		hint2
+	surface		hintsurf0		# climb to the top of first ladder	(climb)
+
+	thing		hint4
+	surface		hintsurf1		# surface block must rest on to have hint solved (pull block)
+
+	thing		hint6
+	surface		hintsurf2		# crawl onto this surface to solve hint	 (crawl)
+
+	thing		hint8  
+	surface		hintsurf3		# jump onto this surface to solve hint (6m)
+
+	thing		hint10
+	surface		h10_face		# whip this strut to solve hint	(whipclimb)
+
+	thing		hint12
+	sector		h12_sector		# jump into this sector to solve hint (4X2)
+
+	thing		hint14
+
+	thing		hint16
+	sector		fall_sector		# enter sector at waterfall	top to solve hint
+
+	thing		hint18
+	thing		potsherd		# take potsherd to solve hint
+
+	thing		hint20
+	surface		hintsurf5		# climb onto this surf to solve hint
+
+	thing		hint22
+	surface		hintsurf6		# touch this shimmy ledge to solve hint
+
+	thing		hint24
+	surface		hintsurf7		# jump onto this face to solve hint	(6m)
+
+	thing		hint26
+	surface		hintsurf8		# climb onto this face to solve hint (2nd climb)
+
+	thing		hint28
+	surface		hintsurf9		# jump onto this face to solve hint	(7X-1M)
+
+	thing		hint30
+	surface		hintsurf10		# jump onto this face to solve hint	 (3M up)
+
+	thing		hint32
+	surface		hintsurf11		# jump onto this face to solve hint	 (4X2)
+
+	thing		hint34
+	sector		exitsector		# last entered sector
+
+end
+
+
+# ========================================================================================
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	SetHintSolved(hint1);
+
+	return;
+
+# ========================================================================================
+
+entered:
+
+	sender = GetSenderRef();
+
+	if (GetSourceRef() != player) return;
+
+	if ((sender == hintsurf0) && (GetHintSolved(hint2) == 0))
+		SetHintSolved(hint2);
+	else if ((sender == hintsurf1) && (GetHintSolved(hint4) == 0))
+		SetHintSolved(hint4);
+	else if ((sender == hintsurf2) && (GetHintSolved(hint6) == 0))
+		SetHintSolved(hint6);
+	else if ((sender == hintsurf3) && (GetHintSolved(hint8) == 0))
+		SetHintSolved(hint8);
+	else if ((sender == h10_face) && (GetHintSolved(hint10) == 0))
+		SetHintSolved(hint10);
+	else if ((sender == h12_sector) && (GetHintSolved(hint12) == 0))
+		SetHintSolved(hint12);
+	else if ((sender == fall_sector) && (GetHintSolved(hint16) == 0))
+		SetHintSolved(hint16);
+	else if ((sender == hintsurf5) && (GetHintSolved(hint20) == 0))
+		SetHintSolved(hint20);
+	else if ((sender == hintsurf6) && (GetHintSolved(hint22) == 0))
+		SetHintSolved(hint22);
+	else if ((sender == hintsurf7) && (GetHintSolved(hint24) == 0))
+		SetHintSolved(hint24);
+	else if ((sender == hintsurf8) && (GetHintSolved(hint26) == 0))
+		SetHintSolved(hint26);
+	else if ((sender == hintsurf9) && (GetHintSolved(hint28) == 0))
+		SetHintSolved(hint28);
+	else if ((sender == hintsurf10) && (GetHintSolved(hint30) == 0))
+		SetHintSolved(hint30);
+	else if ((sender == hintsurf11) && (GetHintSolved(hint32) == 0))
+		SetHintSolved(hint32);
+	else if ((sender == exitsector) && (GetHintSolved(hint34) == 0))
+		SetHintSolved(hint34);
+
+	return;        
+
+# ========================================================================================
+
+removed:
+
+    if (GetSenderRef() == potsherd)
+    {
+        SetHintSolved(hint18);
+    }
+	return;
+
+# ========================================================================================
+
+user0:
+
+	SetHintSolved(hint14);
+	return;
+
+# ========================================================================================
+end
+

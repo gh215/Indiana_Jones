@@ -1,0 +1,128 @@
+# Jones 3D Cog Script
+#
+# pyr_minecarexit.cog
+#	
+# Cutscene as Indy departs level
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message		startup
+message		entered
+message		crossed
+
+# actors
+thing	player		nolink	local
+
+# camera things
+thing	exitcam		nolink
+thing	fadeplate	nolink
+
+# camera lookthings
+thing	exitcamlook	nolink
+
+# surfaces
+surface	trigger
+surface	levelexit
+
+# sounds
+sound	exitmus=mus_gen_indy_a_theme1.wav	local
+
+# subroutines
+flex	startscene=0.0	local
+flex	fixcams=0.0		local
+end
+
+
+code
+startup:
+	ThingFadeAnim(fadeplate, 1.0, 0.0, 0.01, 0);	
+	sleep(.1);
+	SetThingFlags(fadeplate, 0x10);
+	SetCollideType(fadeplate, 0);
+	return;
+
+entered:
+# ---> trigger surface
+
+	if (GetSenderRef() != trigger) return;
+	
+	# exit if player isn't in mine car
+	if (!BitTest(GetPhysicsFlags(GetSourceRef()), 0x01000000)) return;
+	
+	# get new player thing in minecar
+	player = GetLocalPlayerThing();
+	
+	call startscene;
+	
+	PlaySoundLocal(exitmus, 1.0, 0.0, 0x0, 0);
+
+	SetThingThrust(player, '0.0 .5 0.0');
+
+	SetCameraFocus(2, exitcam);
+	SetCameraSecondaryFocus(2, exitcamlook);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0);
+
+	sleep(.5);
+
+	SetCameraLookInterp(2, 1);
+	
+	MoveToFrame(exitcam, 1, 2.5);
+
+	SetThingThrust(player, '0 1 0');
+	
+	sleep(2);
+	MoveToFrame(exitcamlook, 1, 5);
+	SetThingThrust(player, '0 1.5 0');
+	
+	sleep(1);
+	MoveToFrame(exitcam, 2, 3);
+	
+	sleep(2);
+	MoveToFrame(exitcamlook, 2, 5);
+	
+	WaitForStop(exitcam);
+
+	MoveToFrame(exitcam, 3, 3);
+	SetCameraFOV(75, 1, 2);
+
+	WaitForStop(exitcam);
+	sleep(4);
+
+	ClearThingFlags(fadeplate, 0x10);
+	ThingFadeAnim(fadeplate, 0.0, 1.0, 1.0, 0);
+
+	return;
+
+crossed:
+	# ---> levelexit surface
+	if ((GetSenderRef() == levelexit) && (GetSourceRef() == GetLocalPlayerThing()))
+	{
+		EndCutscene();
+		JonesEndLevel();
+	}
+	return;
+
+startscene:
+	call fixcams;
+
+	StartCutscene(1);
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+		
+	return;
+			
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	RestoreExtCam();
+	return;
+
+end
+

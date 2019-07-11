@@ -1,0 +1,228 @@
+
+# Jones 3D Cog Script
+#
+# SEA_Grid.cog
+# 
+# Just the Grid and initial waypoint connections for the Pudovkin, as well as a few instincts for some commies
+# 
+#
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+# ========================================================================================
+
+message         startup
+message         crossed
+
+#  Subroutines
+flex            UpperGrid       local
+flex            LowerGrid       local
+flex            SwapGrid        local
+
+thing           TempWpnt
+
+#  Lower waypoints
+thing           Lower00
+thing           Lower01
+thing           Lower02
+thing           Lower03
+thing           Lower04
+thing           Lower05
+thing           Lower06
+thing           Lower07
+thing           Lower08
+thing           Lower09
+thing           Lower10
+thing           Lower11
+thing           Lower12
+thing           Lower13
+thing           Lower14
+thing           Lower15
+thing           Lower16
+thing           Lower17
+thing           Lower18
+thing           Lower19
+thing           Lower20
+thing           Lower21
+thing           Lower22
+thing           Lower23
+thing           Lower24
+thing           Lower25
+thing           Lower26
+thing           Lower27
+
+#  Upper Waypoints
+thing           Upper00
+thing           Upper01
+thing           Upper02
+thing           Upper03
+thing           Upper04
+thing           Upper05
+thing           Upper06
+thing           Upper07
+thing           Upper08
+thing           Upper09
+thing           Upper10
+thing           Upper11
+thing           Upper12
+thing           Upper13
+thing           Upper14
+thing           Upper15
+thing           Upper16
+thing           Upper17
+thing           Upper18
+thing           Upper19
+thing           Upper20
+thing           Upper21
+thing           Upper22
+thing           Upper23
+thing           Upper24
+thing           Upper25
+
+#===================== COGS ===================================
+cog             SEA_Deck_AI
+
+# ========================================================================================
+
+#  surface         CreateLower00       LinkID=1
+surface         CreateLower01       LinkID=1
+surface         CreateLower02       LinkID=1
+
+surface         CreateUpper00       LinkID=2
+surface         CreateUpper01       LinkID=2
+
+surface         ConnectKitchen      
+
+int             LowerTotal=28       local
+int             UpperTotal=26       local
+int             counter             local
+int             check               local
+
+int             CLEAR_WPNTS=60      local                        
+
+
+end
+
+# ========================================================================================
+code
+# ========================================================================================
+startup:
+    
+    Call LowerGrid;    
+    
+    return;
+                         
+# ========================================================================================
+crossed:
+
+    if(GetSenderID() == 1)
+    {
+        Call LowerGrid;
+        SendMessageEx(SEA_Deck_AI, 27, 0, 0, 0, 0);
+    }
+    
+    else if(GetSenderID() == 2)
+    {
+        Call UpperGrid;
+        SendMessageEx(SEA_Deck_AI, 27, 1, 0, 0, 0);
+    }
+    else if(GetSenderRef() == ConnectKitchen)
+    {
+        AIConnectWpnts(11, 12);
+    }
+    
+    return;
+
+# ========================================================================================
+LowerGrid:
+
+    for(counter = 0; counter < CLEAR_WPNTs; counter = counter + 1)
+    {
+        AISetWpnt(TempWpnt, counter);
+    }
+    
+    for(counter = 0; counter < LowerTotal; counter = counter + 1)
+    {
+        AISetWpnt(Lower00[counter], counter);
+    }
+    AIConnectWpnts(0, 1);
+    AIConnectWpnts(0, 5);
+    AIConnectWpnts(1, 2);
+    AIConnectWpnts(2, 3);
+    AIConnectWpnts(3, 4);
+    AIConnectWpnts(4, 5);
+    AIConnectWpnts(7, 8);
+    AIConnectWpnts(7, 9);
+    AIConnectWpnts(7, 10);
+    
+    #  Might need to have this one triggered
+    AIConnectWpnts(11, 12);
+    
+    AIConnectWpnts(12, 13);
+    AIConnectWpnts(12, 14);
+    AIConnectWpnts(15, 16);
+    AIConnectWpnts(17, 18);
+    AIConnectWpnts(17, 20);
+    AIConnectWpnts(18, 19);
+    AIConnectWpnts(21, 22);
+    AIConnectWpnts(22, 23);
+    AIConnectWpnts(23, 24);
+    AIConnectWpnts(25, 26);
+    AIConnectWpnts(26, 27);
+    AIConnectWpnts(27, 6);  #  Messed up and skipped a number accidentally, so wpnt 6 is in a strange place
+    
+    return;
+    
+# ========================================================================================
+UpperGrid:
+
+    for(counter = 0; counter < CLEAR_WPNTs; counter = counter + 1)
+    {
+        AISetWpnt(TempWpnt, counter);
+    }
+    
+    for(counter = 0; counter < UpperTotal; counter = counter + 1)
+    {
+        AISetWpnt(Upper00[counter], counter);
+    }
+    
+    AIConnectWpnts(0, 1);
+    AIConnectWpnts(0, 2);
+    AIConnectWpnts(1, 2);
+    AIConnectWpnts(1, 3);
+    AIConnectWpnts(2, 5);
+    AIConnectWpnts(3, 4);
+    AIConnectWpnts(3, 6);
+    AIConnectWpnts(4, 5);
+    AIConnectWpnts(5, 7);
+    AIConnectWpnts(6, 7);
+    AIConnectWpnts(6, 8);
+    AIConnectWpnts(7, 9);
+    AIConnectWpnts(8, 10);
+    AIConnectWpnts(9, 13);
+    AIConnectWpnts(10, 14);
+    AIConnectWpnts(11, 13);
+    AIConnectWpnts(13, 15);
+    AIConnectWpnts(14, 16);
+    AIConnectWpnts(15, 19);
+    AIConnectWpnts(16, 17);
+    AIConnectWpnts(16, 20);
+    AIConnectWpnts(17, 18);
+    AIConnectWpnts(18, 19);
+    AIConnectWpnts(19, 21);
+    AIConnectWpnts(20, 22);
+    AIConnectWpnts(21, 23);
+    AIConnectWpnts(22, 23);
+    AIConnectWpnts(24, 25);
+    
+    return;
+
+            
+# ========================================================================================
+end
+# ========================================================================================

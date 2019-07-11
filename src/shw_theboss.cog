@@ -1,0 +1,150 @@
+# Jones 3D Cog Script
+#
+# shw_TheBoss.cog
+#
+# The Boss Cog, heh
+#
+# [CMG] [MDR]
+#
+#	#####  Notes  #####
+#   Cinematic control for Ice Boss.  Relies on SHW_ICEBOSS.COG for actual AI control.
+#   This COG will not receive messages directly from the Ice Boss, but will get a final KILLED
+#   message from SHW_IceBoss.cog when the boss has received final justice... heheh...
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+        message killed
+        message startup
+        message entered
+        
+# ************************** LINKED ITEMS **********************
+        cog		IceBossCog					# ref to boss AI cog
+		
+        thing	bossghost0					# boss starting pos
+
+		thing   IceBoss						# ref to real boss, created by boss AI cog
+        thing   IceDoor
+        thing   Blastpos1
+        thing   Blastpos2
+        thing   icecampos
+        thing   camera
+
+		sector	triggersect0				# boss startup cutscene trigger sector
+
+# ************************** TEMPLATES *************************
+        template	wfallbot
+        template	exp=+explode0		local
+		
+		keyframe	scream=ib_die.key	local
+        
+        sound   monsterdeath = nub_bull_move3_c.wav	
+        sound   explosion = nub_bull_move1_c.wav	local
+
+# ************************** MISC LOCAL VARS *******************
+		vector	plus5					local
+		vector	camtemp0				local
+		vector	camtemp1				local
+
+		thing	curCam					local
+		thing	camPos					local
+        thing	explosion1				local
+        thing	dust					local
+		thing	player					local
+        
+        
+end
+
+# ========================================================================================
+code
+
+# ...................................................................
+startup:
+
+	plus5 = VectorSet(0.0, 0.0, 0.5);
+	player = GetLocalPlayerThing();
+    IceBoss = -1;
+
+	return;
+
+
+# ...................................................................
+entered:
+
+	If ( (GetSenderRef() == triggersect0) && (IceBoss < 0) )
+	{
+		PRINT("Trigger boss startup");
+
+		# Send USER0 message == Tell Boss AI Cog to create the boss at pos of bossghost0
+		IceBoss = SendMessageEx(IceBossCog, 27, bossghost0, 0, 0, 0);
+
+		# play mega Ice Boss cutscene
+
+		# Send USER1 message == Tell Boss AI Cog to put boss "into play"
+		SendMessageEx(IceBossCog, 28, 0, 0, 0, 0);
+	}
+
+	return;
+
+
+# ...................................................................
+killed:
+
+    If ( GetSenderRef() == IceBossCog )
+	{
+		PRINT("shw_TheBoss.cog got KILLED msg from IceBossCog");
+		curCam = GetCurrentCamera();
+		
+        CopyOrientAndPos(player, camera);
+		
+		SetCameraFocus(2, camera);
+		SetCamerasecondaryFocus(2, IceBoss);
+		SetCameraInterpSpeed(2,1.5);
+		SetCameraLookInterp(2,1);
+        SetCameraPosInterp(2,1);
+        SetCurrentCamera(2);
+		
+		camtemp0 = GetThingPos(camera);
+		camtemp0 = VectorAdd(camtemp0, plus5);
+		SetThingPos(camera, camtemp0);
+		SetCameraFOV(100, 0, 1.0);
+		#camPos = VectorSet(0.0, 0.0, 0.50);
+        #SetExtCamOffset(camPos);
+		#newpos = GetThingPos(curCam);
+		#Sleep(1);
+        
+		#SetCameraFOV(70, 0, 2.0);
+		#SetCamerasecondaryFocus(2, IceBoss);
+		Sleep(1);
+
+		print("playing anims");
+#		PlaySoundLocal(monsterdeath, 5, 1, 0x0, 0);
+#		PlayKey(IceBoss, scream, 4, 0x02, 0);
+        ThingFadeAnim(IceBoss, 1, 0, 4, 0);
+		sleep(5.0);
+		print("Blowing the ice door");
+		SetCamerasecondaryFocus(2, IceDoor);
+		SetCameraFocus(2, icecampos);
+		SetCurrentCamera(2);
+        SetCameraFOV(70, 0, 2.0);
+		Sleep(2.0);
+		DestroyThing(IceDoor);
+        explosion1=CreateThing(exp, Blastpos1);
+        dust=CreateThing(wfallbot, Blastpos2);
+        dust=CreateThing(wfallbot, Blastpos2);
+        dust=CreateThing(wfallbot, Blastpos2);
+		Sleep(2.0);
+		RestoreExtCam();
+		SetCurrentCamera(curCam);
+	}
+
+    return;
+        
+
+         
+# ========================================================================================
+end
+
+        

@@ -1,0 +1,92 @@
+# Jones 3D Cog Script
+#
+# SHS_TRoomNoSee.cog   Isolates Treasure room sectors for framerate.
+# 
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+
+symbols
+	
+    message	startup
+    message crossed
+    
+   	surface FromHallOn 			 
+	surface FromHallOff		       
+    surface FromTRoomOn				
+	surface FromTRoomOff	linkid=1
+    surface FromTRoomOff1	linkid=1	# where the waterfall is
+	
+	surface dark0				# make surface facing big nave
+	surface	dark1  				# dark or clear	to prevent smearing
+    
+    sector  HallSec
+    sector	FromTRoomSec	 	#  Area just before waterfall
+	sector	FromTRoomSec1
+
+	int 	player		local
+
+   
+    
+end
+
+code
+
+startup:
+	
+	player=GetLocalPlayerThing();
+	SetSectorAdjoins(HallSec, 0);
+	SetSectorAdjoins(FromTRoomSec, 0);
+	SetSectorAdjoins(FromTRoomSec1, 0);
+	return;
+
+crossed:
+	
+
+	# make sure Indy player is sending message
+	If (GetSourceRef() != player) return;
+
+	# draw sector
+	If (GetSenderRef() == FromHallOn)
+    {
+        SetSectorAdjoins(HallSec, 1);
+    }    
+    
+    If (GetSenderRef() == FromTRoomOn)
+    {
+        
+		SetSectorAdjoins(FromTRoomSec, 1);
+	    SetSectorAdjoins(FromTRoomSec1, 1);
+	    # Make surface clear
+		SetFaceGeoMode(dark0, 0);
+		SetFaceGeoMode(dark1, 0);
+	}    
+    
+   	
+	# don't draw sector 
+	    
+	If (GetSenderRef() == FromHallOff )
+    {
+       	SetSectorAdjoins(HallSec, 0);
+	}
+	
+	If (GetSenderId() == 1)
+	{
+		
+		SetSectorAdjoins(FromTRoomSec, 0);
+		SetSectorAdjoins(FromTRoomSec1, 0);
+		# make surface dark
+		SetFaceGeoMode(dark0, 4);
+		SetFaceGeoMode(dark1, 4);
+	}    
+	
+	
+
+	return;
+	
+
+
+end
+
+

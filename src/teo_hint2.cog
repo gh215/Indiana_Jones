@@ -1,0 +1,523 @@
+# Jones 3D Cog Script
+#
+# TEO_Hint2.cog
+#
+# Solves hints 
+#
+#   Basically, considers hints as one linear list with discrete groups located within   
+# that whole. For example a list of objects array indexed from 0-9 could contain a sub group of objects
+# index numbered from 6-8. The first item in this sub group of objects could be accessed 
+# directly by retrieving the value stored in index 6 and so forth. What this allows for is
+# non linear access to a linear list of objects. For example if jump to a part of the level that
+# uses hints 6-8 but I have only solved hints 1 and 2 the current hint system will show the next hint as 
+# hint 3 which not only confusing but wrong. This way when Indy enters any part of the level (you have to track this)
+# he can force the hint to be teleported to hint 6 and so forth.
+#   The other important thing to remember is that there is only one hint that is never solved or unsolved.
+# the hint is just teleported to the appropriate position based on where the player decided to go, hence 
+# non-linear behavior from linear list.
+# 
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+    message     entered
+    message     arrived
+    message     damaged
+    message     crossed
+    message     user1
+    message     user4
+    message     user5
+    message     user6
+
+    thing       player      local
+    
+# A REAL HINT FROM THE TEMPLATE
+    thing       curhint
+         
+# GHOST OBJECTS STANDING IN FOR HINTS
+    thing       ghint00     
+    thing       ghint01
+    thing       ghint02
+    thing       ghint03
+    thing       ghint04        
+    thing       ghint05        
+    thing       ghint06        
+    thing       ghint07        
+    thing       ghint08        
+    thing       ghint09        
+    thing       ghint10
+    thing       ghint11
+    thing       ghint12
+    thing       ghint13
+    thing       ghint14
+    thing       ghint15
+    thing       ghint16
+    thing       ghint17
+    thing       ghint18
+    thing       ghint19
+    thing       ghint20
+    thing       ghint21
+    thing       ghint22
+    thing       ghint23
+    thing       ghint24
+    thing       ghint25
+    
+# LIST OF ITEMS IN LEVEL        
+    thing       ghint00_switch      
+    thing       ghint01_waterkey
+    thing       ghint02_switch
+    sector      ghint03_sector
+    sector      snakesect0_h4      
+    sector      snakesect1_h5      
+    sector      snakesect2_h6      
+    sector      ghint07_sector
+    # hint 8 is the lightshaft in the statlock room
+    
+# GATEWAY FOR SUBGROUP 9 VOLODSCENE
+    surface         gh8_index9_surf_in                          
+    surface         gh8_index0_surf_out    
+    sector          ghint09_sector
+    thing           ghint10_key
+    # hint 11 is the fish switch in the underwater switch room
+    # hint 12 is the whip climb above the water pillar
+    sector          ghint12_sector
+    # hint 13 is the whip swing high above the water
+    # hint 14 is the fish idol
+    # hint 15 is the mirror
+    
+# GATEWAY FOR SUBGROUP 16 HABBIRD
+    surface         gh8_index16_surf_in                         
+    surface         gh8_index16_surf_out
+    sector          ghint16_sector
+    sector          ghint17_sector
+    thing           ghint18_switch
+    thing           ghint19_birdidol
+    
+# GATEWAY FOR SUBGROUP 20 THEATRE    
+    surface         gh8_index20_surf_in                         
+    surface         gh8_index20_surf_out
+    sector          ghint20_sector
+    sector          ghint21_sector
+    thing           ghint22_jagidol
+    
+# GATEWAY FOR SUBGROUP 23 IDOLROOM
+    surface         gh8_index23_surf_in                         
+    surface         gh8_index23_surf_out
+    sector          ghint23_sector
+    
+# LIST OF INTS SET TO EITHER 0(UNSOLVED) OR 1(SOLVED)    
+    int             ghintint00=0                    local        
+    int             ghintint01=0                    local
+    int             ghintint02=0                    local
+    int             ghintint03=0                    local
+    int             ghintint04=0                    local
+    int             ghintint05=0                    local
+    int             ghintint06=0                    local
+    int             ghintint07=0                    local
+    int             ghintint08=0                    local
+    int             ghintint09=0                    local
+    int             ghintint10=0                    local
+    int             ghintint11=0                    local
+    int             ghintint12=0                    local
+    int             ghintint13=0                    local
+    int             ghintint14=0                    local
+    int             ghintint15=0                    local
+    int             ghintint16=0                    local
+    int             ghintint17=0                    local
+    int             ghintint18=0                    local
+    int             ghintint19=0                    local
+    int             ghintint20=0                    local
+    int             ghintint21=0                    local
+    int             ghintint22=0                    local
+    int             ghintint23=0                    local
+    int             ghintint24=0                    local
+    int             ghintint25=0                    local
+    
+    int             curhintindex=0                              # value of the current unsolved hint
+    int             curhintref=0                    local       # first number in a given group of hints
+    int             hintint_index=0                 local       # counter variable. gets set to the first in the group
+    int             doneyet=0                       local
+    
+    flex            findlowestunsolved              local
+    flex            movehintpos                     local
+    flex            habitraildone                   local           
+end
+
+code
+
+# ========================================================================================
+startup:
+
+    player = GetLocalPlayerThing();
+    
+return;
+
+# ========================================================================================
+activate:
+    
+    if ((GetSenderRef() == ghint00_switch) && (ghintint00 == 0))
+    {
+        ghintint00=1;                               //set this hint solved
+        curhintref=0;                               //set current hint group reference num
+        call findlowestunsolved;                    //find the lowest unsolved hint in that group
+        call movehintpos;                           //pop the hint to the next valid hint position
+    }
+    
+    if ((GetSenderRef() == ghint01_waterkey) && (ghintint01 == 0))
+    {
+        ghintint01=1;
+        curhintref=0;
+        call findlowestunsolved;
+        call movehintpos;
+    }
+    
+    if ((GetSenderRef() == ghint02_switch) && (ghintint02 == 0))
+    {
+        ghintint02=1;
+        curhintref=0;
+        call findlowestunsolved;
+        call movehintpos;
+    }
+    
+    if ((GetSenderRef() == ghint14) && (ghintint14 == 0))
+    {
+        ghintint14=1;
+        curhintref=9;
+        call findlowestunsolved;
+        call movehintpos;
+    }
+    
+    if ((GetSenderRef() == ghint15) && (ghintint15 == 0))
+    {
+        //at the mirror setting hint back to refnum 0
+        ghintint15=1;
+        doneyet = doneyet + 1;
+        call habitraildone;
+        call findlowestunsolved;
+        call movehintpos;
+    }
+    
+    if ((GetSenderRef() == ghint18_switch) && (ghintint18 == 0))
+    {
+        ghintint18=1;
+        curhintref=16;
+        call findlowestunsolved;
+        call movehintpos;
+    }
+    
+    if ((GetSenderRef() == ghint19_birdidol) && (ghintint19 == 0))
+    {
+        // at birdidol setting hint refnum back to 0
+        ghintint18=1;
+        doneyet = doneyet + 1;
+        call habitraildone;
+        call findlowestunsolved;
+        call movehintpos;
+    }
+    
+    if ((GetSenderRef() == ghint22_jagidol) && (ghintint22 == 0))
+    {
+        // at jagidol setting hint refnum back to 0
+        ghintint22=1;
+        doneyet = doneyet + 1;
+        call habitraildone;
+        call findlowestunsolved;
+        call movehintpos;
+    }
+    
+    return;        
+        
+# ========================================================================================
+entered:
+    
+    if (GetSourceRef() != player) return;
+    
+    if ((GetSenderRef() == ghint03_sector) && (ghintint03 == 0))
+    {
+        ghintint03=1;                               //set this hint solved
+        curhintref=0;                               //set current hint group reference num
+        call findlowestunsolved;                    //find the lowest unsolved hint in that group
+        call movehintpos;                           //pop the hint to the next valid hint position
+    }
+    
+    if ((GetSenderRef() == ghint07_sector) && (ghintint07 == 0))
+    {
+        ghintint07=1;                               //set this hint solved
+        curhintref=0;                               //set current hint group reference num
+        call findlowestunsolved;                    //find the lowest unsolved hint in that group
+        call movehintpos;                           //pop the hint to the next valid hint position
+    }
+    
+    if ((GetSenderRef() == ghint09_sector) && (ghintint09== 0))
+    {
+        ghintint09=1;                               
+        curhintref=9;                               
+        call findlowestunsolved;                    
+        call movehintpos;                           
+    }
+    
+    if ((GetSenderRef() == ghint12_sector) && (GetSourceRef() == player) && (ghintint12 == 0))
+    {
+        ghintint12=1;                         
+        curhintref=9;                 
+        call findlowestunsolved;      
+        call movehintpos;
+    }
+    
+    if ((GetSenderRef() == ghint16_sector) && (ghintint16== 0))
+    {
+        ghintint16=1;                               
+        curhintref=16;                               
+        call findlowestunsolved;                    
+        call movehintpos;                           
+    }
+    
+    if ((GetSenderRef() == ghint17_sector) && (ghintint17== 0))
+    {
+        ghintint17=1;                               
+        curhintref=16;                               
+        call findlowestunsolved;                    
+        call movehintpos;                           
+    }
+    
+    if ((GetSenderRef() == ghint20_sector) && (ghintint20 == 0))
+    {
+        ghintint20=1;                               
+        curhintref=20;                               
+        call findlowestunsolved;                    
+        call movehintpos;                           
+    }
+    
+    if ((GetSenderRef() == ghint21_sector) && (ghintint21 == 0))
+    {
+        ghintint21=1;                               
+        curhintref=20;                               
+        call findlowestunsolved;                    
+        call movehintpos;                           
+    }
+    
+    if ((GetSenderRef() == ghint23_sector) && (ghintint23 == 0))
+    {
+        //checking to see if hints are back to linear
+        ghintint23=1;                               
+        doneyet = doneyet + 1;
+        call habitraildone;                               
+        call findlowestunsolved;                    
+        call movehintpos;                           
+    }
+    
+return;
+
+# ========================================================================================
+arrived:
+    
+    if (GetSenderRef() == ghint10_key)
+    {
+        //print("hint 10 key solved");
+        ghintint10=1;
+        curhintref=9;                               //switching to subhint group 9
+        call findlowestunsolved;
+        call movehintpos;       
+    }
+    
+    if (GetSenderRef() == ghint11)
+    {
+        ghintint11=1;
+        curhintref=9;                               //switched to subhint group 9
+        call findlowestunsolved;
+        call movehintpos;       
+    }
+    
+return;    
+
+# ========================================================================================
+damaged:
+
+    if ((GetSenderRef() == ghint19_birdidol) && (ghintint19 == 0))
+    {
+        // at birdidol setting hint refnum back to 0
+        ghintint18=1;
+        curhintref=0;
+        call findlowestunsolved;
+        call movehintpos;
+    }
+    
+    
+    if ((GetSenderRef() == ghint13) && (GetParam(1) == 0x10) && (ghintint13 == 0))
+    {
+        ghintint13=1;                         
+        curhintref=9;                 
+        call findlowestunsolved;      
+        call movehintpos;
+    }             
+    
+return;
+
+# ========================================================================================
+crossed:
+
+    if ((GetSenderRef() == gh8_index9_surf_in) && (GetSourceRef() == player))
+    {
+        //switch to subgroup 9 *NOTE not setting ghintint08 to 1*
+        curhintref=9;                               
+        call findlowestunsolved;
+        call movehintpos;       
+    }
+    
+    if ((GetSenderRef() == gh8_index0_surf_out) && (GetSourceRef() == player))
+    {
+        //switch to subgroup 0 *NOTE not setting ghintint08 to 1*
+        curhintref=0;                               
+        call findlowestunsolved;
+        call movehintpos;       
+    }
+    
+    if ((GetSenderRef() == gh8_index16_surf_in) && (GetSourceRef() == player))
+    {
+        //switch to subgroup 16 *NOTE not setting ghintint08 to 1*
+        curhintref=16;                               
+        call findlowestunsolved;
+        call movehintpos;       
+    }
+    
+    if ((GetSenderRef() == gh8_index16_surf_out) && (GetSourceRef() == player))
+    {
+        //switch to subgroup 0 *NOTE not setting ghintint08 to 1*
+        curhintref=0;                               
+        call findlowestunsolved;
+        call movehintpos;       
+    }
+    
+    if ((GetSenderRef() == gh8_index20_surf_in) && (GetSourceRef() == player))
+    {
+        //switch to subgroup 20 *NOTE not setting ghintint08 to 1*
+        curhintref=20;                               
+        call findlowestunsolved;
+        call movehintpos;       
+    }
+    
+    if ((GetSenderRef() == gh8_index20_surf_out) && (GetSourceRef() == player))
+    {
+        //switch to subgroup 0 *NOTE not setting ghintint08 to 1*
+        curhintref=0;                               
+        call findlowestunsolved;
+        call movehintpos;       
+    }
+    
+    if ((GetSenderRef() == gh8_index23_surf_in) && (GetSourceRef() == player))
+    {
+        //switch to subgroup 23 *NOTE not setting ghintint08 to 1*
+        curhintref=23;                               
+        call findlowestunsolved;
+        call movehintpos;       
+    }
+    
+    if ((GetSenderRef() == gh8_index23_surf_out) && (GetSourceRef() == player))
+    {
+        //switch to subgroup 0 *NOTE not setting ghintint08 to 1*
+        curhintref=0;                               
+        call findlowestunsolved;
+        call movehintpos;       
+    }
+    
+return;
+
+# ========================================================================================
+user1:
+    
+    //from the TEO_MirrorDoor
+    curhintref=24;
+    call findlowestunsolved;
+    call movehintpos;
+    
+return;
+
+# ========================================================================================
+
+user4:
+
+    if (ghintint04 == 0)
+    {
+        ghintint04=1;
+        curhintref=0;
+        call findlowestunsolved;
+        call movehintpos;
+    }
+
+return;
+
+# ========================================================================================
+
+user5:
+
+    if (ghintint05 == 0)
+    {
+        ghintint05=1;
+        curhintref=0;
+        call findlowestunsolved;
+        call movehintpos;
+    }
+
+return;
+
+# ========================================================================================
+
+user6:
+
+    if (ghintint06 == 0)
+    {
+        ghintint06=1;
+        curhintref=0;
+        call findlowestunsolved;
+        call movehintpos;
+    }
+
+return;
+
+# ========================================================================================
+findlowestunsolved:
+
+    //print("finding lowest unsolved hint");
+    hintint_index=curhintref;                       //set index to current hint reference
+    
+    while((ghintint00[hintint_index]) == 1)         //while the flag associated with hint is solved increment index
+    {
+        hintint_index=hintint_index + 1;
+    }
+    
+    curhintindex=hintint_index;                     //when the flag is equal to 0 pull the index and assign to curhintindex
+        
+return;
+
+# ========================================================================================
+movehintpos:
+
+    //print("popping hint");
+    TeleportThing(curhint, ghint00[curhintindex]);  //pops the hint to the lowest unsolved hint in the appropriate area
+
+return;
+
+# ========================================================================================
+habitraildone:
+
+    if (doneyet == 4)
+    {
+        curhintref=24;
+        //print("all areas are done setting hints to subgroup 24");
+    }
+    else
+    {
+        curhintref=0;
+    }
+    
+return;    
+    
+# ========================================================================================
+    
+end
+

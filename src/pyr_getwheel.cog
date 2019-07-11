@@ -1,0 +1,172 @@
+# Jones 3D Cog Script
+#
+# pyr_getwheel.cog
+#	
+# grab wheel from the broken minecar in the pit
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message		activated
+
+# actors
+thing	player		nolink	local
+thing	indyactor	nolink
+thing	indyactor2	nolink
+
+# world things
+thing	wheel
+thing	minecar
+
+# camera things
+thing	wheelcam	nolink
+thing	hintcam		nolink
+
+# voicelines
+sound	glorydays=pr14j01.wav	local
+sound	salvage=pr14j02.wav		local
+sound	rollagain=pr14j03.wav	local
+
+# sounds
+sound	takeoff=sea_launch_wheel_attach.wav	local
+
+# subroutines
+flex	startscene=0.0	local
+flex	endscene=0.0	local
+flex	fixcams=0.0		local
+flex	changecam=0.0	local
+end
+
+code
+activated:
+# ---> Wheel, MineCar	
+	if (GetThingFlags(wheel) & 0x10) return;
+
+	player = GetLocalPlayerThing();
+	
+	# if wheel is activated, grab it
+	if (GetSenderRef() == wheel)
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		call fixcams;
+		call startscene;
+		call changecam;
+		
+		PlayVoice(indyactor, rollagain, 1, 0);
+		AISetLookThing(indyactor, wheel);
+		sleep(.5);
+		PlayMode(indyactor, 60, 0);
+		sleep(.5);
+		PlaySoundThing(takeoff, wheel, 1, -1, -1, 0);
+		SetThingFlags(wheel, 0x10);
+
+		# add wheel to inventory
+		SetInvAvailable(player, 64, 1);
+		ChangeInv(player, 64, 1.0);
+		JonesInvItemChanged(64);
+		
+		Sleep(1.5);
+		
+		call endscene;
+	}
+
+	# if minecar is activated, indy talks
+	if (GetSenderRef() == minecar)
+	{
+		# prepare player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		StartCutscene(1);
+	
+		# switcheroo to floating actor
+		TeleportThing(indyactor2, player);
+		CopyPlayerHolsters(player, indyactor2);
+		ClearThingFlags(indyactor2, 0x80000);
+		SetActorFlags(player, 0x200000);
+		SetThingFlags(player, 0x80000);
+	
+		# bring camera round
+		SetExtCamOffset('0.15 -.1 0.09');
+		
+		# start the action
+		SetThingMaxRotVel(indyactor2, 175);
+		SetThingMaxHeadVel(indyactor2, 175);
+		AISetLookThing(indyactor2, minecar);
+		AIWaitForStop(indyactor2);
+		
+		Sleep(1.0);
+		
+		# Professor Jones sez...
+		PlayVoice(indyactor, glorydays, 1, 1);
+		PlayVoice(indyactor, salvage, 1, 1);
+		
+		Sleep(0.75);
+		
+		# back to reality
+		TeleportThing(player, indyactor2);
+		SetThingFlags(indyactor2, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		RestoreExtCam();
+		EndCutscene();
+	}
+
+	return;
+	
+changecam:
+	# change to wheelcam
+	SetCameraFocus(2, wheelcam);
+	SetCameraSecondaryFocus(2, wheel);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0);
+	return;
+
+startscene:
+	call fixcams;
+
+	StartCutscene(0);
+	CopyOrientAndPos(indyactor, player);
+	CopyPlayerHolsters(player, indyactor);
+	ClearThingFlags(indyactor, 0x80000);
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x80000);
+		
+	return;
+			
+endscene:
+	call fixcams;
+
+	CopyOrientAndPos(indyactor, player);
+	SetThingFlags(indyactor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	SetCurrentCamera(1);
+	EndCutscene();
+
+	# clean up a bit
+	DestroyThing(indyactor);
+	DestroyThing(indyactor2);
+	DestroyThing(wheelcam);
+	DestroyThing(hintcam);
+
+	return;
+
+fixcams:
+	# reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(1, 0);
+	SetCameraLookInterp(1, 0);
+	RestoreExtCam();
+	return;
+	
+end
+

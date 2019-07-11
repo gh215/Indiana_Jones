@@ -1,0 +1,433 @@
+# Jones 3D Cog Script
+#
+# actor_LavaBoss.cog
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+#	#####  Notes  #####
+#	n_AICustomMode usuage:
+#		0x02 - FIRING_LAVA
+#
+# ===================================================================
+
+symbols
+
+message		initialized
+message		aievent
+message		fire
+message		timer
+message		pulse
+message     removed
+message     damaged
+message		callback
+message		user0
+message		user1
+
+# ************************** TEMPLATES *************************
+template	tpl_PrimaryWeapon=+lavahit_lg		local
+template	tpl_AltWeapon=+nopainhit			local
+template	tpl_LavaGuy=lava_guy				local
+
+template	tpl_sparks00=lbossSparksMD			local		# Med sparks
+template	tpl_sparks01=lbossSparksLG			local		# Large sparks
+template    tpl_sparks02=lavasparks				local		# generic lava sparks
+
+template	tpl_plume=lbossFntn					local
+template	tpl_lavaShrp0=lavashrapa			local
+template	tpl_lavaShrp1=lavashrapb			local
+template	tpl_lavaShrp2=lavashrapc			local
+
+# ************************** AI CLASSES ************************
+ai			ai_mad=lavaboss_mad.ai				local
+
+# ************************** WEAPON HANDLERS *******************
+int			n_NumLavaGuys=0						local
+int			n_MaxLavaShot=3						local
+int			n_shotCount							local
+thing		t_LavaGuy							local
+vector		vec_altOffset						local
+
+# ************************** SPECIAL FX ************************
+int			n_joint00							local
+int			n_joint01							local
+int			n_joint02							local
+int			n_joint03							local
+int			n_joint04							local
+
+vector		vec_velDebris						local
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_Player							local
+thing		t_boss								local
+thing		t_sender							local
+thing		t_obj								local
+thing		t_objSpark							local
+thing		t_posGhost=-1						local
+
+int			n_AICustomMode=0					local
+int			FIRING_LAVA=1						local
+
+int			n_eventType							local
+int			n_param								local
+
+int			n_idx								local
+flex		f_val								local
+sector		sec_atNewPos						local
+vector		vec_pos								local
+vector		vec_dir								local
+vector		vec_vel								local
+vector		vec_rot								local
+
+# ************************** SUBROUTINES *******************
+flex		ShootLavaPlume						local
+flex		ShootLavaDebris						local
+flex		ShootLavaGuys						local
+
+end
+
+# ===================================================================
+
+code
+
+# ...................................................................
+initialized:
+	t_boss		= GetSenderRef();
+
+	AISetAllowedSurfaceType(t_boss, 0x200000);				# Allow walking on SITH_SURFACE_LAVA
+	SetActorFlags(t_boss, 0x20000);							# Set AF_DELAYFIRE
+
+#	SetPuppetModeFPS(t_boss, 0, 71, 20);					# Slow down PUPPETADDIN_STAND2CRAWL
+#	SetPuppetModeFPS(t_boss, 0, 72, 20);					# Slow down PUPPETADDIN_CRAWL2STAND
+
+	n_joint00 = GetNodeByName(t_boss, "lbhead");
+	n_joint01 = GetNodeByName(t_boss, "lblarm");
+	n_joint02 = GetNodeByName(t_boss, "lbrarm");
+	n_joint03 = GetNodeByName(t_boss, "lbl4arm");
+	n_joint04 = GetNodeByName(t_boss, "lbr4arm");
+
+	vec_velDebris = VectorSet(0, 0.7, 0.8);
+
+	SetPulse(2.0);
+
+	vec_altOffset = VectorSet(0.0, 0.25, 0.1);
+
+	return;
+
+# ...................................................................
+aievent:
+
+	n_eventType	= GetParam(0);
+	n_param		= GetParam(2);
+	t_sender	= GetSenderRef();
+
+	if ( t_sender != t_boss )
+		return;
+
+	if (n_eventType == 0x10000)								#---- EVENT_PREFIRE
+	{
+		if ( BITTEST(n_param, 0x0020) )						#---- SITHAIUTIL_FIRE_ALT
+		{
+			if ( !BITTEST(n_AICustomMode, FIRING_LAVA) && (n_NumLavaGuys < 12) )
+			{
+				SetActorWeapon(t_boss, tpl_AltWeapon);		# Swap to alternate weapon
+				SetThingFireoffset(t_boss, vec_altOffset);
+			}
+			else
+			{
+#				DEBUGFLEX(n_NumLavaGuys, "Cant shoot lava guys, n_NumLavaGuys =");
+				SetActorWeapon(t_boss, -1);						# Disable alternate weapon
+			}
+		}
+	}
+	else if (n_eventType == 0x20000)						#---- EVENT_POSTFIRE
+	{
+		SetActorWeapon(t_boss, tpl_PrimaryWeapon);				# Swap back to default weapon template
+		SetThingFireoffset(t_boss, '0 0 0');
+	}
+	else if (n_eventType == 0x04)								#---- EVENT_TOUCHED
+	{															# n_param == touched thing index
+		if ( GetThingType(n_param) == 10 )							# Boss touched a SITH_THING_PLAYER
+		{
+			DamageThing(n_param, 1000, 0x200, t_boss);				# Inflict SITH_DAMAGE_LAVA
+		}
+	}
+	else if (BITTEST(n_eventType, 0x100e04))
+	{
+		ReturnEx(1);
+	}
+
+	return;
+
+
+# ...................................................................
+fire:
+
+	t_sender = GetSenderRef();
+	if ( t_sender != t_boss )
+		return;
+
+	if ( IsModePlaying(t_boss, 68) > 0 )
+	{
+		call ShootLavaGuys;
+	}
+
+	return;
+
+
+# ...................................................................
+pulse:
+
+	t_sender	= GetSenderRef();
+
+	if ( t_boss == -1 )
+	{
+		SetPulse(0);
+		return;
+	}
+
+	if ( BITTEST(GetActorFlags(t_boss), 0x40000) )				# IMMOBILE == no sparks
+	{
+		return;
+	}
+
+	if ( !BITTEST(GetThingFlags(t_boss), 0x80000) )
+	{
+		n_param = RandBetween(2, 5);
+
+		for ( n_idx = 0; n_idx < n_param; n_idx = n_idx + 1)
+		{
+			vec_pos = GetThingJointPos(t_boss, n_joint00[RandBetween(0, 4)]);
+			CreateThingAtPos(tpl_sparks00, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+		}
+	}
+
+	return;
+
+
+# ...................................................................
+timer:
+
+	t_sender = GetSenderRef();
+	if ( (t_sender != t_boss) && (GetThingType(t_sender) == 2) )	# SITH_THING_ACTOR?
+	{
+#		DEBUGPRINT("Waking up lava dude");
+		AIClearCutsceneMode(t_sender);								# Reactivate Lava guy
+	}
+
+	return;
+
+
+# ...................................................................
+removed:
+
+	t_sender = GetSenderRef();
+	if ( t_sender == t_boss )
+	{
+		t_boss = -1;
+	}
+	else if ( GetThingType(t_sender) == 2 )							# SITH_THING_ACTOR?
+	{
+#		DEBUGPRINT("Lava Minion removed");
+		SetThingTimer(t_sender, 0);
+		n_NumLavaGuys = n_NumLavaGuys - 1;
+	}
+
+	return;
+
+
+# ...................................................................
+callback:
+
+	t_sender = GetSenderRef();
+	if ( t_sender == t_boss )
+	{
+		n_param = GetParam(1);
+		if ( n_param == 21 )									#*** Begin Submerging
+		{
+			StopSoundClass(t_boss, 2);								# stop 'activated'
+		}
+		else if ( n_param == 22 )								#*** End Submerging
+		{
+			PlaySoundClass(t_boss, 50);								# play 'enterwater'
+
+			call ShootLavaDebris;
+		}
+		else if ( n_param == 23 )								#*** Begin Surfacing
+		{
+			PlaySoundClass(t_boss, 52);								# play 'exitwater'
+
+			call ShootLavaPlume;
+			call ShootLavaDebris;
+		}
+		else if ( n_param == 24 )								#*** End Surfacing
+		{
+			PlaySoundClass(t_boss, 2);								# play 'activated'
+		}
+	}
+
+	return;
+
+
+# ...................................................................
+damaged:
+
+	t_sender = GetSenderRef();
+	if ( t_sender == t_boss )
+	{
+		ReturnEx(0);
+	}
+
+	return;
+
+
+# ...................................................................
+# Put boss into 'angry mode'
+# ...................................................................
+user0:
+
+	AISetClass(t_boss, ai_mad);
+	n_MaxLavaShot = 6;
+
+	return;
+
+
+# ...................................................................
+# Indicate next boss position
+# ...................................................................
+user1:
+
+	t_posGhost = GetParam(0);
+	if ( t_posGhost > -1 )
+	{
+#		DEBUGPRINT("Setting new boss pos");
+		if ( GetThingType(t_posGhost) != 8 )
+		{
+#			DEBUGPRINT("Invalid GHOST object sent as boss pos");
+			t_posGhost = -1;
+		}
+	}
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+ShootLavaPlume:
+
+	if ( t_posGhost == -1 )
+		return;
+
+	vec_pos = VectorAdd(GetThingPos(t_posGhost), '0 0 0.005');
+
+	vec_dir = VectorSet(0, 0.15, 0);
+	for (n_idx = 0; n_idx < 8; n_idx = n_idx + 1)
+	{
+		vec_dir	= VectorRotate(vec_dir, '0 45 0');
+		vec_rot	= VectorAdd(vec_pos, vec_dir);
+		CreateThingAtPos(tpl_plume, FindNewSectorFromThing(t_boss, vec_rot), vec_rot, '0 0 0');
+	}
+
+	return;
+
+
+# ...................................................................
+ShootLavaDebris:
+
+	if ( t_posGhost == -1 )
+		return;
+
+	vec_pos			= VectorAdd(GetThingPos(t_posGhost), '0 0 0.005');
+	sec_atNewPos	= FindNewSectorFromThing(t_posGhost, vec_pos);
+
+	n_param = 50;
+	for (n_idx = 0; n_idx < n_param; n_idx = n_idx + 1)
+	{
+		vec_rot = VectorSet(RandBetween(0, 60), RandBetween(0, 359), 0);
+		vec_dir	= VectorRotate('0.0 0.75 0.55', vec_rot);
+		vec_dir = VectorScale(vec_dir, 0.6 + Rand());
+
+		t_obj = CreateThingAtPos(tpl_lavaShrp0[RandBetween(0, 2)], sec_atNewPos, vec_pos, '0 0 0');
+		if ( t_obj > -1 )
+		{
+			SetLifeLeft(t_obj, 1.5);
+			SetThingVel(t_obj, vec_dir);
+
+			SetThingMaxAngVel(t_obj, 800);
+			SetThingRotVel(t_obj, '800 0 0');
+
+			t_objSpark = CreateThing(tpl_sparks00, t_obj);
+			if ( t_objSpark > -1 )
+			{
+				AttachThingToThingEx(t_objSpark, t_obj, 0x08);
+			}
+		}
+	}
+
+	return;
+
+
+# ...................................................................
+ShootLavaGuys:
+	t_player = GetLocalPlayerThing();
+	if (t_player < 0) return;
+
+	n_AICustomMode = BITSET(n_AICustomMode, FIRING_LAVA);
+	Reset();
+
+#	DEBUGPRINT("Attempting to shoot lava guys");
+	n_shotCount = 0;
+
+	while ( (n_shotCount < n_MaxLavaShot) && (n_NumLavaGuys < 12) )
+	{
+		if ( BITTEST(GetActorFlags(t_boss), 0xC00) )						# Bail if DEAF and BLIND
+		{
+			n_AICustomMode = BITCLEAR(n_AICustomMode, FIRING_LAVA);	
+			return;
+		}
+
+		n_NumLavaGuys	= n_NumLavaGuys + 1;
+		n_shotCount		= n_shotCount + 1;
+
+		vec_pos			= VectorAdd( GetThingPos(t_boss), VectorTransformToOrient(t_boss, vec_altOffset) );
+		sec_atNewPos	= FindNewSectorFromThing(t_boss, vec_pos);
+		t_LavaGuy		= CreateThingAtPos(tpl_LavaGuy, sec_atNewPos, vec_pos, '0 0 0');
+
+		if ( t_LavaGuy > -1 )
+		{
+			PlaySoundClass(t_boss, 106);									# play 'fire1'
+			CreateThingAtPos(tpl_sparks01, sec_atNewPos, vec_pos, '0 0 0');
+
+			CaptureThing(t_LavaGuy);
+			AISetCutsceneMode(t_LavaGuy);
+
+			vec_dir		= VectorSub(GetThingPos(t_Player), GetThingPos(t_boss));
+			f_val		= VectorLen(vec_dir) + 0.3;
+
+#			DEBUGFLEX(f_val, "Lava guy shot scale =");
+			if ( f_val > 1.7 )
+			{
+				f_val = f_val * (1.7/f_val);
+			}
+
+			vec_vel		= VectorScale(vec_dir, f_val);
+			vec_vel		= VectorSet(VectorX(vec_vel), VectorY(vec_vel), 0.40);
+
+			vec_rot		= VectorSet(0, RandBetween(-10, 10), 0);
+
+			SetThingVel(t_LavaGuy, VectorRotate(vec_vel, vec_rot));
+			SetThingTimer(t_LavaGuy, 1.5);
+		}
+
+		Sleep(3.5 / n_MaxLavaShot);
+	}
+
+	n_AICustomMode = BITCLEAR(n_AICustomMode, FIRING_LAVA);	
+	return;
+
+end
+

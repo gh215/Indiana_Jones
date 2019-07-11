@@ -1,0 +1,180 @@
+# Jones 3D Cog Script
+#
+# shs_TowerGates.cog     Make the gates btwn the towers open/close.  
+#
+# [JWC, RD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message 	activated
+
+keyframe	indypull=in_pull_lever.key			local
+keyframe	indypush=in_activate_medium.key		local
+keyframe	leverDown=gen_lever_pull.key		local
+
+sound		leverPull=nub_lever_pull_c.wav	local
+sound		leverBack=nub_lever_reset_c.wav	local
+sound		gateStart=shw_grill_start.wav 	local
+
+thing		player		local
+thing		indy		nolink
+thing		in_mk1
+thing		gatecam_1
+thing		gatecam_2
+thing		gateLever
+thing		CT_gate							  
+thing   	BT_gate
+thing		gc_target1			# Indy		
+thing		gc_target2		 	# Gate
+
+int			curCam				local
+int			in_rotRate			local
+int			filter=0			local    
+
+cog			NoWorkTalkCog
+
+# SUB-ROUTINES
+flex 		pullLever			local
+flex		gate				local
+flex		control				local
+
+end
+
+# ========================================================================================
+
+code
+
+
+activated:
+   
+	if (GetSenderRef() != gateLever) return;
+    
+	# Prep for cutscene...
+	SetActorFlags(player, 0x200000);	# paralyze him
+    StartCutscene(1);
+	curCam = GetCurrentCamera();		
+	player = GetLocalPlayerThing();
+	
+    # Disable and hide player...
+	StopThing(player);					# right now
+	PlayMode(player, 1, 0);				# get him into a nice stand
+	DeselectWeapon(player);				# stow any weapon or lighter
+	CopyPlayerHolsters(player, indy);	# make sure our actor has matching props
+	Sleep(0.5);							# give him some time to do his stuff
+	
+    # Prep camera & cut...
+	SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+	SetCameraPosInterp(2, 0);			# kill dolly mode too
+	SetCameraFocus(2, gatecam_1);
+	SetCameraSecondaryFocus(2, gc_target1);
+	Sleep(0.01);
+	SetCurrentCamera(2);
+    ResetCameraFOV(0, 0.0);
+
+    # Switch actor indy for player...
+	TeleportThing(indy, in_mk1);
+	SetThingFlags(player, 0x80000);		# hide him
+	ClearThingFlags(indy, 0x80000);		# reveal our actor
+
+    if (global3 == 0)
+	{
+		# Indy pulls lever
+		PlayKey(indy, indyPull, 4, 0x12, 0);
+		PlayKey(gateLever, leverDown, 4, 0x12, 0);
+		Sleep(1.2);
+		PlaySoundLocal(leverPull, 1.0, 0, 0x0000, 0);
+		Sleep(1.4);
+		PlaySoundLocal(leverBack, 1.0, 0, 0x0000, 0);
+		Sleep(0.3);
+
+		# Call NoWorkTalkCog
+        SendMessageEx(NoWorkTalkCog, user1, indy, 0, 0, 0);
+	    global15 = 0; # per Randy
+		while (global15 == 0)
+		{
+			Sleep(0.01); # wait for line to finish
+		}
+	}
+	
+	if ((global3 == 1) && (filter == 0))
+	{ 
+		filter = 1;
+	    Call pullLever;          
+	 	Call gate;
+        filter = 0;
+	}
+	Call control;
+	return;
+
+
+	
+pullLever:
+    
+	# Indy pulls lever
+	PlayKey(indy, indyPull, 4, 0x12, 0);
+    PlayKey(gateLever, leverDown, 4, 0x12, 0);
+    Sleep(1.2);
+	PlaySoundLocal(leverPull, 1.0, 0, 0x0000, 0);
+	Sleep(1.4);
+	PlaySoundLocal(leverBack, 1.0, 0, 0x0000, 0);
+	Sleep(0.3);
+	
+    PlaySoundLocal(gateStart, 1.0, 0, 0x0000, 0);
+	Sleep(0.3);
+	
+	# Have Indy look up
+    in_rotRate = GetThingMaxRotVel(indy); 	# remember Indy rate
+	SetThingMaxRotVel(indy, 25.0);
+    AISetLookThing(indy,gc_target2);
+	
+
+	# Camera move to show gate
+	SetCameraLookInterp(2, 1);			# enable pan & tilt to lock on 2nd target
+	SetCameraPosInterp(2, 1);			# enable dolly mode 
+    SetCameraInterpSpeed(2, 3.5);		# slow down	pan
+	Sleep(0.01);
+    SetCameraFocus(2, gatecam_2);		# switch cameras
+    SetCameraSecondaryFocus(2, gc_target2);	# look at gate
+	SetCurrentCamera(2);
+    Sleep(3.0);
+    return;
+
+   
+gate:	
+	# Moves gate	
+    MoveToFrame(CT_gate, (1-GetCurFrame(CT_gate)), 1);	#"Reed"uction of code
+    Sleep(.5);
+	MoveToFrame(BT_gate, (1-GetCurFrame(CT_gate)), 1);
+	WaitForStop(BT_gate);
+    Sleep(.5);	# pause before changing camera
+	return;
+	
+
+control:
+   	
+    # Return control and camera to player
+    SetThingMaxRotVel(indy, in_rotRate);# reset indy rotate velocity
+	TeleportThing(indy, in_mk1);		# reset actor to original position
+    SetActorHeadPYR(indy,'0,0,0');		# reset actor head
+    SetThingFlags(indy, 0x80000);
+    SetCameraPosition(1, GetThingPos(gatecam_1));	# prep for camera to swing back
+	ClearThingFlags(player, 0x80000);
+    SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	Sleep(0.01);
+	SetCurrentCamera(curCam);
+	ResetCameraFOV(0, 0.0);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	
+	return; 
+
+
+end
+    
+	
+    

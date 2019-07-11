@@ -1,0 +1,83 @@
+# Jones 3D Cog Script
+#
+# gen_CamLineB.cog
+#
+# Swings Camera around to indy's side during a short sayline
+#
+# [SXC]
+#
+# 11/23/98 SXC
+# 
+# 
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+
+    thing       player          local
+
+    flex        xpos=0.2
+    flex        ypos=0
+    flex        zpos=0.065
+
+    vector      swingpos        local
+
+    int         croscheck=0     local
+    int         linenum=0       local
+    
+    thing       triggerobj
+    
+    sound       indyline0
+    sound       indyline1
+    sound       indyline2         
+             
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    swingpos = VectorSet(xpos, ypos, zpos);
+    player = GetLocalPlayerThing();
+    return;
+           
+# ========================================================================================
+activate:
+    If ((GetSenderRef() == triggerobj) && (croscheck == 0))
+    {
+        croscheck = 1;
+        linenum = linenum + 1;
+        StartCutscene(1);
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        SetExtCamOffset(swingpos);
+        If ((linenum == 1) && (indyline0 > -1))
+        {
+            PlaySoundLocal(indyline0, 1, 0, 0x0, 1);
+        }
+        
+        If ((linenum == 2) && (indyline1 > -1))
+        {
+            PlaySoundLocal(indyline1, 1, 0, 0x0, 1);
+        }
+        
+        If ((linenum > 2) && (indyline2 > -1))
+        {
+            PlaySoundLocal(indyline2, 1, 0, 0x0, 1);
+        }                            
+        Sleep(0.75);
+        RestoreExtCam();
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        croscheck = 0;
+    }
+    
+return;
+        
+end

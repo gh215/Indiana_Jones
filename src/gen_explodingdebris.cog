@@ -1,0 +1,86 @@
+# Jones 3d Cog Script
+#
+# gen_ExplodingDebris.cog
+#
+# Generic debris/sub explosions generation script
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    message     activate
+    message     startup
+    
+    thing       player                  local    
+    thing       button                  desc=hit_this_thing
+    thing		bombpos     			desc=explode_thing
+    thing       victim                  desc=the thing youre blowing up
+    thing       bombcampos              desc=position for bombcam
+    int		    pieces=40			    desc=num_debris
+
+    int		    i				        local
+    int		    fragment			    local		
+
+    template	debris0 		
+    template	debris1   		
+    template	debris2 		
+    template	debris3 		
+    template	debris4
+    		
+    vector      liteval                 local
+    vector      nolite                  local
+
+    int		    dummy				    local
+    int         hitit=0                 local
+
+    sound		explode_snd=gen_shotgun_fire.wav	local
+    sound       charging=nub_aethlight_on_c.wav       local
+
+end
+# ========================================================================================
+
+code
+
+startup:
+    player=GetLocalPlayerThing();
+    liteval=VectorSet(0.25, 0.55, 1.0);
+    nolite=VectorSet(0, 0, 0);
+    return;
+    
+# ========================================================================================
+activate:
+    if ((GetSenderRef() == button) && (hitit == 0))
+    {
+        hitit=1;
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        SetCameraFocus(0, bombcampos);
+        SetCurrentCamera(0);
+        SetCameraFOV(120, 1, 3.0);
+        PlaySoundThing(charging, victim, 1.0, 10.0, 20.0, 0);
+        SetThingLight(player, liteval, 2.0);
+        Sleep(3);                                                                        	            
+        dummy = PlaySoundThing(explode_snd, bombpos, 1.0, 10.0, 20.0, 0);
+        for(i=0; i<pieces; i=i+1)                                                        	            
+        {                                                                                    	            
+            fragment = CreateThing(debris0[RandBetween(0, 4)], bombpos);                                 
+            SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.0'), 2));
+            SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));    	            
+        }                                                                                    	            
+        DestroyThing(victim);
+        sleep(1);
+        SetThingLight(player, nolite, 2.0);
+        SetCameraFocus(1, player);
+        SetCameraFOV(90, 0, 0);
+        SetCurrentCamera(1);
+        ClearActorFlags(player, 0x200000);                                                     	            
+        EndCutscene();
+    }
+    return;
+    
+# ========================================================================================                                                                          	            
+
+end
+

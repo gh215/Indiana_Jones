@@ -1,0 +1,1229 @@
+# Jones 3D Cog Script
+#
+# CYN_Cutscene02.cog
+#
+# Indy hooks up with Sophia at the campsite. 
+#
+# [RT & revised by HB]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	# ************************ MESSAGES ************************
+
+	message		startup
+	message		entered
+	message		callback
+	message		pulse
+	message		timer
+
+	# ************************ COGS ************************
+	cog			fallcog
+	cog			sectorcog
+	cog			ambcog
+	
+	# ************************ KEYFRAMES ***********************
+
+	keyframe	in_Rub=0in_rubhead_4_4.key				local
+	keyframe	in_PushHat=0in_figithat_4_4.key			local
+	keyframe	in_ArmsOut=0in_armsout_1_1.key			local
+	keyframe	in_armsup=0in_armsup_1_1.key			local
+	keyframe	in_lean=0in_leanin20cm_1_1.key			local
+	keyframe	in_Think=0in_thinking_4_4.key			local
+	keyframe	in_Examine=0in_examgear_1.key			local
+	keyframe	in_TurnGear=0in_turngear.key			local
+	keyframe	in_Enter=0in_enterheli.key				local
+	keyframe	in_leftup=0in_leftarm_1_1.key			local
+	keyframe	in_grabVPhoto=0in_pickupphoto_1_13.key	local
+	keyframe	in_dropVPhoto=0in_dropphoto_13_4.key	local
+	keyframe	in_overThere=0in_overshoulder_4_1.key	local
+
+	keyframe	in_Stand2=0in_stand2.key				local
+	keyframe	in_Stand4=0in_stand4.key				local
+	keyframe	in_Stand5=0in_leanin20cm_1_1.key		local 
+	keyframe	in_studyVPhoto=0in_stand13.key			local
+	keyframe	in_1to2=0in_stand1_bd_2.key				local
+	keyframe	in_1to4=0in_stand1_bd_4.key				local
+	keyframe	in_sitheli=0in_sitheli.key				local
+
+	keyframe	so_Doff=0so_helmetoff.key				local
+	keyframe	so_Hair=0so_hair_2_4.key				local
+	keyframe	so_Look=0so_lookshards_1_1.key			local
+	keyframe	so_WaveL=0so_waveleft_1_1.key			local
+	keyframe	so_WaveR=0so_waveright_1_1.key			local
+	keyframe	so_Pouch=0so_pouch_2_2.key				local
+	keyframe	so_HeadShake=0so_headshake_1_1.key		local
+	keyframe	so_CrossArms=0so_armsmid_3_3.key		local
+
+	keyframe	so_Stand1=0so_stand1.key				local
+	keyframe	so_Stand3=0so_stand3.key				local
+	keyframe	so_Stand4=0so_stand4.key				local
+	keyframe	so_Stand5=0so_stand5.key				local
+	keyframe	so_Stand6=0so_stand6.key				local
+	keyframe	so_1to2=0so_stand1_bd_2.key				local
+	keyframe	so_2to1=0so_stand2_bd_1.key				local
+	keyframe	so_leftup=0so_lefthnd_2_2.key			local
+	keyframe	so_helmeton=0so_helmeton_2_2.key		local
+
+	keyframe	in_arm_Point=0in_photopoint.key			local
+	keyframe	so_arm_Toss=0so_throwphoto.key			local
+
+	keyframe	chopTurn=cyn_chopr.key					local
+	keyframe	chopTurn2=cyn_chopr2.key				local
+	keyframe	chopFly=cyn_chopr_fly.key				local
+
+	# ************************* MODELS *************************
+
+	model		mod_in_Hair=head_in_goodhair.3do		local
+	model		mod_in_HandHat=hand_in_hat.3do 			local
+	model		mod_in_HandPhoto=hand_in_vophoto.3do	local
+	model		mod_in_HandGear=hand_in_gear.3do		local
+
+	model		mod_so_Helmet=head_so_helmet.3do		local
+	model		mod_so_HandHelmet=hand_so_helmet.3do	local
+	model		mod_so_HandPhoto=hand_so_photo.3do		local
+	model		mod_so_HandShard=hand_so_shard.3do		local
+	model		mod_so_HandGear=hand_so_gear.3do		local
+
+	model		mod_arm_PhotoBab=photo_so_bab.3do		local
+	model		mod_arm_PhotoVo=photo_so_vo1.3do		local
+	model		mod_arm_PhotoV2=photo_so_vo2.3do		local
+
+#	model		mod_copter=cyn_chopr.3do				local
+	model		chop_blad=cyn_chopr_blade.3do			local
+	model		chop_rot=cyn_chopr_rotor.3do			local
+
+	# ************************* SOUNDS *************************
+
+	sound		in00=cn02j00.wav						local
+	sound		in01=cn02j01.wav						local
+	sound		in02=Cn02j03.wav						local
+	sound		in03=Cn02j05.wav						local
+	sound		in04=Cn02j05a.wav						local
+	sound		in05=Cn02j07.wav						local
+	sound		in06=Cn02j09.wav						local
+	sound		in07=Cn02j11.wav						local
+	sound		in08=Cn02j15.wav						local
+	sound		in09=Cn02j17.wav						local
+	sound		in10=Cn02j21.wav						local
+	sound		in11=Cn02j23.wav						local
+	sound		in12=Cn02j25.wav						local
+	sound		in13=Cn02j27.wav						local
+	sound		in14=Cn02j29.wav						local
+	sound		in15=Cn02j32.wav						local
+	sound		in16=Cn02j34.wav						local
+
+	sound		so01=Cn02s02.wav						local
+	sound		so02=Cn02s04.wav						local
+	sound		so03=Cn02s06.wav						local
+	sound		so04=Cn02s08.wav						local
+	sound		so05=Cn02s10.wav						local
+	sound		so06=Cn02s12.wav						local
+	sound		so07=Cn02s13.wav						local
+	sound		so08=Cn02s14.wav						local
+	sound		so09=Cn02s16.wav						local
+	sound		so10=Cn02s18.wav						local
+	sound		so11=Cn02s19.wav						local
+	sound		so12=Cn02s20.wav						local
+	sound		so13=Cn02s22.wav						local
+	sound		so14=Cn02s24.wav						local
+	sound		so15=Cn02s26.wav						local
+	sound		so16=Cn02s28.wav						local
+	sound		so17=Cn02s30.wav						local
+	sound		so18=Cn02s31.wav						local
+	sound		so19=Cn02s33.wav						local
+	sound		so20=Cn02s35a.wav						local
+	sound		so21=Cn02s35b.wav						local
+
+	sound		heliRev1=helicopter_rev1.wav			local
+	sound		heliRev2=helicopter_rev2.wav			local
+	sound		heliStart1=helicopter_startup.wav		local
+	sound		heliStart2=helicopter_startup2.wav		local
+
+	sound		pull_part=cyn_metalpart_rattle.wav		local
+	sound		spin_part=cyn_metalpart_spin.wav		local
+
+	sound		mus_EnterIndy=mus_cyn_cutscene1.wav		local
+	sound		mus_VolodPic=mus_cyn_cutscene2.wav		local
+	sound		mus_GetPart=mus_gen_machinepart.wav		local
+	sound		mus_SpyLine=mus_cyn_cutscene3.wav		local
+
+	sound		mus_LiftOff=mus_gen_indycalm.wav		local
+
+	# ************************* THINGS *************************
+
+	thing		player									local
+
+	thing		indy									linkid=0
+	thing		sophia									linkid=1
+
+	thing		in_arm									nolink
+	thing		so_arm									linkid=2
+
+	thing		in_Target1								nolink
+	thing		in_Target2								nolink
+	thing		in_Target3								nolink
+	thing		in_Target4								nolink
+#	no in_Target5
+	thing		in_Target6								nolink
+	thing		in_Target7								nolink
+	thing		in_Target8								nolink
+	thing		in_target9								nolink
+
+	thing		so_Target1								nolink
+	thing		so_Target2								nolink
+	thing		so_Target3								nolink
+	thing		so_Target4								nolink
+#	no so_Target5
+#	no so_Target6
+	thing		so_Target7  							nolink
+	thing		so_Target8								nolink
+	thing		so_Target9								nolink
+
+	thing		so_ghost1								nolink
+	thing		so_ghost2								nolink
+
+	thing		indyCam									nolink
+	thing		indyCam2								nolink
+	thing		indyCam3								nolink
+	thing		indyCam4								nolink
+	thing		indyCam5								nolink
+	thing		indyCam6								nolink
+	thing		indyCam7								nolink
+	thing		indyCam8								nolink
+
+	thing		sophiaCam								nolink
+	thing		sophiaCam2								nolink
+	thing		sophiaCam3								nolink
+	thing		sophiaCam4								nolink
+	thing		sophiaCam5								nolink
+	thing		sophiaCam6								nolink
+	thing		sophiaCam7								nolink
+
+#	thing		sideCam									nolink
+	thing		sideCam2								nolink
+	thing		sideCam3								nolink
+
+	thing		lowcam									nolink
+	thing		longCam									nolink
+#	thing		tableCam								nolink
+	thing		photoCam								nolink
+	thing		heliCam									nolink
+
+	thing		photoBab								nolink
+	thing		photoVo									nolink
+	thing		photoV2									nolink
+
+	thing		camAnchor								nolink
+	thing		copterAnchor							nolink
+
+	thing		table									nolink
+
+	thing		copter									linkid=3
+	thing		copt_Target1							nolink
+	thing		copt_Target2							nolink
+	thing		copt_Target3							nolink
+	thing		copt_Target4							nolink
+	thing		copt_Target5							nolink
+
+	thing		in_ghost1								nolink
+	thing		fadeoutplate							nolink
+
+	thing		vulture_1								nolink
+	thing		vulture_2								nolink
+
+	# ******************* WORLD & ENGINE REFS ******************
+
+	material	gearMat=rigear.mat						local
+	sector		trigger									linkid=4
+
+	# ********************** VARIABLES *************************
+
+	flex		in_rotRate								local
+	flex		so_rotRate								local
+	flex		cop_rotRate								local
+
+	int			in_track1								local
+	int			in_track2								local
+	int			so_track								local
+	int			cop_track								local
+	int			in_ArmTrack								local
+	int			so_ArmTrack								local	
+	int			part_track								local
+
+	int			in_colltype								local
+	int			so_colltype								local
+	int			co_colltype								local
+
+	int			so_swap=0								local
+	int			so_arm_swap=0							local
+
+	int			sender									local
+	int			curSound								local
+	int			matAnimNum								local
+	int			bEntered=0								local
+
+	int			curCam									local
+
+	int			chopSound1								local
+	int			chopSound2								local
+
+	int			callNum									local
+
+	int			meshRefHat								local
+	int			meshRefHead								local
+	int			meshRefHand								local
+	int			so_meshRefHand							local
+
+	int			spychan									local
+
+	# *********************** FX STUFF ************************
+
+	template	chopdust=chopperdustfx					local
+	template	smokeTpl=+baz_spr_smoke					local
+
+	thing		dust_pivot								nolink
+	thing		smoke									local
+	thing		chop_shadow								nolink							
+
+	# ********************* SUBROUTINES ***********************
+	
+	flex		goggleHead								local
+
+end
+
+# ===================================================================
+
+code
+
+# -------------------------------------------------------------------
+
+startup:
+
+	# Pointer to Player
+	player = GetLocalPlayerThing();
+
+	# Prep actors...
+	in_rotRate = GetThingMaxRotVel(indy);
+	so_rotRate = GetThingMaxRotVel(sophia);
+	cop_rotRate = GetThingMaxRotVel(copter);
+
+	AISetCutSceneMode(indy);
+	AISetCutSceneMode(sophia);
+	AISetCutSceneMode(copter);
+
+	# Prep set...
+	SetThingFlags(chop_shadow, 0x80000);
+	SetThingFlags(fadeoutplate, 0x80000);
+
+	return;
+
+# -------------------------------------------------------------------
+
+entered:
+
+	if((GetSenderRef() != trigger) || bEntered) return;
+
+	bEntered = 1;
+
+	Sleep(0.8); # see player finish climbing out of pit
+
+	curCam = GetCurrentCamera();
+	SetActorFlags(player, 0x200000);
+
+	# Stop olv_outside_a01 in the birdambient cog
+	SendMessage(ambcog, user0);
+
+	StartCutscene(1);
+
+	# Play intro music...
+	PlaySoundLocal(mus_EnterIndy, 1.0, 0.0, 0x0, 0);
+
+	# Make sure we can't see the fadeoutplate...
+	SetThingAlpha(fadeoutplate, 0.0);
+
+	# Prep...
+	ClearThingFlags(copter, 0x80000);
+	ClearThingFlags(chop_shadow, 0x80000);
+	DestroyThing(vulture_1);
+	DestroyThing(vulture_2);
+
+	# Disable player...
+	ResetThing(player); # right now
+	# PlayMode(player, 1, 0); # twice???
+	PlayMode(player, 1, 0); # get him into a nice stand
+	CopyPlayerHolsters(player, indy);
+	SetThingFlags(player, 0x80000);
+	AISetCutsceneMode(indy);
+	AISetCutsceneMode(sophia);
+
+	# Prep Indy & Sophia...
+	ClearThingFlags(indy, 0x80000);
+	ClearThingFlags(sophia, 0x80000);
+
+	# Swap in her goggle head
+	call goggleHead;
+
+	# Bring Indy into the campsite...
+	AISetMoveSpeed(indy, 1.0);
+	AISetLookThing(indy, in_Target1);
+	AISetMoveThing(indy, in_Target1, 0);
+
+	# Cut to shot of Indy entering campsite and enable him...
+	SetCameraFocus(2, indyCam);
+	SetCameraSecondaryFocus(2, in_ghost1);
+	SetCurrentCamera(2);
+	SetCameraFOV(70, 0, 0.0);
+	Sleep(0.01);
+	SetCameraPosInterp(2, 1); # enable dolly
+	SetCameraInterpSpeed(2, 3.5); # speed is actually time
+	SetCameraFocus(2, lowcam);
+	SetCameraFOV(43, 1, 3.5);
+	MoveToFrame(in_ghost1, 1, 1.5);
+	AIWaitForStop(indy);
+	AISetLookThing(indy, sophia);
+
+	# Indy:  "Oh no, what now...?"
+	Sleep(0.2);
+	in_track1 = PlayKey(indy, in_Stand4, 2, 0x0, 0); # indy hands on hips
+	PlayKey(indy, in_1to4, 4, 0x12, 0);
+	PlayVoice(indy, in00, 1.0, 1);
+	Sleep(0.2);
+
+	# Move Sophia toward table...
+	AISetMoveSpeed(sophia, 1.2);
+	AISetLookThing(sophia, so_Target1);
+	AISetMoveThing(sophia, so_Target1, 0);
+
+	# Long shot of campsite...
+	SetCameraPosInterp(2, 0); # disable cam dolly
+	SetCameraFocus(2, longCam);
+	SetCameraSecondaryFocus(2, so_ghost1); # track the moving ghost
+	SetCurrentCamera(2);
+	SetCameraFOV(57, 0, 0.0); # was 65, then 60
+
+	# Cam and focus moves toward Sophia...
+	MoveToFrame(longCam, 1, 1.38); # time to arrive as helmet removal ends (was 1.38)
+	SetCameraFOV(22, 1, 6.3); # likewise
+	MoveToFrame(so_ghost1, 1, 1.4); # time to arrive with sophia (was 1.5)
+
+	# Sophia takes off her hat and goggles, then steps forward...
+	AIWaitForStop(sophia);
+	AttachThingToThing(so_ghost1, sophia);
+	PlayKey(sophia, so_Doff, 4, 0x2, 1);
+	AISetMoveSpeed(sophia, 1.0);
+	AISetMoveThing(sophia, so_Target2, 1);
+
+	# Indy exclaims recognition:  "Sophia?"
+	Sleep(0.4);
+	curSound = PlayVoice(indy, in01, 1.0, 0);
+	Sleep(0.1);
+
+	# Cut to Indy...
+	SetCameraFocus(0, indyCam2);
+	SetCurrentCamera(0);
+	SetCameraFOV(47, 0, 0.0);
+	AISetLookThing(sophia, indy);
+
+	# Swap out Sophia's hand with the helmet while she's offscreen...
+	RestoreThingMesh(sophia, -99); # -99 Restores ALL meshes
+	DetachThing(so_ghost1);
+
+	# Indy pushes his hat back...
+	PlayKey(indy, in_PushHat, 4, 0x12, 0);
+	WaitForSound(curSound);
+	Sleep(0.2);
+	
+	# Cut to Sophia...
+	SetCameraFocus(0, sophiaCam);
+	SetCameraFOV(47, 0, 0.0);
+	StopKey(indy, in_track1, 0.0);
+	AISetLookThing(indy, sophia);
+
+	# Sophia: "Hello, Indy..."
+	curSound = PlayVoice(sophia, so01, 1.0, 0);
+	so_track = PlayKey(sophia, so_Stand4, 2, 0x0, 0);
+	PlayKey(sophia, so_Hair, 4, 0x12, 1);
+	WaitForSound(curSound);
+
+	# Cut to Indy over Sophia's shoulder...
+	SetCameraFocus(2, indyCam3);
+	SetCameraSecondaryFocus(2, camAnchor);
+	SetCurrentCamera(2);
+	SetCameraFOV(45, 0, 0.0);
+
+	# Indy: "What brings you out west...?"
+	curSound = PlayVoice(indy, in02, 1.0, 0);
+	StopKey(sophia, so_track, 0.7);
+	PlayKey(indy, in_ArmsOut, 4, 0x12, 1);
+	PlayKey(indy, in_armsup, 4, 0x12, 0);
+	Sleep(1.0); # was 1.5
+
+	# Camera follows anchor (and Sophia) toward table...
+	MoveToFrame(camAnchor, 1, 1.2);
+	SetCameraFOV(30, 1, 1.9); # was 2.0
+	AISetMoveSpeed(sophia, 1.1);
+	AISetLookThing(sophia, so_Target3);
+	Sleep(0.2); ## may need adjusting for foreign language versions
+	AISetMoveThing(sophia, so_Target3, 0);
+	Sleep(1.0); ## may need adjusting for foreign language versions
+	AISetMoveSpeed(sophia, 0.9);
+
+	# Sophia arrives and turns toward the table...
+	AIWaitForStop(sophia);
+	SetThingMaxRotVel(sophia, 50.0);
+	AISetLookThing(sophia, table);
+
+	# Sophia puts hands on hips...
+	so_track = PlayKey(sophia, so_Stand1, 2, 0x0, 0);
+	PlayKey(sophia, so_2to1, 4, 0x12, 0);
+	Sleep(1.2); # was 1.5
+
+	# Teleport Indy while offscreen so he can get to the table...
+	TeleportThing(indy, in_Target2);
+	WaitForSound(curSound);
+
+	# Zero Sophia's head and cut across table...
+	SetActorHeadPYR(sophia, '0.0 0.0 0.0');
+	SetCameraFocus(0, sophiaCam2);
+	SetCurrentCamera(0);
+	SetCameraFOV(25, 0, 0.0);
+
+	# Aim indyCam3 for next shot...
+	MoveToFrame(camAnchor, 2, 2.0);
+	PlayKey(sophia, so_Look, 4, 0x12, 0);
+
+	# Sophia:  "Wonderful potsherds."
+	curSound = PlayVoice(sophia, so02, 1.0, 0);
+	Sleep(1.5); ## may need adjusting for foreign language versions
+
+	# Indy moves toward the table from offscreen...
+	AISetMoveSpeed(indy, 0.9);
+	AISetLookThing(indy, sophia);
+	AISetMoveThing(indy, in_Target3, 0);
+	WaitForSound(curSound);
+	Sleep(0.5); ## may need adjusting for foreign language versions (was 1.5)
+
+	# Cut back as Indy enters shot...
+	SetCameraFocus(2, indyCam3);
+	SetCurrentCamera(2);
+	SetCameraFOV(35, 0, 0.0);
+	AISetLookThing(sophia, indy);
+
+	# Indy: "New thinking..."
+	curSound = PlayVoice(indy, in03, 1.0, 0);
+	AIWaitForStop(indy);
+	PlayKey(indy, in_ArmsOut, 4, 0x12, 1);
+	PlayKey(indy, in_leftup, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Cut to closeup of Indy...
+	SetCameraFocus(0, indyCam4);
+	SetCurrentCamera(0);
+	SetCameraFOV(35, 0, 0.0);
+	AISetLookThing(sophia, indy);
+
+	# Indy: "Kind of noble..."
+	Sleep(0.2);
+	# PlayKey(indy, in_shrug, 4, 0x12, 0);
+	PlayKey(indy, in_armsup, 4, 0x12, 0); # temp until shrug works
+	PlayVoice(indy, in04, 1.0, 1);
+	Sleep(0.2);
+
+	# Cut to shot of Sophia over Indy's shoulder: "Iron curtain..."
+	SetCameraFocus(0, sophiaCam3);
+	SetCameraFOV(42, 0, 0.0);
+	PlayKey(sophia, so_WaveL, 4, 0x12, 0);
+	PlayVoice(sophia, so03, 1.0, 1);
+
+	# Indy: "I read the papers..."
+	in_track1 = PlayKey(indy, in_stand4, 2, 0x0, 0);
+	PlayKey(indy, in_1to4, 4, 0x12, 0); # Indy puts hands on hips
+	Sleep(0.2);
+	PlayVoice(indy, in05, 1.0, 1);
+	
+	# Sophia: "Wanna really be noble?"
+	PlayKey(sophia, so_WaveR, 4, 0x30, 0);
+	curSound = PlayVoice(sophia, so04, 1.0, 0);
+	Sleep(2.5);
+	StopKey(indy, in_track1, 0.5); # relax back to hands at sides
+	WaitForSound(curSound);
+
+	# Reverse the shot...
+	SetCameraFocus(0, indyCam5);
+	SetCameraFOV(40, 0, 0.0);
+
+	# Indy folds his arms: "Who's we?"
+	in_track1 = PlayKey(indy, in_Stand2, 2, 0x0, 0);
+	PlayKey(indy, in_1to2, 4, 0x12, 0);
+	PlayVoice(indy, in06, 1.0, 1);
+
+	# Sophia turns away: "CIA"
+	SetThingMaxRotVel(sophia, 280.0);
+	StopKey(sophia, so_track, 0.25);
+	AISetLookThing(sophia, so_Target4);
+	curSound = PlayVoice(sophia, so05, 1.0, 0);
+	Sleep(4.5);
+	PlayKey(sophia, so_leftup, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Cut to closeup of Indy...
+	StopKey(indy, in_track1, 1.0);
+	SetCameraPosInterp(2, 0); # turn off cam dolly
+	SetCameraFocus(0, indyCam4);
+	SetCurrentCamera(0);
+	SetCameraFOV(37, 0, 0.0); # was 35
+
+	# Indy: "Atomic secrets?"
+	curSound = PlayVoice(indy, in07, 1.0, 0);
+	in_track1 = PlayKey(indy, in_Stand4, 2, 0x0, 0); # hands on hips
+	PlayKey(indy, in_1to4, 4, 0x12, 1);
+	PlayKey(indy, in_Rub, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Swap in Sophia's hand with photo...
+	SetThingMesh(sophia, 15, mod_so_HandPhoto, 0);
+
+	# Cut to closeup of Sophia as she turns back toward camera...
+	AISetLookThing(sophia, indy);
+	SetCameraFocus(0, sophiaCam4);
+	SetCameraFOV(25, 0, 0.0);
+	StopKey(indy, in_track1, 0); # stop hip stand
+	Sleep(0.8); # was 0.9
+
+	# Sophia: "Don't be silly..."
+	PlayVoice(sophia, so06, 1.0, 1);
+
+	# She whips out the photo of Babylon...
+	curSound = PlayVoice(sophia, so07, 1.0, 0);
+	Sleep(1.1);
+	PlayKey(sophia, so_Pouch, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Cut to table...
+	SetCameraFocus(0, photoCam);
+	SetCurrentCamera(0);
+	SetCameraFOV(32, 0, 0.0);
+
+	# Sophia's invisible for a bit...
+	SetThingFlags(sophia, 0x10);
+
+	# Sophia: "Dig site..."
+	curSound = PlayVoice(sophia, so08, 1.0, 0);
+
+	# Play Babel theme
+	PlaySoundLocal(mus_VolodPic, 1.0, 0.0, 0x0, 0);
+
+	# Cheat Indy around to the other side of the table...
+	TeleportThing(indy, in_Target1);
+	AISetLookThing(indy, in_Target4);
+	AISetMoveThing(indy, in_Target4, 0);
+
+	# Sophia's arm tosses the photo onto the table...
+	ClearThingFlags(so_arm, 0x80000);
+	SetThingMesh(so_arm, 5, mod_arm_PhotoBab, 0);
+	so_arm_swap = 1; # set callback to drop 1st photo
+	so_ArmTrack = PlayKey(so_arm, so_arm_Toss, 2, 0x14, 0); # drop 1st photo
+
+	# Indy bends into the shot: "Babylon!"
+	AISetLookThing(indy, photoBab);
+	Sleep(1.8);
+	PlayKey(indy, in_lean, 4, 0x12, 0);
+	WaitForSound(curSound);
+	Sleep(0.2);
+	PlayVoice(indy, in08, 1.0, 1);
+
+	# Camera snaps to an even closer shot of the photo...
+	Sleep(0.4);
+
+    # hide hack on indy's hat brim				CMG 10/3
+	SetThingFlags(indy, 0x10);
+
+	SetCameraFOV(25, 1, 0.5); # was 1.0
+
+	# Sophia: "Remember your bible?"
+	curSound = PlayVoice(sophia, so09, 1.0, 0);
+
+	# Get rid of Sophia's photo hand...
+	RestoreThingMesh(sophia, so_meshRefHand);
+
+	# They're lookin' at each other...
+	AISetLookThing(indy, sophia); 
+	AISetLookThing(sophia, indy);
+
+	# Play and hold their "looking down" anims...
+	in_track1 = PlayKey(indy, in_Stand5, 4, 0x4, 0);
+	in_track2 = PlayKey(indy, in_Stand4, 4, 0x0, 0);
+	so_track = PlayKey(sophia, so_Stand5, 4, 0x4, 0);
+
+	# Stop the anim on Sophia's arm and hide it...
+	StopKey(so_arm, so_ArmTrack, 0.0);
+    SetThingFlags(so_arm, 0x80000);
+	WaitForSound(curSound);
+
+	# Finger points at the photo...
+	ClearThingFlags(in_arm, 0x80000);
+	in_ArmTrack = PlayKey(in_arm, in_arm_Point, 2, 0x14, 0);
+
+	# Indy: "Looks like..."
+	PlayVoice(indy, in09, 1.0, 1);
+
+	# Stop the anim on Indy's arm and hide it...
+	StopKey(in_arm, in_ArmTrack, 0.0);
+	SetThingFlags(in_arm, 0x80000);
+
+    # close hack on indy's hat brim				CMG 10/3
+	ClearThingFlags(indy, 0x10);
+
+	# Cut to 2-shot...
+	ClearThingFlags(sophia, 0x10); # Sophia is visible
+	SetCameraFocus(0, sideCam2);
+	#SetCurrentCamera(0);
+	SetCameraFOV(30, 0, 0.0);
+
+	# ...as they look up at each other...
+	StopKey(indy, in_track1, 0.5); # unbend
+	StopKey(indy, in_track2, 1.0); # relax out of hands-on-hips pose
+	StopKey(sophia, so_track, 0.7);
+
+	# Sophia: "Very good, Jones."
+	Sleep(0.2);
+	PlayVoice(sophia, so10, 1.0, 1);
+
+	# Sophia: "Volodnikov..."
+	curSound = PlayVoice(sophia, so11, 1.0, 0);
+	
+	Sleep(0.6);
+	AISetLookThing(sophia, so_target8); # she looks down at pix
+	Sleep(0.4);
+
+	# Cut back to the table...
+	SetCameraFocus(0, photoCam);
+	SetCameraFOV(32, 0, 0.0);
+
+	# Sophia's arm tosses in the photo of Volodya...
+	ClearThingFlags(so_arm, 0x80000);
+	SetThingMesh(so_arm, 5, mod_arm_PhotoVo, 0);
+	so_arm_swap = 2; # set callback to drop 2nd photo
+	so_ArmTrack = PlayKey(so_arm, so_arm_Toss, 2, 0x14, 0);
+	WaitForSound(curSound);
+
+	# Stop the anim on Sophia's arm and hide it...
+	StopKey(so_arm, so_ArmTrack, 0.0);
+	SetThingFlags(so_arm, 0x80000);
+
+	# Sophia: "He thinks there's some truth..."
+	curSound = PlayVoice(sophia, so12, 1.0, 0);
+	Sleep(0.1);
+
+	# Zoom on V photo...
+	SetCameraFOV(25, 1, 0.5); # was 1.0
+	WaitForSound(curSound);
+
+	# Indy: "Godless communist?"
+	PlayVoice(indy, in10, 1.0, 1);
+
+	# Toss 2nd photo of V...
+	ClearThingFlags(so_arm, 0x80000);
+	SetThingMesh(so_arm, 5, mod_arm_PhotoV2, 0);
+	so_arm_swap = 3; # set callback to drop 3rd photo
+	so_ArmTrack = PlayKey(so_arm, so_arm_Toss, 2, 0x14, 0);
+
+	# Sophia: "A physicist..."
+	PlayVoice(sophia, so13, 1.0, 1);
+
+	# Stop anim on Sophia's arm and hide it...
+	StopKey(so_arm, so_ArmTrack, 0.0);
+	SetThingFlags(so_arm, 0x80000);
+
+	# Cut to 2-shot...
+	SetCameraFocus(0, sideCam3);
+	SetCurrentCamera(0);
+	SetCameraFOV(33, 0, 0.0);
+
+	# Indy: "What's he doing in Babylon?"
+	AISetLookThing(sophia, indy);
+	in_track1 = PlayKey(indy, in_studyVPhoto, 2, 0x0, 0);
+	PlayKey(indy, in_grabVPhoto, 4, 0x12, 0);
+	PlayVoice(indy, in11, 1.0, 1);
+
+	# Sophia:  "Atom joke..."
+	curSound = PlayVoice(sophia, so14, 1.0, 0);
+	Sleep(1.5); ## may need adjusting for foreign language versions
+	StopKey(indy, in_track1, 0.0);
+	in_track1 = PlayKey(indy, in_Stand4, 2, 0x0, 0);
+	PlayKey(indy, in_dropVPhoto, 4, 0x12, 1);
+	WaitForSound(curSound);
+
+	# Indy: "World's not laughing..."
+	PlayVoice(indy, in12, 1.0, 0);
+	in_track2 = PlayKey(indy, in_PushHat, 4, 0x12, 0);
+	Sleep(2.0); ## may need adjusting for foreign language versions
+	StopKey(indy, in_track2, 0.4);
+	AISetLookThing(sophia, indy);
+
+	# Cut to closeup of Sophia...
+	SetThingFlags(indy, 0x10); # make him invisible
+	SetCameraFocus(0, sophiaCam5);
+	SetCameraFOV(20, 0, 0.0);
+
+	# Sophia: "Deadly tower..."
+	curSound = PlayVoice(sophia, so15, 1.0, 0);
+	so_track = PlayKey(sophia, so_Stand1, 2, 0x0, 0);
+	PlayKey(sophia, so_2to1, 4, 0x12, 1);
+	PlayKey(sophia, so_WaveL, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Cut to closeup of Indy: "Tore it down..."
+	ClearThingFlags(indy, 0x10); # Indy reappears
+	SetThingFlags(sophia, 0x10); # and Sophia is invisible
+	SetCameraFocus(0, indyCam6);
+	SetCameraFOV(25, 0, 0.0);
+	in_track2 = PlayKey(indy, in_Think, 4, 0x12, 0);
+	PlayVoice(indy, in13, 1.0, 1);
+
+	# Cut to 2-shot...
+	ClearThingFlags(sophia, 0x10);
+	AISetLookThing(indy, sophia); # was in_target8
+	AISetLookThing(sophia, indy);
+	SetCameraFocus(0, sideCam3); # was sideCam
+	SetCameraFOV(35, 0, 0.0); # was 33
+
+	# Sophia: "Exactly."
+	PlayVoice(sophia, so16, 1.0, 1);
+
+	# Indy: "Amusing theory..."
+	StopKey(indy, in_track2, 2.0); # back to hands-on-hips
+	curSound = PlayVoice(indy, in14, 1.0, 0);
+	Sleep(1.5); ## may need adjusting for foreign language versions
+	StopKey(indy, in_track1, 0.0);
+	SetThingMaxRotVel(indy, 250.0);
+	AISetLookThing(indy, so_target1); # turns away cam right
+	PlayKey(indy, in_overThere, 4, 0x12, 0);
+	Sleep(1.0);
+	AISetLookThing(indy, in_target8); # turns back
+	WaitForSound(curSound);
+
+	# Sophia: "You don't think...."
+	curSound = PlayVoice(sophia, so17, 1.0, 0);
+	PlayKey(sophia, so_WaveR, 4, 0x12, 1);
+	StopKey(sophia, so_track, 0.0);
+	PlayKey(sophia, so_1to2, 4, 0x12, 0);
+	Sleep(1.0);
+
+	# Sophia: "This came from..."
+	SetCameraFocus(0, sophiaCam6);
+	SetCameraFOV(20, 0, 0.0);
+	SetThingFlags(indy, 0x10); # Indy invisible
+	AISetLookThing(indy, sophia);
+	
+	# part from bag sound effect
+	PlaySoundLocal(pull_part, 1.0, 0.0, 0x0, 0);
+	
+	AISetLookThing(sophia, indy);
+	StopKey(indy, in_track1, 0.0); #HB lose hands-on-hips
+	so_swap = 1;
+	PlayKey(sophia, so_Pouch, 5, 0x12, 0);
+	WaitForSound(curSound);
+	PlayVoice(sophia, so18, 1.0, 1);
+	Sleep(0.5);
+
+	# Play theme for the infernal part
+	PlaySoundLocal(mus_GetPart, 0.5, 0.0, 0x0, 0);
+
+	# Indy takes the gear: 
+	SetThingFlags(sophia, 0x10);
+	so_track = PlayKey(sophia, so_Stand1, 2, 0x0, 0);
+	ClearThingFlags(indy, 0x10); # Indy reappears
+	SetCameraFocus(0, indyCam7);
+	in_track1 = PlayKey(indy, in_Examine, 4, 0x14, 0);
+
+	Sleep(0.5);
+
+    PlayVoice(indy, in15, 1.0, 1); # "Somebody made a mistake..."
+
+	# Back to Sophia closeup...
+	StopKey(indy, in_track1, 0.0);
+	SetThingFlags(indy, 0x10); # Indy invisible
+	ClearThingFlags(sophia, 0x10); # Sophia reappears
+	SetCameraFocus(0, sophiaCam5);
+
+	# Sophia: "No mistake..."
+	PlayKey(sophia, so_HeadShake, 4, 0x12, 0);
+	PlayVoice(sophia, so19, 1.0, 1);
+	StopKey(sophia, so_track, 0.0);
+
+	# Cut to closeup of Indy's hands...
+	SetThingFlags(sophia, 0x10); # Sophia invisible again
+	so_track = PlayKey(sophia, so_Stand3, 2, 0x0, 0);
+	ClearThingFlags(indy, 0x10); # Indy visible again
+	SetCameraFocus(0, indyCam8);
+
+	# Indy: "Look at that little wheel spin!"
+	# spin the part
+	in_track1 = PlayKey(indy, in_TurnGear, 4, 0x14, 0);
+	Sleep(0.5);
+	part_track=PlaySoundLocal(spin_part, 1.0, 0.0, 0x1, 0);
+	PlayVoice(indy, in16, 1.0, 1);
+
+	# Wider shot of Sophia over Indy's shoulder...
+	StopKey(indy, in_track1, 1.0);
+	StopSound(part_track, 1.0);
+	ClearThingFlags(sophia, 0x10); # Sophia reappears
+	DestroyThing(so_ghost1);
+	AttachThingToThing(so_ghost2, sophia);
+	SetCameraFocus(2, sophiaCam7);
+	SetCameraSecondaryFocus(2, so_ghost2);
+	SetCurrentCamera(2);
+	SetCameraFOV(50, 0, 0.0);
+
+    # run inventory acquisition routine
+	ChangeInv(player, 82, 1);
+	SetInvAvailable(player, 82, 1);
+	JonesInvItemChanged(82);
+
+	# Sophia: "C'mon, Indy, we're the CIA..."
+	PlayVoice(sophia, so20, 1.0, 0);
+    PlayKey(sophia, so_CrossArms, 4, 0x12, 1);
+    StopKey(sophia, so_track, 0.8);
+
+    # Sophia dons her helmet...
+	Sleep(0.8);
+    
+	# play spy music
+	spychan=PlaySoundLocal(mus_SpyLine, 0.5, 0.0, 0x0, 0);
+	ChangeSoundVol(spychan, 2, 3.5);
+
+
+	so_meshRefHand = SetThingMesh(sophia, 18, mod_so_HandHelmet, 0); # get helmet in hand
+	PlayKey(sophia, so_helmeton, 4, 0x12, 1);
+
+	# Sophia: "...we've got spies."
+	PlayVoice(sophia, so21, 1.0, 0);
+	Sleep(0.7); # was 0.4
+
+	# Sophia turns and walks out of frame...
+	AISetMoveSpeed(sophia, 0.5);
+	Sleep(0.3);
+	AISetMoveSpeed(sophia, 1.2);
+	AISetLookThing(sophia, so_Target9);
+	AISetMoveThing(sophia, so_Target9, 1);
+
+	# Play helicopter startup sound
+	PlaySoundLocal(heliStart1, 1, 0, 0x10, 0);
+
+	# Stop the anim on the gear and swap it back out...
+	StopAnim(matAnimNum);
+	RestoreThingMesh(indy, meshRefHand);
+
+	# Cut to helicopter...
+	SetCameraFocus(2, heliCam);
+	SetCameraSecondaryFocus(2, copterAnchor);
+	SetCurrentCamera(2);
+	SetCameraFOV(50, 0, 0.0);
+
+	# Sophia's already inside...
+	TeleportThing(sophia, so_Target7);
+	so_track = PlayKey(sophia, so_Stand6, 4, 0x10, 0);
+
+	# Start that puppy...
+	cop_track = PlayKey(copter, chopTurn, 4, 0x10, 0);
+
+	# second sartup sound
+	Sleep(3.0);
+	PlaySoundLocal(heliStart2, 1, 0, 0x20, 0);
+
+	# Kill waterfall noise right now...
+	SendMessage(fallcog, user0);
+
+	# timers to control the remaining sound fades
+	SetTimerEx(2.368, 1, 0, 0);
+	SetTimerEx(6.687, 2, 0, 0);
+	SetTimerEx(5.790, 3, 0, 0);
+	SetTimerEx(7.579, 4, 0, 0);
+
+	# light dust
+	SetPulse(0.5);
+
+	# Indy enters the shot...
+	TeleportThing(indy, in_Target6);
+	AISetMoveSpeed(indy, 1.1);
+	AISetLookThing(indy, in_Target7);
+	AISetMoveThing(indy, in_Target7, 1);
+
+	# Indy animates into the copter...
+	PlayKey(indy, in_Enter, 4, 0x12, 1);
+
+	# ...and actually sits there!
+	TeleportThing(indy, in_target9);
+
+	# Fasten yer seatbelts!
+	AttachThingToThingEx(indy, copter, 0x000C);
+	PlayKey(indy, in_sitheli, 4, 0x14, 0);
+	AttachThingToThingEx(sophia, copter, 0x000C);
+	AttachThingToThing(copterAnchor, copter);
+
+	# Heads up!
+	AISetLookThing(sophia, copt_Target2);
+	AISetLookThing(indy, copt_Target2);
+
+	# Now rev it up a bit...
+	StopKey(copter, cop_track, 0.5);
+	SetPulse(0.25);
+	cop_track = PlayKey(copter, chopTurn2, 4, 0x10, 0);
+	Sleep(0.8);
+	StopKey(copter,cop_track, 0.5);
+	PlayKey(copter, chopFly, 4, 0x10, 0);
+	SetPulse(0.1);
+	Sleep(0.3);
+
+	# The blades blur...
+	SetThingMesh(copter, 3, chop_blad, 0); # main rotor
+	SetThingMesh(copter, 1, chop_rot, 0); # tail rotor
+	Sleep(1.0);
+
+	in_colltype = GetCollideType(indy);
+	so_colltype = GetCollideType(sophia);
+	co_colltype = GetCollideType(copter);
+	SetCollideType(indy, 0);
+	SetCollideType(sophia, 0);
+	SetCollideType(copter, 0);
+
+	# ...and the thing flies away...
+	SetThingMaxRotVel(copter, 10.0); # slow to turn
+	AISetMoveSpeed(copter, 1.0);
+	AISetMoveThing(copter, copt_Target1, 0);
+
+	# fade the shadow out
+	ThingFadeAnim(chop_shadow, 1.0, 0.0, 3.0, 0);
+
+	# Create a ring blast under the chopper
+	smoke = CreateThing(smokeTpl, dust_pivot);
+	AnimateSpriteSize(smoke, '0.1 0.1 1.0', '2.0 2.0 0.0', 0.75);
+	SetCameraFOV(75, 1, 1.7);
+	Sleep(1.0);
+
+    # send message to soundfade out cog to clear sector sounds 
+	SendMessage(sectorcog, user3);
+	SendMessage(ambcog, user3);
+
+	# Stop dust particles
+	SetPulse(0);
+	AISetMoveSpeed(copter, 1.1);
+	Sleep(0.7);
+
+	AISetMoveSpeed(copter, 1.2);
+	AISetLookThing(sophia, copt_Target2);
+	AISetLookThing(indy, copt_Target2);
+	AISetLookThing(copter, copt_Target2);
+	AISetMoveThing(copter, copt_Target2, 0);
+	Sleep(0.8);
+	
+	AISetMoveSpeed(copter, 1.3);
+	AISetLookThing(sophia, copt_Target3);
+	AISetLookThing(indy, copt_Target3);
+	AISetLookThing(copter, copt_Target3);
+	AISetMoveThing(copter, copt_Target3, 0);
+	Sleep(1.3);
+
+	AISetMoveSpeed(copter, 1.2);
+	AISetLookThing(sophia, copt_Target4);
+	AISetLookThing(indy, copt_Target4);
+	AISetLookThing(copter, copt_Target4);
+	AISetMoveThing(copter, copt_Target4, 0);
+	Sleep(0.5);
+
+	AISetMoveSpeed(copter, 1.1);
+	AISetLookThing(sophia, copt_Target5);
+	AISetLookThing(indy, copt_Target5);
+	AISetLookThing(copter, copt_Target5);
+	AISetMoveThing(copter, copt_Target5, 0);
+	SetCameraFOV(90, 1, 9.0);
+	Sleep(3.0);
+	AISetMoveSpeed(copter, 1.0);
+	Sleep(5.0);
+
+	SetCollideType(indy, in_colltype);
+	SetCollideType(sophia, so_colltype);
+	SetCollideType(copter, co_colltype);
+
+	# Fade out...
+	ClearThingFlags(fadeoutplate, 0x80000);
+	ThingFadeAnim(fadeoutplate, 0.0, 1.0, 1.0, 0);
+	
+    Sleep(1.0);
+	
+	EndCutscene();
+	
+	#### test only #### Clean up...
+	## ClearActorFlags(player, 0x200000); 
+	## SetCurrentCamera(curCam);
+	## ResetCameraFOV(0, 0.0);
+
+	SetThingMaxRotVel(indy, in_rotRate); 
+	SetThingMaxRotVel(sophia, so_rotRate); 
+	SetThingMaxRotVel(copter, cop_rotRate);
+
+	# Put Sophia's heads back!
+	SetThingVoiceHeads(sophia, "sohead", "head_so_msound.3do", "head_so_asound.3do", "head_so_amsound.3do", "head_so_osound.3do");
+
+	JonesEndLevel();
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	sender = GetSenderRef();
+	callNum = GetParam(1);
+
+	if (sender == indy)
+	{
+		if (callNum == 21)
+		{
+			meshRefHat = SetThingMesh(indy, 8, mod_in_Hair, 0);
+			meshRefHead = SetThingMesh(indy, 9, mod_in_Hair, 1);
+			meshRefHand = SetThingMesh(indy, 15, mod_in_HandHat, 0);
+
+			# RT: Set up no-hat heads...
+			SetThingVoiceHeads(indy, "inhead", "head_in_goodhair.3do", "head_in_asound_gh.3do", "head_in_amsound_gh.3do", "head_in_osound_gh.3do");
+		}
+		else if (callNum == 22)
+		{
+			RestoreThingMesh(indy, meshRefHat);
+			RestoreThingMesh(indy, meshRefHead);
+			RestoreThingMesh(indy, meshRefHand);
+            
+			# RT: Restore default heads...
+			SetThingVoiceHeads(indy, "inhead", "", "head_in_asound.3do", "head_in_amsound.3do", "head_in_osound.3do");
+		}
+		else if (callNum == 23)
+		{
+			meshRefHand = SetThingMesh(indy, 15, mod_in_HandGear, 0);
+		}
+		else if (callNum == 24)
+		{
+			matAnimNum = MaterialAnim(gearMat, 8.0, 0x1);
+		}
+		else if (callNum == 25)
+		{
+			meshRefHand = SetThingMesh(indy, 15, mod_in_HandPhoto, 0);
+			SetThingFlags(photoV2, 0x80000);
+		}
+		else if (callNum == 26)
+		{
+			RestoreThingMesh(indy, meshRefHand);
+			ClearThingFlags(photoV2, 0x80000);
+		}
+	}
+	else if (sender == sophia)
+	{
+		if (callNum == 16) # Remove swap anims are tagged with #16
+		{
+			RestoreThingMesh(sophia, -99); # -99 Restores ALL meshes
+		}
+		else if (callNum == 21)
+		{
+			# Swap out Sophia's goggle head
+			RestoreThingMesh(sophia, -99); # -99 Restores ALL meshes
+			# Swap in her hand with the helmet
+			SetThingMesh(sophia, 18, mod_so_HandHelmet, 0);
+		}
+		else if (callNum == 22)
+		{
+			SetThingMesh(sophia, 18, mod_so_HandShard, 0);
+		}
+		else if (callNum == 23 && so_swap == 1)
+		{
+			SetThingMesh(sophia, 15, mod_so_HandGear, 0);
+			so_swap = 0;
+		}
+		else if (callNum == 24)
+		{
+			# Get rid of her helmet hand...
+			RestoreThingMesh(sophia, so_meshRefHand);
+
+			# Swap in her goggle head...
+			call goggleHead;
+
+			# New set of heads...
+			SetThingVoiceHeads(sophia, "sohead", "head_so_helmet.3do", "head_so_helmet_asound.3do", "head_so_helmet_amsound.3do", "head_so_helmet_osound.3do");
+		}
+	}
+	else if (sender == so_arm)
+	{
+		RestoreThingMesh(so_arm, -99); # -99 Restores ALL meshes
+		
+		if (so_arm_swap == 1)
+		{
+			ClearThingFlags(photoBab, 0x80000);
+		}
+		else if (so_arm_swap == 2)
+		{
+			ClearThingFlags(photoVo, 0x80000);
+		}
+		else if (so_arm_swap == 3)
+		{
+			ClearThingFlags(photoV2, 0x80000);
+		}
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+pulse:
+
+	CreateThing(chopdust, dust_pivot);
+	return;
+
+# -------------------------------------------------------------------
+
+goggleHead:
+
+	SetThingMesh(sophia, 2, mod_so_Helmet, 0);
+	SetThingMesh(sophia, 3, mod_so_Helmet, 1);
+	SetThingMesh(sophia, 4, mod_so_Helmet, 2);
+	SetThingMesh(sophia, 5, mod_so_Helmet, 3);
+	SetThingMesh(sophia, 6, mod_so_Helmet, 4);
+	SetThingMesh(sophia, 7, mod_so_Helmet, 5);
+	SetThingMesh(sophia, 8, mod_so_Helmet, 6);
+	SetThingMesh(sophia, 9,  mod_so_Helmet, 7);
+	SetThingMesh(sophia, 10, mod_so_Helmet, 8);
+
+	return;
+
+# -------------------------------------------------------------------
+timer:
+
+If (GetSenderID() == 1)
+	{
+		chopSound1 = PlaySoundLocal(heliRev1, 0, 0, 0x11, 0);
+		ChangeSoundVol(chopSound1, 1, 2.879);
+	}
+
+If (GetSenderID() == 2)
+	{
+		ChangeSoundVol(chopSound1, 0, 7.894);
+	}
+
+If (GetSenderID() == 3)
+	{
+		chopSound2 = PlaySoundLocal(heliRev2, 0, 0, 0x1, 0);
+		ChangeSoundVol(chopSound2, 1, 1.279);
+	}
+
+If (GetSenderID() == 4)
+	{
+		# Fade copter sound
+		ChangeSoundVol(chopSound2, 0, 6);
+	}
+return;
+
+# -------------------------------------------------------------------
+	
+end

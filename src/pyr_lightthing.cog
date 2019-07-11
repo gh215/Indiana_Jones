@@ -1,0 +1,30 @@
+# Jones 3D Cog Script
+#
+# pyr_lightthing.cog
+#	
+# Light things up at level start
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+
+thing	litthing		nolink
+
+# RGB lighting values
+flex	arr=0.0
+flex	gee=0.0
+flex	bee=0.0
+end
+
+# ========================================================================================
+
+code
+startup:
+	SetThingLight(litthing, VectorSet(arr, gee, bee), .001, .01);
+	return;
+end
+

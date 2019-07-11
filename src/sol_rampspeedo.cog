@@ -1,0 +1,141 @@
+# Jones 3D Cog Script
+#
+# SOL_RampSpeedO.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     user1
+    message     user2
+    message     entered
+    message     pulse
+    
+    thing       player      local
+    thing       car         local
+    
+    surface     trig1
+    surface     trig2
+    surface     trig3
+    surface     trig4
+    
+    sound       landing=sol_minecar_landing_c.wav   local   # mine car landing sfx
+    
+    vector      curVel      local
+    flex        speedO      local
+    int         blownUp=0   local
+    int         enabled=1   local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    # turn on speedometer
+    #SetPulse(2.0);
+    
+    Sleep(0.01);
+    player = GetLocalPlayerThing();
+    
+    return;
+    
+# ========================================================================================
+
+user0:
+
+    blownUp = 1;
+    return;
+    
+# ========================================================================================
+
+user1:
+
+    # disable this cog
+    enabled = 0;
+    return;
+    
+# ========================================================================================
+
+user2:
+
+    # enable this cog
+    enabled = 1;
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    car = GetSourceRef();
+    curVel = GetThingVel(player);
+    speedO = VectorLen(curVel);
+    
+    if((BitTest(GetPhysicsFlags(car), 0x01000000)) && (blownUp == 1) && (enabled == 1))
+    {
+        if(GetSenderRef() == trig1)
+        {
+            # do cutscene stuff
+            StartCutscene(0);
+            SetActorFlags(player, 0x200000);
+            
+            if(speedO < 0.34)   # 2 presses
+            {
+                #Print("speed to 2.5");
+                SetThingThrust(player, '0.0 2.5 0.0');
+            }
+        }
+            
+        if(GetSenderRef() == trig2)
+        {
+            if(speedO < 0.46)   # 4 presses
+            {
+                #Print("speed to 3.0");
+                SetThingThrust(player, '0.0 3.0 0.0');
+            }
+        }
+        
+        if(GetSenderRef() == trig3)
+        {
+            if(speedO < 0.9)
+            {
+                #Print("speed to 0.9");
+                SetThingThrust(player, '0.0 4.0 0.0');
+            }
+        }
+        
+        if(GetSenderRef() == trig4)
+        {
+            # play landing sfx on other side of hole
+            PlaySoundLocal(landing, 1.0, 0.0, 0x0, 0);
+            
+            # restore player controls
+            ClearActorFlags(player, 0x200000);
+            EndCutscene();
+        }
+    }
+        
+    return;
+       
+# ========================================================================================
+
+pulse:
+
+    player = GetLocalPlayerThing();
+    curVel = GetThingVel(player);
+    speedO = VectorLen(curVel);
+    PrintFlex(speedO);
+    return;   
+    
+# ========================================================================================
+
+end
+

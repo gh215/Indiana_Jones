@@ -1,0 +1,110 @@
+# Jones 3D Cog Script
+#
+# item_Bud.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		activated
+message		callback
+
+cog			talkCog					local
+
+keyframe	get=in_reach_bulb.key	local
+
+model		budHand=hand_in_bud.3do	local
+
+sound		foundSnd=SS07J03.wav	local
+
+thing		player					local
+thing		item=-1					local
+
+int			bin=106					local
+int			swapRef					local
+
+end
+
+# ===================================================================
+
+code
+
+activated:
+
+	player = GetSourceRef();
+	item = GetSenderRef();
+
+	# Check to see if player is holding something. 
+	if (GetCurItem(player) != 0)
+	{
+		return;
+	}
+
+    # Disable player controls and stuff
+	if (MakeMeStop() == -1)
+		return;
+	DeselectWeaponWait(player);
+
+    StartCutscene(0);
+
+	talkCog = GetCogByIndex(0);
+	SendMessage(talkCog, 27);
+
+	# Wait a bit before starting animation
+    if (GetInv(player, bin) < GetInvMax(player, bin))
+	{
+		Sleep(0.33);
+		CaptureThing(player);
+		PlayKey(player, get, 5, 0x12, 0); 
+	}
+    else
+	{
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+		return;
+	}
+
+	SetExtCamOffset('0.15 -0.05 0.04');
+    SetExtCamLookOffset('0.0 0.02 0.0');
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	if (GetParam(1) == 21)
+	{
+        swapRef = SetThingMesh(player, 15, budHand, 0);
+
+		if (item != -1)
+		{
+			DestroyThing(item);
+			item = -1;
+		}
+	}
+	else
+	{
+		ReleaseThing(player);
+        RestoreThingMesh(player, swapRef);
+	
+		ChangeInv(player, bin, 1.0);
+		SetInvAvailable(player, bin, 1);
+		JonesInvItemChanged(bin);
+	
+		RestoreExtCam();
+	
+		Sleep(1.0);
+		PlayVoice(player, foundSnd, 1.0, 0);
+	
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+	}
+
+	return;
+
+end

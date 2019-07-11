@@ -1,0 +1,59 @@
+# Jones 3D Cog Script
+#
+# sea_bridgescene.cog
+#
+# [DS]
+#
+#
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message	startup
+	message	entered
+
+#	thing		indyactor
+#	thing		campos
+	thing		captain
+	sector	imp_nitch
+	int		curcam						local
+#	keyframe	capt_drive=	  .key				local
+	thing		player						local
+#	sound		captalk0=	.wav					local
+
+end
+
+# ================================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	ClearThingFlags(captain, 0x80000);
+	return;
+
+entered:
+#	if(getsenderref() == impnitch)
+#	{
+#	curcam = GetCurrentCamera();
+#	SetThingFlags(player, 0x80000);
+#	SetActorFlags(player, 0x200000);		#no control.
+#	ClearThingFlags(indyactor, 0x80000);
+#	SetCameraFocus(2, campos);
+#	SetCameraSecondaryFocus(2, indyactor);
+#	SetCurrentCamera(2);
+#	SetCameraFOV(90, 0, 0.0);			#check for default.
+#
+#	SetCurrentCamera(curcam);
+#	SetThingFlags(indyactor, 0x80000);
+#	ClearActorFlags(player, 0x200000);
+#	ClearThingFlags(player, 0x80000);
+#	}
+	return;
+
+end
+

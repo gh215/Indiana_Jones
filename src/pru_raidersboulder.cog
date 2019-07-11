@@ -1,0 +1,88 @@
+# Jones 3D Cog Script
+#
+# PRU_RaidersBoulder.cog
+#
+# plays a line of dialogue as you enter a face.  Checks that you're facing correct direction.
+# 
+# [SXC] [GGJ]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	entered
+	message	exited
+	message	startup
+	message	pulse
+	
+	surface	triggerFace0
+	surface	triggerFace1
+	surface	musTrigger
+	
+    thing	player				local
+	
+	vector   playervec            local
+    float    playery =0		local
+	float    playerx =0		local
+    int		bnosound=0       		local
+	int		musOnce=0				local
+	flex		dialoguelength=3.0		local
+	
+	sound		dialogue=pu01j02.wav		local
+	sound		mus=mus_pru_raidersclearing.wav	local
+end
+
+# ========================================================================================
+
+code
+startup:
+	bnosound=0;
+	player = GetLocalPlayerThing();
+    return;
+
+# ........................................................................................
+
+entered:
+	if ((GetSenderRef() == musTrigger) && (musOnce == 0))
+	{
+		PlaySoundLocal(mus, 1, 0, 0x0, 0);
+		musOnce = 1;
+		return;
+	}
+
+	if ((bnosound==0) && ((GetSenderRef() == triggerFace0) || (GetSenderRef() == triggerFace1)))
+	{
+	Print("entered");
+	SetPulse(0.5);
+	}
+	return;
+	
+exited:
+	if ((bnosound==0) && ((GetSenderRef() == triggerFace0) || (GetSenderRef() == triggerFace1)))
+
+	{
+	SetPulse(0.0);
+	}
+	return;
+    
+pulse:
+Print("pulse");
+playervec = GetThingLVec(player);
+playery = VectorY(playervec);
+playerx = VectorX(playervec);
+
+#Check that Indy is facing west.
+if ((playerx < 0) && ((playery > -0.7) && (playery < 0.7)))
+{
+    Print("speaking");
+	bnosound=1;
+	SetPulse(0.0);
+	PlayVoice(player, dialogue, 1, 0);
+	sleep(dialoguelength);
+}
+return;
+
+end
+
+
+

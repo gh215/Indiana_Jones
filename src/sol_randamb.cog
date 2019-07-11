@@ -1,0 +1,80 @@
+# Jones 3D Cog Script
+#
+# SOL_RandAmb.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message	    entered
+	message	    startup
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+	thing		soundPos2		nolink
+	thing		soundPos3		nolink
+    
+    sector      on_sec1         linkID=1
+    sector      on_sec2         linkID=1
+    sector      on_sec3         linkID=1
+    sector      off_sec1        linkID=0
+    sector      off_sec2        linkID=0
+    sector      off_sec3        linkID=0
+
+	sound		wav0=sol_ambient01_a.wav   local
+	sound		wav1=sol_ambient02_a.wav    local
+	sound		wav2=sol_ambient03_a.wav    local
+	sound		wav3=sol_ambient04_a.wav    local
+	sound		wav4=sol_ambient05_a.wav    local
+    sound		wav5=nub_ambient4_a.wav    local
+	
+	int		    sndNum			local
+	int		    numPos=4		local
+	int		    count   		local
+
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	if(GetSenderID() == 1)
+    {
+        #Print("ambients on");
+        setpulse(2.0);
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        #Print("ambients off");
+        SetPulse(0.0);
+    }
+	return;
+
+# ========================================================================================
+
+pulse:
+
+	SetPulse(0.0);
+    sndNum = RandBetween(0, 5);
+	
+    for (count = 0; count <= numPos; count = count+1) 
+	{
+	    if (soundPos0[count] >= 0) 
+        {
+            PlaySoundThing(wav0[sndnum], soundPos0[count], 1.0, -1, -1, 0);
+        }
+	}
+    
+    SetPulse(2.0);
+    
+	return;
+
+# ========================================================================================
+
+end

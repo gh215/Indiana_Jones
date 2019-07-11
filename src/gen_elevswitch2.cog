@@ -1,0 +1,68 @@
+# Jones 3D Cog Script
+#
+# gen_ElevSwitch2.cog
+#
+# This elevator will go up to its next frame and hold there.  The elevator can be recalled to a floor by hitting the
+# respective "Call" button.
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	crossed
+	message	activate
+	message	arrived
+
+	surface	lower_adjoin0	linkid=1
+	surface	lower_adjoin1	linkid=1
+	surface	lower_adjoin2	linkid=1
+	surface	call0				linkid=1
+	surface	call1				linkid=1
+	surface 	call2				linkid=1
+	surface	call3				linkid=1
+
+	thing		elevator			desc=elevator_object
+
+	int		curframe=0		Local
+	flex		start_wait=0.25		desc=pause_before_moving_up
+	flex		speed=4.0
+#	sound		wav0=lvrclik1.wav
+end
+
+# ========================================================================================
+
+code
+activate:						// If player presses button
+	if (GetWallCel(call0) == 1) return;
+	if (GetSenderId() != 1) return;
+	setwallcel(call0,1);
+	setwallcel(call1,1);
+	setwallcel(call2,1);
+	setwallcel(call3,1);
+	// PlaySoundPos(wav0, GetSurfaceCenter(GetSenderRef()), 1, -1, -1, 0);
+	curframe=getcurframe(elevator);
+	movetoframe(elevator, 1-curframe, speed);
+	stop;
+
+# ........................................................................................
+
+arrived:
+	setwallcel(call0,0);
+	setwallcel(call1,0);
+	setwallcel(call2,0);
+	setwallcel(call3,0);
+	// PlaySoundPos(wav0, GetSurfaceCenter(GetSenderRef()), 1, -1, -1, 0);
+	stop;		
+
+# ........................................................................................
+
+crossed:						// If player crosses adjoin(s)
+	if (IsThingMoving(elevator)) return;
+	sleep(start_wait);				// pause before moving up
+
+	curframe=getcurframe(elevator);
+	movetoframe(elevator, 1-curframe, speed);
+	stop;
+
+end
+

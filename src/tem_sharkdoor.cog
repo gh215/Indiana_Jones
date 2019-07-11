@@ -1,0 +1,400 @@
+# Jones 3D Cog Script
+#
+# TEM_SharkDoor.cog
+#
+# shark key = 85
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     activated
+    
+    # ** local things **
+    thing       player          local
+    thing       playerTarget    local
+    thing       indy            local
+    
+    # ** misc things **
+    thing       door            # shark door
+    thing       doorOffset      # offset for door
+    thing       keyOffset       # offset for keyhole
+    thing       insideOffset    # offset for inside of door
+    thing       look_Door       # interp secondary focus
+    thing       sharkKey        # put the key in the hole
+    thing       walkTarg1
+    
+    # ** sectors **
+    sector      doorSec
+    
+    # ** surfaces **
+    surface     doorway
+    surface     keyHole
+    
+    template    tpl_Indy=indy_sh_actor      local
+    template	tpl_Ghost=ghost				local
+    
+    # ** using the wrong or no item lines (whichLine = 1) **
+	sound	    in_WrongLine0=Inxj089.wav       local # That didn't work-->in_sayline[11]
+	sound	    in_WrongLine1=Inxj090.wav		local # ...something wrong.
+	sound	    in_WrongLine2=Inxj092.wav		local # Hmm...didn't quite work.
+	sound	    in_WrongLine3=Inxj060.wav		local # I don't think...right answer
+	sound	    in_WrongLine4=Inxj087.wav		local # Whoops.
+	sound	    in_WrongLine5=Inxj088.wav		local # Nope.
+	sound	    in_WrongLine6=Inxj091.wav		local # Of course that didn't work.
+    
+    # ** locked door lines (whichLine = 2) **
+    sound	    in_DoorLocked0=Inxj081.wav		local # Oh no...why...always locked?
+    sound       in_DoorLocked1=Inxj076.wav      local # This door is locked
+    sound       in_DoorLocked2=Inxj077.wav      local # it's locked
+    
+    # ** key hole lines (whichLine = 3) **
+    sound	    in_keyHole0=Inxj077.wav			local # It's locked.
+	sound	    in_keyHole1=Inxj078.wav			local # Locked.
+	sound	    in_keyHole2=Inxj082.wav			local # keyhole here...just need key.
+	sound	    in_keyHole3=Inxj080.wav			local # Locked...luck never changes.
+    
+    # ** success key lines (whichLine = 4) **
+	sound	    in_Success0=Inxj110.wav			local # Success!-->in_sayline[0]
+	sound	    in_Success1=Inxj108.wav			local # There!
+	sound	    in_Success2=Inxj109.wav			local # It fits!
+	sound	    in_Success3=Inxj103.wav			local # Whoa! It opened.
+	sound	    in_Success4=Inxj111.wav			local # what...know...worked!
+	sound	    in_Success5=Inxj106.wav			local # ...got lucky.
+	sound	    in_Success6=Inxj105.wav			local # ...be damned...opened.
+    
+    # ** misc sounds **
+    sound       in_LockedAgain=Inxj079.wav                         local   # locked again.
+    sound       sfx_Unlock=tem_monkeykey_unlock_c.wav       local   # turning key sfx
+    
+    cog         cog_Hint
+    
+    # ** vectors **
+    vector      keyCamTarg      local
+    
+    # ** subroutines **
+    flex        unlock          local
+    flex        noWayOut        local
+    flex        speak           local
+    
+    # ** ints **
+    int         playing=0       local
+    int         inside=0        local
+    int         unlocked=0      local
+    int         newComment      local
+    int         oldComment      local
+    int         whichLine       local
+    int         curItem         local
+    
+    int         doorCam=0       local
+    int         keyCam=0        local
+        
+end
+
+# ========================================================================================
+code
+
+startup:
+
+    # hide sharkKey
+    SetThingFlags(sharkKey, 0x80000);
+    
+    SetThingLight(door, '0.35 0.2 0.2', 0.001, 0.1);
+    SectorAdjoins(doorSec, 0);
+    return;
+      
+# ========================================================================================
+
+user0:
+
+    # close door when player approaches tiki
+    SetThingLight(door, '0.2 0.2 0.2', 0.001, 0.1);
+    ClearAdjoinFlags(doorway, 2);       # no move
+    MoveToFrame(door, 0, 2.0);
+    WaitForStop(door);
+    SetAdjoinFlags(doorway, 2);         # move
+    SectorAdjoins(doorSec, 0);
+    
+    inside = 1;
+    
+    return;
+
+# ========================================================================================
+
+activated:
+        
+    player = GetLocalPlayerThing();
+    curItem = GetCurItem(player);
+    
+    if((GetSenderRef() == door) && (unlocked == 0) && (playing == 0))
+    {
+        # player activated with an item
+        if(curItem > 0)
+        {
+            playing = 1;
+            # say wrong item lines
+            whichLine = 1;
+            doorCam = 1;
+            Call speak;
+            doorCam = 0;
+        }
+        
+        # normal activation
+        else
+        {
+            playing = 1;
+            # say door locked lines
+            whichLine = 2;
+            doorCam = 1;
+            Call speak;
+            doorCam = 0;
+        }
+    }
+    
+    else if((GetSenderRef() == keyHole) && (unlocked == 0) && (playing == 0))
+    {
+        # player is correctly using shark kay
+        if(curItem == 85)
+        {
+            unlocked = 1;
+            # unlock the door
+            Call unlock;
+        }
+
+        else
+        {
+            playing = 1;
+            # say need key lines
+            whichLine = 3;
+            keyCam = 1;
+            Call speak;
+            keyCam = 0;
+        }
+    }
+    
+    # player can't get back out of room
+    else if((GetSenderRef() == door) && (inside == 1) && (playing == 0))
+    {
+        playing = 1;
+        Call noWayOut;
+    }
+        
+    return;
+
+# ========================================================================================
+
+unlock:
+
+    # solve hint7
+    SendMessage(cog_Hint, user0);
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # offset camera to keyOffset
+    SetExtCamLookOffsetToThing(player);
+    SetExtCamOffsetToThing(keyOffset);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    Sleep(0.5);
+    
+    # create target at player position
+    keyCamTarg = VectorAdd(VectorTransformToOrient(player, '0.0 0.0 0.0'), GetThingPos(player));
+    playerTarget = CreateThingAtPos(tpl_Ghost, GetThingSector(player), keyCamTarg, '0 0 0');
+    CaptureThing(playerTarget);
+        
+    # activate key hole
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # show sharkKey and light it up
+    ClearThingFlags(sharkKey, 0x80000);
+    SetThingLight(sharkKey, '0.1 0.2 0.1', 0.001, 0.01);
+    
+    # slide it in
+    MoveToFrame(sharkKey, 1, 1.0);
+    
+    # play unlock sfx
+    PlaySoundLocal(sfx_Unlock, 1.0, 0.0, 0x0, 1);
+    
+    # remove key from inventory
+    ChangeInv(player, 85, -1);
+    
+    # switch to keyOffset camera
+    SetCameraFocus(2, keyOffset);
+    SetCameraSecondaryFocus(2, playerTarget);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # create indy actor
+    indy = CreateThing(tpl_Indy, player);
+    CaptureThing(indy);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # hide player show indy
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # set camera interp speed turn on look interp
+    SetCameraInterpSpeed(2, 2.0);
+    SetCameraLookInterp(2, 1);
+    Sleep(0.01);
+    
+    # interp to look_Door
+    SetCameraSecondaryFocus(2, look_Door);
+    
+    # rest for a bit
+    Sleep(1.0);
+    
+    # clear door adjoin
+    SectorAdjoins(doorSec, 1);
+    
+    # open the door
+    MoveToFrame(door, 1, 1.0);
+    
+    # indy looks at look_Door
+    AISetLookThing(indy, look_Door);
+    
+    # say success line
+    Sleep(1.0);
+    PlayVoice(player, in_Success0[RandBetween(0, 6)], 1.0, 1);
+    
+    # walk indy closer to door
+    AISetMoveSpeed(indy, 1.0);
+    AISetLookThing(indy, walkTarg1);
+    AISetMoveThing(indy, walkTarg1, 1);
+        
+    # wait for door to open all the way
+    #WaitForStop(door);
+    Sleep(0.5);
+    
+    # indy looks back at sharkKey
+    #AISetLookThing(indy, sharkKey);
+    
+    # move camera focus back to player
+    #SetCameraInterpSpeed(2, 1.0);
+    #SetCameraSecondaryFocus(2, playerTarget);
+    
+    Sleep(1.0);
+
+    # stop any unfinished animations
+    ResetThing(player);
+    
+    # Get the player into position
+    CopyOrientAndPos(indy, player);
+    
+    # hide actor show player
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # restore camera to player
+    SetCameraPosition(1, GetThingPos(keyOffset));
+    SetCurrentCamera(1);
+    RestoreExtCam();
+    
+    # turn off look interp
+    SetCameraLookInterp(2, 0);
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+noWayOut:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # offset camera
+    SetExtCamOffsetToThing(insideOffset);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # nudge door
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # say locked again line
+    PlayVoice(player, in_LockedAgain, 1.0, 1);
+    
+    # restore camera and controls
+    RestoreExtCam();
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+speak:
+
+    while (newComment == oldComment) 
+    {
+        newComment = RandBetween(0, 2);
+    }
+    
+    oldComment = newComment;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # offset camera
+    if(doorCam == 1) SetExtCamOffsetToThing(doorOffset);
+    
+    else if(keyCam == 1) SetExtCamOffsetToThing(keyOffset);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # activate door
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    if(whichLine == 1)
+    {
+        PlayVoice(player, in_WrongLine0[RandBetween(0, 6)], 1.0, 1);
+    }
+    
+    else if(whichLine == 2)
+    {
+        PlayVoice(player, in_DoorLocked0[RandBetween(0, 2)], 1.0, 1);
+    }
+    
+    else if(whichLine == 3)
+    {
+        PlayVoice(player, in_keyHole0[RandBetween(0, 3)], 1.0, 1);
+    }
+    
+    # restore offsetCam and controls
+    RestoreExtCam();
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+
+# ========================================================================================
+
+end
+

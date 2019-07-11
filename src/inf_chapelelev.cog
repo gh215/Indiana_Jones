@@ -1,0 +1,132 @@
+# Jones 3D Cog Script
+#
+# INF_ChapelDoor.cog
+#
+# [RT & SXC]
+#
+# Mini-cutscene: Indy pulling a floor lever.
+#
+# Input:
+# 
+#	thing		indy		=	Cutscene actor Indy
+#	thing		camera	=	POV cutscene camera
+#	thing		lever		=	The lever...duh.
+#	flex		FOV		=	Camera field of view
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message	    startup
+	message	    activate
+
+	keyframe	in_pull=in_pull_lever_down.key	local
+	keyframe	lever_down=gen_lever.key		local
+    keyframe    elevanim=inf_elvtr_gears.key    local
+          
+    sound       leverpull=nub_lever_pull_c.wav  local   
+    sound       leverback=nub_lever_reset_c.wav local
+    sound       gearplatmove=nub_weight_move_c.wav  local
+    sound       gearplatstart=nub_elev_start_c.wav  local
+    sound       gearplatstop=nub_elev_stop_c.wav    local   
+
+	thing		player					        local
+
+	thing		indy						    nolink
+	thing		camera
+    thing       camera_tgt0
+	thing		lever
+    thing       elevator
+    thing       elevator_cap
+    
+    int         pullcheck=0                     local
+    int         startchan                       local
+    int         movechan                        local
+    int         wepnum=1        local
+    int         lastrand=-1     local
+    int         currand=0       local
+    int         keychan         local
+    
+    sound       indylineb0=inxj058.wav      local
+    sound       indylineb1=inxj059.wav      local
+    sound       indylineb2=inxj060.wav      local
+    sound       indylineb3=inxj061.wav      local
+    sound       indylineb4=inxj090.wav      local
+    sound       indylineb5=inxj095.wav      local
+
+end
+
+# ================================================================================
+    
+code
+
+startup:
+    AISetCutsceneMode(elevator);
+	player = GetLocalPlayerThing();
+    SetCollideType(elevator, 0);
+    ClearThingFlags(elevator, 0x80000);
+return;
+
+# -------------------------------------------------------------------
+activate:
+    if ((GetSenderRef() == lever) && (pullcheck == 0) && (GetCurItem(player) == 0))
+    {
+        pullcheck = 1;
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player);
+            DeselectWeaponWait(player);
+            DeselectWeapon(player);
+            //printint(wepnum);
+        }
+	    SetThingFlags(player, 0x80000);
+	    SetCameraFocus(2, camera);
+        SetCameraSecondaryFocus(2, camera_tgt0);
+        SetCurrentCamera(2);
+	    SetCameraFOV(70, 0, 0);
+	    ClearThingFlags(indy, 0x80000);
+	    PlayKey(lever, lever_down, 4, 0x12, 0);
+        PlaySoundThing(leverpull, lever, 1, 10, 20, 0);
+	    PlayKey(indy, in_pull, 4, 0x12, 1);
+	    SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0);
+	    SetThingFlags(indy, 0x80000);
+	    ClearThingFlags(player, 0x80000);
+        Sleep(1);
+        startchan=PlaySoundThing(gearplatstart, elevator, 1, 10, 20, 0);
+        WaitForSound(startchan);
+        keychan = PlayKey(elevator, elevanim, 2, 0x00, 0);
+        AISetMoveSpeed(elevator, 0.65);
+        AISetMoveFrame(elevator, 1);
+        AttachThingtoThing(elevator_cap, elevator);
+        //MoveToFrame(elevator_cap, 1, 2);
+        movechan=PlaySoundThing(gearplatmove, elevator_cap, 1, 10, 20, 1);
+        AIWaitForStop(elevator);
+        StopKey(elevator, keychan, 0.2);
+        StopSound(movechan, 0);
+        PlaySoundThing(gearplatstop, elevator, 1, 10, 20, 0);
+        pullcheck = 0;
+        wepnum=1;
+    }
+    
+    if ((GetCurItem(player) != 0) && (GetSenderID() == 1))
+    {
+        StopThing(player);
+        StartCutscene(0);
+        SetActorFlags(player, 0x200000);
+        currand = RandBetween(0, 5);
+        While (lastrand == currand)
+        {
+            currand = RandBetween(0, 5);
+        }
+        PlayVoice(player, indylineb0[currand], 1, 1);
+        lastrand = currand;
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }
+	return;
+
+end
+

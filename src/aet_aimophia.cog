@@ -1,0 +1,785 @@
+# Jones 3D Cog Script
+#
+# AET_AIMophia.cog
+#
+# AI enhancements for AET Mophia Boss
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+#	#####  COG Notes  #####
+#	The following functionality can be accessed with USER msgs sent to this COG
+#
+#	USER0 - Create Mophia.					param0 = Ghost THING used as position to be created at.
+#	USER1 - Put Mophia "into play."
+#	USER2 - Transform Mophia to next "smaller version."
+#	USER3 - Reset Mophia to a neutral state.
+#
+#
+# ===================================================================
+
+# ===================================================================
+symbols
+
+	message		user0
+	message		user1
+	message		user2
+	message		user3
+	message		entered
+	message		exited
+	message		damaged
+	message		timer
+	message		pulse
+	message		startup
+	message		aievent
+	message		arrivedwpnt
+
+# ************************** SUBROUTINES ***********************
+flex		BeginRestMode				local
+flex		FleeToRestPosition			local
+flex		EndRestMode					local
+flex		StartSwoopAttack			local
+flex		FinishSwoopAttack			local
+flex		TerminateSwoopAttack		local
+flex		AbortSwoopAttack			local
+flex		PrepForDeath				local
+
+# ************************** LINKED ITEMS **********************
+thing		t_ghostPos00							# Mophia home pos
+thing		t_ghostPos01							# Arena center pos
+thing		t_ghostPos02							# Platform 1
+thing		t_ghostPos03							# Platform 2
+thing		t_ghostPos04							# Platform 3
+thing		t_ghostPos05							# Lower Tier wpnt
+thing		t_ghostPos06
+thing		t_ghostPos07
+thing		t_ghostPos08
+thing		t_ghostPos09
+thing		t_ghostPos10
+thing		t_ghostPos11							# Middle Tier wpnt
+thing		t_ghostPos12
+thing		t_ghostPos13
+thing		t_ghostPos14
+thing		t_ghostPos15
+thing		t_ghostPos16
+thing		t_ghostPos17							# Upper Tier wpnt
+thing		t_ghostPos18
+thing		t_ghostPos19
+thing		t_ghostPos20
+thing		t_ghostPos21
+thing		t_ghostPos22
+thing		t_ghostPos23
+thing		t_ghostPos24
+thing		t_ghostPos25
+
+thing		plate_0									# Invisa plates
+thing		plate_1
+
+sector		sec_trig00
+sector		sec_trig01
+sector		sec_trig02
+sector		sec_trig03
+sector		sec_trig04
+
+# ************************** TEMPLATES *************************
+template	tpl_Boss=mophia				local
+template	tpl_Boss_med=mophia_med		local
+template	tpl_Boss_sml=mophia_sml		local
+template	tpl_Boss_xsml=mophia_xsml	local
+
+# ************************** AI VARS ***************************
+cog			cog_cinematic				local				# ref to COG who called us
+
+int			n_AICstmMode				local
+int			CMODE_SUFFERING=1			local
+int			CMODE_NEEDREST=2			local
+int			CMODE_BOMBATTACK=4			local
+int			CMODE_SWOOPATTACK=8			local
+int			CMODE_PERCH=16				local
+int			CMODE_HEAL=32				local
+int			CMODE_NORANGED=64			local
+int			CMODE_SWOOPFLIGHT=128		local
+
+int			n_minPulse					local
+int			n_activeLayer				local
+int			n_maxPulse					local
+
+int			b_rangedAttack				local
+int			n_totalShots				local
+int			n_maxShots					local
+
+int			TIMERID_REST=1				local
+int			TIMERID_SWOOP=2				local
+int			TIMERID_ABORTSWOOP=3		local
+
+flex		f_restTime					local
+flex		f_moveSize					local
+flex		f_dist						local
+int			num_WhipHits				local
+int			num_WhipDeath				local
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_boss						local
+thing		t_player					local
+sector		sec_boss					local
+
+int			n_MophiaSize				local
+int			snd_screech					local
+
+int			n_ID						local
+int			n_eventType					local
+int			n_param						local
+int			n_touchCount				local
+
+int			n_crntWpnt					local
+int			n_nextWpnt					local
+int			n_countWpnt=-1				local
+
+flex		f_val						local
+vector		vec_dir						local
+vector		vec_pos						local
+
+end
+
+
+# ===================================================================
+code
+
+# ...................................................................
+startup:
+
+	t_boss = -1;
+
+	return;
+
+
+# ...................................................................
+# Create Mophia at location-THING == GetParam(0)				[must be a valid GHOST THING]
+user0:
+
+	cog_cinematic		= GetSenderRef();						# Remember who called us
+	t_player			= GetLocalPlayerThing();				# Set constants
+
+	t_boss				= CreateThing(tpl_Boss, GetParam(0));
+
+	CaptureThing(t_boss);
+	AISetInstinctWpntMode(t_boss);
+	PlaySoundClass(t_boss, 123);								# play loop sound
+
+	ClearActorFlags(t_boss, 0x80000);
+	AISetCutsceneMode(t_boss);									# Put Boss into cutscene mode until further notice
+
+	ReturnEx(t_boss);											# return Boss THING index to caller
+
+	return;
+
+
+# ...................................................................
+# Put Mophia into play
+user1:
+
+#	DEBUGPRINT("aet_AIMophia:: Mophia in play");
+	AIClearCutsceneMode(t_boss);
+
+	#***  Get current Mophia size (USER4)  ***#
+	n_MophiaSize = SendmessageEx(GetThingClassCog(t_boss), USER4, 0, 0, 0, 0);
+
+	for ( n_param = 0; n_param < 23; n_param = n_param + 1 )
+	{
+		AISetWpnt(t_ghostPos00[n_param], n_param);
+	}
+
+	AIConnectWpnts(1, 2);							#---- Platform combat wpnts
+	AIConnectWpnts(1, 3);
+	AIConnectWpnts(1, 4);
+	for ( n_param = 1; n_param <= 4; n_param = n_param + 1 )
+	{
+		AISetWpntFlags(n_param, 0x2000);			# Set AIWPNT_LAYER1
+	}
+
+	AIConnectWpnts(5, 6);							#---- Outer floor wpnts
+	AIConnectWpnts(6, 7);
+	AIConnectWpnts(7, 8);
+	AIConnectWpnts(8, 9);
+	AIConnectWpnts(9, 10);
+	AIConnectWpnts(10, 5);
+	for ( n_param = 5; n_param <= 10; n_param = n_param + 1 )
+	{
+		AISetWpntFlags(n_param, 0x10000);			# Set AIWPNT_LAYER4
+		AISetWpntFlags(n_param, 0x20000);			# Set AIWPNT_LAYER5
+	}
+
+	AIConnectWpnts(11, 12);							#---- Inner floor wpnts
+	AIConnectWpnts(12, 13);
+	AIConnectWpnts(13, 14);
+	AIConnectWpnts(14, 15);
+	AIConnectWpnts(15, 16);
+	AIConnectWpnts(16, 11);
+	for ( n_param = 11; n_param <= 16; n_param = n_param + 1 )
+	{
+		AISetWpntFlags(n_param, 0x8000);			# Set AIWPNT_LAYER3
+		AISetWpntFlags(n_param, 0x20000);			# Set AIWPNT_LAYER5
+	}
+
+	AIConnectWpnts(10, 15);							# Connect inner and outer floor wpnts
+
+	AIConnectWpnts(17, 18);							#---- Upper Tier wpnts
+	AIConnectWpnts(18, 19);
+	AIConnectWpnts(19, 20);
+	AIConnectWpnts(20, 21);
+	AIConnectWpnts(21, 22);
+	AIConnectWpnts(22, 17);
+	for ( n_param = 17; n_param <= 22; n_param = n_param + 1 )
+	{
+		AISetWpntFlags(n_param, 0x4000);			# Set AIWPNT_LAYER2
+	}
+
+
+	PlaySoundClass(t_boss, 123);					# play loop sound
+
+	num_WhipHits  = 0;
+	f_restTime    = 4;
+
+	n_minPulse = 3;
+	n_maxPulse = 6;
+	SetPulse(RandBetween(n_minPulse, n_maxPulse));
+
+	if ( n_MophiaSize == 3 )
+	{
+		n_activeLayer = 0x4000;						# Initial patrol route is upper tier
+		AISetActiveWpntLayer(n_activeLayer);
+
+		#***  Start boss resting initially  ***#
+		call BeginRestMode;
+	}
+	else
+	{
+		n_activeLayer = 0x8000;						# Standard patrol route is inner floor area
+		AISetActiveWpntLayer(n_activeLayer);
+
+		#***  Otherwise, start boss moving  ***#
+		n_nextWpnt	= AIFindNearestWpnt(t_boss);
+		AITraverseWpnts(t_boss, n_nextWpnt, 1.5, 0, 1);
+	}
+
+	return;
+
+
+# ...................................................................
+# Transform Mophia
+user2:
+
+	#***  Get current Mophia size (USER4)  ***#
+	n_MophiaSize = SendmessageEx(GetThingClassCog(t_boss), USER4, 0, 0, 0, 0);
+
+	if ( n_MophiaSize == 0 )
+		return;
+
+	Reset();
+
+	KillTimerEx(TIMERID_REST);									# Common reset
+	KillTimerEx(TIMERID_SWOOP);
+	KillTimerEx(TIMERID_ABORTSWOOP);
+	SendMessage(GetThingClassCog(t_boss), USER2);
+
+	vec_pos = GetThingPos(t_boss);
+	vec_dir = GetThingLVecPYR(t_boss);
+	sec_boss= GetThingSector(t_boss);
+
+	ReleaseThing(t_boss);
+	DestroyThing(t_boss);										# Destroy current version
+
+	if( n_MophiaSize == 3 )
+	{
+		t_boss = CreateThingAtPos(tpl_Boss_med, sec_boss, vec_pos, vec_dir);
+	}
+	else if( n_MophiaSize == 2)
+	{
+		t_boss = CreateThingAtPos(tpl_Boss_sml, sec_boss, vec_pos, vec_dir);
+	}
+	else if( n_MophiaSize == 1 )
+	{
+		t_boss = CreateThingAtPos(tpl_Boss_xsml, sec_boss, vec_pos, vec_dir);
+	}
+
+	CaptureThing(t_boss);
+
+	AISetInstinctWpntMode(t_boss);
+	ReturnEx(t_boss);
+
+	return;
+
+
+# ...................................................................
+# Reset Mophia to neutral state
+user3:
+
+	Reset();
+
+# ...................................................................
+PrepForDeath:
+
+	KillTimerEx(TIMERID_REST);
+	KillTimerEx(TIMERID_SWOOP);
+	KillTimerEx(TIMERID_ABORTSWOOP);
+	SendMessage(GetThingClassCog(t_boss), USER3);						# Reset VFX and AI to neutral state
+
+	AIClearSubMode(t_boss, 0x8000);										# Clear SUBMODE_CONTINUOUSWPNTMOTION
+	StopThing(t_boss);
+
+	SetPulse(0);
+
+	return;
+
+
+# ...................................................................
+entered:
+
+	if ( t_boss == -1 )
+		return;
+
+	if ( GetSourceRef() == t_player )
+	{
+		#***  Get current Mophia size (USER4)  ***#
+		n_MophiaSize = SendmessageEx(GetThingClassCog(t_boss), USER4, 0, 0, 0, 0);
+
+		#***  Player entered floor area  ***#
+		if ( GetSenderRef() == sec_trig00 )
+		{
+#			DEBUGPRINT("aet_AIMophia:: Indy Entered arena floor sector");
+			#***  Enable bomb attack mode  ***#
+			SendMessageEx(GetThingClassCog(t_boss), USER0, 1, CMODE_BOMBATTACK, 0, 0);
+
+			#***  Activate inner floor route (LAYER3), default  ***#
+			n_activeLayer = 0x8000;
+			AISetActiveWpntLayer(n_activeLayer);					# Set LAYER3 active
+
+			#***  Activate inner floor route (LAYER5), if large  ***#
+			if ( n_MophiaSize==3 )
+			{
+				n_activeLayer = 0x20000;
+				AISetActiveWpntLayer(n_activeLayer);				# Set LAYER5 active
+			}
+		}
+
+		#***  Player entered combat arena  ***#
+		if ( (GetSenderRef() == sec_trig01) )
+		{
+			f_val = VectorZ( VectorSub(GetThingPos(t_player), GetThingPos(t_ghostPos00)) );
+			if ( (f_val < 1.5) || (n_MophiaSize==0) )
+			{
+				#***  Activate outer floor route (LAYER4)  ***#
+#				DEBUGPRINT("aet_AIMophia:: Indy entered arena sector near combat stage");
+				n_activeLayer = 0x10000;
+				AISetActiveWpntLayer(n_activeLayer);				# Set LAYER4 active
+
+				#***  Set no ranged weapon mode  ***#
+				SendMessageEx(GetThingClassCog(t_boss), USER0, 1, CMODE_NORANGED, 0, 0);
+			}
+			else
+			{
+				#***  Activate upper tier route (LAYER2)  ***#
+#				DEBUGPRINT("aet_AIMophia:: Indy entered arena sector near upper tier");
+				n_activeLayer = 0x4000;
+				AISetActiveWpntLayer(n_activeLayer);				# Set LAYER2 active
+			}
+		}
+	}
+	return;
+
+
+# ...................................................................
+exited:
+
+	if ( t_boss == -1 )
+		return;
+
+	if ( GetSourceRef() == t_player )
+	{
+		#***  Get current Mophia size (USER4)  ***#
+		n_MophiaSize = SendmessageEx(GetThingClassCog(t_boss), USER4, 0, 0, 0, 0);
+
+		if ( GetSenderRef() == sec_trig00 )
+		{
+#			DEBUGPRINT("aet_AIMophia:: Indy Exited arena floor sector");
+			#***  Clear bomb attack mode  ***#
+			SendMessageEx(GetThingClassCog(t_boss), USER0, 0, CMODE_BOMBATTACK, 0, 0);
+
+			#***  Clear final combat mode  ***#
+			SendMessageEx(GetThingClassCog(t_boss), USER0, 0, CMODE_NORANGED, 0, 0);
+
+			call FinishSwoopAttack;
+
+			#***  Activate inner floor route (LAYER3)  ***#
+			n_activeLayer = 0x8000;
+			AISetActiveWpntLayer(n_activeLayer);				# Set LAYER3 active
+		}
+
+		#***  Player exited combat arena  ***#
+		if ( (GetSenderRef() == sec_trig01) )
+		{
+#			DEBUGPRINT("aet_AIMophia:: Indy Exited arena sector");
+
+			#***  Clear no ranged weapon mode  ***#
+			SendMessageEx(GetThingClassCog(t_boss), USER0, 0, CMODE_NORANGED, 0, 0);
+		}
+	}
+	return;
+
+
+# ...................................................................
+aievent:
+
+	if ( GetSenderRef() != t_boss ) return;
+
+	#***  Retrieve current custom mode (USER1)  ***#
+	n_AICstmMode = SendMessageEx(GetThingClassCog(t_boss), USER1, 0, 0, 0, 0);
+
+	n_eventType	= GetParam(0);
+	n_param		= GetParam(2);								# Value depends on n_eventType
+
+	if ( n_eventType == 0x04 )								#---- EVENT_TOUCHED ----
+	{														#---- n_param == touched THING index
+		ReturnEx(1);
+		if ( BITTEST(n_AICstmMode, CMODE_SWOOPATTACK) )
+		{
+			if (n_param == t_player)
+			{
+				call FinishSwoopAttack;
+			}
+
+			n_touchCount = n_touchCount + 1;
+			if ( n_touchCount > 30 )
+			{
+#				DEBUGPRINT("aet_AIMophia:: Max touch count exceeded while SWOOPING");
+				call FinishSwoopAttack;
+			}
+		}
+	}
+	else if ( n_eventType == 0x200 )						#---- SITHAI_EVENTHITWALL ----
+	{
+		if ( BITTEST(n_AICstmMode, CMODE_SWOOPATTACK) )
+		{
+#			DEBUGPRINT("aet_AIMophia:: Hit wall while SWOOPING");
+			ReturnEx(1);
+			call FinishSwoopAttack;
+		}
+	}
+
+	return;
+
+
+# ...................................................................
+arrivedwpnt:
+
+	n_crntWpnt = GetParam(0);
+	n_nextWpnt = GetParam(1);
+
+	#***  Retrieve current custom mode  ***#
+	n_AICstmMode = SendMessageEx(GetThingClassCog(t_boss), USER1, 0, 0, 0, 0);
+
+	#***  Start Perching\Resting?  ***#
+	if ( (n_crntWpnt==2) || (n_crntWpnt==3) || (n_crntWpnt==4) )
+	{
+		if ( !BITTEST(n_AICstmMode, CMODE_NEEDREST) )
+			return;
+		if ( AIFindNearestWpnt(GetLocalPlayerThing()) == n_crntWpnt )
+			return;
+
+		AIStopFlee(t_boss);
+		StopThing(t_boss);
+
+		AISetLookThing(t_boss, t_ghostPos01);
+		AIWaitForStop(t_boss);
+
+		f_val	= CheckFloorDistance(t_boss);
+		vec_pos = GetThingPos(t_boss);
+		vec_pos = VectorSet(VectorX(vec_pos), VectorY(vec_pos), VectorZ(vec_pos) - f_val);
+		AISetMovePos(t_boss, vec_pos, 1);
+
+		SendMessageEx(GetThingClassCog(t_boss), USER0, 1, CMODE_PERCH, 0, 0);
+		SendMessageEx(GetThingClassCog(t_boss), USER0, 1, CMODE_HEAL, 0, 0);
+	}
+
+	return;
+
+
+# ...................................................................
+damaged:
+
+	if (GetSenderRef() != t_boss)
+		return;
+
+	if ( BITTEST(GetParam(1), 0x800) )								#---- SITH_DAMAGE_ELECTROWHIP
+	{
+		#***  Retrieve current custom mode  ***#
+		n_AICstmMode = SendMessageEx(GetThingClassCog(t_boss), USER1, 0, 0, 0, 0);
+
+		vec_pos = VectorSub('0 0 0', GetThingLVec(t_boss));
+		ApplyForce(t_boss, VectorScale(vec_pos, 250));						# Smack the boss a little
+
+		#***  Get current Mophia size (USER4)  ***#
+		n_MophiaSize = SendmessageEx(GetThingClassCog(t_boss), USER4, 0, 0, 0, 0);
+
+		#***  For xsml Mophia, take damage and consider death  ***#
+		if ( n_MophiaSize==0 )
+		{
+			num_WhipDeath	= 3 + GetDifficulty();
+			num_WhipHits	= num_WhipHits + 1;
+#   		DEBUGFLEX(num_WhipHits, "Num of whip hits =");
+			if ( num_WhipHits >= num_WhipDeath )
+			{
+				call TerminateSwoopAttack;
+				call PrepForDeath;
+
+#				DEBUGPRINT("aet_AIMophia:: Sending KILLED msg to cinematic cog");
+				SendMessageEx(cog_cinematic, KILLED, 0, 0, 0, 0);			# Notify cinematic COG of boss death
+
+				AISetCutsceneMode(t_boss);
+				t_boss = -1;
+
+				return;
+			}
+		}
+
+#		DEBUGFLEX(GetThingHealth(t_boss), "Mophia health =");
+		call TerminateSwoopAttack;
+		call BeginRestMode;
+	}
+
+	return;
+
+
+# ...................................................................
+timer:
+
+	if ( GetSenderID() == TIMERID_REST )
+	{
+#		DEBUGPRINT("aet_AIMophia:: Rest TIMER elapsed");
+		call EndRestMode;
+	}
+
+	if ( GetSenderID() == TIMERID_SWOOP )
+	{
+#		DEBUGPRINT("aet_AIMophia:: Max Swoop attack TIMER elapsed");
+		call FinishSwoopAttack;
+	}
+
+	if ( GetSenderID() == TIMERID_ABORTSWOOP )
+	{
+		call AbortSwoopAttack;
+	}
+
+	return;
+
+
+# ...................................................................
+pulse:
+
+	# Retrieve current custom mode
+	n_AICstmMode = SendMessageEx(GetThingClassCog(t_boss), USER1, 0, 0, 0, 0);
+
+	if ( BITTEST(n_AICstmMode, CMODE_SWOOPATTACK | CMODE_NEEDREST | CMODE_PERCH) )
+		return;
+
+	AISetMoveSpeed(t_boss, 1.2);
+
+	#***  If traversing waypoints, consider swoop attack  ***#
+	if ( BITTEST(AIGetMode(t_boss), 0x04000000) )
+	{
+		if ( !IsAITargetInSight(t_boss) )
+			return;
+		if ( IsModePlaying(t_boss, 65) || IsModePlaying(t_boss, 66) || IsModePlaying(t_boss, 67) )
+			return;
+
+		#***  If player not on combat stage, stop sometimes  ***#
+		if ( !BITTEST(n_AICstmMode, CMODE_NORANGED) )
+		{
+			if ( Rand() < 0.25 )
+			{
+				StopThing(t_boss);
+				AISetLookPos(t_boss, GetThingPos(t_player));
+				return;
+			}
+		}
+
+		#***  Get current Mophia size (USER4)  ***#
+		n_MophiaSize = SendmessageEx(GetThingClassCog(t_boss), USER4, 0, 0, 0, 0);
+		if ( n_MophiaSize==0 )
+		{
+			#***  If mophia xsml and player not on combat stage, dont swoop attack  ***#
+			f_val = VectorZ( VectorSub(GetThingPos(t_player), GetThingPos(t_ghostPos00)) );
+			if ( f_val > 1.5 )
+			{
+				return;
+			}
+		}
+
+		call StartSwoopAttack;
+	}
+
+	#***  Keep boss moving  ***#
+	n_nextWpnt	= AIFindNearestWpnt(t_boss);
+	AITraverseWpnts(t_boss, n_nextWpnt, 1.5, 0, 1);
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+BeginRestMode:
+
+#	DEBUGPRINT("aet_AIMophia:: Starting rest period");
+
+	SetPulse(0);
+	f_val = f_restTime;
+	SetTimerEx(f_val, TIMERID_REST, 0, 0);
+
+	SendMessageEx(GetThingClassCog(t_boss), USER0, 1, CMODE_NEEDREST, 0, 0);
+
+	return;
+
+# ...................................................................
+EndRestMode:
+
+#	DEBUGPRINT("aet_AIMophia:: Finishing rest period");
+
+	SendMessageEx(GetThingClassCog(t_boss), USER0, 0, CMODE_NEEDREST, 0, 0);
+	SetPulse(RandBetween(n_minPulse, n_maxPulse));
+
+	#***  Start boss moving  ***#
+	n_nextWpnt	= AIFindNearestWpnt(t_boss);
+	AITraverseWpnts(t_boss, n_nextWpnt, 1.5, 0, 1);
+
+	return;
+
+
+# ...................................................................
+StartSwoopAttack:
+
+	# Retrieve current custom mode
+	n_AICstmMode = SendMessageEx(GetThingClassCog(t_boss), USER1, 0, 0, 0, 0);
+
+	if ( BITTEST(n_AICstmMode, CMODE_NEEDREST | CMODE_BOMBATTACK | CMODE_SWOOPATTACK) )
+		return;
+
+#	DEBUGPRINT("aet_AIMophia:: Starting swoop attack");
+
+	SetTimerEx(15, TIMERID_SWOOP, 0, 0);
+	n_touchCount = 0;
+
+	Reset();
+	StopThing(t_boss);
+
+	AISetLookPos(t_boss, GetThingPos(t_player));
+	AIWaitForStop(t_boss);
+
+	SendMessageEx(GetThingClassCog(t_boss), USER0, 1, CMODE_SWOOPFLIGHT, 0, 0);
+	SendMessageEx(GetThingClassCog(t_boss), USER0, 1, CMODE_SWOOPATTACK, 0, 0);
+	f_moveSize = GetThingMoveSize(t_boss);
+
+	vec_dir	= VectorSub(GetThingPos(t_boss), GetThingPos(t_player));	# Calc a destination pos in front of player
+	vec_dir	= VectorSet( VectorX(vec_dir), VectorY(vec_dir), 0 );
+	vec_dir	= VectorNorm(vec_dir);
+	vec_dir = VectorScale(vec_dir, (1.2 * f_moveSize));
+
+	vec_pos = VectorSub(GetThingPos(t_player), GetThingInsertOffset(t_player));
+	vec_pos = VectorAdd(vec_pos, vec_dir);
+	vec_pos = VectorSet(VectorX(vec_pos), VectorY(vec_pos), VectorZ(vec_pos) + (3*f_moveSize/4));
+
+	#***  Get current Mophia size (USER4)  ***#
+	n_MophiaSize = SendmessageEx(GetThingClassCog(t_boss), USER4, 0, 0, 0, 0);
+	if ( n_MophiaSize <= 1 )
+	{
+		AISetMoveSpeed(t_boss, 2.5);
+	}
+	else
+	{
+		AISetMoveSpeed(t_boss, 4.0);
+	}
+
+	snd_screech = PlaySoundClass(t_boss, 124);								# play screech
+	Sleep(1.25);
+
+	#***  If Mophia has taken damage, consider aborting mid-flight  ***#
+	if ( num_WhipHits > 0 )
+	{
+		f_val = 0.25 + (num_WhipHits * 0.05);
+		if ( Rand() <= f_val )
+		{
+			f_dist = VectorLen( VectorSub(GetThingPos(t_player), GetThingPos(t_boss)) );
+#			DebugFlex(f_dist, "Attack dist to player =");
+			if ( f_dist > 0.85 )
+			{
+				SetTimerEx(0.8, TIMERID_ABORTSWOOP, 0, 0);
+			}
+			else
+			{
+				SetTimerEx(0.4, TIMERID_ABORTSWOOP, 0, 0);
+			}
+		}
+	}
+
+	AISetMovePos(t_boss, vec_pos, 1);
+
+#	DEBUGPRINT("aet_AIMophia:: Swoop goal reached");
+	#***  Allow code to continue into FinishSwoopAttack  ***#
+# ...................................................................
+FinishSwoopAttack:
+
+	Reset();
+
+	KillTimerEx(TIMERID_SWOOP);
+	KillTimerEx(TIMERID_ABORTSWOOP);
+	SendMessageEx(GetThingClassCog(t_boss), USER0, 0, CMODE_SWOOPFLIGHT, 0, 0);
+
+	StopThing(t_boss);
+	Sleep(0.5);
+
+	vec_pos	= VectorAdd( GetThingPos(t_boss), VectorTransformToOrient(t_boss, '0.0 -0.6 0.1') );
+	AISetMoveSpeed(t_boss, 0.32);
+	AISetMovePos(t_boss, vec_pos, 0);
+
+	SendMessageEx(GetThingClassCog(t_boss), USER0, 0, CMODE_SWOOPATTACK, 0, 0);
+
+	return;
+
+
+# ...................................................................
+TerminateSwoopAttack:
+
+	KillTimerEx(TIMERID_SWOOP);
+	KillTimerEx(TIMERID_ABORTSWOOP);
+	SendMessageEx(GetThingClassCog(t_boss), USER0, 0, CMODE_SWOOPFLIGHT, 0, 0);
+
+	vec_pos	= VectorAdd( GetThingPos(t_boss), VectorTransformToOrient(t_boss, '0.0 -0.6 0.1') );
+	AISetMoveSpeed(t_boss, 0.5);
+	AISetMovePos(t_boss, vec_pos, 0);
+
+	SendMessageEx(GetThingClassCog(t_boss), USER0, 0, CMODE_SWOOPATTACK, 0, 0);
+	PlayMode(t_boss, 75, 0);									# Play 'hit' anim manually
+
+	return;
+
+
+# ...................................................................
+AbortSwoopAttack:
+
+	KillTimerEx(TIMERID_SWOOP);
+	SendMessageEx(GetThingClassCog(t_boss), USER0, 0, CMODE_SWOOPFLIGHT, 0, 0);
+
+	vec_pos	= VectorAdd(GetThingPos(t_player), '0.0 0.0 0.4');
+	AISetMovePos(t_boss, vec_pos, 1);
+
+	SendMessageEx(GetThingClassCog(t_boss), USER0, 0, CMODE_SWOOPATTACK, 0, 0);
+
+	return;
+
+
+# ===================================================================
+end
+

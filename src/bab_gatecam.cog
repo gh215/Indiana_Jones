@@ -1,0 +1,201 @@
+# Jones 3D Cog Script
+#
+# bab_GateOpen.cog
+#
+# This cog will take the camera to a frame in front of the shark gate,watch
+# it move then jump back to the player.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+
+    thing		gate0			    
+    thing		gate1
+    thing       gatecam
+    thing       indycam
+    thing       player0                                 local
+    thing       actorindy                               
+    thing       lever                                   linkid=1
+                                                        
+    keyframe	in_pull=in_pull_lever_down.key	        local
+	keyframe	lever_down=gen_lever.key		        local
+    
+    sound       gatesqueal=fol_in_scrapemetal_med.wav   local
+    sound       leverpull=nub_lever_pull_c.wav          local
+    sound       leverback=nub_lever_reset_c.wav         local
+    sound       gatestop=tem_ldoorr_ldoorl_close_c.wav  local
+    		
+    flex        movespeed=1.0
+    flex        flag = 0				                local
+    int         hitit=0                                 local
+    int         gatechannel                             local
+    flex        opengate                                local
+    flex        closegate                               local
+    int         wepnum=1                                local
+    int         lastrand=-1                             local
+    int         currand=0                               local
+                                                        
+    sound       indylineb0=inxj058.wav                  local
+    sound       indylineb1=inxj059.wav                  local
+    sound       indylineb2=inxj060.wav                  local
+    sound       indylineb3=inxj061.wav                  local
+    sound       indylineb4=inxj090.wav                  local
+    sound       indylineb5=inxj095.wav                  local
+    
+end
+
+# ========================================================================================
+
+code
+startup:
+
+    player0 = GetLocalPlayerThing();
+    
+return;                                   
+    
+#........................................................................................
+
+activate:
+                       
+    if ((GetSenderRef() == lever) && (GetCurFrame(gate0) == 0) && (hitit == 0) && (GetCurItem(player0) == 0))
+    {
+        hitit = 1;
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player0);
+            DeselectWeaponWait(player0);
+            DeselectWeapon(player0);
+            //printint(wepnum);
+        }
+        call opengate;		
+    }
+    
+    else if ((GetSenderRef() == lever) && (GetCurFrame(gate0) == 1) && (hitit == 0) && (GetCurItem(player0) == 0))
+    {
+        hitit = 1;
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player0);
+            DeselectWeaponWait(player0);
+            DeselectWeapon(player0);
+            //printint(wepnum);
+        }
+        call closegate;
+    }
+    
+    if ((GetCurItem(player0) != 0) && (GetSenderID() == 1))
+    {
+        StopThing(player0);
+        StartCutscene(1);
+        SetActorFlags(player0, 0x200000);
+        currand = RandBetween(0, 5);
+        While (lastrand == currand)
+        {
+            currand = RandBetween(0, 5);
+        }
+        PlayVoice(player0, indylineb0[currand], 1, 1);
+        lastrand = currand;
+        EndCutscene();
+        ClearActorFlags(player0, 0x200000);
+    }
+            
+return;
+    
+#........................................................................................
+
+opengate:
+
+	SetActorFlags(player0, 0x200000);
+	StartCutScene(1);
+	SetThingFlags(player0, 0x80000);
+    SetCameraFocus(0, indycam);
+    SetCurrentCamera(0);
+    SetCameraFOV(90, 0, 0.0);
+    CopyPlayerHolsters(player0, actorindy);
+    ClearThingFlags(actorindy, 0x80000);
+    PlayKey(lever, lever_down, 4, 0x12, 0);
+    PlayKey(actorindy, in_pull, 4, 0x12, 0);
+    Sleep(0.85);
+    PlaySoundThing(leverpull, lever, 1, 5, 10, 0);
+    Sleep(1.5);
+    SetCameraFOV(90, 0, 0.0);
+    SetCameraFocus(0, gatecam);
+    SetCollideType(gate0, 0);
+    SetCollideType(gate1, 0);
+	Sleep(0.01);
+	SetCameraFOV(75, 1, 2.0);
+    MoveToFrame(gate0, 1, movespeed);
+    gatechannel = PlaySoundThing(gatesqueal, gate0, 1, 10, 20, 1);
+    MoveToFrame(gate1, 1, movespeed);
+    WaitForStop(gate1);
+    StopSound(gatechannel, 0);
+    PlaySoundThing(gatestop, gate0, 1, 10, 20, 0);
+    SetCollideType(gate0, 3);
+    SetCollideType(gate0, 3);
+    Sleep(1.0);
+    SetThingFlags(actorindy, 0x80000);
+    SetCameraFocus(1, player0);
+    SetCurrentCamera(1);
+    ResetCameraFOV(0, 0.0);
+    ClearThingFlags(player0, 0x80000);
+	EndCutScene();
+	ClearActorFlags(player0, 0x200000);
+    hitit = 0;  
+    wepnum = 1;
+    
+return;
+
+#........................................................................................
+
+closegate:
+
+    SetActorFlags(player0, 0x200000);
+	StartCutScene(1);
+	SetThingFlags(player0, 0x80000);
+    SetCameraFocus(0, indycam);
+    SetCameraFOV(90, 0, 0.0);
+    SetCurrentCamera(0);
+    SetCameraFOV(90, 0, 0.0);
+    ClearThingFlags(actorindy, 0x80000);
+    PlayKey(lever, lever_down, 4, 0x12, 0);
+    PlayKey(actorindy, in_pull, 4, 0x12, 0);
+    Sleep(0.7);
+    PlaySoundThing(leverpull, lever, 1, 5, 10, 0);
+    Sleep(1.5);
+    SetCameraFOV(90, 0, 0.0);
+    SetCameraFocus(0, gatecam);
+    SetCurrentCamera(0);
+    SetCollideType(gate0, 0);
+    SetCollideType(gate1, 0);
+    MoveToFrame(gate0, 0, movespeed);
+    gatechannel = PlaySoundThing(gatesqueal, gate0, 1, 10, 20, 1);
+    MoveToFrame(gate1, 0, movespeed);
+    WaitForStop(gate1);
+    StopSound(gatechannel, 0);
+    PlaySoundThing(gatestop, gate0, 1, 10, 20, 0);
+    SetCollideType(gate0, 3);
+    SetCollideType(gate1, 3);
+    Sleep(1.0);
+    SetThingFlags(actorindy, 0x80000);
+    SetCameraFocus(1, player0);
+    SetCurrentCamera(1);
+    ResetCameraFOV(0, 0.0);
+    ClearThingFlags(player0, 0x80000);
+	EndCutScene();
+	ClearActorFlags(player0, 0x200000);
+    hitit = 0;
+    wepnum = 1;
+    
+return;    
+    
+#........................................................................................
+					
+end
+
+

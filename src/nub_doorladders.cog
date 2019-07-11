@@ -1,0 +1,155 @@
+# Jones 3D Cog Script
+#
+# nub_DoorLadders.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	startup
+message	activated
+message	arrived
+message	entered
+
+thing	door0  
+thing	ladder0
+thing	ladder1
+thing	dbutton0
+thing	lbutton0
+thing	lbutton1
+thing	robo0
+thing	robo1
+thing	robo2
+
+sector	awake0
+sector	awake1
+sector	awake2
+
+surface	climbable0
+surface	climbable1
+
+thing	player			local
+
+int		done0=0			local
+int		done1=0			local
+int		done2=0			local
+int		doordone=0		local
+int		ladder0done=0	local
+int		ladder1done=0	local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+AISetMode(robo0, 0x2000);
+AISetMode(robo1, 0x2000);
+AISetMode(robo2, 0x2000);
+
+return;
+
+# ........................................................................................
+activated:
+
+if (IsThingMoving(door0)) return;
+if (IsThingMoving(ladder0))	return;
+if (IsThingMoving(ladder1))	return;
+
+if (GetSenderRef() == dbutton0)
+	{
+	if (doordone == 1) return;
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	MoveToFrame(dbutton0, 1, 1.0);
+	PlayMode(player, 60, 1);
+	MoveToFrame(door0, 1, 1.0);
+	ClearActorFlags(player, 0x200000);
+	doordone=1;
+	}
+if (GetSenderRef() == lbutton0)
+	{
+	if (ladder0done == 1) return;
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	PlayMode(player, 60, 0);
+	MoveToFrame(lbutton0, 1, 1.0);
+	MoveToFrame(ladder0, 1, 1.0);
+	ladder0done=1;
+	}
+if (GetSenderRef() == lbutton1)
+	{
+	if (ladder1done == 1) return;
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	PlayMode(player, 60, 0);
+	MoveToFrame(lbutton1, 1, 1.0);
+	MoveToFrame(ladder1, 1, 1.0);
+	ladder1done=1;
+	}
+
+return;
+
+# ........................................................................................
+arrived:
+
+if ((GetSenderRef() == dbutton0) && (GetCurFrame(dbutton0) == 1))
+	{
+	MoveToFrame(dbutton0, 0, 1.0);
+	}
+if ((GetSenderRef() == lbutton0) && (GetCurFrame(lbutton0) == 1))
+	{
+	MoveToFrame(lbutton0, 0, 1.0);
+	}
+if ((GetSenderRef() == lbutton1) && (GetCurFrame(lbutton1) == 1))
+	{
+	MoveToFrame(lbutton1, 0, 1.0);
+	}
+if (GetSenderRef() == ladder0)
+	{
+	SetAdjoinFlags(climbable0, 0x0010);
+	ClearActorFlags(player, 0x200000);
+	print("Climbable");
+	}
+if (GetSenderRef() == ladder1)
+	{
+	SetAdjoinFlags(climbable1, 0x0010);
+	ClearActorFlags(player, 0x200000);
+	print("Climbable");
+	}
+
+return;
+
+# ........................................................................................
+entered:
+
+if (GetSenderRef() == awake0)
+	{
+	if (done0 == 1) return;
+	AIClearMode(robo0, 0x2000);
+	done0=1;
+	}
+if (GetSenderRef() == awake1)
+	{
+	if (done1 == 1) return;
+	AIClearMode(robo1, 0x2000);
+	done1=1;
+	}
+if (GetSenderRef() == awake2)
+	{
+	if (done2 == 1) return;
+	AIClearMode(robo2, 0x2000);
+	done2=1;
+	}
+
+return;
+
+# ........................................................................................
+end
+

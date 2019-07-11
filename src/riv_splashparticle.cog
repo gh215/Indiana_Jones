@@ -1,0 +1,72 @@
+# Jones 3D Cog Script
+#
+# RIV_SplashParticle.cog
+#
+# gimme a particle with that splash there, Guido...
+#
+# [TRM] && [PAZ] && [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#========================================================================================
+
+symbols
+	
+    message         startup
+	message			sighted
+	message			pulse 		
+
+	thing			spriteThing     local
+	thing			player          local
+	
+    template		splashA=spritlemist		local
+    
+    flex			pulsetime       local
+    
+end
+
+#========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;  
+
+#========================================================================================
+
+sighted:
+
+	#Print("sighted: creating splash");
+    spriteThing = GetSenderRef();
+
+	#SetThingPulse(spriteThing, 2.0);
+	
+	return;
+		
+#========================================================================================
+
+pulse:
+
+    spriteThing = GetSenderRef();
+
+	CreateThing(splashA, spriteThing);
+    
+	if(HasLOS(player, spriteThing) == 1)
+    {
+        pulseTime = RandBetween(1, 2);
+        SetThingPulse(spriteThing, pulsetime);
+    }
+		
+	else
+    {
+        Print("splash off");
+        SetThingPulse(spriteThing, 0);
+    }
+		
+	return;
+	
+#========================================================================================
+	
+end
+

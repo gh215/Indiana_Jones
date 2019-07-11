@@ -1,0 +1,425 @@
+# Jones 3D Cog Script
+#
+# pyr_openingcutscene.cog
+#
+# CutScene of Indy arriving at level start.
+#
+# [RKD] && [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+symbols
+
+message	startup
+message	user0
+message	entered
+
+#animations
+keyframe	tocrossarms=0in_stand1_bd_2.key		local
+keyframe	crossarms=0in_stand2.key   			local
+keyframe	handsonhips=0in_stand4.key 			local
+keyframe	tohandsonhips=0in_stand1_bd_4.key 	local
+keyframe	getOut=ij_getup.key					local
+
+#template    actortpl=indy_sh_actor			local
+template	jeepActorTpl=jeep_actor_pyr	local
+
+#jeep action surfaces
+surface	jeep2trigger			mask=0x004	#mask lets surface know to look for an actor
+surface	speed2		linkid=2	mask=0x004
+surface	speed1		linkid=1	mask=0x004
+surface	lastFace				mask=0x004
+
+# jeep materials
+material	topMat=pyr_jeep_top.mat		local
+material	botMat=pyr_jeep_bbmp.mat	local
+
+# adjoins to fiddle with
+surface	desertedge	nolink
+
+# world items
+thing	sign		nolink
+thing	jeep		nolink
+thing	jeep2		nolink
+thing	fadeplate	nolink
+thing	player		local
+thing	finalJeep
+thing	scorpion	nolink
+#thing	sun			nolink
+
+# world items to hide
+thing 	block1		nolink
+thing	block2		nolink
+thing	block3		nolink
+thing	sign2 		nolink
+thing	hyena1		nolink
+thing	hyena2		nolink
+thing	hyena3		nolink
+surface	mono4trigger	nolink
+
+# various actor-y items
+thing	jeepActor	local
+thing	indyactor
+
+# actor marks
+thing	signmark
+thing	meroemark
+
+# actor lookthings
+thing	farlook
+thing	signindylook
+
+# cameras
+thing	startcam
+thing	arrivecam
+thing	signcam
+
+# camera lookthings
+thing	startcamlook
+thing	arrivecamlook
+thing	signcamlook
+
+# saylines
+sound	meroe=pr01j01a.wav	local
+sound	mines=pr04j01.wav	local
+sound	wishful=pr04j02.wav	local
+
+# non-sayline sounds
+sound	jeepstop=jep_engine_off.wav		local
+sound	passby=pyr_jeep_passby.wav		local
+
+# music
+sound	intro=mus_pyr_intro.wav	local
+
+# cogs
+cog		hidepitthings
+
+# variables
+int		curchannel=0	local
+int		curtrack=0		local
+int		cursound=0		local
+
+int		bSeen=0			local
+int		alldone=0		local
+
+# subroutine
+flex	endscene=0.0	local
+end
+
+# ========================================================================================
+code
+
+# =======================================================================
+# LIST OF GLOBAL VARIABLES USED THROUGHOUT MEROE						#
+#	1: (may be used by a random number generator)						#
+#	2: 1 if Indy is in jeep, 0 if he isn't								#
+#	3: Status of the Nubian Kid											#
+#			0 = not met													#
+#			1 = met in cave, not at cliff								#
+#			2 = met at cliff											#
+#			3 = got watch and gone										#
+#			4 = in mid-cutscene											#
+#	4: number of lightboxes raised										#
+#	5: number of light sentries (monojackals) raised					#
+#	6: number of bars removed from the door								#
+#	7: number of sign readings											#
+#	8: number of hyenas killed											#
+#	9: number of lightroom heiratics read								#
+#	10:	(not used)														#
+#	11:	1 if indy is in the interior, 0 if in the exterior dunes		#
+#	12: number of minedoor activations (info used by Solomon's mines)	#
+#	13:	(not used, bad luck)											#
+#	14:	(not used)														#
+#	15: Hal's "random" sayline control										#
+# =======================================================================
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	# Start on black...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, startcam);
+	SetCameraSecondaryFocus(2, startcamlook);
+	SetCurrentCamera(2);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+	player = GetLocalPlayerThing();
+
+	# set up initial camera and fade in
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, startcam);
+	SetCameraSecondaryFocus(2, startcamlook);
+	SetCurrentCamera(2);
+
+    # hide stuff, mainly to prevent immediate texture cache-in
+	SetThingFlags(block1, 0x10);
+	SetThingFlags(block2, 0x10);
+	SetThingFlags(block3, 0x10);
+	SetThingFlags(sign, 0x10);
+	SetThingFlags(sign2, 0x10);
+	SetThingFlags(hyena1, 0x10);
+	SetThingFlags(hyena2, 0x10);
+	SetThingFlags(hyena3, 0x10);
+
+    # hide monojackal 4 and parts under no-see
+	ClearAdjoinFlags(mono4trigger, 0x1);
+	SetFaceGeoMode(mono4trigger, 4);
+
+	SetActorFlags(player, 0x200000);
+	SendMessage(hidepitthings, user2);
+	AISetCutsceneMode(scorpion);
+	SetAdjoinFlags(desertedge, 0x1);	
+	StartCutscene(2);
+
+	AISetMoveSpeed(scorpion, .5);
+	AISetMoveFrame(scorpion, 1);
+	
+	CopyPlayerHolsters(player, jeep);
+	SetThingThrust(jeep, '0.0 3.0 0.0');
+	
+	# make sure jeep has gas can
+	SendMessageEx(GetThingClassCog(jeep), user1, jeep, 0, 0, 0);
+	
+	sleep(.5);
+	ThingFadeAnim(fadeplate, 1.0, 0.0, 2.0, 0);	
+	PlaySoundLocal(passby, 1, 0, 0, 0);
+	Sleep(2.2);
+	SetThingFlags(fadeplate, 0x10);
+	
+	# sleep for 0.01 to generate a frame
+	Sleep(0.01);
+	
+	# now proceed to other stuff...	
+	SetThingFlags(player, 0x80000);	
+	SetThingFlags(jeep2, 0x80000);
+	SetThingFlags(finalJeep, 0x80000);
+
+	# RT: Set up jeep materials
+	SetMaterialCel(topMat, 1);
+	SetMaterialCel(botMat, 1);
+	
+	# get things moving
+	PlaySoundLocal(intro, 1, 0, 0, 0);
+	Sleep(1);
+	MoveToFrame(startcam, 1, 3);
+	MoveToFrame(startcamlook, 1, 2.2);
+	sleep(.5);
+	MoveToFrame(startcam, 1, 2);
+	sleep(.4);
+	
+	# turn shadow off on jeep
+	ClearThingFlags(jeep, 0x4000);
+	
+	WaitForStop(startcam);
+	MoveToFrame(startcamlook, 2, 2);
+
+	return;
+
+# .................................................................................
+entered:
+# ---> 2nd jeep face, last jeep face, slowdown1, slowdown2
+
+	if (GetSourceRef() == scorpion) return;
+	
+	# further insurance against the repeating cutscene bug
+	if (alldone) return;
+
+	if ((GetSourceRef() != jeep) && (GetSourceRef() != jeep2)) return;
+	
+	if (GetSenderRef() == speed1)
+	{
+		SetThingThrust(jeep2, '0 1 0');
+	}
+	
+	if (GetSenderID() == 2)
+	{
+		SetThingThrust(jeep2, '0 2 0');
+	}
+	
+	if (GetSenderRef() == speed2)
+	{
+		# make blocks visible when closer
+		ClearThingFlags(block1, 0x10);
+		ClearThingFlags(block2, 0x10);
+		ClearThingFlags(block3, 0x10);
+		ClearThingFlags(sign, 0x10);
+		ClearThingFlags(sign2, 0x10);
+		
+		# jump to camera near blocks
+		SetCameraFocus(2, arrivecam);
+		SetCameraSecondaryFocus(2, jeep2);
+	
+		# turn off adjoin to entry sectors
+		ClearAdjoinFlags(desertedge, 0x1);	
+	}
+	
+	if (GetSenderRef() == jeep2trigger)
+	{
+		# let the jeep get over the cliff
+		sleep(1);
+
+		#stop the 1st jeep
+		StopThing(jeep);
+		SetThingFlags(jeep, 0x80000);
+		sleep(.5);
+		
+		#initiate the 2nd jeep
+		ClearThingFlags(jeep2, 0x80000);
+		CopyPlayerHolsters(player, jeep2);
+		
+		# make sure new jeep has gas can
+		SendMessageEx(GetThingClassCog(jeep2), user1, jeep2, 0, 0, 0);
+		
+		SetThingThrust(jeep2, '0 3 0');
+		DestroyThing(jeep);
+	}
+	else if (GetSenderRef() == lastface)
+	{
+		# reveal the roaming hyenas
+		ClearThingFlags(hyena1, 0x10);
+		ClearThingFlags(hyena2, 0x10);
+		ClearThingFlags(hyena3, 0x10);
+		
+		# stop the 2nd jeep
+		StopThing(jeep2);
+		CopyOrientAndPos(jeep2, arrivecamlook);
+		Sleep(.25);
+		
+		# create another jeep at the right spot
+		jeepActor = CreateThing(jeepActortpl, jeep2);
+		SetCameraSecondaryFocus(2, jeepActor);
+
+		# copy info over, add gas can, and destroy old jeep
+		CopyPlayerHolsters(player, jeepActor);
+		CopyOrientandPos(Jeep2, jeepActor);
+		PlaySoundThing(jeepstop, jeep2, 1, -1, -1, 0);
+		DestroyThing(jeep2);
+		
+		# indy gets out of jeep
+		ClearThingFlags(jeepActor, 0x80000);
+		SendMessageEx(GetThingClassCog(jeepActor), user1, jeep, 0, 0, 0);
+		PlayKey(jeepActor, getOut, 4, 0x12, 1);
+
+		# switch between actor jeep and driveable jeep + indyactor
+		CopyOrientAndPos(jeepActor, finalJeep);
+		SetThingFlags(jeepActor, 0x80000);
+		ClearThingFlags(finalJeep, 0x80000);
+		CopyPlayerHolsters(player, indyActor);
+		ClearThingFlags(indyActor, 0x80000);
+
+		# change camera
+		SetCameraSecondaryFocus(2, arrivecamlook);
+		
+		# indy turns to face the level
+		AISetMoveSpeed(indyactor, 1.0);
+		SetThingMaxRotVel(indyactor, 180);
+		AISetLookThingEyeLevel(indyActor, farlook);
+		AIWaitForStop(indyactor);
+
+		#indy starts talking
+		curchannel = PlayVoice(indyactor, meroe, 1, 0);
+		sleep(2);
+		
+		# indy walks a bit, camera follows
+		AISetLookThingEyeLevel(indyactor, meroemark);
+		AIWaitForStop(indyactor);
+		AISetMoveThing(indyactor, meroemark, 0);
+		MoveToFrame(arrivecam, 1, .5);
+		MoveThingToPos(arrivecamlook, GetThingPos(meroemark), 2);
+		AIWaitForStop(indyactor);
+		AISetLookThing(indyactor, farlook);
+		AIWaitForStop(indyactor);
+		AttachThingToThing(signcamlook, indyactor);
+
+		# a few histrionics
+		curtrack = PlayKey(indyactor, tohandsonhips, 4, 0x12, 1);
+		curtrack = PlayKey(indyactor, handsonhips, 4, 0x14, 0);
+		WaitForSound(curchannel);
+		StopKey(indyactor, curtrack, 0.25);
+
+		Sleep(.75);
+		
+		#indy walks to the sign
+		AISetLookThing(indyactor, sign);
+		AIWaitForStop(indyactor);
+		AISetMoveSpeed(indyactor, 1);
+		AISetMoveThing(indyactor, signmark, 0);
+		curchannel = PlayVoice(indyactor, mines, 1, 0);
+		
+		sleep(.75);
+		SetCameraLookInterp(2, 0);
+		SetCameraFocus(2, signcam);
+		SetCameraSecondaryFocus(2, signcamlook);
+		
+		AIWaitForStop(indyactor);
+		AISetLookThing(indyactor, signindylook);
+
+		#line ends, indy crosses his arms and gets doubtful
+		WaitForSound(curchannel);
+		curtrack = PlayKey(indyactor, tocrossarms, 4, 0x12, 1);
+		curtrack = PlayKey(indyactor, crossarms, 4, 0x14, 0);
+		curchannel = PlayVoice(indyactor, wishful, 1, 1);
+		
+		StopKey(indyactor, curtrack, 0.25);
+		AISetLookThing(indyActor, startcamlook);
+		AIWaitForStop(indyactor);
+//		AISetLookThing(indyActor, farlook);
+//		AIWaitForStop(indyactor);
+
+		sleep(.5);
+
+		call endscene;
+	}
+
+	return;
+
+endscene:
+	# replace player, etc.
+	CopyOrientAndPos(indyactor, player);
+	SetThingFlags(indyactor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	SetCameraPosition(1, GetThingPos(signcam));
+	SetCurrentCamera(1);
+
+	# set monojackal4 stuff to normal
+	SetAdjoinFlags(mono4trigger, 0x1);
+	SetFaceGeoMode(mono4trigger, 0);
+
+	# clean up a few things
+	DestroyThing(fadeplate);
+	DestroyThing(jeepActor);
+	DestroyThing(indyactor);
+	DestroyThing(signmark);
+	DestroyThing(meroemark);
+	DestroyThing(farlook);
+	DestroyThing(signindylook);
+	DestroyThing(startcam);
+	DestroyThing(arrivecam);
+	DestroyThing(signcam);
+	DestroyThing(startcamlook);
+	DestroyThing(arrivecamlook);
+	DestroyThing(signcamlook);
+	
+	EndCutscene();
+
+	sleep(1);
+
+	alldone = 1;
+	return;
+	
+end
+

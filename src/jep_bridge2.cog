@@ -1,0 +1,104 @@
+# Jones 3D Cog Script
+#
+#	jep_bridge2.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	startup
+message	entered	
+message	activate
+
+template	plank
+thing		plankpos
+thing		indyactor
+thing		campos
+thing		invisostop
+surface	bridge
+surface	bustedramp
+int		solved=0					local
+thing		player					local
+keyframe	in_place=in_reach_low.key		local
+cog		hintscog
+sound		placeit=jep_woodpart_place.wav	local
+int		curcam					local
+thing		staticjeep			# link to jeep at encampment.
+Sound		jeep_in_way=inxj034.wav		local # unhh, there's no room...
+
+end
+
+# ===================================================================
+
+code
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+activate:
+	if(GetSenderRef() != bustedramp) return;
+	if (GetCurItem(player) == 109)				#Plank.
+	{
+	if (VectorDist(GetThingPos(staticjeep), GetThingPos(indyactor)) < .15)
+	{
+		MakeMeStop();
+		StartCutscene(0);
+		PlayVoice(player, jeep_in_way, 1.0, 1);
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+		return;
+	}
+	curcam = GetCurrentCamera();
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutscene(1);
+	CopyPlayerHolsters(player, indyactor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyactor, 0x80000);
+	SetCameraLookInterp(2, 0);			# turns off interp to lookthing.
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, indyactor);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0);				# makes sure set to default.
+	PlayKey(indyactor, in_place, 4, 0x12, 0);
+	sleep(1.0);
+	PlaySoundLocal(placeit, 1.0, 0.0, 0x0, 0);
+	CreateThing(plank, plankpos);
+	ChangeInv(player, 109, -1);
+	solved=1;
+	DestroyThing(invisostop);
+	sleep(1.0);
+	CopyOrientAndPos(indyactor, player);
+	SendMessage(hintscog, user0);
+	SetCurrentCamera(curcam);
+	SetThingFlags(indyactor, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	EndCutscene();
+	}
+	return;
+
+entered:
+	if((solved == 1) || (global2 == 0))  return;
+	if(getsenderref() == bridge)
+	{
+	print ("tried busted ramp");
+	StopThing(GetLocalPlayerThing());
+	SetThingThrust(GetLocalPlayerThing(), '0.0 -1.5 0.0');
+	sleep(1.0);
+	StopThing(GetLocalPlayerThing());
+	}
+	return;
+
+end
+
+
+
+
+
+
+

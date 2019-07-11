@@ -1,0 +1,302 @@
+# Jones 3D Cog Script
+#
+# actor_RobotBoss.cog
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		created
+message		aievent
+message		timer
+message		damaged
+message		callback
+
+# ************************** TEMPLATES *************************
+template	tpl_PrimaryWeapon=+robohit_lg		local
+template	tpl_AltWeapon=+robohit_lasr			local
+template	tpl_Statue=robodead					local
+
+template	tpl_arcs=rbossElecArc				local
+template	tpl_sparks0=rbossSparks				local
+template	tpl_sparks1=rbossFntnMD				local
+template	tpl_sparks2=lbossSparksMD			local
+
+template	tpl_explode=+lava_guy_fire			local
+template	tpl_smoke=+lava_guy_smoke			local
+
+material	mat_glow=nub_a4sfx_rboss_hit.mat	local
+
+# ************************** WEAPON HANDLERS *******************
+vector		vec_primaryOffset				local
+vector		vec_AltOffset					local
+
+# ************************** SPECIAL FX ************************
+int			n_joint00						local
+int			n_joint01						local
+int			n_joint02						local
+int			n_joint03						local
+int			n_joint04						local
+int			n_joint05						local
+int			n_joint06						local
+int			n_joint07						local
+int			n_joint08						local
+int			n_joint09						local
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_boss							local
+thing		t_player						local
+flex		f_scale							local
+
+int			TIMERID_HANDSPARKS=1			local
+
+int			n_eventType						local
+int			n_crntAIMode					local
+int			n_param							local
+
+int			n_sndFootMove=-1				local
+
+int			n_idx							local
+int			n_numSparks						local
+flex		f_sleepTime						local
+flex		f_val							local
+
+vector		vec_pos							local
+
+end
+
+# ===================================================================
+code
+
+# ...................................................................
+startup:
+
+	MaterialAnim(mat_glow, 12, 1);
+
+	return;
+
+
+# ...................................................................
+created:
+
+	t_player			= GetLocalPlayerThing();
+	t_boss				= GetSenderRef();
+
+	vec_altOffset		= VectorSet(0.0, 0.19, 0.15);
+#	vec_primaryOffset	= VectorSet(0.0, 0.20, 0.0);
+	SetThingFireoffset(t_boss, '0 0 0');
+
+	AISetMode(t_boss, 0x2000000);							# Set MODE_NOCHASING
+	AISetSubMode(t_boss, 0x80040);							# Set SUBMODE_(SLOWMODEFADE|FIREADDEYEOFFSET)
+	AISetSubMode(t_boss, 0x1000000);						# Set SUBMODE_SPECIALTURNS
+
+	SetThingMoveSize(t_boss, 0.18);
+	AISetInstinctWpntMode(t_boss);
+
+	SetPuppetModeFPS(t_boss, 0, 40, 15);					# Slow down '180 turn' anim
+	SetPuppetModeFPS(t_boss, 0, 75, 20);					# Slow down 'hit' anim
+
+	n_joint00 = GetNodeByName(t_boss, "rbeye");
+
+	n_joint01 = GetNodeByName(t_boss, "rblshdr");
+	n_joint02 = GetNodeByName(t_boss, "rblarm");
+	n_joint03 = GetNodeByName(t_boss, "rblwrist");
+
+	n_joint04 = GetNodeByName(t_boss, "rbrshdr");
+	n_joint05 = GetNodeByName(t_boss, "rbrarm");
+	n_joint06 = GetNodeByName(t_boss, "rbrwrist");
+
+	n_joint07 = GetNodeByName(t_boss, "rbhip");
+	n_joint08 = GetNodeByName(t_boss, "rblleg");
+	n_joint09 = GetNodeByName(t_boss, "rbrleg");
+
+	return;
+
+
+# ...................................................................
+aievent:
+
+	t_boss		= GetSenderRef();
+	n_eventType	= GetParam(0);
+	n_param		= GetParam(2);								# Value depends on n_eventType
+
+	if ( n_eventType == 0x100 )								#---- SITHAI_EVENTMODECHANGED
+	{
+		n_crntAIMode = GetParam(1);
+		if ( BITTEST(n_crntAIMode, 0x01) && !BITTEST(n_param, 0x01) )		# Started moving?
+		{
+			vec_pos = AIGetMovePos(t_boss);
+			vec_pos = VectorSub(vec_pos, GetThingPos(t_boss));
+			if ( VectorLen(vec_pos) > 0.15 )
+			{
+				n_sndFootMove = PlaySoundClass(t_boss, 3);					# play 'startmove'
+			}
+		}
+	}
+	else if ( BITTEST(n_eventType, 0x80800 ) )				#---- EVENT_GOAL(UNREACHABLE|REACHED)
+	{
+		if ( n_sndFootMove > -1 )
+		{
+			StopSound(n_sndFootMove, 0.2);
+			n_sndFootMove = -1;
+		}
+	}
+	else if ( n_eventType == 0x10000 )						#---- EVENT_PREFIRE
+	{
+		if ( BITTEST(n_param, 0x0020) )							# SITHAIUTIL_FIRE_ALT
+		{
+			SetActorWeapon(t_boss, tpl_AltWeapon);				# Swap to alternate weapon
+			SetThingFireoffset(t_boss, vec_altOffset);
+		}
+	}
+	else if ( n_eventType == 0x4000 )						#---- EVENT_FIRE
+	{
+		if ( IsModePlaying(t_boss, 65) )
+		{
+			SetTimerEx(0.3, TIMERID_HANDSPARKS, 6, 0);
+		}
+	}
+	else if ( n_eventType == 0x20000 )						#---- EVENT_POSTFIRE
+	{
+		SetActorWeapon(t_boss, tpl_primaryWeapon);				# reset primary weapon
+		SetThingFireoffset(t_boss, '0 0 0');
+	}
+
+	return;
+
+
+# ...................................................................
+timer:
+
+	n_param = GetParam(0) - 1;
+
+	if ( GetSenderID() == TIMERID_HANDSPARKS )
+	{
+		if ( Rand() > 0.5 )
+		{
+			vec_pos = GetThingJointPos(t_boss, n_joint06);
+			CreateThingAtPos(tpl_sparks0, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+		}
+		else
+		{
+			vec_pos = GetThingJointPos(t_boss, n_joint03);
+			CreateThingAtPos(tpl_sparks0, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+		}
+
+		if ( n_param > 0 )
+		{
+			SetTimerEx(0.15, TIMERID_HANDSPARKS, n_param, 0);
+		}
+	}
+
+	return;
+
+
+# ...................................................................
+damaged:
+
+	n_param = GetParam(1);
+	if (n_param != 0x100000)								#---- If not SITH_DAMAGE_LIGHTNING, clear damage
+	{
+		if ( BITTEST(n_param, 0x01) )							# DAMAGE_IMPACT?
+		{
+			PlaySoundClass(t_boss, 85);							# Play ricochet sound
+		}
+
+		ReturnEx(0);											# Reduce damage to Nil
+		return;
+	}
+
+	if ( GetThingHealth(t_boss)-GetParam(0) <= 0 )			#---- Death!!  Make lots of sparks
+	{
+		n_numSparks = 24;
+		f_sleepTime = 0.2;
+	}
+	else													#---- Ouch!  Make some sparks
+	{
+		n_numSparks = 6;
+		f_sleepTime = 0.4;
+	}
+	for ( n_idx=0; n_idx < n_numSparks; n_idx = n_idx + 1 )
+	{
+		vec_pos = GetThingJointPos(t_boss, n_joint00[RandBetween(0, 9)]);
+		CreateThingAtPos(tpl_sparks1, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+
+		vec_pos = GetThingJointPos(t_boss, n_joint00[RandBetween(0, 9)]);
+		CreateThingAtPos(tpl_sparks1, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+		CreateThingAtPos(tpl_arcs, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+
+		PlaySoundClass(t_boss, 89);								# Play 'hitdamaged' sound
+
+		Sleep(f_sleepTime);
+	}
+
+	return;
+
+
+# ...................................................................
+callback:
+
+	t_boss	 = GetSenderRef();
+	t_player = GetLocalPlayerThing();
+    n_param  = GetParam(1);
+
+	if (n_param == 16)										#---- Death anim callback
+	{
+		Reset();
+
+ 		vec_pos = GetThingJointPos(t_boss, n_joint00);
+		vec_pos = VectorAdd(vec_pos, VectorTransformToOrient(t_boss, '0.0 0.08 -0.05'));
+		CreateThingAtPos(tpl_explode, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+		CreateThingAtPos(tpl_smoke, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+
+		for ( n_idx=0; n_idx < 10; n_idx = n_idx + 1 )
+		{
+			CreateThingAtPos(tpl_sparks2, FindNewSectorFromThing(t_boss, vec_pos), vec_pos, '0 0 0');
+		}
+
+		PlaySoundClass(t_boss, 124);							# go boom
+
+		CreateThing(tpl_Statue, t_boss);
+		DestroyThing(t_boss);
+		return;
+	}
+
+    if (n_param == 21)										#---- Right foot down
+	{
+		vec_pos		= VectorSet(10.0, 0, -5.0);
+		f_scale		= 0.5 / VectorDist( GetThingPos(t_boss), GetThingPos(t_player) );
+		SetPOVShake('0 0 0', VectorScale(vec_pos, f_scale), 0.0, 55.0);
+
+		PlaySoundClass(t_boss, 6);								# play 'lwalkhard'
+	}
+    else if (n_param == 22)									#---- Start moving left foot
+	{
+		n_sndFootMove = PlaySoundClass(t_boss, 46);				# play 'lwalkaet'
+	}
+	else if (n_param == 23)									#---- Left foot down
+    {
+		vec_pos		= VectorSet(10.0, 0, 5.0);
+		f_scale		= 0.5 / VectorDist( GetThingPos(t_boss), GetThingPos(t_player) );
+		SetPOVShake('0 0 0', VectorScale(vec_pos, f_scale), 0.0, 55.0);
+
+		PlaySoundClass(t_boss, 7);								# play 'rwalkhard'
+	}
+    else if (n_param == 24)									#---- Start moving right foot
+	{
+		n_sndFootMove = PlaySoundClass(t_boss, 47);				# play 'rwalkaet'
+	}
+	else if (n_param == 25)									#---- Start 180 turn sound
+	{
+		PlaySoundClass(t_boss, 123);							# play 'reserved1'
+	}
+    
+    return;
+
+end
+

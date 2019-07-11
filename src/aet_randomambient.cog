@@ -1,0 +1,112 @@
+# Jones 3D Cog Script
+#
+# aet_RandomAmbient.cog
+#
+# [SXC] [TL] [GJ] on bass...
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# =======================================================================================
+symbols
+
+message	startup
+message	timer
+message	entered
+message	user0
+message	user1
+
+thing	player				local
+
+sound	wav0
+sound	wav1
+sound	wav2
+sound	wav3
+sound	wav4
+
+int		numsounds
+
+flex	min_interval
+flex	range_interval
+flex	min_volume
+flex	range_volume
+
+int		temp				local
+int		aetSound			local
+int		b_IsPlaying			local
+int		TIMERID_AMB=1		local
+
+int		startcog=0					# Set as 1 for cog to run at startup.
+
+end
+
+# ========================================================================================
+code
+
+# ........................................................................................
+startup:
+
+	b_IsPlaying = 0;
+	player = GetLocalPlayerThing();
+
+	if (startcog != 1) 
+	{
+		return;
+	}
+
+	Sleep(1.0);
+	SetTimerEx(min_interval+(rand()*range_interval), TIMERID_AMB, 0, 0);
+
+	return;
+
+
+# ........................................................................................
+timer:
+
+	# Dont play sound if already doing so, but try again later
+	if ( b_IsPlaying == 1 )
+	{
+		SetTimerEx(min_interval+(rand()*range_interval), TIMERID_AMB, 0, 0);
+		return;
+	}
+
+	temp = rand()*numsounds;
+	aetSound=playsoundlocal(wav0[temp], (min_volume+(rand()*range_volume)), ((rand()*2)-1.0), 0, 0);
+
+	if (aetSound != -1)
+	{
+		b_IsPlaying = 1;
+
+		ChangeSoundPitch(aetSound, ((RandBetween(1, 99) * 0.01) + 0.25), 0.01);
+		WaitForSound(aetSound);
+
+		b_IsPlaying = 0;
+	}
+
+	SetTimerEx(min_interval+(rand()*range_interval), TIMERID_AMB, 0, 0);
+
+	return;
+
+
+# ........................................................................................
+user0:
+
+	KillTimerEx(TIMERID_AMB);
+	if ( b_IsPlaying == 1 )
+	{
+		Reset();
+		b_IsPlaying = 0;
+		StopSound(aetSound, 0.9);
+	}
+
+	return;
+
+
+# ........................................................................................
+user1:
+
+	SetTimerEx(min_interval+(rand()*range_interval), TIMERID_AMB, 0, 0);
+
+	return;
+
+# ........................................................................................
+end

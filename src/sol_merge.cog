@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# SOL_Merge.cog
+#
+# [TRM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    
+    thing       car         local
+    
+    surface     offSwitch
+    surface     onSwitch
+    surface     track
+        
+end
+
+# ========================================================================================
+code
+
+entered:
+
+    car = GetSourceRef();
+
+    if(BitTest(GetPhysicsFlags(car), 0x01000000))
+    {
+        # shut off track
+        if(GetSenderRef() == offSwitch)
+        {
+            Print("Merge: shut off track");
+            ClearSurfaceFlags(track, 0x4000);
+        }
+        
+        # turn on track
+        if(GetSenderRef() == onSwitch)
+        {
+            Print("Merge: turn on track");
+            SetSurfaceFlags(track, 0x4000);
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

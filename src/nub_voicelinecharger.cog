@@ -1,0 +1,134 @@
+
+# Jones 3D Cog Script
+#
+# PRU_voicelineCan'tWhip.cog    Plays a voice line when Indy sees something.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	activated
+
+surface	surf0
+surface	surf1
+surface	surf2
+
+thing	cam1spot
+thing	cam1look
+thing	player					local
+thing	chargerTarg				local
+thing	chargerCam				local
+
+sound	dialogue=inxj233.wav	local	#Hmm.  This might be important.
+
+int		once0=0	local
+int		once1=0	local
+int		once2=0	local
+
+flex	ponderscene				local
+
+vector	v_modvec				local
+vector	v_targetpos0			local
+sector	targetsector			local
+template	ghostTpl=ghost		local
+
+end
+# ========================================================================================
+code
+
+activated:
+player = GetLocalPlayerThing();
+
+if (GetCurWeapon(player) != 0) return;
+
+if ((GetSenderRef() == surf0) && (once0 == 0))
+{
+	once0 = 1;
+	Call Ponderscene;
+	return;
+}
+if ((GetSenderRef() == surf1) && (once1 == 0))
+{
+	once1 = 1;
+	Call Ponderscene;
+	return;
+}if ((GetSenderRef() == surf2) && (once2 == 0))
+{
+	once2 = 1;
+	Call Ponderscene;
+	return;
+}
+
+return;
+# ========================================================================================
+Ponderscene:
+
+MakeMeStop();
+StartCutscene(1);
+
+#create a new target out in front of Indy.
+v_modvec = VectorSet(0, 0.1, 0.075);
+v_targetpos0 = VectorAdd(VectorTransformToOrient(player, v_modvec), GetThingPos(player));	
+targetsector = FindNewSectorFromThing(player, v_targetpos0);
+
+chargerTarg = CreateThingAtPos(ghostTpl, targetsector, v_targetpos0, '0 0 0');
+
+if (GetSenderRef() != surf2)
+{
+	#create a new camera position behind Indy.
+	v_modvec = VectorSet(0.1, -0.1, 0.0);
+	v_targetpos0 = VectorAdd(VectorTransformToOrient(player, v_modvec), GetThingPos(player));	
+	targetsector = FindNewSectorFromThing(player, v_targetpos0);
+}
+else
+{
+	#create a new camera position behind Indy.
+	v_modvec = VectorSet(-0.1, -0.1, 0.0);
+	v_targetpos0 = VectorAdd(VectorTransformToOrient(player, v_modvec), GetThingPos(player));	
+	targetsector = FindNewSectorFromThing(player, v_targetpos0);
+}
+
+chargerCam = CreateThingAtPos(ghostTpl, targetsector, v_targetpos0, '0 0 0');
+
+MakeCamera2LikeCamera1(cam1spot, cam1look);
+SetCameraLookInterp(2, 0); 			# force snap if not sure already the case
+SetCameraPosInterp(2, 0); 			# force snap if not sure already the case
+SetCameraFocus(2, cam1spot); 		# cam 2 takes over here
+SetCameraSecondaryFocus(2, cam1look); # looking same place
+#viewangle = GetCameraFOV(); 		# it pays to be careful
+SetCurrentCamera(2);
+ResetCameraFOV(0, 0.0);
+#SetCameraFOV(60, 1, 1.2); 			# start here anyway
+SetCameraLookInterp(2, 1);
+SetCameraPosInterp(2, 1);
+SetCameraInterpSpeed(2, 1.2);       
+Sleep(0.01); 						# let engine work briefly
+SetCameraFocus(2, chargerCam); 		# slide out to new spot
+
+SetCameraSecondaryFocus(2, chargerTarg); # slide over to new target
+
+PlayVoice(player, dialogue, 1, 1);
+
+SetCameraInterpSpeed(2, 1.0); # quicker going back, please
+Sleep(0.01); 						# let engine work briefly
+SetCameraSecondaryFocus(2, cam1look);
+SetCameraFocus(2, cam1spot);
+#SetCameraFOV(viewangle, 1, 1.0); # transition back to follow-cam FOV
+Sleep(1.0);
+SetCameraLookInterp(2, 0); # exit in snap mode
+SetCameraPosInterp(2, 0); # exit in snap mode
+
+#SetCameraPosition(1, cam1spot);
+SetCurrentCamera(1);
+ClearActorFlags(player, 0x200000);
+EndCutscene();
+
+    
+return;
+
+end
+# .................................................................................
+

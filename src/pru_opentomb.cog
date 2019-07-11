@@ -1,0 +1,123 @@
+
+# Jones 3D Cog Script
+#
+# PRU_opentomb.cog
+#
+# Simple Door/Lever Script
+#
+# [RKD] [TL] [RT] [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+	
+message	startup
+message	activated	
+message	arrived     
+message	crossed
+
+thing	door0
+thing	lever
+thing   player            local
+thing   indy              nolink
+thing   camera
+thing	ghost
+	
+keyframe	in_pull=in_pull_lever_down.key	local
+keyframe	lever_down=gen_lever.key		   local
+	
+sound    startdoor
+sound    movedoor
+sound    stopdoor
+sound    leversound
+sound    leversound2
+sound    openwav   
+
+int      open=0			   local
+int      curCam            local
+int      move0channel      local
+int      move1channel      local   
+int      begun=0           local
+int      hintgone=0        local
+	
+flex		moveSpeed=1.0
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+   player = GetLocalPlayerThing();
+   //SetFaceGeoMode(mapadjoin, 0);
+   //SetSectorAdjoins(mapsector, 0);
+   return;
+# ========================================================================================
+activated:
+   
+   if ((begun) == 1) return;
+   
+   
+   if (GetSenderRef() == lever)
+      {
+         StartCutscene(1);
+         begun = 1;
+         curCam = GetCurrentCamera();
+         SetThingFlags(player, 0x80000);
+         ClearThingFlags(indy, 0x80000);
+		 SetCameraFocus(2, camera);
+         SetCameraLookInterp(2, 0);
+		 SetCameraPosInterp(2, 0);
+         Sleep(0.1);
+		 SetCameraSecondaryFocus(2, indy);
+		 SetCurrentCamera(2);
+         PlayKey(lever, lever_down, 4, 0x12, 0);
+         PlayKey(indy, in_pull, 4, 0x12, 0);
+         Sleep(1.2);   
+         PlaySoundLocal(leversound, 1.0, 0, 0x0000, 0);
+         Sleep(1.4);
+         PlaySoundLocal(leversound2, 1.0, 0, 0x0000, 0);
+         Sleep(0.3);
+	     //if (open == 0) 
+	     //{
+            SetCameraLookInterp(2, 1);
+			SetCameraPosInterp(2, 1);
+            SetCameraInterpSpeed(2, 1.0);
+			Sleep(0.1);
+			SetCameraSecondaryFocus(2, ghost);
+            PlaySoundLocal(startdoor, 1.0, 0, 0x0000, 0);
+            move0channel = PlaySoundLocal(movedoor, 1.0, 0, 0x0001, 0);
+            MoveToFrame(door0, 1 - GetCurFrame(door0), moveSpeed);
+            MoveToFrame(camera, 1, 3.0);
+            PlaySoundLocal(openwav, 1.0, 0, 0x0000, 0);
+            
+		 //}
+
+         EndCutscene();
+      }
+   return;
+
+# ........................................................................................
+arrived:	
+      
+   if (GetSenderRef() != door0) return;
+
+	StopSound(move0channel, 0.0);
+	StopSound(move1channel, 0.0);
+	PlaySoundLocal(stopdoor, 1.0, 0, 0x0000, 1);
+	//open = 1 - open;
+	SetCurrentCamera(curCam);
+    #SetCameraFocus(curCam, player);
+	SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    begun = 0;
+	
+   return;
+
+# ........................................................................................
+
+
+end
+

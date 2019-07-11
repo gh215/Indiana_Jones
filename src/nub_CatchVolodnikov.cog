@@ -1,0 +1,709 @@
+# Jones 3D Cog Script
+#
+# nub_CatchVolodnikov.cog
+#
+# Nub's tomb Volodikov puzzle script
+#
+# [MDR] [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup
+	message	aievent
+	message	arrivedwpnt
+	message	updatewpnts
+	message entered
+	message exited
+	message	damaged
+
+# ************************** SUBROUTINES ************************
+	flex	InitDrVolodnikov		local
+	flex	SetWPntsRunToUpper		local
+	flex	SetWPntsRunToLower		local
+	flex	WaitAtWpnt				local
+	flex	RunForIt				local
+	flex	GiveUp					local
+
+# ************************** TEMPLATES **************************
+#	template	tplVolodnikov=volodnikov_nub	local					#GGJ
+
+# ************************** MISC LINKED GEOM *******************
+	thing	tPushBlock1
+	thing	tPushBlock2
+	thing	tPushStatue
+
+	sector	sec_TrigInit
+	sector	sec_MazeEntry00					linkid=1	mask=0x404		# Sector above hole in 2nd floor
+	sector	sec_MazeEntry01					linkid=1	mask=0x404
+	sector	sec_MazeEntry02					linkid=1	mask=0x404
+	sector	sec_MazeEntry03					linkid=1	mask=0x404
+
+
+	sector	sec_InnerMazeEntry00			linkid=2	mask=0x404
+
+	surface	srfBlocksWPNT0					linkid=3	mask=0x480
+	surface	srfBlocksWPNT5					linkid=3	mask=0x480
+	surface srfBlocksWPNT6					linkid=3	mask=0x480
+	surface	srfBlocksWPNT7					linkid=3	mask=0x480
+    surface srfBlocksWPNT21					linkid=4	mask=0x480
+
+	sector	sec_BlocksWPNT19				linkid=5	mask=0x480
+	sector	sec_BlocksWPNT20				linkid=5	mask=0x480
+
+# ************************** WAYPOINTS **************************
+	int		n_puzzleStatus=0		local
+	int		b_DisabledWpnt6=0		local
+	int		b_StopAtWpnt13=1		local
+
+	int		n_lastWpnt=25			local
+	thing	tWayPoint00
+	thing	tWayPoint01
+	thing	tWayPoint02
+	thing	tWayPoint03
+	thing	tWayPoint04
+	thing	tWayPoint05
+	thing	tWayPoint06
+	thing	tWayPoint07
+	thing	tWayPoint08
+	thing	tWayPoint09
+	thing	tWayPoint10
+	thing	tWayPoint11
+	thing	tWayPoint12
+	thing	tWayPoint13
+	thing	tWayPoint14
+	thing	tWayPoint15
+	thing	tWayPoint16
+	thing	tWayPoint17
+	thing	tWayPoint18
+	thing	tWayPoint19
+	thing	tWayPoint20
+	thing	tWayPoint21
+	thing	tWayPoint22
+	thing	tWayPoint23
+	thing	tWayPoint24
+	thing	tWayPoint25
+
+# ************************** MISC LOCAL VARS *******************
+	thing		tVolodnikov							#made not local GGJ
+	thing		tPlayer				local
+	thing		t_LookThing			local
+
+	int			b_noEscape=0		local
+	flex		f_distDanger		local
+	flex		f_distZDanger		local
+
+	int			idx					local
+	int			n_ID				local
+	int			t_sender			local
+	int			t_source			local
+
+	int			n_prevWpnt			local
+	int			n_crntWpnt			local
+	int			n_plyrWpnt			local
+
+	int			b_RunToUpper		local
+	int			n_eventType			local
+	int			n_crntAIMode		local
+	int			n_param				local
+
+	vector		vec_volod			local
+	vector		vec_indy			local
+	flex		f_val				local
+
+# ************************** ADDITIONAL CUTSCENE VARS **********
+	cog			cutcog
+	model		mod_vo_gearhand=hand_vo_turtgear.3do	local	#GGJ
+
+	
+end
+
+
+# ========================================================================================
+code
+
+# ........................................................................................
+startup:
+
+	tPlayer	= GetLocalPlayerThing();
+	SetThingFlags(tVolodnikov, 0x80000);
+	
+	return;
+
+
+# ........................................................................................
+arrivedwpnt:
+
+	if ( GetSenderRef() != tVolodnikov )
+		return;
+
+	n_crntWpnt = GetParam(0);
+	if ( n_crntWpnt == n_prevWpnt )
+		return;
+
+	AISetSubMode(tVolodnikov, 0x8000);						# Set SUBMODE_CONTINUOUSWPNTMOTION
+
+	if ( (n_crntWpnt == 0) || (n_crntWpnt == 5) || (n_crntWpnt == 7) )
+	{
+		if ( b_RunToUpper == 0 )
+		{
+			call SetWPntsRunToUpper;
+		}
+
+		t_LookThing = tWayPoint00[6];
+		call WaitAtWpnt;
+	}
+
+	if ( (n_crntWpnt == 21) || (n_crntWpnt == 22) )
+	{
+		n_plyrWpnt = AIFindNearestWpnt(tPlayer);
+		if ( n_plyrWpnt < 19 )
+		{
+			AIClearSubMode(tVolodnikov, 0x8000);			# Clear SUBMODE_CONTINUOUSWPNTMOTION
+			call SetWPntsRunToLower;
+
+			t_LookThing = tWayPoint00[12];
+			call WaitAtWpnt;
+		}
+	}
+
+	if ( b_RunToUpper == 1 )
+	{
+		if ( n_crntWpnt == 6 )
+		{
+			call SetWPntsRunToLower;
+		}
+		if ( (n_crntWpnt == 13) && (b_DisabledWpnt6 == 0) && (b_StopAtWpnt13 == 1) )
+		{
+			t_LookThing = tWayPoint00[12];
+			call WaitAtWpnt;
+		}
+	}
+
+	n_prevWpnt = n_crntWpnt;
+
+	return;
+
+
+# ........................................................................................
+updatewpnts:
+
+	if ( (n_crntWpnt >= 12) && (n_crntWpnt <= 13) )
+	{
+		if ( GetMoveStatus(tPlayer) < 6 )
+		{
+#			DEBUGPRINT("Indy not flying\climbing up... bailing on update wpnt");
+			return;
+		}
+
+		n_plyrWpnt = AIFindNearestWpnt(tPlayer);
+		if ( (n_plyrWpnt == 6) || (n_plyrWpnt == 16) )
+		{
+			call SetWPntsRunToLower;
+		}
+	}
+
+	return;
+
+
+# ........................................................................................
+entered:
+
+	t_source	= GetSourceRef();
+	t_sender	= GetSenderRef();
+	n_ID		= GetSenderID();
+
+	if ( t_source == tPlayer )								#---- Track current location of player
+	{
+		if ( t_sender == sec_TrigInit )
+		{
+			call InitDrVolodnikov;
+			return;
+		}
+
+		if ( n_ID == 1 )										# 1st floor sector danger trigger?
+		{
+			if ( t_sender == sec_MazeEntry01 || t_sender == sec_MazeEntry02 )
+			{
+#				DEBUGPRINT("Disallowing stop at Wpnt 13");
+				b_StopAtWpnt13 = 0;
+				if ( n_crntWpnt == 13 )
+				{
+#					DEBUGPRINT("Indy near wpnt 13... flee");
+					call RunForIt;
+				}
+			}
+		}
+
+		if ( n_ID == 5 )										# Indy + 2nd floor surface danger trigger?
+		{
+			if ( (t_sender == sec_BlocksWPNT19) || (t_sender == sec_BlocksWPNT20) )
+			{
+				if ( n_crntWpnt >= 17 )
+				{
+					if ( (b_noEscape == 2) && (t_sender == sec_BlocksWPNT19) )
+					{
+						call GiveUp;
+					}
+					if ( (b_noEscape == 1) && (t_sender == sec_BlocksWPNT20) )
+					{
+						call GiveUp;
+					}
+
+#					DEBUGPRINT("* Indy near wpnt 19 or 20... flee!");
+					call RunForIt;
+				}
+			}
+		}
+
+		return;
+	}
+															#---- Track Volodnikov
+	if (t_source == tVolodnikov )
+	{
+		if ( n_ID == 1 )										# Volod + 2nd floor sector hole in floor?
+		{
+			if ( t_sender == sec_MazeEntry00 )
+			{
+				vec_volod = GetThingPos(tWayPoint00[6]);
+				f_val = VectorZ( GetThingPos(tVolodnikov) ) - 0.06;
+
+				vec_volod = VectorSet( VectorX(vec_volod), VectorY(vec_volod), f_val );
+				SetThingPosEx(tVolodnikov, vec_volod, FindNewSectorFromThing(tVolodnikov, vec_volod));
+			}
+
+			if ( t_sender == sec_MazeEntry03 )
+			{
+				AISetWpntRank(6, 30);
+			}
+		}
+
+		return;
+	}
+															#---- Track push blocks
+	if ( t_source == tPushBlock1 || t_source == tPushBlock2 )
+	{
+		if ( n_ID == 3 )										# Push Block + 1st floor wpnt blocker surfaces?
+		{
+			if ( t_sender == srfBlocksWPNT0 )
+			{
+#				DEBUGPRINT("Waypoint 25 Blocked");
+				AISetWpntFlags(25, 0x100);						# set AIWPNT_DISABLED
+			}
+			else if ( t_sender == srfBlocksWPNT5 )
+			{
+#				DEBUGPRINT("Waypoint 5 Blocked");
+				AISetWpntFlags(23, 0x100);						# set AIWPNT_DISABLED
+			}
+			else if ( t_sender == srfBlocksWPNT6 )
+			{
+#				DEBUGPRINT("Waypoint 6 Blocked");
+				b_DisabledWpnt6 = 1;
+				AISetWpntFlags(6, 0x100);						# set AIWPNT_DISABLED
+				AISetWpntFlags(16, 0x100);
+				AISetWpntFlags(23, 0x100);
+				AISetWpntFlags(24, 0x100);
+				AISetWpntFlags(25, 0x100);
+			}
+			else if ( t_sender == srfBlocksWPNT7 )
+			{
+#				DEBUGPRINT("Waypoint 7 Blocked");
+				AISetWpntFlags(24, 0x100);						# set AIWPNT_DISABLED
+			}
+		}
+
+		return;
+	}
+
+	if ( t_source == tPushStatue )							#---- Track push statue
+	{
+		if ( n_ID == 5 )										# Push Statue + final escape blocker surfaces?
+		{
+			if ( t_sender == sec_BlocksWPNT19 )
+			{
+#				DEBUGPRINT("Waypoint 19 Blocked");
+				AISetWpntFlags(19, 0x100);						# set AIWPNT_DISABLED
+				b_noEscape = 1;
+			}
+			else if ( t_sender == sec_BlocksWPNT20 )
+			{
+#				DEBUGPRINT("Waypoint 20 Blocked");
+				AISetWpntFlags(20, 0x100);						# set AIWPNT_DISABLED
+				b_noEscape = 2;
+			}
+		}
+		if ( n_ID == 4 )										# Push Statue + final escape blocker surfaces?
+		{
+			if ( t_sender == srfBlocksWPNT21 )
+			{
+#				DEBUGPRINT("Waypoint 21 Blocked");
+				AISetWpntFlags(21, 0x100);						# set AIWPNT_DISABLED
+				AIClearWpntFlags(22, 0x100);					# clear AIWPNT_DISABLED
+			}
+
+#			DEBUGFLEX(b_noEscape, "b_noEscape =");
+		}
+	}
+
+	return;
+
+
+# ........................................................................................
+exited:
+
+	t_source	= GetSourceRef();
+	t_sender	= GetSenderRef();
+	n_ID		= GetSenderID();
+
+	if ( t_source == tPlayer )								#---- Track current location of player
+	{
+		if ( n_ID == 1 )										# 1st floor sector danger trigger?
+		{
+			if ( t_sender == sec_MazeEntry01 || t_sender == sec_MazeEntry02 )
+			{
+#				DEBUGPRINT("Allowing stop at Wpnt 13");
+				b_StopAtWpnt13 = 1;
+			}
+		}
+	}
+															#---- Track push blocks
+	if ( t_source == tPushBlock1 || t_source == tPushBlock2 )	
+	{
+		if ( n_ID == 3 )										# Push Block + 1st floor wpnt blocker surfaces?
+		{
+			if ( t_sender == srfBlocksWPNT0 )
+			{
+#				DEBUGPRINT("Waypoint 25 Unblocked");
+				AIClearWpntFlags(25, 0x100);					# Clear AIWPNT_DISABLED
+			}
+			else if ( t_sender == srfBlocksWPNT5 )
+			{
+#				DEBUGPRINT("Waypoint 5 Unblocked");
+				AIClearWpntFlags(23, 0x100);					# Clear AIWPNT_DISABLED
+			}
+			else if ( t_sender == srfBlocksWPNT6 )
+			{
+#				DEBUGPRINT("Waypoint 6 Unblocked");
+				b_DisabledWpnt6 = 0;
+				AIClearWpntFlags(6, 0x100);						# Clear AIWPNT_DISABLED
+				AIClearWpntFlags(16, 0x100);
+				AIClearWpntFlags(23, 0x100);
+				AIClearWpntFlags(24, 0x100);
+				AIClearWpntFlags(25, 0x100);
+			}
+			else if ( t_sender == srfBlocksWPNT7 )
+			{
+#				DEBUGPRINT("Waypoint 7 Unblocked");
+				AIClearWpntFlags(24, 0x100);					# Clear AIWPNT_DISABLED
+			}
+		}
+	}
+
+	if ( t_source == tPushStatue )							#---- Track push statue
+	{
+		if ( n_ID == 5 )										# Push Statue + final escape blocker surfaces?
+		{
+			if ( t_sender == sec_BlocksWPNT19 )
+			{
+#				DEBUGPRINT("Waypoint 19 Unblocked");
+				b_noEscape = 0;
+				AIClearWpntFlags(19, 0x100);					# Clear AIWPNT_DISABLED
+			}
+			else if ( t_sender == sec_BlocksWPNT20 )
+			{
+#				DEBUGPRINT("Waypoint 20 Unblocked");
+				b_noEscape = 0;
+				AIClearWpntFlags(20, 0x100);					# Clear AIWPNT_DISABLED
+			}
+		}
+		if ( n_ID == 4 )										# Push Statue + final escape blocker surfaces?
+		{
+			if ( t_sender == srfBlocksWPNT21 )
+			{
+#				DEBUGPRINT("Waypoint 21 Unblocked");
+				AIClearWpntFlags(21, 0x100);					# Clear AIWPNT_DISABLED
+				AISetWpntFlags(22, 0x100);						# set AIWPNT_DISABLED
+			}
+		}
+	}
+	
+	return;
+
+
+# ........................................................................................
+aievent:
+
+	t_sender	= GetSenderRef();
+
+	if ( t_sender == tVolodnikov )
+	{
+		n_eventType		= GetParam(0);
+		n_crntAIMode	= GetParam(1);
+		n_param			= GetParam(2);							# Meaning varies according to n_eventType
+
+		if ( BITTEST(n_eventType, 0x604) )						# EVENT_(TOUCHED|HITWALL|HITCLIFF)?
+		{
+#			DEBUGPRINT("Hit something");
+			ReturnEx(1);										# Keep Volodnikov going
+		}
+	}
+
+	return;
+
+
+# ........................................................................................
+damaged:
+
+	return;
+
+
+# ========================================================================================
+#	Subroutines
+# ========================================================================================
+
+# ........................................................................................
+InitDrVolodnikov:
+
+	if ( n_puzzleStatus == 0 )
+	{
+#		DEBUGPRINT("** Initializing Volodnikov wpnt system.");
+		b_DisabledWpnt6	= 0;
+		b_StopAtWpnt13	= 1;
+
+		n_prevWpnt		= 0;
+		n_crntWpnt		= 0;
+		n_plyrWpnt		= -1;
+
+		b_noEscape		= 0;										# Set constants
+		f_distDanger	= 0.80;
+		f_distZDanger	= 0.20;
+
+		#tVolodnikov = CreateThing(tplVolodnikov, tWayPoint00);			#commente out and added line below, GGJ
+		ClearThingFlags(tVolodnikov, 0x80000);
+		CaptureThing(tVolodnikov);
+		SetThingMesh(tVolodnikov, 8, mod_vo_gearhand, 0);
+
+		AISetInstinctWpntMode(tVolodnikov);
+		AISetSubMode(tVolodnikov, 0x8000);							# Set SUBMODE_CONTINUOUSWPNTMOTION
+	}
+
+	for ( idx=0; idx <= n_lastWpnt; idx = idx + 1 )				# Init waypoints
+	{
+		AISetWpnt(tWayPoint00[idx], idx);
+	}
+
+	AIConnectWpnts(0, 1);
+	AIConnectWpnts(0, 2);
+	AIConnectWpnts(0, 25);
+	AIConnectWpnts(25, 6);
+	AIConnectWpnts(1, 3);
+	AIConnectWpnts(2, 4);
+	AIConnectWpnts(3, 5);
+	AIConnectWpnts(4, 7);
+	AIConnectWpnts(5, 23);
+	AIConnectWpnts(5, 8);
+	AIConnectWpnts(8, 10);
+	AIConnectWpnts(10, 12);
+	AIConnectWpnts(12, 11);
+	AIConnectWpnts(11, 9);
+	AIConnectWpnts(9, 7);
+	AIConnectWpnts(6, 23);
+	AIConnectWpnts(6, 24);
+	AIConnectWpnts(7, 9);
+	AIConnectWpnts(7, 24);
+
+	AIConnectWpnts(12, 13);
+	AIConnectWpntsOneWay(13, 6);
+	AIConnectWpnts(13, 14);
+	AIConnectWpnts(14, 17);
+	AIConnectWpntsOneWay(16, 6);
+	AIConnectWpnts(17, 16);
+	AIConnectWpnts(17, 18);
+	AIConnectWpnts(17, 19);
+	AIConnectWpnts(19, 21);
+	AIConnectWpnts(19, 22);
+	AIConnectWpnts(21, 20);
+	AIConnectWpnts(22, 20);
+	AIConnectWpnts(20, 18);
+	AIConnectWpnts(18, 16);
+	AIConnectWpnts(18, 15);
+	AIConnectWpnts(15, 13);
+
+	if ( n_puzzleStatus == 0 )
+	{
+		n_puzzleStatus = 1;
+
+		AISetWpntFlags(22, 0x100);							# starts out AIWPNT_DISABLED
+		call SetWPntsRunToUpper;
+	}
+
+	return;
+
+
+# ........................................................................................
+SetWPntsRunToUpper:
+
+#	DEBUGPRINT("* Setting WPnts to run up");
+
+	b_RunToUpper	= 1;
+
+	AISetWpntRank(0, 0);
+	AISetWpntRank(1, 5);
+	AISetWpntRank(2, 5);
+	AISetWpntRank(3, 5);
+	AISetWpntRank(4, 5);
+	AISetWpntRank(5, 10);
+	AISetWpntRank(6, 0);
+	AISetWpntRank(7, 10);
+	AISetWpntRank(8, 10);
+	AISetWpntRank(9, 10);
+	AISetWpntRank(10, 15);
+	AISetWpntRank(11, 15);
+	AISetWpntRank(12, 15);
+	AISetWpntRank(13, 20);
+	AISetWpntRank(14, 20);
+	AISetWpntRank(15, 20);
+	AISetWpntRank(16, 0);
+	AISetWpntRank(17, 25);
+	AISetWpntRank(18, 25);
+	AISetWpntRank(19, 30);
+	AISetWpntRank(20, 30);
+	AISetWpntRank(21, 30);
+	AISetWpntRank(22, 30);
+	AISetWpntRank(23, 5);
+	AISetWpntRank(24, 5);
+	AISetWpntRank(25, 0);
+
+	return;
+
+
+# ........................................................................................
+SetWPntsRunToLower:
+
+#	DEBUGPRINT("* Setting WPnts to run down");
+
+	b_RunToUpper	= 0;
+
+	AISetWpntRank(0, 30);
+	AISetWpntRank(1, 25);
+	AISetWpntRank(2, 25);
+	AISetWpntRank(3, 25);
+	AISetWpntRank(4, 25);
+	AISetWpntRank(5, 20);
+	AISetWpntRank(6, 10);
+	AISetWpntRank(7, 20);
+	AISetWpntRank(8, 20);
+	AISetWpntRank(9, 20);
+	AISetWpntRank(10, 15);
+	AISetWpntRank(11, 15);
+	AISetWpntRank(12, 15);
+	AISetWpntRank(13, 10);
+	AISetWpntRank(14, 10);
+	AISetWpntRank(15, 10);
+	AISetWpntRank(16, 15);
+	AISetWpntRank(17, 5);
+	AISetWpntRank(18, 5);
+	AISetWpntRank(19, 5);
+	AISetWpntRank(20, 5);
+	AISetWpntRank(21, 0);
+	AISetWpntRank(22, 0);
+	AISetWpntRank(23, 15);
+	AISetWpntRank(24, 15);
+	AISetWpntRank(25, 30);
+
+	return;
+
+
+# ........................................................................................
+WaitAtWpnt:
+
+	if ( (n_crntWpnt == 21) && (b_noEscape > 0) )
+	{
+#		DEBUGFLEX(n_crntWpnt, "WaitAtWpnt: Stopping at wpnt");
+		StopThing(tVolodnikov);
+		AIStopFlee(tVolodnikov);
+		AISetLookThing(tVolodnikov, t_LookThing);
+
+		return;
+	}
+
+	# Only stop if Indy isnt too close
+	vec_volod	= GetThingPos(tVolodnikov);
+	vec_indy	= GetThingPos(tPlayer);
+
+	f_val		= VectorZ(VectorSub(vec_volod, vec_indy));
+#	DEBUGFLEX(f_val, "** WaitAtWpnt: Delta Z =");
+	if ( ABS(f_val) > f_distZDanger )
+	{
+#		DEBUGFLEX(n_crntWpnt, "** WaitAtWpnt: Stopping at wpnt");
+		StopThing(tVolodnikov);
+		AIStopFlee(tVolodnikov);
+		AISetLookThing(tVolodnikov, t_LookThing);
+
+		return;
+	}
+
+	f_val = VectorDist(vec_volod, vec_indy);
+#	DEBUGFLEX(f_val, "** WaitAtWpnt: player to volod dist = ");
+	if ( f_val > f_distDanger )
+	{
+#		DEBUGFLEX(n_crntWpnt, "** WaitAtWpnt: Stopping at wpnt");
+		StopThing(tVolodnikov);
+		AIStopFlee(tVolodnikov);
+		AISetLookThing(tVolodnikov, t_LookThing);
+
+		return;
+	}
+
+#	DEBUGFLEX(n_crntWpnt, "** WaitAtWpnt: Indy too close, not stopping.  crntWpnt =");
+	return;
+
+
+# ........................................................................................
+RunForIt:
+
+	if ( BITTEST(GetActorFlags(tPlayer), 0x80) )			# If player has AF_INVISIBLE, do nothing
+		return;
+
+	AISetSubMode(tVolodnikov, 0x8000);						# Set SUBMODE_CONTINUOUSWPNTMOTION
+	AIFlee(tVolodnikov, tPlayer);
+
+	return;
+
+
+# ........................................................................................
+GiveUp:
+
+	if ( n_puzzleStatus > 1 )
+		return;
+
+	n_puzzleStatus = 2;
+
+#	PRINT("You Got Me, Indy! Here you go...take it!");
+#	DEBUGPRINT("You Got Me, Indy!");
+
+	ReleaseThing(tVolodnikov);
+	Reset();
+
+	DestroyThing(tVolodnikov);
+	tVolodnikov = -1;
+
+	if (b_noEscape == 1)
+	{
+#		Print("south opening is blocked");
+		SendMessage(cutcog, user0);
+	}
+	if (b_noEscape == 2)
+	{
+#		Print("north opening is blocked");
+        SendMessage(cutcog, user1);
+	}
+
+	return;
+
+
+
+# ........................................................................................
+end
+

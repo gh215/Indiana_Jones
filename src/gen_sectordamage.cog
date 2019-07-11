@@ -1,0 +1,68 @@
+# Jones 3D Cog Script
+#
+# 00_sectordamage.cog
+#
+# Apply constant amount of damage to a player in a sector.
+# Sector can heal instead, if a negative number is used for the "damage" variable.
+#
+# 01/31/97 [CYW]
+# 04/14/97 [YB]  Disabled the pulse if the damageSector is not linked in
+#                Reduced the damageInterval and increased the damage
+# 06/27/97 [DB]  Changed damage type to 0x1
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup
+	message	pulse
+
+	sector	damageSector			# the deadly sector.
+
+	flex		damageInterval=1.0	# how often damage is applied in seconds.
+	flex		damage=4.0				# how much damage is applied
+
+	thing		victim		local		# actors and players affected.
+	int		type			local
+end
+
+
+code
+
+# ........................................................................................
+
+startup:
+	if(damageSector > -1) SetPulse(damageInterval);
+	return;
+
+# ........................................................................................
+
+pulse:
+	victim = FirstThingInSector(damageSector);
+	while (victim != -1)
+	{
+		type = GetThingType(victim);
+		// If we have an actor (2) or a player (10)
+		if ((type==2) || (type==10))
+		{
+			// Do the damage or healing.
+			if (damage > 0)
+			{								
+				DamageThing(victim, damage, 0x1, victim);
+			}
+			else
+			{
+				HealThing(victim, -damage);
+			}
+		}
+		victim = NextThingInSector(victim);
+	}
+	return;
+
+# ........................................................................................
+
+end
+
+
+
+

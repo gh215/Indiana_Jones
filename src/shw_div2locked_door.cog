@@ -1,0 +1,325 @@
+# Jones 3D Cog Script
+#
+# shw_div1locked_doors.cog
+#
+# Generic Door Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+
+#	MESSAGES
+	message	startup		
+	message	activated	
+
+#	ACTORS
+    thing		indy	    
+	thing		player		local	    
+    
+#	PROPS
+	thing		door0		
+	thing		button0		
+	thing		button1		
+    
+#	CAMERAS
+    thing       but1Cam		
+
+#	COGS
+    cog       	doortalkcog		
+	
+#	CAMERA TARGETS
+    thing       camTargPos1	    
+    thing       but1MoveTarg	local
+	
+#	VARIABLES
+	float		doorspeed=4.0
+	float		sleepTime=5.0	local
+    int			open=0          local
+    int			closing=0       local
+	int			keyed=0         local
+	int			doorspeak=0  	local
+	int			i=0  			local
+    int			playerpos		local
+	int			keygrumble=0	local
+
+#	KEYFRAMES
+    keyframe        inReach=in_reach_medium.key        local
+        
+#	VECTORS
+    vector      but1CamTarg         local
+    vector      openpos         	local	#doors' open position
+    vector      closepos         	local	#doors' closed position
+
+#	TEMPLATES
+    template    ghostTpl=ghost      local
+
+#	SOUNDS
+    sound	placement=tem_tikikey_place_c.wav        local
+    sound	click=sol_panel_switch_c.wav	local
+
+	sound	in_doorline0=INXJ089.wav		local	# that didn't work
+	sound	in_doorline1=INXJ090.wav		local	# I'm doing something wrond
+	sound	in_doorline2=INXJ091.wav		local	# of course that didn't work
+	sound	in_doorline3=INXJ095.wav		local	# must be another way
+	sound	in_doorline4=INXJ100.wav		local	# looks like door...?
+	
+#	SECTORS
+	sector	        doorSector			local
+			
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+	in_rotRate = GetThingMaxRotVel(player);
+	
+    closepos=GetThingPos(door0);
+    doorSector = GetThingSector(door0);
+	SetSectorAdjoins(doorSector, 0);
+    return;
+
+# ........................................................................................
+# ........................................................................................
+        
+#========================================================
+
+
+activated:
+
+if (open == 1) return;
+if (IsThingMoving(door0)) return;
+
+If (GetSenderRef() == button0) 
+{
+    If (keyed == 1)
+	{
+        open = 1;
+		# take control from player and deselect weapon
+		SetActorFlags(player, 0x200000);
+		DeselectWeapon(player);
+		Sleep(0.5);
+		# player hits the switch
+		PlayMode(player, 60, 1);
+		Sleep(0.25);
+		# player regains control
+        ClearActorFlags(player, 0x200000);
+		# play sounds, move the buttons and door
+		MoveToFrame(button0, 1, 1);
+        MoveToFrame(button1, 1, 1);
+		PlaySoundThing(click, door0, 1, 3, 10, 0x0);
+		SetSectorAdjoins(doorSector, 1);
+        Rotate(door0, 90, 1, doorspeed);
+        waitforstop(door0);
+		openpos=GetThingLVecPYR(door0);
+        sleep(sleeptime);
+        Rotate(door0, -90, 1, doorspeed);
+		closing = 1;
+		WaitForStop(door0);
+        closing = 0;
+		MoveToFrame(button0, 0, 10);
+		MoveToFrame(button1, 0, 10);
+		SetSectorAdjoins(doorSector, 0);
+		open = 0;
+        return;
+    }
+	else if (keyed == 0)
+	{
+    # Check if inventory is being used...
+	whichItem = GetCurItem(player);
+	
+	# Prep for scene...
+    curCam = GetCurrentCamera();
+	StartCutScene(1);
+	open = 1;
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+    DeselectWeapon(player); # stow any weapon or lighter
+	Sleep(0.25); # wait a beat
+	CopyPlayerHolsters(player, indy); # make sure actor has matching props
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indy, 0x80000);
+
+	# Line Indy up...
+	CopyOrientAndPos(player, indy);
+	AISetLookThing(indy, button0);
+	AIWaitForStop(indy);
+
+	# Slew follow camera to observe the scene from a known position
+	### SetExtCamLookOffsetToThing(button0); # new look offset per Matt R...buggy
+	SetExtCamOffsetToThing(but1Cam);
+	Sleep(0.5);
+	
+	if (whichItem == 59)
+		{
+		ChangeInv(player, 59, -1);
+		keyed = 1;
+		call innerchamber;
+		return;
+		}
+else
+	{								
+	if (whichItem != 0)
+		{
+		# Take care of wrong keys and items...
+		SendMessageEx(doortalkcog, user0, indy, 59, whichItem, 0);
+	    }
+	
+	else if (keygrumble == 0)
+		{
+		# Note need for key 1st time thru...
+		SendMessageEx(doortalkcog, user4, indy, 1, 3, 0);
+        }
+			
+	}
+		
+while (global15 == 0)
+	{
+	Sleep(0.01); # wait for line to finish
+	}
+	Sleep(0.3);
+	RestoreExtCam();
+	SetThingMaxRotVel(indy, in_rotRate);
+	ClearThingFlags(player, 0x80000);
+	SetThingFlags(indy, 0x80000);
+    EndCutScene();
+	open = 0;
+    return;
+	
+	}
+}
+
+If ((GetSenderRef() == button1)	&& (keyed == 1))
+	{
+		open = 1;
+		# take control from player and deselect weapon
+		SetActorFlags(player, 0x200000);
+		DeselectWeapon(player);
+		Sleep(0.5);
+		# player hits the switch
+		PlayMode(player, 60, 1);
+		Sleep(0.25);
+		# player regains control
+        ClearActorFlags(player, 0x200000);
+		# play sounds, move the buttons and door
+		MoveToFrame(button0, 1, 1);
+        MoveToFrame(button1, 1, 1);
+		PlaySoundThing(click, door0, 1, 3, 10, 0x0);
+		SetSectorAdjoins(doorSector, 1);
+        Rotate(door0, -90, 1, doorspeed);
+        waitforstop(door0);
+		openpos=GetThingLVecPYR(door0);
+        sleep(sleeptime);
+		Rotate(door0, 90, 1, doorspeed);
+        closing = 1;
+        waitforstop(door0);
+        closing = 0;
+		PlaySoundThing(click, door0, 1, 3, 10, 0x0);
+        MoveToFrame(button0, 0, 10);
+        MoveToFrame(button1, 0, 10);
+        SetSectorAdjoins(doorSector, 0);
+        open = 0;
+    }
+
+
+If (GetSenderRef() == door0)
+    {
+        # General "door won't open" grmubling thereafter...
+        SetActorFlags(player, 0x200000);
+        SendMessageEx(doortalkcog, user5, indy, 1, 3, 0);
+		PlayMode(player, 60, 0);
+        Sleep(0.5);
+        ClearActorFlags(player, 0x200000);
+    }
+return;
+# ........................................................................................
+
+blocked:
+	print("????");
+	return;
+
+# ........................................................................................
+innerchamber:
+
+{
+       # create target for secondary focus at player position.
+        but1CamTarg = VectorAdd(VectorTransformToOrient(player, '0.0 0.0 0.0'), GetThingPos(player));
+        but1MoveTarg = CreateThingAtPos(ghostTpl, GetThingSector(player), but1CamTarg, '0 0 0');
+        CaptureThing(but1MoveTarg);
+        
+		# offset camera to thing.
+		SetExtCamLookOffsetToThing(but1MoveTarg);
+
+        ClearThingFlags(indy, 0x80000);
+        open = 1;
+        
+        # Play the animations - wait for Indy's
+        PlayKey(indy, inReach, 4, 0x12, 1);
+        keyPlace = PlaySoundLocal(placement, 1.0, 0.0, 0x0, 0);
+		Sleep(0.25);
+		PlaySoundThing(click, door0, 1, 3, 10, 0x0);
+        MoveToFrame(button0, 1, 1);
+        MoveToFrame(button1, 1, 1);
+        
+		
+		# switch to camera 2 with focus on ghost at indy's position
+        SetCameraFocus(2, but1Cam);
+        SetCameraSecondaryFocus(2, but1MoveTarg);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+		
+        # Set door sector to draw and open door
+		SetSectorAdjoins(doorSector, 1);
+        Rotate(door0, 90, 1, doorspeed);
+        
+        # move camera focus object up to door
+        animId = MoveThingToPos(but1MoveTarg, GetThingPos(camTargPos1), 2.0);
+		# indy actor looks as door opens
+        AISetLookThing(indy, camTargPos1);
+		waitforstop(door0);
+		openpos=GetThingLVecPYR(door0);
+		Sleep(1.0);
+
+        # move camera focus back to player 
+        #animId = MoveThingToPos(but1MoveTarg, GetThingPos(player), 0.5);
+		#Sleep(1.0);
+        
+        # Restore camera
+        SetCameraPosition(curCam, GetThingPos(but1Cam));
+        SetCurrentCamera(curCam);
+        RestoreExtCam();
+        EndCutScene();
+
+        # Return control and camera to player
+        CopyOrientAndPos(indy, player);
+        SetThingFlags(indy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        ClearActorFlags(player, 0x200000);
+        sleep(sleeptime);
+        Rotate(door0, -90, 1, doorspeed);
+        closing = 1;
+        waitforstop(door0);
+        closing = 0;
+        MoveToFrame(button0, 0, 10);
+        MoveToFrame(button1, 0, 10);
+		PlaySoundThing(click, door0, 1, 3, 10, 0x0);
+        SetSectorAdjoins(doorSector, 0);
+        open = 0;
+	}
+return;
+# ........................................................................................
+# ........................................................................................
+
+# ........................................................................................
+
+
+end
+

@@ -1,0 +1,59 @@
+# Jones 3D Cog Script
+#
+# gen_onetime_musiccue.cog
+#
+# duh.
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+
+	#..................MESSAGES................
+    message		entered		
+    message		startup		
+
+	
+	#..................ACTORS................
+	thing		player          						local
+    
+
+	#..................TRIGGER................
+	sector		triggerSECT
+
+	#..................MUSIC CUE................
+    sound       thecue          		
+	
+    #..................VARIABLES................
+    int			cue_played=0							local
+    int			vol                           
+    
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	player=GetLocalPlayerThing();
+
+return;
+# ========================================================================================
+
+entered:
+
+if 	(GetSenderRef() != triggerSECT) return;
+if	(GetSourceRef() != player) return;
+if 	(cue_played != 0) return;
+    {
+        cue_played = 1;
+		PlaySoundLocal(thecue, vol, 0, 0x0, 0);
+    }
+return;
+# ========================================================================================
+	
+end
+

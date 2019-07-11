@@ -1,0 +1,144 @@
+# Jones 3D Cog Script
+#
+# SHW_PortRoomVoice.cog
+#
+# Say line control for the wheelcav in SHW
+#
+# [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols		
+	#	MESSAGES
+    message     startup
+    message     entered
+    
+	#	ACTORS
+    thing       player      local
+    thing       indyActor      
+          
+	# PROPS
+	thing	wheeldevice
+	
+	#	ACTOR MARKS
+    thing       player_mk1      
+
+	#	TRIGGERS
+    surface     triggersurf     
+    
+	#	CAM OBJS
+	thing	campos
+    
+	#	CAM TARGS
+	thing	wheeltarg	local
+	
+
+	# VECTORS
+    vector	wheeltargpos	local
+	
+	# TEMPLATES
+	template	camObj=ghost	local
+	
+	#	SAYLINES
+    sound       intheyknew=sw01j04.wav      local       # they certainly knew...
+    
+    int hit=0   local
+    int in_rotRate	local
+    int curCam	local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if (hit == 1) return;
+    if ((GetSenderRef() == triggersurf) && (GetSourceRef() == player))
+        {    
+            hit = 1;
+			
+			# Prep for scene...
+            StartCutScene(1);
+			curCam = GetCurrentCamera();
+			Sleep(0.25);
+			MakeMeStop();
+			SetCameraLookInterp(2, 0);
+			SetCameraPosInterp(2, 0);
+			#SetActorFlags(player, 0x200000);
+			Sleep(1.0);
+			DeselectWeapon(player); # stow any weapon or lighter
+			Sleep(0.5); # wait a beat
+			CopyPlayerHolsters(player, indyActor); # make sure actor has matching props
+			
+			# offset the cam to a known position
+            SetExtCamOffsetToThing(campos);
+			Sleep(1.0);
+			
+			# Line Indy up...
+			CopyOrientAndPos(player, indyActor);
+			SetThingFlags(player, 0x80000);
+			ClearThingFlags(indyActor, 0x80000);
+            
+			# goto camera 2 
+			SetCameraFocus(2, campos);
+			SetCameraSecondaryFocus(2, indyActor);
+			SetCurrentCamera(2);
+			SetCameraFOV(90, 0, 0.0);
+            
+			# move indyAcotr out to the edge
+			AISetLookThingEyeLevel(indyActor, player_mk1);
+			AISetMoveThing(indyActor, player_mk1, 1);
+
+            # create a ghost object target for camera focaus at indyActors' position
+            wheeltargpos = VectorAdd(VectorTransformToOrient(indyActor, '0.0 0.0 0.0'), GetThingPos(indyActor));
+			wheeltarg = CreateThingAtPos(camObj, GetThingSector(indyActor), wheeltargpos, '0 0 0');
+			CaptureThing(wheeltarg);
+
+			# Set camera focus to moving object
+			SetCameraSecondaryFocus(2, wheeltarg);
+            
+			# wait for actor to stop, set actors' look targ to wheel
+            AISetLookThing(indyActor, wheeldevice);
+			
+            
+			# offset camera look target to thing.
+			#SetExtCamLookOffsetToThing(wheeltarg);
+            
+			Sleep(2.0);
+			
+			# move the camera focus object down to the wheel
+			animId = MoveThingToPos(wheeltarg, GetThingPos(wheeldevice), 2.0);
+            
+            # Sleep breifly then say line
+			sleep(1.0);
+            PlayVoice(player, intheyknew, 1.0, 1);
+			Sleep(1.0);
+
+            # Restore camera
+			SetCameraPosition(curCam, GetThingPos(campos));
+			SetCurrentCamera(curCam);
+			RestoreExtCam();
+			EndCutScene();
+
+            # Return control and camera to player
+			CopyOrientAndPos(indyActor, player);
+			SetThingFlags(indyActor, 0x80000);
+			ClearThingFlags(player, 0x80000);
+			ClearActorFlags(player, 0x200000);
+        }    
+    return;
+
+# ========================================================================================
+    
+end
+

@@ -1,0 +1,58 @@
+# Jones 3D Cog Script
+#
+# SHW_Div2Voice.cog
+#
+# Say line control for the Div Room2 in SHW
+#
+# [CMG]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols		
+	
+    message     startup
+    message     entered
+    
+    thing       player      local
+          
+    surface     triggersurf     
+    
+    
+    sound       intheyknew=sw01j06a.wav      local       # quite a milling machine...
+    
+    int hit=0   local
+    
+    
+    
+    
+    
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if (hit == 1) return;
+    if ((GetSenderRef() == triggersurf) && (GetSourceRef() == player))
+        {    
+            hit = 1;
+            sleep(2);
+            PlayVoice(player, intheyknew, 1.0, 1);
+        }    
+    return;
+
+# ========================================================================================
+    
+end
+

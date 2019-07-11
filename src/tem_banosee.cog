@@ -1,0 +1,119 @@
+# Jones 3D Cog Script
+#
+# SOL_EntNoSee.cog
+#
+# Sets no see adjoin for entrance room 
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+        message     startup
+        message     entered
+        
+        thing       player      local
+
+        sector      sec1
+        sector      sec2
+        sector      sec3
+        
+        sector      sec4
+        
+        sector      off1
+        sector      off2
+        sector      off3
+        sector      on1
+        sector      on2
+        sector      on3
+        
+        sector      off4
+        sector      off5
+        sector      on4
+        
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    SectorAdjoins(Sec1, 0);
+    SectorAdjoins(Sec2, 0);
+    SectorAdjoins(Sec3, 0);
+    return;
+
+# ========================================================================================
+
+entered:
+        
+    if(GetSourceRef() != player) return;
+    
+    # draw bridge area -- coming up steps
+    if(GetSenderRef() == off1)
+        {
+            Print("draw - bridge area");
+            SectorAdjoins(sec1, 1);
+        }
+        
+    # draw waterfall area
+    if(GetSenderRef() == off2)
+        {
+            Print("draw - waterfall");
+            SectorAdjoins(sec2, 1);
+        }
+        
+    # draw monkey key area
+    if(GetSenderRef() == off3)
+        {
+            Print("draw - monkey key");
+            SectorAdjoins(sec3, 1);
+        }
+        
+    # Draw sec2, no draw sec4 - comin round back side of hut connect
+    if((GetSenderRef() == off4) || (GetSenderRef() == off5))
+        {
+            Print("swap no draw sectors");
+            SectorAdjoins(sec2, 1);
+            SectorAdjoins(sec4, 0);
+        }
+        
+    # don't draw waterfall area   
+    if(GetSenderRef() == on1)
+        {
+            Print("no draw - waterfall");
+            SectorAdjoins(sec2, 0);
+        }
+        
+    # don't draw monkey key area
+    if(GetSenderRef() == on2)
+        {
+            Print("no draw - monkey key");
+            SectorAdjoins(sec3, 0);
+        }
+        
+    # don't draw bridge area
+    if(GetSenderRef() == on3)
+        {
+            Print("no draw - bridge area");
+            SectorAdjoins(sec1, 0);
+        }
+        
+    # back side of hut connect -- swap them back
+    if(GetSenderRef() == on4)
+        {
+            Print("swap em back");
+            SectorAdjoins(sec2, 0);
+            SectorAdjoins(sec4, 1);
+        }
+
+        return;
+        
+# ========================================================================================
+
+end
+

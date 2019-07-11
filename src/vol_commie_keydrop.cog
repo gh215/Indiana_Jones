@@ -1,0 +1,78 @@
+# Jones 3D Cog Script
+#
+# Vol_commie_keydrop.cog
+#
+# Generic Door Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+#...............MESSAGES........................
+	message		activated		
+	message		startup		
+ 	
+#...............ACTORS........................
+    thing		player						local
+
+#...............PROPS........................
+    thing		keyitem								
+
+
+#...............COGS........................
+    cog			hintcog
+
+#...............SOUNDS........................
+	sound		in_whatsthis=INXJ002.wav	local
+	sound		in_thekey=INXJ167.wav		local
+
+#...............VARIABLES........................
+	int			hit=0						local
+
+end
+
+# ========================================================================================
+code
+startup:
+
+	player = GetLocalPlayerThing();
+return;
+
+# ========================================================================================
+# ........................................................................................
+activated:
+
+
+If (hit == 1) return;
+If (GetSenderRef() == keyitem)
+
+	hit = 1;
+    StartCutscene(1);
+	SetActorFlags(player, 0x200000);
+	
+	# swing the cam out
+	SetExtCamOffset('0.15 -0.1 0.08'); # was '0.05 0.02 0.065'
+	PlayVoice(player, in_whatsthis, 1.0, 0);
+	PlayMode(player, 60, 1);
+    
+	DestroyThing(keyitem);
+	PlayVoice(player, in_thekey, 1.0, 0);
+	SendMessage(hintcog, user0);
+	
+	# add the key to Jone's inventory
+	ChangeInv(player, 110, 1);
+	SetInvAvailable(player, 110, 1);
+	JonesInvItemChanged(110);
+	RestoreExtCam();
+
+    EndCutscene();
+	ClearActorFlags(player, 0x200000);
+	hit = 0;
+
+return;
+
+# ........................................................................................
+end

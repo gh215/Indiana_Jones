@@ -1,0 +1,85 @@
+
+# Jones 3D Cog Script
+#
+# PRU_FallingDebris.cog
+#
+# debris = place a ghost object in the center of your room and put it near the ceiling.
+# clutter = place a ghost object in the center of the room at floor level.
+#
+# turn on this cog from another cog with SendMessage(cogname, user0);
+# turn off this cog from another cog with SendMessage(cogname, user1);
+#
+# [TRM] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     user0
+    message     user1
+    message     pulse
+    message     timer
+    
+    thing       debris              # the junk that falls
+    
+    thing       rocks               local
+    
+    sector      tempSect            local
+    
+    sound       sndFalling=olv_fallfloor_c.wav  local   # falling rocks
+    
+    template    debris0=stnshrapas_nc_ns         local   
+    template    debris1=stnshrapbs_nc_ns        local   
+    template    debris2=stnshrapcs_nc_ns        local 
+    
+    vector      vecPos              local
+    vector      rocksVel            local
+    
+    int         deb                 local
+    int         sound1              local
+
+    flex        xVal                # x = width of room
+    flex        yVal                # y = length of room
+    flex        pulseTime=0.5	    # duh
+    
+end
+
+# ========================================================================================
+code
+
+user0:
+
+    SetPulse(pulseTime);
+	sound1 = PlaySoundThing(sndFalling, debris, 1.0, -1, -1, 0x880);
+    return;
+    
+# ========================================================================================
+
+user1:
+
+    SetPulse(0.0);
+    StopSound(sound1, 0.0);
+    return;
+
+# ========================================================================================
+
+pulse:
+    tempSect = GetThingSector(debris);
+    
+    SetPulse(0.0);
+    for(deb=0; deb<RandBetween(3, 5); deb=deb+1)                                                        	            
+    {                                                                                    	            
+        vecPos = VectorSet(rand()*xVal, rand()*yVal, 0.0);
+        rocks = CreateThingAtPos(debris0[RandBetween(0, 2)], tempSect, VectorAdd(GetThingPos(debris), VectorAdd('-0.25 -0.25 0.0', vecPos)), '0 0 0');
+        rocksVel = VectorSet(0, 0, 0.01);
+        SetThingVel(rocks, VectorScale(rocksVel, 0.7));
+    }
+    SetPulse(pulseTime);
+    
+    return;
+
+# ========================================================================================
+
+end
+

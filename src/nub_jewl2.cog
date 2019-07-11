@@ -1,0 +1,101 @@
+
+# Jones 3D Cog Script
+#
+# nub_Jewel.cog
+#
+# [TL] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		entered
+message		exited
+
+thing		player		local
+thing		plasma
+thing		blockA
+thing		blockB
+
+surface		topSurfN	linkID=1
+surface		topSurfNrim	linkID=1
+surface		topSurfS	linkID=1
+surface		topSurfSrim	linkID=1
+surface		topSurfE	linkID=1
+surface		topSurfErim	linkID=1
+surface		topSurfW	linkID=1
+surface		topSurfWrim	linkID=1
+#RKD -- added 4 more enterable surfaces
+
+int			blockPos=0	local
+#RKD - BLOCKPOS WAS "LOCLA"
+
+surface		pad				mask=480
+
+end
+
+# ========================================================================================
+code
+
+startup:
+StartCutscene(1);
+Sleep(0.01);
+EndCutscene();
+
+player = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+entered:
+Print("entered");
+PrintInt(blockpos);
+#RKD -- ADDED PRINT STATEMENTS
+
+if ((GetSenderRef() == pad) && (GetSourceRef() == player) && (blockPos == 0))
+{
+	print("Jewel is TRUE...");
+	JewelFlyingStatus(1, plasma);
+}
+if ((GetSenderRef() == pad) && ((GetSourceRef() == blockA) || (GetSourceRef() == blockB)))
+{
+	blockPos = 1;
+}
+
+#RKD -- GETSENDERREF FOR PLAYER, CHANGED TO GETSOURCEREF
+if ((GetSenderID() == 1) && (blockPos == 0) && (GetSourceRef() == player))
+{
+	Print("entered top surface");
+	JewelFlyingStatus(1, plasma);
+}
+
+return;
+
+# ........................................................................................
+exited:
+
+if ((GetSenderRef() == pad) && (GetSourceRef() == player)) 
+{
+	print("Jewel is FALSE...");
+	JewelFlyingStatus(0, plasma);
+}
+if ((GetSenderRef() == pad) && ((GetSourceRef() == blockA) || (GetSourceRef() == blockB)))
+{
+	blockPos = 0;
+}
+
+#RKD -- GETSENDERREF FOR PLAYER, CHANGED TO GETSOURCEREF
+if ((GetSenderID() == 1) && (GetSourceRef() == player))
+{
+	Print("exited top surface");
+	JewelFlyingStatus(0, plasma);
+}
+
+return;
+
+# ........................................................................................
+end
+
+

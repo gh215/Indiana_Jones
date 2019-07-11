@@ -1,0 +1,118 @@
+#
+# Jones 3D Cog Script
+#
+# PRU_piranhaDeath.cog    Swim in the rapids, piranhas will eat you.
+#
+# [GGJ]	This cog is dedicated to the memory of "Bub," my first pet piranha.
+# Most work done by CogMaster [PKM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	startup
+message	entered
+message timer
+
+sector	trigger
+
+template	tplActor=indy_sh_actor	local
+#template	tplHatRaft=rafthat		local
+
+thing		fishCam
+thing		fadePlate
+thing		deathTarget
+
+thing		piranha0		nolink
+thing		piranha1		nolink
+thing		piranha2		nolink
+thing		piranha3		nolink
+thing		piranha4		nolink
+thing		piranha5		nolink
+thing		piranha6		nolink
+thing		piranha7		nolink
+thing		piranha8		nolink
+thing		piranha9		nolink
+
+thing		actor			local
+thing		player			local
+
+keyframe	jumpKey=pi_jump.key	local
+int			currentFish			local
+
+end
+
+# ========================================================================================
+code
+startup:
+
+	player = GetLocalPlayerThing();
+
+	SetThingFlags(fadePlate, 0x80000);
+
+	for (currentFish = 0; currentFish <= 9; currentFish = currentFish + 1)
+	{
+		AISetCutsceneMode(piranha0[currentFish]);
+		SetThingFlags(piranha0[currentFish], 0x80000);
+	}
+
+	currentFish = 0;
+
+	return;
+
+entered:
+
+	StartCutscene(1);
+		
+	# Stop the player from moving
+	SetActorFlags(player, 0x200000);
+
+
+//	hatRaft = CreateThing(tplHatRaft, player);
+
+//	SetThingFlags(player, 0x80000);
+//	ClearThingFlags(actor, 0x80000);
+
+	# Cut to fishCam
+	if (!BITTEST(GetThingFlags(player), 0x202))
+	{
+		SetCameraFocus (2, fishCam);
+		SetCameraSecondaryFocus(2, player);
+		SetCurrentCamera(2);
+		Sleep(0.01);
+		SetCameraLookInterp(2, 1);
+	}
+	MoveThingToPos(player, GetThingPos(deathTarget), 2.0);
+
+	SetTimer(1.0);
+
+	return;
+
+timer:
+	if (currentFish == 7)
+	{
+		ClearThingFlags(fadePlate, 0x80000);
+		ThingFadeAnim(fadePlate, 0, 1, 1.0, 0);
+	}
+
+	ClearThingFlags(piranha0[currentFish], 0x80000);
+	PlayKey(piranha0[currentFish], jumpKey, 7, 0x00, 0);
+
+	if (currentFish == 9)
+	{
+		Sleep(2.0);
+
+		EndCutscene();	
+		DamageThing(player, GetHealth(player) + 1, 1, 0);
+
+		return;
+	}
+
+	currentFish = currentFish + 1;
+
+	SetTimer(0.05 + (Rand() * 0.1));
+
+	return;
+
+end

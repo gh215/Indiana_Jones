@@ -1,0 +1,206 @@
+# Jones 3D Cog Script
+#
+# RIV_Fence.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activated
+
+    thing       player      local
+    thing       fence
+    thing       button
+    thing       look_Fence
+    thing       cam1
+    
+    sound       snd_Start=bab_gate_start.wav        local
+    sound       snd_Moving=bab_gate_move.wav        local
+    sound       snd_Stop=bab_gate_stop.wav          local
+    sound       snd_Button=gen_wood_button.wav      local
+    
+    cog         hintCog
+    
+    # ** subroutines **
+    flex        openFence   local
+    flex        closeFence  local
+    
+    int         open=0      local
+    int         playing=0   local
+    int         track_Move  local
+    int         sentOnce=0  local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetThingLight(button, '0.25 0.25 0.25', 0.01, 0.5);
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    player = GetLocalPlayerThing();
+    
+    if((GetSenderRef() == button) && (open == 0) && (playing == 0))
+    {
+        playing = 1;
+        open = 1;
+        Call openFence;
+    }
+
+    else if((GetSenderRef() == button) && (open == 1) && (playing == 0))
+    {
+        playing = 1;
+        open = 0;
+        Call closeFence;
+    }
+    
+    return;
+           
+# ========================================================================================
+
+openFence:
+
+    if(sentOnce == 0)
+    {
+        sentOnce = 1;
+        SendMessage(hintCog, user0);
+    }
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # switch to external camera
+    SetCameraFocus(2, cam1);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    PlaySoundThing(snd_Button, button, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(button, 1, 1.0);
+    WaitForStop(button);
+    
+    # set camera interp speed turn on look interp
+    SetCameraInterpSpeed(2, 2.0);
+    SetCameraLookInterp(2, 1);
+    Sleep(0.01);
+    
+    # interp to look_Fence
+    SetCameraSecondaryFocus(2, look_Fence);
+    
+    Sleep(1.5);
+    
+    PlaySoundThing(snd_Start, fence, 1.0, 10.0, 20.0, 0);
+    track_Move = PlaySoundThing(snd_Moving, fence, 1.0, 10.0, 20.0, 0);
+    MoveToFrame(fence, 1, 2.0);
+    WaitForStop(fence);
+    StopSound(track_Move, 0.5);
+    PlaySoundThing(snd_Stop, fence, 1.0, 10.0, 20.0, 0);
+    
+    # move camera focus back to player
+    SetCameraInterpSpeed(2, 1.0);
+    SetCameraSecondaryFocus(2, player);
+    
+    PlaySoundThing(snd_Button, button, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(button, 0, 1.0);
+    WaitForStop(button);
+    
+    Sleep(1.0);
+    
+    # restore camera to player
+    SetCameraPosition(1, GetThingPos(cam1));
+    SetCurrentCamera(1);
+    
+    # turn off look interp
+    SetCameraLookInterp(2, 0);
+    
+    playing = 0;
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    return;
+
+# ========================================================================================
+
+closeFence:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # switch to external camera
+    SetCameraFocus(2, cam1);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    PlaySoundThing(snd_Button, button, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(button, 1, 1.0);
+    WaitForStop(button);
+    
+    # set camera interp speed turn on look interp
+    SetCameraInterpSpeed(2, 2.0);
+    SetCameraLookInterp(2, 1);
+    Sleep(0.01);
+    
+    # interp to look_Fence
+    SetCameraSecondaryFocus(2, look_Fence);
+    
+    Sleep(1.5);
+    
+    PlaySoundThing(snd_Start, fence, 1.0, 10.0, 20.0, 0);
+    track_Move = PlaySoundThing(snd_Moving, fence, 1.0, 10.0, 20.0, 0);
+    MoveToFrame(fence, 0, 2.0);
+    WaitForStop(fence);
+    StopSound(track_Move, 0.5);
+    PlaySoundThing(snd_Stop, fence, 1.0, 10.0, 20.0, 0);
+    
+    # move camera focus back to player
+    SetCameraInterpSpeed(2, 1.0);
+    SetCameraSecondaryFocus(2, player);
+    
+    PlaySoundThing(snd_Button, button, 1.0, 5.0, 10.0, 0);
+    MoveToFrame(button, 0, 1.0);
+    WaitForStop(button);
+    
+    Sleep(1.0);
+    
+    # restore camera to player
+    SetCameraPosition(1, GetThingPos(cam1));
+    SetCurrentCamera(1);
+    
+    # turn off look interp
+    SetCameraLookInterp(2, 0);
+    
+    playing = 0;
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    return;
+    
+# ========================================================================================
+
+end

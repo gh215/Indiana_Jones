@@ -1,0 +1,116 @@
+# Jones 3D Cog Script
+#
+# TEM_LavaBubMM.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     user0
+    message     entered
+    message     pulse
+    
+    thing       blurp           local
+    thing       bloop0
+    thing       bloop1
+    thing       bloop2
+    thing       bloop3
+    thing       bloop4
+    thing       bloop5
+    thing       bloop6
+    thing       bloop7
+    thing       bloop8
+    thing       bloop9
+    
+    sector      sec_Start1      linkID=1
+    sector      sec_Start2      linkID=1
+    sector      sec_Start3      linkID=1
+    
+    sector      sec_Stop1       linkID=0
+    sector      sec_Stop2       linkID=0
+    sector      sec_Stop3       linkID=0
+    
+    template    tpl_Bubble=lavabubopp       local
+    template    tpl_Sparks=lavasparks       local
+
+    material	bubbleSkin=bubble_a4lava_top.mat	    local
+    material	lavaSkin=gen_a4sfx_lava_particle.mat	local
+    
+    sound       sfx_Bloop0=gen_lava_bloop_a.wav      local
+    sound       sfx_Bloop1=gen_lava_blurp_a.wav      local
+    
+    int         animId      local
+    int         randNum     local
+    
+    
+end
+
+# ========================================================================================
+
+code
+
+user0:
+
+    # message sent by tiki1 door
+    SetPulse(0.0);
+
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if(GetSenderID() == 1)
+    {
+        Print("startBubbles");
+        SetPulse(1.0);
+    }
+
+    if(GetSenderID() == 0)
+    {
+        Print("stopBubbles");
+        SetPulse(0.0);
+    }
+    
+    return;
+
+# ========================================================================================
+
+pulse:
+
+    randNum = RandBetween(0, 9);
+    
+    # create bubble at random position
+    blurp = CreateThing(tpl_Bubble, bloop0[randNum]);
+    CaptureThing(blurp);
+    
+    # move bubble to frame
+    MoveToFrame(blurp, 1, 1.5);
+    
+    # animate the bubble mat
+    SetMaterialCel(bubbleskin, 0);
+    animId = MaterialAnim(bubbleskin, 48, 0);
+    
+    # play the bloop/blurp sfx
+    PlaySoundThing(sfx_Bloop0[RandBetween(0, 1)], blurp, 1.0, 10.0, 15.0, 0x0);
+    
+    # create lava sparks
+    SetMaterialCel(lavaskin, 0);
+	CreateThing(tpl_Sparks, bloop0[randNum]);
+    MaterialAnim(lavaskin, 4, 0);
+    
+    # get ready for the next one
+    WaitForStop(blurp);
+    Sleep(0.45);
+    #StopAnim(animId);
+    DestroyThing(blurp);
+    
+    return;
+
+# ========================================================================================
+
+end
+

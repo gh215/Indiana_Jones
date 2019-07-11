@@ -1,0 +1,121 @@
+# Jones 3D Cog Script
+#
+# INF_ChapelDoor.cog
+#
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message	    startup
+    message     blocked
+    message		arrivedwpnt
+	message	    user0
+
+	keyframe	in_pull=in_pull_lever_down.key	local
+	keyframe	lever_down=gen_lever.key		local
+    keyframe    elevanim=inf_elvtr_gears.key    local
+    keyframe    elevanimup=inf_elvtr_gearup.key    local
+          
+    sound       leverpull=nub_lever_pull_c.wav  local   
+    sound       leverback=nub_lever_reset_c.wav local
+    sound       gearplatmove=nub_weight_move_c.wav  local
+    sound       gearplatstart=nub_elev_start_c.wav  local
+    sound       gearplatstop=nub_elev_stop_c.wav    local   
+
+	thing		player					        local
+
+	thing		camera
+    thing       camera_tgt0
+    thing       elevator
+    thing       elevator_cap
+    
+    thing       waypoint0
+    thing       waypoint1
+    
+    int         keychan                         local
+    int         movechan                        local
+    int         nextframe=0                     local
+    int         direction=0                     local
+    int         screen=0                        local
+    int         crntWpnt                        local
+    int         nextWpnt                        local
+    int         direction=0                     local
+
+end
+
+# ================================================================================
+
+code
+
+# ................................................................................
+
+startup:
+
+    AISetCutsceneMode(elevator);
+	player = GetLocalPlayerThing();
+    SetCollideType(elevator, 0);
+    ClearThingFlags(elevator, 0x80000);
+    
+return;
+
+# ................................................................................
+
+user0:
+
+    AttachThingtoThing(elevator_cap, elevator);
+
+    AISetWpnt(waypoint0, 2);
+    AISetWpnt(waypoint1, 3);
+    
+    AIConnectWpnts(2, 3);
+    
+    AITraverseWpnts(elevator, 2, 0.5, 0, 1);
+    keychan = PlayKey(elevator, elevanimup, 2, 0x00, 0);
+    movechan = PlaySoundThing(gearplatmove, elevator, 1, 5, 10, 1);
+    direction = 1;
+    
+return;
+
+# ................................................................................
+
+arrivedwpnt:
+
+    if (GetSenderRef() == elevator)
+    {
+        //print("arriving at waypoint");
+        PlaySoundThing(gearplatstop, elevator, 1, 5, 10, 0);
+        StopSound(movechan, 0.0);
+        StopKey(elevator, keychan, 0);
+        
+        if (direction == 0)
+        {
+            keychan = PlayKey(elevator, elevanim, 2, 0x00, 0);
+            movechan = PlaySoundThing(gearplatmove, elevator, 1, 5, 10, 1);
+        }
+        if (direction == 1)
+        {
+            keychan = PlayKey(elevator, elevanimup, 2, 0x00, 0);
+            movechan = PlaySoundThing(gearplatmove, elevator, 1, 5, 10, 1);
+        }
+        
+        direction = 1-direction;
+    }
+        
+return;
+
+# ................................................................................
+
+blocked:
+
+    //print("I'm blocked");
+    
+return;
+
+# ................................................................................
+
+
+end
+

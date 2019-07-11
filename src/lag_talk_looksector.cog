@@ -1,0 +1,89 @@
+# Jones 3D Cog Script
+#
+# lag_talk_looksector.cog
+#
+#
+# [DS]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+	message     startup
+	message     entered
+	message	exited
+	message	pulse
+    
+	sector	looksec
+	sound		indyline=
+
+	int         player					local
+	int		beenhere=0					local
+
+	float		playery =0					local
+	float		playerx =0					local
+	thing		player					local
+	vector	playervec					local
+	int		direction=0					local
+	int		targdir=0		desc=0-north,1-south,2-east,3-west.
+	sound		music0=mus_lag_japan1.wav		local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+
+entered:
+
+	if (beenhere == 1) return;
+	if(getsenderref() != looksec) return;
+	setpulse(0.5);
+	return;
+
+exited:
+
+	if(getsenderref() != looksec) return;
+	setpulse(0.0);
+	return;
+
+pulse:
+	
+	playervec = GetThingLVec(player);
+	playery = VectorY(playervec);
+	playerx = VectorX(playervec);
+
+	if ((playery > 0) && ((playerx > -0.7) && (playerx < 0.7)))
+	{
+	direction = 0;                               //north
+	}
+	else if ((playery < 0) && ((playerx > -0.7) && (playerx < 0.7)))
+	{
+	direction = 1;                          //south
+	}
+	else if ((playerx > 0) && ((playery > -0.7) && (playery < 0.7)))
+	{
+	direction = 2;                          //east
+	}
+	else if ((playerx < 0) && ((playery > -0.7) && (playery < 0.7)))
+	{
+	direction = 3;                          //west
+	}
+#	printint(direction);
+	if ((direction) == (targdir))
+	{
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+	PlayVoice(player, indyline, 1.0, 0);
+	beenhere=1;
+	setpulse(0.0);
+	}
+	return;
+
+end
+

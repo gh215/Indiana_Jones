@@ -1,0 +1,56 @@
+# Jones 3D Cog Script
+#
+# item_Mirror.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	touched
+message	taken
+
+thing	player	local
+
+int		bin=63	local
+
+end
+
+# ===================================================================
+
+code
+
+touched:
+
+    player = GetSourceRef();
+    
+	if (GetInv(player, bin) < GetInvMax(player, bin))
+	{
+		TakeItem(GetSenderRef(), player);
+	}
+	
+	return;
+
+# -------------------------------------------------------------------
+
+taken:
+
+    player = GetSourceRef();
+	
+    ChangeInv(player, bin, 1.0);
+	SetInvAvailable(player, bin, 1);
+    JonesInvItemChanged(bin);
+	
+	return;
+
+end
+
+
+
+
+
+
+

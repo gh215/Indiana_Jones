@@ -1,0 +1,59 @@
+# Jones 3D Cog Script
+#
+# PRU_snakehole.cog    Snake comes out of hole if Indy approaches.
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message entered
+message	startup
+message	aievent
+
+thing	snake
+thing	snakeTarget
+thing	player		local
+
+surface	triggerSurf
+int	once=0			local
+
+end
+# ========================================================================================
+
+code
+startup:
+#10000 causes ai to send event messages, 2000 disables.
+#AISetMode(snake, 0x12000);
+AISetCutsceneMode(snake);
+player=GetLocalPlayerThing();
+return;
+# ========================================================================================
+
+entered:
+if (once == 0)
+{
+	once = 1;
+	AISetLookThing(snake, snakeTarget);
+	AISetMoveSpeed(snake, 1.0);
+	AISetMoveThing(snake, snakeTarget, 1);
+}
+return;
+# ========================================================================================
+
+aievent:
+#check to see that the snake is approaching his target
+if (GetParam(0) == 0x2000)
+{
+	#AIClearMode(snake, 0x12000);
+	AIClearCutsceneMode(snake);
+	AISetFireTarget(snake, player);
+	#set ai to active and attacking
+	#AISetMode(snake, 0x202);
+}
+return;
+
+end
+

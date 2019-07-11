@@ -1,0 +1,408 @@
+# Jones 3D Cog Script
+#
+# INF_TurnerHunt.cog
+# Controls turner as he runs around the arena
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     killed
+    message     user0
+    message     timer
+    message     aievent
+    message     damaged
+    
+    thing       player                                  local
+    
+    thing       turner                                  mask=0x408
+    
+    sound       tu_line0=im07t02.wav                    local
+    sound       tu_line1=im07t04.wav                    local
+    sound       tu_line2=im07t06.wav                    local
+    sound       tu_line3=im08t02.wav                    local
+    sound       tu_line4=im03t04.wav                    local
+    
+    template    imp2template=imp2                       local
+    
+	model  		mod_tu_imp2=hand_tu_imp2_b.3do			local
+    
+    thing       dmatpoint0                              nolink
+    thing       dmatpoint1                              nolink
+    thing       dmatpoint2                              nolink
+    thing       dmatpoint3                              nolink
+    thing       dmatpoint4                              nolink 
+    thing       dmatpoint5                              nolink 
+    thing       dmatpoint6                              nolink 
+    thing       dmatpoint7                              nolink 
+    thing       dmatpoint8                              nolink 
+    thing       dmatpoint9                              nolink 
+    thing       dmatpoint10                             nolink 
+    thing       dmatpoint11                             nolink
+    thing       dmatpoint12                             nolink 
+    thing       dmatpoint13                             nolink 
+    thing       dmatpoint14                             nolink 
+    thing       dmatpoint15                             nolink
+    thing       dmatpoint16                             nolink 
+    thing       dmatpoint17                             nolink 
+    thing       dmatpoint18                             nolink 
+    thing       dmatpoint19                             nolink 
+    thing       dmatpoint20                             nolink 
+    thing       dmatpoint21                             nolink 
+    thing       dmatpoint22                             nolink 
+    thing       dmatpoint23                             nolink 
+    thing       dmatpoint24                             nolink 
+    thing       dmatpoint25                             nolink 
+    thing       dmatpoint26                             nolink 
+    thing       dmatpoint27                             nolink 
+    thing       dmatpoint28                             nolink 
+    thing       dmatpoint29                             nolink 
+    thing       dmatpoint30                             nolink 
+    thing       dmatpoint31                             nolink 
+    thing       dmatpoint32                             nolink 
+    thing       dmatpoint33                             nolink 
+    thing       dmatpoint34                             nolink 
+    thing       dmatpoint35                             nolink 
+    thing       dmatpoint36                             nolink 
+    thing       dmatpoint37                             nolink 
+    thing       dmatpoint38                             nolink 
+    thing       dmatpoint39                             nolink 
+    thing       dmatpoint40                             nolink 
+    thing       dmatpoint41                             nolink 
+    thing       dmatpoint42                             nolink 
+    thing       dmatpoint43                             nolink 
+    thing       dmatpoint44                             nolink 
+    thing       dmatpoint45                             nolink 
+    thing       dmatpoint46                             nolink 
+    thing       dmatpoint47                             nolink 
+    thing       dmatpoint48                             nolink 
+    thing       dmatpoint49                             nolink 
+    thing       dmatpoint50                             nolink 
+    thing       dmatpoint51                             nolink  
+    thing       dmatpoint52                             nolink 
+    thing       dmatpoint53                             nolink 
+    thing       dmatpoint54                             nolink 
+    thing       dmatpoint55                             nolink 
+    thing       dmatpoint56                             nolink 
+    thing       dmatpoint57                             nolink 
+    thing       dmatpoint58                             nolink 
+    thing       dmatpoint59                             nolink 
+    thing       dmatpoint60                             nolink 
+    thing       dmatpoint61                             nolink 
+    thing       dmatpoint62                             nolink 
+    thing       dmatpoint63                             nolink
+    
+    vector      player_curpos                           local
+    
+    flex        curdist                                 local
+    flex        dist_index                              local
+    flex        cur_smallest                            local
+    flex        next_smallest                           local
+    
+    int         loc_index                               local
+    int         fleeindex                               local
+                                                        
+    int         arraycount=0                            local
+                                                        
+    int         modenum=0                               local
+    int         lastrand=-1                             local
+    int         currand=0                               local
+    int         lastrandt=-1                            local
+    int         currandt=0                              local
+    int         lastrandr=-1                            local
+    int         currandr=0                              local
+    int         start=1                                 local
+    int         tauntchan=0                             local
+    int         killflag=0                              local
+    int         firsttime=1                             local
+    
+    sound		pow=imp2_activate.wav		            local	# Autoloaded
+    sound       deadturner=mus_inf_turnerdead.wav       local    
+
+    flex        fadeout                                 local
+    flex        fadein                                  local
+    int         meshindex                               local
+    int         boomscreen=0                            local
+    int         aieventscreen=0                         local
+    flex        n_eventtype                             local
+    flex        n_param                                 local
+    int         killblock=0                             local
+    
+end
+
+code
+
+#........................................................................................
+
+startup:
+
+    player = GetLocalPlayerThing();
+    ClearThingFlags(turner, 0x80000);
+    SetThingMesh(turner, 8, mod_tu_imp2, 0);
+    CaptureThing(turner);
+    call fadeout;
+    
+return;
+
+#........................................................................................
+
+damaged:
+
+    if ((GetSenderRef() == turner) && (GetParam(1) == 0x04) && (boomscreen == 0))
+    {
+        //print("turner is in range of explosion");
+        boomscreen = 1;
+        returnex(0);
+        call fadeout;
+        modenum = 3;
+        KillTimerEx(2);
+        SetTimerEX(RandBetween(2, 4), 2, 0, 0);
+    }
+    
+return;
+
+#........................................................................................
+        
+aievent:
+
+    //print("aievent received");
+	n_eventType = GetParam(0);
+	n_param = GetParam(2);
+
+	if (n_eventType == 0x1000)		#---- EVENT_TARGETED
+	{
+		if ((BITTEST(GetWeaponFlags(n_param), 0x20000)) && (aieventscreen == 0))
+		{
+            aieventscreen = 1;
+			call fadeout;
+            modenum = 3;
+            KillTimerEx(2);
+            SetTimerEX(RandBetween(2, 4), 2, 0, 0);    
+        }
+	}
+
+return;
+
+#........................................................................................
+
+user0:
+
+    start = 1;
+    SetTimerEX(RandBetween(2, 4), 2, 0, 0);
+    
+return;
+    
+#........................................................................................
+
+timer:
+
+    if (start == 1)
+    {
+    
+        
+        //fade turner out
+        If (firsttime != 1)
+        {
+            call fadeout;
+            Sleep(2);
+        }    
+        firsttime = 0;
+        
+        //throw a rand between 0 and 3
+        modenum = RandBetween(0, 3);
+        //# print("modenum is");
+        //printint(modenum);
+        
+        //combat mode
+        if (modenum == 0)
+        {
+            //enter combat mode
+            # print("combat mode");
+            
+            //find the closest point to indy and use the next point
+            player_curpos = GetThingPos(player);
+            
+            cur_smallest=VectorDist(player_curpos, GetThingPos(dmatpoint0[0]));
+            cur_smallest=abs(cur_smallest);
+            
+            For (arraycount=1; arraycount<=63; arraycount=arraycount+1)
+            {
+                next_smallest = VectorDist(player_curpos, GetThingPos(dmatpoint0[arraycount]));
+                next_smallest=abs(next_smallest);
+                
+                if (cur_smallest > next_smallest)
+                {
+                    loc_index = arraycount;
+                    cur_smallest = next_smallest;
+                }
+            }    
+            loc_index=loc_index + (RandBetween(1, 3));
+            if (loc_index > 63)
+            {
+                loc_index = 63;
+            }    
+                
+            //materialise turner close to indy and start shooting
+            TeleportThing(turner, dmatpoint0[loc_index]);
+            Sleep(0.25);
+            call fadein;
+            Sleep(1.5);
+            SetTimerEX(RandBetween(1, 3), 2, 0, 0);
+            boomscreen=0;
+            aieventscreen=0;
+        }
+        
+        //combat mode
+        if (modenum == 1)
+        {
+            //enter combat mode
+            //print("combat mode");
+            
+            //find the closest point to indy and use the next point
+            player_curpos = GetThingPos(player);
+            
+            cur_smallest=VectorDist(player_curpos, GetThingPos(dmatpoint0[0]));
+            cur_smallest=abs(cur_smallest);
+            
+            For (arraycount=1; arraycount<=63; arraycount=arraycount+1)
+            {
+                next_smallest = VectorDist(player_curpos, GetThingPos(dmatpoint0[arraycount]));
+                next_smallest=abs(next_smallest);
+                
+                if (cur_smallest > next_smallest)
+                {
+                    loc_index = arraycount;
+                    cur_smallest = next_smallest;
+                }
+            }    
+            loc_index=loc_index + (RandBetween(1, 3));
+            if (loc_index > 63)
+            {
+                loc_index = 63;
+            }
+                
+            //materialise turner close to indy and start shooting
+            TeleportThing(turner, dmatpoint0[loc_index]);
+            Sleep(0.25);
+            call fadein;
+            Sleep(1.5);
+            SetTimerEX(RandBetween(1, 3), 2, 0, 0);
+            boomscreen=0;
+            aieventscreen=0;
+        }
+        
+        //tauntmode
+        if (modenum == 2)
+        {
+            //tauntmode
+            //print("taunting");
+            currandt = RandBetween(0, 4);
+            While (lastrandt == currandt)
+            {
+                currandt = RandBetween(0, 4);
+            }
+            //tauntchan=PlaySoundThing(tu_line0[currandt], dmatpoint0[RandBetween(0, 63)], 1, 20, 60, 0);
+            tauntchan=PlayVoice(turner, tu_line0[currandt], 1, 0);
+            WaitForSound(tauntchan);
+            lastrandt = currandt;
+            SetTimerEX(RandBetween(1, 3), 2, 0, 0);
+            boomscreen=0;
+            aieventscreen=0;
+        }
+        
+        //random teleportation mode
+        if (modenum == 3)
+        {
+            //random teleport mode
+            //print("random teleport");
+            currandr = RandBetween(0, 63);
+            While (lastrandr == currandr)
+            {
+                currandr = RandBetween(0, 63);
+            }
+            TeleportThing(turner, dmatpoint0[currandr]);
+            lastrandr = currandr;
+            Sleep(0.25);
+            call fadein;
+            Sleep(1.5);
+            SetTimerEX(RandBetween(1, 3), 2, 0, 0);
+            boomscreen=0;
+            aieventscreen=0;
+        }
+    
+    }            
+        
+return;
+
+#........................................................................................
+
+killed:
+
+    if (killblock == 1)
+    {
+        return;
+    }
+    killblock = 1;
+
+    KillTimerEx(2);
+    # print("turner has been killed");
+    Sleep(1);
+    
+    call fadein;
+    RestoreThingMesh(turner, meshindex);
+    //music
+	PlaySoundLocal(deadturner, 1, 0, 0x0, 0);
+    
+    //create the imp2part where he falls
+    CreateThing(imp2template, turner);
+    start = 0;
+    
+return;
+             
+#........................................................................................
+
+fadeout:
+    
+    SetActorFlags(turner, 0x100000);
+    ClearThingFlags(turner, 0x4000);
+    AISetCutsceneMode(turner);
+    ThingFadeAnim(turner, 1.0, 0.0, 1.0, 0);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    PlaySoundThing(pow, turner, 1, 10, 20, 0);
+    Sleep(0.5);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    Sleep(0.5);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    SetCollideType(turner, 0);
+    SetActorFlags(turner, 0x80000);
+
+return;
+
+#........................................................................................
+
+fadein:
+
+    SetActorFlags(turner, 0x8);
+    ThingFadeAnim(turner, 0.0, 1.0, 1.0, 0);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    PlaySoundThing(pow, turner, 1, 10, 20, 0);
+    Sleep(0.5);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    Sleep(0.5);
+    MakeFairyDust(turner, GetThingJointPos(turner, 5));
+    ClearActorFlags(turner, 0x100000);
+    ClearActorFlags(turner, 0x8);
+    SetThingFlags(turner, 0x4000);
+    SetCollideType(turner, 3);
+    AIClearCutsceneMode(turner);
+    ClearActorFlags(turner, 0x80000);
+
+return;
+
+#........................................................................................
+
+end

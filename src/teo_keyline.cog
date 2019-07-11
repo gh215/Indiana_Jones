@@ -1,0 +1,89 @@
+# Jones 3D Cog Script
+#
+# gen_MoveObj.cog
+#
+#
+# A hack for pushing blocks around. Inspired by Reed Derleth
+# 
+# IMPORTANT. Make sure you attach the cog to a valid object.
+# Make sure that the ghostthing is assigned to a ghost object.
+#
+# Usage:
+# -Get behind the object (face the direction you want it to go)
+# -Activate once to push forward.
+# -Activate twice rapidly to pull. (the object will materialise on top of you just walk forward)
+# -You can teleport things out of the world so be careful
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message     startup
+	message     entered
+	message	    taken
+    
+    sound       keyline
+    
+    sector      entersector
+    
+    thing       key
+
+	vector      playervec           local
+
+	thing       player0             local
+
+	float       playery=0           local
+	float       playerx=0           local
+    int         check=0             local
+    int         keytaken=0          local
+
+end
+
+
+# ========================================================================================
+
+code
+
+startup:
+    player0 = GetLocalPlayerThing();
+	return;
+
+# ........................................................................................
+
+entered:
+    if ((GetSenderRef() == entersector) && (GetSourceRef() == player0) && (check == 0) && (keytaken == 0))
+    {
+	    playervec = GetThingLVec(player0);
+	    playery = VectorY(playervec);
+	    playerx = VectorX(playervec);
+
+		if ((playery > 0) &&
+		   ((playerx > -0.7) && (playerx < 0.7))) 
+        {
+            check = 1;
+		   	PlayVoice(player0, keyline, 1.0, 0); 
+		}
+    }        
+	return;
+    
+# ........................................................................................
+
+taken:
+    if (GetSenderRef() == key)
+    {
+        keytaken = 1;
+    }
+    return;        
+	
+	end
+
+
+
+
+
+
+
+

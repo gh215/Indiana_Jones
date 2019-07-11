@@ -1,0 +1,68 @@
+# Jones 3D Cog Script
+#
+# RIV_LockerRaft.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     exited
+
+    thing       player      local
+    thing       HammerCam
+    
+    surface     surf0       linkID=1
+    surface     surf1       linkID=1
+    surface     surf2       linkID=1
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if(GetSenderID() == 1)
+    {
+        #SetExtCamOffset('0.0 -0.4 0.0');
+        SetCameraFOV(120, 1, 1.0);
+        SetCollideType(hammerCam, 0);
+    }
+    
+    return;
+    
+# ========================================================================================
+
+exited:
+
+    if((GetSenderID() == 1) && (GetSourceRef() == player))
+    {
+        Sleep(1.0);
+        
+        if(GetMoveStatus(player) != 6)  # player isn't hanging
+        {
+            #RestoreExtCam();
+            SetCameraFOV(90, 1, 1.0);
+            SetCollideType(hammerCam, 3);
+        }
+    }
+
+    return;
+
+# ========================================================================================
+
+end
+

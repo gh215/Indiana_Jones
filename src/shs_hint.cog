@@ -1,0 +1,361 @@
+# Jones 3D Cog Script
+#
+# shs_Hint.cog
+#
+# Solves hints    
+#
+# [JWC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+        message         startup
+        message         activated
+        message         entered
+        message         taken
+		message			removed
+		message			arrived
+        message			user0
+		message			user1
+		message			user2
+
+
+        thing           player		local
+
+        thing           hint1
+        thing			h1button
+		
+		thing           hint2
+		sector          h2sector
+        
+        thing           hint4
+		surface			h4face0 	linkid=1
+		surface			h4face1		linkid=1
+
+		thing           hint6
+        thing           h6ladder
+		
+		thing           hint8
+        sector  		h8sector
+		
+		thing           hint10
+        thing           h10block
+		surface			h10face		mask=0x080
+		
+		#thing           hint11
+		# player whipclimbs to jump on pad
+		
+		thing           hint12
+        thing           h12block
+		surface			h12face		mask=0x080
+		
+	    #thing           hint13
+        # player whipclimbs off floor 
+			
+		thing           hint14
+        thing			h14lever
+	   	   
+		thing           hint16
+        thing			h16button
+		
+		thing           hint18
+        sector			h18sector
+				
+        thing           hint20
+        thing			h20lever
+		
+		thing           hint22
+        thing			h22lever
+		
+		thing           hint24
+		int				solvable=0			local
+		int				h26solved=0			local
+		# player sets clock (handled in clock cog)
+		
+        thing           hint26
+        thing			h26lever
+     
+		thing           hint28
+        thing			h28keyhole
+		
+        thing           hint30
+        thing			h30seal
+				
+		thing           hint32
+        thing			h32gate
+	   
+		thing           hint34
+		sector			h34sector
+		
+        thing           hint36
+		thing			h36bronzekey	
+				
+		thing           hint38
+		thing			h38beam
+				
+		thing           hint40
+		thing			h40keyhole
+				
+		thing           hint42
+        thing			h42bulb
+
+        thing           hint44
+		sector			h44sector
+
+		thing           hint46
+		thing			h46button
+
+        thing           hint48
+		thing			h48ghost		## mask=0x8
+		
+        thing           hint50
+		thing			h50ghost		## mask=0x8
+				
+		thing           hint52
+		thing			h52pot
+		
+        #thing           hint54
+		# player gets whip spot
+		
+		thing           hint56
+		thing			h56pad
+				
+		thing           hint58
+		thing			h58pot
+		
+        thing           hint60
+        sector			h60sector
+		
+
+			  
+
+
+end
+
+
+# ========================================================================================
+code
+
+startup:
+    
+    player = GetLocalPlayerThing();
+return;
+
+# ========================================================================================
+activated:
+
+	# push button to lower ladder in entry tower
+    if ((GetSenderRef() == h1button) && (GetHintSolved(hint1) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint1);
+    }
+    
+       
+    # player opens tower gates	
+    if ((GetSenderRef() == h14lever) && (GetHintSolved(hint14) == 0) && (GetSourceRef() == player))
+    {               
+        SetHintSolved(hint14);
+    }
+	
+    # player hits slideladder button
+    if ((GetSenderRef() == h16button) && (GetHintSolved(hint16) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint16);
+    }
+	
+	# player activates lever for ladder
+    if ((GetSenderRef() == h20lever) && (GetHintSolved(hint20) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint20);
+    }
+
+    # player activates lever for bell
+    if ((GetSenderRef() == h22lever) && (GetHintSolved(hint22) == 0) && (GetSourceRef() == player))
+	{
+        SetHintSolved(hint22);
+	}
+    # player pulls lever for bellringer	
+	if ((GetSenderRef() == h26lever) && (solvable == 1) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint26);
+    	h26solved=1;		# now hint24 won't unsolve
+	}
+	# player opens door with old lady key 
+    if ((GetSenderRef() == h28keyhole) && (GetHintSolved(hint28) == 0) && (GetCurItem(player) == 115))
+    {
+        SetHintSolved(hint28);
+    }
+    # player gets the monastic seal
+    if ((GetSenderRef() == h30seal) && (GetHintSolved(hint30) == 0) && (GetSourceRef() == player))
+	{
+        SetHintSolved(hint30);
+	}
+    # player opens gate	with key
+    if ((GetSenderRef() == h40keyhole) && (GetHintSolved(hint40) == 0) && (GetCurItem(player) == 103))
+    {
+
+        SetHintSolved(hint40);
+    }
+	# player activates ladder in big nave
+	if ((GetSenderRef() == h46button) && (GetHintSolved(hint46) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint46);
+    }
+    # player puts bulb in pot
+	if ((GetSenderRef() == h52pot) && (GetCurItem(player) == 104))
+    {
+        SetHintSolved(hint52);
+    }
+    
+
+return;        
+        
+        
+# ========================================================================================
+entered:
+        
+    # push button to open courtyard door
+    if ((GetSenderRef() == h2sector) && (GetHintSolved(hint2) == 0) && (GetSourceRef() == player))
+    {               
+        SetHintSolved(hint2);
+    }
+
+	# player enters face with climbing maze
+    if ((GetSenderId() == 1) && (GetHintSolved(hint4) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint4);
+    }
+    # player gets on top of CT ladder
+    if ((GetSenderRef() == h6ladder) && (GetHintSolved(hint6) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint6);
+    }
+    # player enters power room from clock tower
+    if ((GetSenderRef() == h8sector) && (GetHintSolved(hint8) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint8);
+    }
+    # player pushes block on to spot in power room 
+    if ((GetSenderRef() == h10face) && (GetHintSolved(hint10) == 0) && (GetSourceRef() == h10block))
+    {
+        SetHintSolved(hint10);
+    }
+    
+    # player pushes block on to spot in upper power 
+    if ((GetSenderRef() == h12face) && (GetHintSolved(hint12) == 0) && (GetSourceRef() == h12block))
+    {
+        SetHintSolved(hint12);
+    }
+    # player shoots window by ledge
+    if ((GetSenderRef() == h18sector) && (GetHintSolved(hint18) == 0))
+    {
+        SetHintSolved(hint18);
+    }
+	# player opens door with seal key
+	if ((GetSenderRef() == h34sector) && (GetHintSolved(hint34) == 0))
+    {
+        SetHintSolved(hint34);
+    }
+    # player gets on right beam
+    if ((GetSenderRef() == h38beam) && (GetHintSolved(hint38) == 0))
+    {
+        SetHintSolved(hint38);
+    }
+    # player jumps into water
+    if ((GetSenderRef() == h44sector) && (GetHintSolved(hint44) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint44);
+    }
+    # player whipswings to pad
+    if ((GetSenderRef() == h56pad) && (GetHintSolved(hint56) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint56);
+    }
+    # player gives flower to old lady
+    if ((GetSenderRef() == h60sector) && (GetHintSolved(hint60) == 0) && (GetSourceRef() == player))
+    {
+        SetHintSolved(hint60);
+    }
+	
+
+         
+    
+        
+return;        
+
+# ========================================================================================
+taken:
+
+    # player picks up bronze key
+    if ((GetSenderRef() == h36bronzekey) && (GetHintSolved(hint36) == 0))
+    {
+        SetHintSolved(hint36);
+    }
+    # player picks up bulb
+    if ((GetSenderRef() == h42bulb) && (GetHintSolved(hint42) == 0))
+    {
+        SetHintSolved(hint42);
+    }
+
+return;
+
+# ========================================================================================
+removed:
+
+	
+    # player shoots window in pot room
+    if ((GetSenderRef() == h48ghost) && (GetHintSolved(hint48) == 0))
+    {
+        SetHintSolved(hint48);
+    }
+    # player shoots window in other room
+     if ((GetSenderRef() == h50ghost) && (GetHintSolved(hint50) == 0))
+    {
+        SetHintSolved(hint50);
+    }
+
+return;
+
+# ========================================================================================
+arrived:
+    # player activates statue twice	& gate opens
+    if (GetSenderRef() == h32gate)
+	{
+        SetHintSolved(hint32);
+	}
+
+return;
+# ========================================================================================
+user0:
+		if (h26solved == 1)	return;
+		
+		SetHintUnSolved(hint24);
+		solvable=0;
+		
+		
+return;
+
+# ========================================================================================
+user1:
+
+      # bellringer is spinning, from clock cog
+      SetHintSolved(hint24);
+	  solvable=1;
+
+return;
+
+# ========================================================================================
+user2:
+
+    # player picksup flower
+    SetHintSolved(hint58);
+
+return;
+
+
+
+# ========================================================================================
+end
+

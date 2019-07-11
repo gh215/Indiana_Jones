@@ -1,0 +1,113 @@
+# Jones 3D Cog Script
+#
+# actor_Spider.cog
+#
+# [MDR] [RT]
+#
+# Special behavior for spiders.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		created
+	message		touched
+	message		timer
+	message		killed
+
+	material	bloodMat=gen_a4sprite_blood_grn.mat	local
+
+	template	tplSplort=+vulcansplort
+	template	tplFire=+bazooka_exp_fire	local
+	template	tplSmoke=+bazooka_exp_smoke	local
+	template	tplSparks=lavadeathsparks	local
+
+	thing		spidey						local
+	thing		source						local
+
+	int			index						local
+	int			damageType					local
+	int			attachMesh					local
+
+	flex		crushDamage					local
+
+end
+
+# ===================================================================
+code
+
+# -------------------------------------------------------------------
+created:
+
+	AISetMode(GetSenderRef(), 0x2000000); # Set MODE_NOCHASING
+	return;
+
+# -------------------------------------------------------------------
+touched:
+
+	spidey = GetSenderRef();
+	source = GetSourceRef();
+
+	if (source == GetLocalPlayerThing())
+	{
+		# Ignore touch if Indy's standing still...
+		if ( VectorLen(GetThingVel(source)) == 0 )
+			return;
+
+		# If we weren't just stepped on...
+		if (GetThingUserData(spidey) == 0) # We weren't just stepped on...
+		{
+			# Remember what the fiend did!
+			SetThingUserData(spidey, 1);
+			SetThingTimer(spidey, 2.0);
+
+			# Apply some damage... 
+			crushDamage = GetThingMaxHealth(spidey) / 2;
+			DamageThing(spidey, crushDamage, 0x8, source);
+		}
+	}
+	return;
+
+# -------------------------------------------------------------------
+timer:
+
+	# We're eligible to be stepped on again...how nice
+	spidey = GetSenderRef();
+	SetThingUserData(spidey, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+killed:
+
+	spidey = GetSenderRef();
+    damageType = GetParam(1);
+
+    if (damageType == 0x8) # Doh! Crushed to death...
+	{
+		attachMesh = GetMeshByName(spidey, "spbelly");
+        if (attachMesh != -1)
+		{
+			AttachThingToThingMesh(spidey, tplSplort, attachMesh); 
+			MaterialAnim(bloodMat, 16.0, 0x0);
+		}
+	}
+    else if (damageType == 0x200) # I fell in the lava...
+	{
+		Sleep(0.1);
+		CreateThing(tplFire, spidey);
+		Sleep(0.3);
+		CreateThing(tplSmoke, spidey);
+		SetThingFlags(spidey, 0x80000);
+
+		for (index = 0; index < 10; index = index + 1)
+		{
+			CreateThing(tplSparks, spidey);
+			Sleep(0.03);
+		}
+	}
+	return;
+
+end

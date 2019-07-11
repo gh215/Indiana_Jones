@@ -1,0 +1,290 @@
+# Jones 3D Cog Script
+#
+# actor_IndyRaft.cog
+#
+# [MDR]
+#
+# Indy's script while using the raft.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		startup
+	message		boarded
+	message		damaged
+	message		killed
+	message		callback
+	message		timer
+	message		user0
+	message		user1
+	
+	model		leftHandModel=hand_ir_lpad.3do		local	# Autoloaded
+	model		rightHandModel=hand_ir_rpad.3do		local	# Autoloaded
+	   
+	model		rftfr_ir_null=rftfr_ir_null.3do		local
+	model		rftfr_ir_paddle=rftfr_ir_paddle.3do	local
+	model		rftbk_ir_null=rftbk_ir_null.3do		local
+	model		rftbk_ir_1=rftbk_ir_1.3do			local
+	model		rftbk_ir_2=rftbk_ir_2.3do			local
+	model		rftbk_ir_3=rftbk_ir_3.3do			local
+	model		rftbk_ir_4=rftbk_ir_4.3do			local
+	model		rftbk_ir_5=rftbk_ir_5.3do			local
+
+	sound		inflate=riv_raft_inflate.wav		local
+	sound		deflate=riv_raft_deflate.wav		local
+
+	# RT: Load these templates for engine use
+	template	tpl_Splash=+raft_splash	local
+	template	tpl_Spray=spritlemist	local
+	template	tpl_Wake=+raft_wake		local
+	material	wake=gen_a4_raft_wake.mat local
+	template	sparks=paddlesplash		local
+
+	thing		raft					local
+	thing		indy					local
+
+	int         leftHandMesh			local
+	int         rightHandMesh			local
+	int			param					local
+	int			handSwapRef=-1			local
+
+	int			backSwapRef=-1			local
+	int			frontSwapRef=-1			local
+	int			backMesh				local
+	int			frontMesh				local
+	int			sinking					local
+
+	flex		callbacklow				local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	MaterialAnim(wake, 10.0, 0x80001);
+	return;
+
+# -------------------------------------------------------------------
+
+user0:
+	StartCutScene(2);
+	return;
+# -------------------------------------------------------------------
+
+user1:
+	EndCutScene();
+	return;
+# -------------------------------------------------------------------
+
+damaged:
+
+	return;
+
+# -------------------------------------------------------------------
+boarded:
+
+	CopyPlayerHolsters(GetSourceRef(), GetSenderRef());
+	
+	return;
+
+# -------------------------------------------------------------------
+
+killed:
+	sinking = 29;
+	SetTimer(0.01);
+	return;
+
+timer:
+	param = sinking;
+	if (param >= 24)
+	{
+		call callbacklow; 
+		SetTimer(0.3);
+	}
+	if (param == 25)
+	{
+		ThingFadeAnim(raft, 1.0, 0.0, 1.0, 0);
+	}
+	sinking = sinking - 1;
+
+	return;
+
+
+# -------------------------------------------------------------------
+
+
+callback:
+//	DebugPrint("Callback");
+
+	raft = GetLocalPlayerThing();
+    leftHandMesh = GetMeshByName(raft, "inlhand");
+    rightHandMesh = GetMeshByName(raft, "inrhand");
+    backMesh = GetMeshByName(raft, "inraftbk");
+    frontMesh = GetMeshByName(raft, "inraftfr");
+	
+	param = GetParam(1);
+	
+	call callbacklow;
+	return;
+
+callbacklow:
+//	DebugFlex(param, "Param1");
+
+	if (param == 21)	
+	{
+		if (handSwapRef != -1)
+		{
+//			DebugPrint("Remove Paddle");
+			RestoreThingMesh(raft, handSwapRef);
+			handSwapRef = -1;
+		}
+	}
+	else if (param == 23)	 #for rowing on left side, top of paddle is in right hand
+	{
+		if (handSwapRef != -1)
+		{
+			RestoreThingMesh(raft, handSwapRef);
+			handSwapRef = -1;
+		}
+		handSwapRef = SetThingMesh(raft, rightHandMesh, rightHandModel, 0);
+	}
+	else if (param == 22)	#for rowing on right side
+	{
+		if (handSwapRef != -1)
+		{
+			RestoreThingMesh(raft, handSwapRef);
+			handSwapRef = -1;
+		}
+		handSwapRef = SetThingMesh(raft, leftHandMesh, leftHandModel, 0);
+	}
+	else if (param == 16) # inflate start
+	{
+		// Getting in?
+		if (GetMoveStatus(raft) == 70)
+		{
+//			DebugPrint("Start");
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_null, 0);
+			frontSwapRef = SetThingMesh(raft, frontMesh, rftfr_ir_null, 0);
+		}
+		else
+		{
+			// reset to default state after invisible
+			RestoreThingMesh(raft, backSwapRef);
+			RestoreThingMesh(raft, frontSwapRef);
+			backSwapRef = -1;
+			frontSwapRef = -1;
+
+		}
+	}
+	else if (param == 24) # inflate 1
+	{
+//		DebugPrint("1");
+		// Getting in?
+		if (GetMoveStatus(raft) == 70)
+		{
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_1, 0);
+			PlaySoundThing(inflate, raft, 1.0, 0.1, 10.0, 0x480);
+		}
+		else
+		{
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_null, 0);
+		}
+	}
+	else if (param == 25) # inflate 2
+	{
+//		DebugPrint("2");
+		// Getting in?
+		if (GetMoveStatus(raft) == 70)
+		{
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_2, 0);
+		}
+		else
+		{
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_1, 0);
+		}
+	}
+	else if (param == 26) # inflate 3
+	{
+//		DebugPrint("3");
+		// Getting in?
+		if (GetMoveStatus(raft) == 70)
+		{
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_3, 0);
+		}
+		else
+		{
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_2, 0);
+		}
+	}
+	else if (param == 27) # inflate 4
+	{
+//		DebugPrint("4");
+		// Getting in?
+		if (GetMoveStatus(raft) == 70)
+		{
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_4, 0);
+		}
+		else
+		{
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_3, 0);
+		}
+	}
+	else if (param == 28) # inflate 5
+	{
+//		DebugPrint("5");
+		// Getting in?
+		if (GetMoveStatus(raft) == 70)
+		{
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_5, 0);
+		}
+		else
+		{
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_4, 0);
+		}
+	}
+	else if (param == 29) # inflate 6
+	{
+//		DebugPrint("6");
+		// Getting in?
+		if (GetMoveStatus(raft) == 70)
+		{
+			RestoreThingMesh(raft, backSwapRef);
+			frontSwapRef = SetThingMesh(raft, frontMesh, rftfr_ir_paddle, 0);
+			backSwapRef = -1;
+		}
+		else
+		{
+			backSwapRef = SetThingMesh(raft, backMesh, rftbk_ir_5, 0);
+			frontSwapRef = SetThingMesh(raft, frontMesh, rftfr_ir_null, 0);
+			PlaySoundThing(deflate, raft, 1.0, 0.1, 10.0, 0x480);
+		}
+	}
+	else if (param == 30)
+	{
+		// Getting in?
+		if (GetMoveStatus(raft) == 70)
+		{
+			// Remove paddle from front of boat
+//			DebugPrint("Done");
+			RestoreThingMesh(raft, frontSwapRef);
+			frontSwapRef = -1;
+		}
+		else
+		{
+			// Place paddle on front of boat
+//			DebugPrint("Start");
+			frontSwapRef = SetThingMesh(raft, frontMesh, rftfr_ir_paddle, 0);
+		}
+	}
+	return;
+
+# -------------------------------------------------------------------
+
+end
+

@@ -1,0 +1,32 @@
+# Jones 3D Cog Script
+#
+# PRU_whipTest.cog    Boulder chases Indy.
+#
+# [GGJ]	
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message entered
+
+surface	landingSurf
+
+sector	landingSector
+
+end
+# ========================================================================================
+code
+entered:
+if (GetSenderRef() == landingSurf)
+{
+	Print("surface");
+}
+if (GetSenderRef() == landingSector)
+{
+	Print("sector");
+}
+return;
+
+end

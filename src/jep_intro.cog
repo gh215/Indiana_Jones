@@ -1,0 +1,129 @@
+# Jones 3D Cog Script
+#
+# jep_Intro.cog
+#
+# [DS & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message     startup
+	message     user0
+    
+	keyframe	in_hatpush=0in_figithat_4_4.key		local
+	# keyframe	in_think=0in_thinking_4_4.key		local
+	keyframe	in_sideTOhips=0in_stand1_bd_4.key	local
+	keyframe	in_handsONhips=0in_stand4.key		local
+	keyframe	in_botharmsup=0in_armsup_1_1.key	local
+
+	sound		in_names=jp01j01a.wav				local # Sophia? Turner? 2.5s
+	sound		in_where=jp01j02.wav				local # Where is everybody? 2.7s
+	sound		music0=mus_jep_intro.wav			local
+
+	thing		player								local
+	thing		indyactor							nolink
+	thing		campos_lo							nolink
+	thing		campos_hi							nolink
+	thing		camtarg								nolink
+	thing		fader								# gen_fadeplat thing
+
+	material	topMat=jeep_top.mat					local
+	material	botMat=jeep_bbmp.mat				local
+
+	int         in_keytrack1						local
+	int			in_keytrack2						local
+	int         cursound							local
+
+	int			bSeen=0								local
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	# Start on black...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, campos_lo);
+	SetCameraSecondaryFocus(2, camtarg);
+	SetCurrentCamera(2);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+#   switch camera first
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, campos_lo);
+	SetCameraSecondaryFocus(2, camtarg);
+	SetCurrentCamera(2);
+
+    # RT: Set up jeep materials
+	SetMaterialCel(topMat, 2);
+	SetMaterialCel(botMat, 2);
+
+#   let engine generate frame
+	Sleep(0.01);
+
+#	now start level
+
+	player = GetLocalPlayerThing();
+	AttachThingToThing(camtarg, indyactor);
+	SetActorFlags(player, 0x200000);
+	StartCutscene(2);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyactor, 0x80000);
+	CopyPlayerHolsters(player, indyactor);
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+
+	ThingFadeAnim(fader, 1.0, 0.0, 1.5, 0);	
+	AISetMoveSpeed(indyactor, 1.0);
+	AISetMoveThing(indyactor, player, 0);
+	SetCameraPosInterp(2, 1);
+	SetCAmeraInterpSpeed(2, 4.5);
+	Sleep(0.01);
+	SetCameraFocus(2, campos_hi);
+	AIWaitForStop(indyactor);
+	cursound=PlayVoice(indyactor, in_names, 1.0, 0);
+	Sleep(1.0);
+	in_keyTrack1 = PlayKey(indyactor, in_handsONhips, 2, 0x0, 0);
+	PlayKey(indyactor, in_sideTOhips, 4, 0x12, 1);
+	in_keyTrack2 = PlayKey(indyactor, in_hatpush, 4, 0x12, 0);
+	Sleep(1.5);
+	StopKey(indyactor, in_keyTrack1, 0.5);
+	StopKey(indyactor, in_keyTrack2, 0.5);
+	Sleep(0.5);
+	WaitForSound(cursound);
+	PlayVoice(indyactor, in_where, 1.0, 0);
+	PlayKey(indyactor, in_botharmsup, 4, 0x12, 1);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetThingFlags(indyactor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	SetThingAlpha(player, 1.0);
+	SetCameraPosition(1, GetThingPos(campos_hi));
+	SetCurrentCamera(1);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+end
+

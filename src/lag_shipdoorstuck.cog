@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# lag_shipdoorStuck.cog
+#
+# Locked Ships Rotating Door Script
+#
+# [DS]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# =======================================================================================
+
+symbols
+	message	startup
+	message	activate	
+
+   	thing		door0
+	thing		player						local
+	keyframe	in_activate=in_activate_medium.key		local
+	sound		stuckwav0=inxj098.wav				local	# It won't budge.
+	sound		stuckwav1=inxj096.wav				local	# I can't open it.
+	int		talking=0						local
+	int		sndnum						local
+	int		numsounds=2						local
+	int		tryit							local
+
+end
+
+# ========================================================================================
+
+code
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+activate:
+	if (GetSenderRef() != door0) return;
+	if(talking == 1) return;
+	sndnum = rand()*numsounds;
+	talking=1;
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+	tryit = PlayVoice(player, stuckwav0[sndnum], 1.0, 0);
+	PlayKey(player, in_activate, 4, 0x12, 1);
+	WaitForSound(tryit);
+	ClearActorFlags(player, 0x200000);
+	talking=0;
+	return;
+
+end
+

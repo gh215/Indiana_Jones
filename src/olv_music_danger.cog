@@ -1,0 +1,60 @@
+# Jones 3D Cog Script
+#
+# olv_music_danger.cog
+#
+# Cog description
+#
+# [DS & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		entered
+
+	surface		trigger_face
+
+	sector		trigger_sect
+
+	sound		music0=mus_gen_danger1.wav					local
+
+	thing		player										local
+
+	int			played=0									local
+
+end
+
+# ------------------------------------------------------------------------------
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player = GetLocalPlayerThing();
+
+	return;
+
+# ..............................................................................
+
+entered:
+
+	if(played == 1)
+	{
+		return;
+	}
+
+	played=1;
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+
+	return;
+
+end
+
+
+
+

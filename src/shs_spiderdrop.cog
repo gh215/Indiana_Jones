@@ -1,0 +1,70 @@
+# Jones 3D Cog Script
+#
+# shs_SpiderDrop.cog
+#
+# [GGJ] && [TRM]
+#
+# [JWC] added triggered by walking
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+    message     killed
+    message		startup
+	message 	entered
+
+    surface	    trig_Spider
+    
+    thing	    spiderGhost0
+    thing	    spider0	        local
+    thing		player			local
+
+    template	tpl_Spider=spider_wall		local
+    
+    int			population=0	local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	spider0 = -1;
+	population = 0;
+	player = GetLocalPlayerThing();
+	PrintInt(population);
+	return;
+
+
+
+entered:
+
+	if ((spider0 != -1) || (population != 0))
+		return;
+	
+	if ((GetSenderRef() == trig_Spider) && (GetSourceRef() == player))
+	{
+		population = 1;
+		Sleep(0.75);
+		spider0 = CreateThing(tpl_Spider, spiderGhost0);
+    
+		CaptureThing(spider0);
+	}
+	return;
+
+# ========================================================================================
+
+killed:
+    
+	spider0 = -1;
+	population = 0;
+	return;
+    
+# ========================================================================================
+end
+
+

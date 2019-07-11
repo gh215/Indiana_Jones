@@ -1,0 +1,106 @@
+# Jones 3D Cog Script
+#
+# nub_RandomAmbient.cog
+#
+# [SXC] [TL] on bass...
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# =======================================================================================
+symbols
+
+message	startup
+message	timer
+message	entered
+
+sector	soundOnSector
+sector	soundOffSector
+
+sound	wav0
+sound	wav1
+sound	wav2
+sound	wav3
+sound	wav4
+
+int		numsounds
+int		b_IsPlaying			local
+int		TIMERID_AMB=1		local
+
+flex	min_interval
+flex	range_interval
+flex	min_volume
+flex	range_volume
+
+int		temp				local
+int		nubSound			local
+int		startcog=0						# set as 1 for cog to run at startup
+
+end
+
+# ========================================================================================
+code
+
+# ........................................................................................
+startup:
+
+	b_IsPlaying = 0;
+
+	if (startcog != 1) return;
+	SetTimerEx(min_interval+(rand()*range_interval), TIMERID_AMB, 0, 0);
+
+	return;
+
+
+# ........................................................................................
+timer:
+
+	# Dont play sound if already doing so, but try again later
+	if ( b_IsPlaying == 1 )
+	{
+		SetTimerEx(min_interval+(rand()*range_interval), TIMERID_AMB, 0, 0);
+		return;
+	}
+
+	temp = rand()*numsounds;
+	nubSound = playsoundlocal(wav0[temp], 1, ((rand()*2)-1.0), 0, 0);		# volume was (min_volume+(rand()*range_volume))
+
+	if (nubSound != -1)
+	{
+		b_IsPlaying = 1;
+
+		ChangeSoundPitch(nubSound, (Rand() + 0.25), 0.01);					# was ChangeSoundPitch(nubSound, (Rand() + 0.1) * RandBetween(1, 2), 0.01);
+		WaitForSound(nubSound);
+
+		b_IsPlaying = 0;
+	}
+
+	SetTimerEx(min_interval+(rand()*range_interval), TIMERID_AMB, 0, 0);
+
+	return;
+
+
+# ........................................................................................
+entered:
+
+	if (GetSenderRef() == soundOnSector)
+	{
+		SetTimerEx(min_interval + (rand()*range_interval), TIMERID_AMB, 0, 0);
+		return;
+	}
+
+	if (GetSenderRef() == soundOffSector)
+	{
+		KillTimerEx(TIMERID_AMB);
+
+		if ( b_IsPlaying == 1 )
+		{
+			Reset();
+			b_IsPlaying = 0;
+			StopSound(nubSound, 0.9);
+		}
+	}
+
+	return;
+
+# ........................................................................................
+end

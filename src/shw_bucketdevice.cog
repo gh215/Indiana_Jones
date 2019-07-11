@@ -1,0 +1,327 @@
+# Jones 3D Cog Script
+#
+# shw_bucketdevice.cog
+#
+# Sluiceway Alternating Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+        message         startup
+        message         activated
+        message         user0
+        message         user1
+        message         timer
+        message         pulse
+        
+        thing           bucket0		nolink
+        thing           player                  local
+        thing           activatetarget          
+        thing           splashitem			local          
+
+        thing	        indy			nolink
+        thing	        camera
+        thing	        camtarget
+        thing	        keypos
+        
+        thing	        keyitem                 local
+        thing	        spraystart
+        thing	        sprayloop
+        thing	        sprayend
+        
+        thing           bucketsprayitem             local
+        thing           bucketspraypos
+        thing			splashring		local
+
+        surface         splashsurf
+        
+        cog             troopcog            
+        cog				hintcog
+
+
+        material		sprayskin=shw_a4water_spout.mat		local
+        material		startskin=spray_a4mth_beg.mat		local
+        material		loopskin=spray_a4mth_loop.mat		local
+        material		endskin=spray_a4mth_end.mat		local
+		
+		
+		material        splashdown=shw_floor_puddle_v2.mat	local
+        
+        flex			fps=8.0	        local
+        
+        keyframe        rotate=shw_scoop_bukt.key   local   
+        keyframe        pull=in_turn_crank1.key   local   
+        keyframe        turnbd=in_turn_bd_stand_crank1.key   local   
+        keyframe        standbd=in_stand_bd_turn_crank1.key   local   
+                                                             
+        sound           crankmove=shw_crank_turn.wav            local
+        sound           drybuckhit=shw_bucket_hit_dry.wav       local
+        sound           wetbuckhit=shw_bucket_hit_water.wav     local
+        sound           bucktscoop=shw_bucket_scoop.wav         local
+        sound           splash=shw_water_spill.wav              local
+        sound           keydrop=shw_key_drop.wav                local
+
+        vector          direction1      local
+        vector          splashstart      local
+        vector          splashend      local
+        
+        template        key       
+        template        fountainspray       
+        template        bucketspray       
+        template        splashmist       
+        template        ring=+ripples	local       
+        
+	int	curCam		local
+	int	thaw=0		local
+	int	keymade=0	local
+	int	keysize		local
+        
+        
+	int	crankloop       local
+	int	splashloop      local
+
+end
+# ========================================================================================
+
+code
+
+startup:
+
+        player = GetLocalPlayerThing();
+		SetThingFlags(spraystart, 0x80000);
+		SetThingFlags(sprayloop, 0x80000);
+		SetThingFlags(sprayend, 0x80000);
+		splashstart	= VectorSet(0.05, 0.05, 0.5);
+		splashend	= VectorSet(0.15, 0.15, 0.0);
+		
+        
+return;
+
+#----------------------------------------------------------------------------------                
+
+activated:
+
+		// Remember the current camera
+			curCam = GetCurrentCamera();
+			# SET UP THE ACTOR WITH CORRECT WEAPONS
+			CopyPlayerHolsters(player, indy);
+
+        If ((Getsenderref() == activatetarget) && (thaw == 1))
+        {
+            SetActorFlags(player, 0x200000);
+            SetTimerEx(0.1,1, 0,0);             //take cam and start anims    
+            SetTimerEx(2.3, 2, 0, 0);          //camera moves
+            SetTimerEx(1.5, 3, 0, 0);          //bucket spray gen  scoop sound
+            SetTimerEx(1.75,4, 0, 0);           //destroy bucketspry, 
+            SetTimerEx(2.95, 5, 0, 0);          //2nd bucket spray scoop sound  fountain gen
+            SetTimerEx(3.75, 6, 0, 0);           //destroy 2nd bucktspray  
+            SetTimerEx(6.0, 7, 0, 0);          //bounce key, destroy fountspray, return player control
+        }
+        
+        else if ((GetSenderref() == activatetarget) && (thaw == 0))
+        {
+            SetActorFlags(player, 0x200000);
+            SetTimerEx(0.1, 8, 0,0);             //take cam and start anims    
+            SetTimerEx(1.25, 9, 0, 0);          //camera moves first bucketsound
+            SetTimerEx(2.25, 10, 0, 0);          //second bucket sound
+            SetTimerEx(2.25, 11, 0, 0);           //return control
+            
+        }
+
+return;
+#=================================================================
+timer:        
+                
+         
+         If (GetSenderID() == 1)       //take cam and start anims
+         {
+            // Disable and hide player
+            SetThingFlags(player, 0x80000);
+            
+            // Cut to cutscene camera
+            SetCameraFocus(2, camera);
+            SetCamerasecondaryFocus(2, camtarget);
+            SetCameraFOV(FOV, 0, 0.0);
+            ClearThingFlags(indy, 0x80000);
+            SetCurrentCamera(2);
+            
+            // Play the animations - wait for Indy's
+            PlayKey(indy, standbd, 4, 0x12, 1);
+            PlayKey(bucket0, rotate, 4, 0x12, 0);
+            PlaySoundLocal(crankmove, 0.5, -1, 0x0, 0);
+            PlaySoundLocal(bucktscoop, 0.75, -1, 0x0, 0);
+            PlayKey(indy, pull, 4, 0x12, 1);
+            PlayKey(indy, turnbd, 4, 0x12, 1);
+         }
+                        
+         else
+         If (GetSenderID() == 2)         //camera moves
+              {
+                 
+                 movetoframe(camtarget, 1, 1);
+                 
+              }
+         
+         else
+         If (GetSenderID() == 3)          //bucket spray gen
+              {
+               
+                  //create water spray from bucket
+                  bucketsprayitem = CreateThing(bucketspray, bucketspraypos);
+                  capturething(bucketsprayitem);
+                  PlaySoundLocal(wetbuckhit, 1.0, 1, 0x0, 0);
+                  PlaySoundLocal(bucktscoop, 0.75, -1, 0x0, 0);
+              }
+                                                                
+         else
+         If (GetSenderID() == 4)     //destroy bucketspry
+              {
+                 destroything(bucketsprayitem);
+              }
+                                    
+          else
+          If (GetSenderID() == 5)         //2nd bucket spray destroy first bucketspray            
+               {
+                  //create water spray from mouth
+                  ClearThingFlags(spraystart, 0x80000);
+                  SetMaterialCel(startskin, 0);
+				  materialanim(startskin, 8, 0);
+                  PlaySoundLocal(splash, 0.85, 1, 0x0, 0);
+				  SetPulse(0.1);	#particle splash created on every pulse
+                  //create water spray from bucket
+                  bucketsprayitem = CreateThing(bucketspray, bucketspraypos);
+                  CaptureThing(bucketsprayitem);
+                  PlaySoundLocal(bucktscoop, 0.75, -1, 0x0, 0);
+                  PlaySoundLocal(wetbuckhit, 1.0, 1, 0x0, 0);
+               }
+               
+          If (GetSenderID() == 6)        //destroy 2nd bucktspray, create fount
+               {
+                  SetThingFlags(spraystart, 0x80000);   # hide spraystartitem
+                  #materialanim(startskin, 0, 0);        # end animation on spraystartitem texture
+                  
+				  ClearThingFlags(sprayloop, 0x80000);  # show sprayloopitem
+                  SetMaterialCel(loopskin, 0);
+                  materialanim(loopskin, 8, 1);		  	# start animation on sprayloopitem texture
+                  SetSurfaceMat(splashsurf, splashdown);
+				  
+				  destroything(bucketsprayitem);
+                  movetoframe(camera, 1, .5);
+               }   
+                        
+           If (GetSenderId() == 7)         //make key destroy fountspray, return player control
+                {
+                   //create key
+                 if (keymade == 0)
+                    {
+                      keyitem = CreateThing(key, keypos);
+					  keysize=(GetThingMoveSize(keyitem));
+                      SetThingMoveSize(keyitem, 0.005);
+                      direction1 = VectorSet((-1), (0), (-.5));
+                      ApplyForce(keyitem, VectorScale(direction1, 0.015));
+                      keymade = 1;
+                      PlaySoundLocal(keydrop, 0.5, 1, 0x0, 0);
+                      SendMessage(troopcog, user0);
+                      SendMessage(hintcog, user0);
+                    }
+                   sleep(.1);
+                   SetThingFlags(sprayloop, 0x80000);
+                   
+				   ClearThingFlags(sprayend, 0x80000);
+				   SetMaterialCel(endskin, 0);
+                   materialanim(endskin, 8, 0);		  	# start animation on sprayloopitem texture
+                   Sleep(.25);
+				   SetThingFlags(sprayend, 0x80000);
+				   SetPulse(0);
+				   sleep(2);
+                   
+				   // Return control and camera to player
+                   SetThingFlags(indy, 0x80000);
+                   ClearThingFlags(player, 0x80000);
+				   ClearActorFlags(player, 0x200000);
+                   SetCurrentCamera(curCam);
+                   movetoframe(camera, 0, 50);
+                   movetoframe(camtarget, 0, 50);
+                   SetThingMoveSize(keyitem, keysize);
+                }
+                
+           If (GetSenderID() == 8)       //take cam and start anims for sluice dry
+                {
+                   
+                   
+       
+                   // Cut to cutscene camera
+                   SetCameraFocus(2, camera);
+                   SetCamerasecondaryFocus(2, camtarget);
+                   SetCameraFOV(FOV, 0, 0.0);
+                   ClearThingFlags(indy, 0x80000);
+                   SetThingFlags(player, 0x80000);
+                   SetCurrentCamera(2);
+       
+                   // Play the animations - wait for Indy's  and play crank sound
+                   PlayKey(indy, standbd, 4, 0x12, 1);
+                   PlayKey(bucket0, rotate, 4, 0x12, 0);
+                   PlaySoundLocal(crankmove, 0.75, -1, 0x0, 0);
+                   PlayKey(indy, pull, 4, 0x12, 1);
+                   PlayKey(indy, turnbd, 4, 0x12, 1);
+                }
+                
+            If (GetSenderID() == 9)     //camera moves and first buckethit for sluice dry   
+                {
+                   PlaySoundLocal(drybuckhit, 1.0, 1, 0x0, 0);
+                   movetoframe(camtarget, 1, 0.5);
+                }
+                
+            If (GetSenderID() == 10)     //second buckethit for sluice dry   
+                {
+                   PlaySoundLocal(drybuckhit, 1.0, 1, 0x0, 0);
+                }
+
+            If (GetSenderID() == 11)     //return control to player   
+                {
+                   //wait for the action and return control
+                   waitforstop(cameratarget);
+                   sleep(4);
+                   #SetCameraFocus(curCam, player);
+                   SetThingFlags(indy, 0x80000);
+                   ClearThingFlags(player, 0x80000);
+				   ClearActorFlags(player, 0x200000);
+                   SetCurrentCamera(curCam);
+                   movetoframe(camtarget, 0, 50);
+                }
+
+
+ClearActorFlags(player, 0x200000);
+return;
+
+#----------------------------------------------------------------------------------                
+pulse:
+
+index = index + 1;
+splashitem = CreateThing(splashmist, sprayloop);
+If (index == 4)
+{
+splashring = CreateThing(ring, sprayloop);
+AnimateSpriteSize(splashring, splashstart, splashend, 0.5);
+index = 0;
+}
+return;
+
+#----------------------------------------------------------------------------------                
+user0:
+
+        thaw = 1;
+        
+return;
+#----------------------------------------------------------------------------------                
+user1:
+
+        thaw = 0;
+        
+return;
+#----------------------------------------------------------------------------------                
+
+end

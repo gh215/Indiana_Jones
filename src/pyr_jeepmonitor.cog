@@ -1,0 +1,46 @@
+# Jones 3D Cog Script
+#
+# pyr_jeepmonitor.cog
+#	
+# Global2 = 1 when Indy is in the jeep.
+# Global2 = 0 when he gets out.
+# Also force visibility on the static jeep when it's unboarded.
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	boarded
+message	unboarded
+
+thing	jeep
+
+end
+
+code
+startup:
+	sleep(.01);
+	global2 = 0;
+		
+	return;
+
+boarded:
+	if (GetSenderRef() != jeep) return;
+	
+	global2 = 1;
+	return;
+
+unboarded:
+	if (GetSenderRef() != jeep) return;
+		
+	# insurance against jeep disappearance
+	ClearThingFlags(jeep, 0x10);
+	
+	global2 = 0;
+	return;
+
+end
+

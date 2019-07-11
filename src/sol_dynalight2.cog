@@ -1,0 +1,48 @@
+# Jones 3D Cog Script
+#
+# SOL_DynaLight2.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+
+    thing       treasure
+    thing       coffin1
+    thing       coffin2
+    thing       coffin3
+    thing       coffin4
+    
+    flex        rval=0.44
+    flex        gval=0.28
+    flex        bval=0.03
+    
+    vector      color           local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    Sleep(1.0);
+    color = VectorSet(rval, gval, bval);
+    SetThingLight(treasure, color, 0.2, 0.5);
+    SetThingLight(coffin1, color, 0.2, 0.5);
+    SetThingLight(coffin2, color, 0.2, 0.5);
+    SetThingLight(coffin3, color, 0.2, 0.5);
+    SetThingLight(coffin4, color, 0.2, 0.5);
+    
+    return;
+           
+# ========================================================================================
+
+end
+

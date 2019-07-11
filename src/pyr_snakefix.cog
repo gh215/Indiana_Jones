@@ -1,0 +1,43 @@
+# Jones 3D Cog Script
+#
+# pyr_snakefix.cog
+#
+# Compensate for fat bullets at break-in to pyramid 1
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ==============================================================================
+
+symbols
+message	entered
+
+surface	targetoff
+
+sector	targeton
+
+thing	snake1	nolink
+thing	snake2	nolink
+end
+
+code
+entered:
+# ---> TargetOn/TargetOff surfaces
+
+	if (GetSenderRef() == targeton)
+	{
+		# turn snake targetting on
+		ClearActorFlags(snake1, 0x100000);
+		ClearActorFlags(snake2, 0x100000);
+	}
+	else if (GetSenderRef() == targetoff)
+	{
+		# turn snake targetting off
+		SetActorFlags(snake1, 0x100000);
+		SetActorFlags(snake2, 0x100000);
+	}
+		
+	return;
+
+end
+

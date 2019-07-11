@@ -1,0 +1,72 @@
+# Jones 3D Cog Script
+#
+# nub_Jewel.cog
+#
+# [TL] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		entered
+message		exited
+
+thing		player		local
+thing		plasma
+sector		topSector
+
+surface		pad		
+
+end
+
+# ========================================================================================
+code
+
+startup:
+StartCutscene(1);
+Sleep(0.01);
+EndCutscene();
+
+player = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+entered:
+
+if ((GetSenderRef() == pad) && (GetSourceRef() == player)) 
+{
+	print("Jewel is TRUE...");
+	JewelFlyingStatus(1, plasma);
+}
+
+if (GetSenderRef() == topSector)
+{
+	JewelFlyingStatus(1, plasma);
+}
+
+return;
+
+# ........................................................................................
+
+exited:
+
+if ((GetSenderRef() == pad) && (GetSourceRef() == player)) 
+{
+	print("Jewel is FALSE...");
+	JewelFlyingStatus(0, plasma);
+}
+
+if (GetSenderRef() == topSector)
+{
+	JewelFlyingStatus(0, plasma);
+}
+
+
+return;
+
+# ........................................................................................
+end
+

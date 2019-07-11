@@ -1,0 +1,474 @@
+# Jones 3D Cog Script
+#
+# 15_AET_SkitoScene.cog
+#
+# Ham Sandwich!
+#
+# This cog handles the cutscene for Indy finding Marduk's lair.
+#
+# Later, when Indy shows Marduk what for, we use these actors and such to show Marduk's
+# demise.
+#
+# [PAZ] [TL] & [HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message 	startup
+	message		crossed
+	message		entered
+	message		taken
+	message		user1										# Message received by Scholl's boss cog.
+    
+	keyframe	in_falling=in_jump_fall.key			local
+	keyframe	in_ltarmup=0in_leftarm_1_1.key		local    
+	keyframe	in_rtarmup=0in_armsout_1_1.key		local
+	keyframe	in_botharmsup=0in_armsup_1_1.key	local
+	keyframe	in_armsCrossed=0in_stand2.key		local
+	keyframe	in_crossArms=0in_stand1_bd_2.key	local
+
+	keyframe	bighit=wm_bighit.key				local	# Marduk's big hit animation
+    
+	model		torso=torso_wm_nogem.3do   			local	# Marduk's chest w/no gem
+    
+ 	sound		danger1=mus_gen_danger3.wav			local	# these sounds are placeholders!
+	sound		defeat=mus_inf_cutscene1d.wav		local
+	
+	sound		doorstart=aet_dais_start.wav	   	local
+	sound		doormove=aet_dais_move.wav		   	local
+	sound		doorstop=aet_dais_stop.wav		   	local
+
+	sound		screech=aet_mr_defeat.wav			local		 
+	sound		chargeHere=at02j04.wav				local			
+	sound		ugly=at02J02.wav					local	
+	sound		welcome=at02e03.wav					local
+	sound		mardukloop=aet_mr_fly.wav			local	
+
+	thing		player								local
+	thing		indy
+	
+    thing		marduk										# Marduk actor
+	thing		mardukspot1							nolink
+	
+    thing		mcs_cam_1							nolink
+	thing		mcs_cam_2							nolink
+	thing		mcs_cam_3							nolink
+
+	thing		mcs_ct_1							nolink
+	thing		mcs_ct_2							nolink
+	thing		mcs_ct_3							nolink
+	thing		mardroptarg							nolink
+	
+	thing		mcs_mk_1							nolink
+	thing		uberindyspot1						nolink
+			
+	thing		door1										# Marduk entry door(s)
+	thing		door2
+	thing		door3
+	
+	thing		probe										# lightning probe
+
+	thing		sc3start									# start indy here
+
+	thing		mardukspot3									# Marduk's mark for cs
+	thing		mardukspot4									# Where he retreats
+	thing		offtarg								local	# Spin target
+
+	thing		gemcreate									# where gem created
+	
+
+    cog			mardukCog									# Link to AI cog
+	cog 		hint_cog
+
+	surface		trig3										# starts the scene
+
+	sector		trigger
+	sector		camsector							local
+
+	template	tpl_gem_move=mardukkeymove				local	# template for gem move thing creation
+	template	tpl_gem_key=mardukkey					local	# template for gem item creation
+	template	tpl_ghost=ghost						local
+    
+	vector		v_camspot							local
+
+	int			gem									local	# create on fly
+	int			itemgem								local
+	int			onetime=0							local
+	int			doneVoice=1							local	
+	int			cursound							local
+	int			in_keytrack1						local
+	int			in_keytrack2						local
+	int			mr_colltype							local
+	int			pl_colltype							local
+	int			mardukchannel						local
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player=GetLocalPlayerThing();
+		
+	AISetCutsceneMode(marduk); # (temp)
+
+	global10 = 0; # <---INIT GLOBAL VAR
+	
+	# Hide Marduk...
+	SetThingFlags(marduk, 0x80000);		
+	
+	# Turn probe whip flags off...
+    ClearThingFlags(probe, 0x00000008);		
+	ClearThingFlags(probe, 0x80000000);	
+	SetActorFlags(probe, 0x100000); # no target
+
+	return;
+	
+# ..............................................................................
+
+entered:
+	
+	player = GetLocalPlayerThing();
+
+	if ((GetSenderRef() == door1) || (GetSenderRef() == door2) || (GetSenderRef() == door3))
+	{		
+		if ((doneVoice != 0) || (global10 != 0))
+		{
+			return;
+		}
+
+		doneVoice = 1;
+		global10 = 1;
+		PlayVoice(player, chargeHere, 1.0, 0);
+
+		return;
+	}
+
+	if ((GetSenderRef() != trigger) || (GetSourceRef() != player) || (onetime != 0))
+	{
+		return;
+	}
+								
+	onetime = 1; # do once only	   
+	
+	# Music...
+	PlaySoundLocal(danger1, 1.0, 0.0, 0x0, 0);
+
+	# Prep for cutscene...
+	Sleep(0.2);
+
+	# Indy appears in mid-air and drops into arena...	
+	TeleportThing(player, sc3start);
+	
+	# Prep camera & cut...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, mcs_cam_1);
+	SetCameraSecondaryFocus(2, player);
+	SetCurrentCamera(2);
+	SetCameraFOV(85, 0, 0.0);
+	Sleep(0.01);
+	SetCameraFOV(75, 1, 2.0);
+
+	# Engine needs time to find player exiting aethereal sector...
+	SetActorFlags(player, 0x200000);
+	StartCutscene(1);
+
+	# Wait for slide to finish...
+	while (IsThingMoving(player) != 0)
+	{
+		Sleep(0.1);
+	}
+	Sleep(0.1);
+	MakeMeStop();
+	TeleportThing(indy, player);
+	DeselectWeaponWait(player);
+	CopyPlayerHolsters(player, indy);
+	SetThingFlags(player, 0x80000);	
+	ClearThingFlags(indy, 0x80000); # reveal actor
+	Sleep(0.3);
+
+	# AISetMoveThing(indy, mcs_mk_1, 1);
+	# Sleep(0.3);
+
+	# Pan off to door...
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 3.5);
+	Sleep(0.01);
+	SetCameraFocus(2, mcs_cam_2);
+	SetCameraSecondaryFocus(2, mcs_ct_1);
+	SetCameraFOV(75, 1, 3.5);
+	Sleep(3.5);
+		 	
+	# Move & hide player...
+	TeleportThing(player, uberindyspot1); 
+	SetThingFlags(player, 0x80000);
+	
+	# Reposition player & actor & aim them toward doors...
+	TeleportThing(indy, uberindyspot1); 
+
+	# Enter the dragon...
+	ClearThingFlags(marduk, 0x80000);
+	mr_colltype = GetCollideType(marduk);
+	SetCollideType(marduk, 0);
+	SetThingAlpha(marduk, 0.0);
+	AIEnableHeadTracking(indy, marduk);	
+
+	# Doors open...
+	MoveToFrame(door1, 1, 1.0);	
+	MoveToFrame(door2, 1, 1.0);	
+	MoveToFrame(door3, 1, 1.0);
+	MoveToFrame(probe, 1, 2.0);
+
+	PlaySoundLocal(doorstart, 1.0, 0, 0x0, 0);	
+	cursound = PlaySoundLocal(doormove, 1.0, 0, 0x1, 0);
+	WaitForStop(door1);
+	StopSound(cursound, 0.0);
+	PlaySoundLocal(doorstop, 1.0, 0, 0x0, 0);
+		
+	# Marduk appears...
+    mardukchannel = PlaySoundLocal(mardukloop, 1.0, 0, 0x1, 0);
+	
+	AISetMoveSpeed(marduk, 0.5);
+	AiSetMoveThing(marduk, mardukspot1, 0);
+	ThingFadeAnim(marduk, 0.0, 1.0, 0.4, 0);
+	
+	# Pan up...
+	SetCameraInterpSpeed(2, 1.8);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, mcs_ct_2);
+	SetCameraFOV(35, 1, 1.8);
+	StopSound(cursound, 0.5);
+	Sleep(1.0);
+	
+	# Big M screeches (or whatever)...
+	PlaySoundLocal(screech, 1.0, 0.0, 0x0, 0);
+	
+	# Close doors...
+	MoveToFrame(door1, 0, 1.0);	
+	MoveToFrame(door2, 0, 1.0);	
+	MoveToFrame(door3, 0, 1.0);
+	
+	PlaySoundLocal(doorstart, 1.0, 0, 0x0, 0);	
+	cursound = PlaySoundLocal(doormove, 1.0, 0, 0x1, 0);
+	WaitForStop(door1);
+	StopSound(cursound, 0.0);
+	PlaySoundLocal(doorstop, 1.0, 0, 0x0, 0);
+		
+	# Pull back...
+	SetCameraInterpSpeed(2, 2.5);
+	Sleep(0.01);
+	SetCameraFocus(2, mcs_cam_3);
+	SetCameraSecondaryFocus(2, mcs_ct_3);
+	SetCameraFOV(90, 1, 2.0); # was 2.5
+	Sleep(1.0);
+	StopSound(cursound, 0.5);
+	Sleep(1.0); # was 1.5
+
+	# Indy: "...one of those angry gods...ugly too..."
+    cursound = PlayVoice(indy, ugly, 1.0, 0);
+	in_keytrack2 = PlayKey(indy, in_armsCrossed, 2, 0x10, 0);
+	PlayKey(indy, in_crossArms, 4, 0x12, 0);
+	WaitForSound(cursound);
+
+    cursound = PlayVoice(marduk, welcome, 1.0, 0);
+	Sleep(4.0);
+	StopKey(indy, in_keytrack2, 0.5);
+	WaitForSound(cursound);
+
+	# Wake Marduk up...
+	AIClearCutsceneMode(marduk);
+
+	# Reset stuff...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	AIDisableHeadTracking(indy);
+	AISetMoveSpeed(indy, 1.0);
+	AISetMoveSpeed(marduk, 1.0);	
+	## SetCollideType(player, pl_colltype);
+	SetCollideType(marduk, mr_colltype);
+	
+	# Return player to game...
+	TeleportThing(player, indy);
+	StopKey(indy, in_keytrack2, 0.0);
+	SetThingFlags(indy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+		
+	# Prepare swing back to follow-cam...
+	SetCameraPosition(1, GetThingPos(mcs_cam_3));
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	
+	EndCutScene();
+	ClearActorFlags(player, 0x200000); # player in control
+
+    StopSound(mardukchannel, 0.0);
+
+	# Give player a moment to get ready...
+	Sleep(1.0);
+    
+    # Wake up Marduk AI cog....
+	SendMessageEx(mardukCog, 27, 0, 0, 0, 0);
+	
+	return;
+	
+# ..............................................................................
+
+user1:
+
+	# NOTE: Once Marduk is thoroughly pummeled, 
+	# Scholl's cog will send this message...
+
+	# Prep for cutscene...
+	MakeMeStop();
+#	SetActorFlags(player, 0x200000);
+	StartCutscene(1);
+	
+    SendMessage(hint_cog, user0);
+	
+    # Play defeat music...
+	PlaySoundLocal(defeat, 1, 0, 0x0, 0);
+
+	# Disable player...
+#	StopThing(player); # right now
+#	PlayMode(player, 1, 0); # get him into a nice stand
+    
+	# Move Marduk to center of room...
+    mardukchannel = PlaySoundLocal(mardukloop, 1.0, 0, 0x1, 0);
+	AiSetCutsceneMode(marduk);
+
+	AISetMoveSpeed(marduk, 2.0);
+	AISetLookThing(marduk, mardukspot3);
+	AISetMoveThing(marduk, mardukspot3, 0);
+
+	# Cut to Marduk...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, mcs_cam_1);
+	SetCameraSecondaryFocus(2, marduk);
+	SetCurrentCamera(2);
+	AIWaitForStop(marduk);
+
+	# RT: Put away and lose mirror
+	DeselectWeapon(player);
+    ChangeInv(player, 50, -1.0);
+
+	# Spinneth...
+	v_camspot = VectorAdd(VectorTransformToOrient(marduk, '0.2 0.2 0.0'), GetThingPos(marduk));	
+	camsector = FindNewSectorFromThing(marduk, v_camspot);
+	offtarg = CreateThingAtPos(tpl_ghost, camsector, v_camspot, '0 0 0');
+	CaptureThing(offtarg);
+	AttachThingToThing(offtarg, mardukspot3);
+	AIEnableBodyTracking(marduk, offtarg);	
+	Rotate(mardukspot3, 980, 1, 5.0);
+	
+	# Zoom in while playing the animation of him writhing...
+	SetCameraFOV(65, 1, 2.5);
+	PlayKey(marduk, bighit, 0, 0x02, 1); # 1.7s
+	   
+	# Switch out the torso mesh...
+	SetThingMesh(marduk, 0, torso, 0);	
+	
+	#...create the gem...
+	gem = CreateThing(tpl_gem_move, gemcreate);
+	CaptureThing(gem);
+	Sleep(0.01);
+	
+   	#...and drop the gem to the floor...
+	MoveToFrame(gem, 1, 3.0);
+	Sleep(0.8);
+	
+	# Make M writhe while probe retreats...
+	PlayKey(marduk, bighit, 0, 0x2, 0);
+	MoveToFrame(probe, 0, 3.0);
+	
+	# Prep cam...
+	SetCameraFOV(90, 1, 1.5);
+	SetCameraLookInterp(2, 1);
+	SetCameraInterpSpeed(2, 1.0);
+	Sleep(0.01);
+
+	# Marduk bails...
+	SetCollideType(marduk, 0);
+	AISetMoveSpeed(marduk, 1.0);
+	AiSetMoveThing(marduk, mardukspot4, 0);
+	SetCameraSecondaryFocus(2, mardroptarg);
+	
+	# Doors open as he nears...
+	MoveToFrame(door1, 1, 3.0);	
+	MoveToFrame(door2, 1, 3.0);	
+	MoveToFrame(door3, 1, 3.0);
+	
+	PlaySoundLocal(doorstart, 1.0, 0, 0x0, 0);	
+	cursound = PlaySoundLocal(doormove, 1.0, 0, 0x1, 0);
+	WaitForStop(door1);
+	StopSound(cursound, 0.0);
+	PlaySoundLocal(doorstop, 1.0, 0, 0x0, 0);
+	
+	Sleep(1.5);
+	ThingFadeAnim(marduk, 1.0, 0.0, 0.5, 0);
+
+    StopSound(mardukchannel, 0.0);
+
+	# Doors close...
+	MoveToFrame(door1, 0, 2.0);	
+	MoveToFrame(door2, 0, 2.0);
+	MoveToFrame(door3, 0, 2.0);
+	
+	PlaySoundLocal(doorstart, 1.0, 0, 0x0, 0);	
+	cursound = PlaySoundLocal(doormove, 1.0, 0, 0x1, 0);
+	WaitForStop(door1);
+	StopSound(cursound, 0.0);
+	PlaySoundLocal(doorstop, 1.0, 0, 0x0, 0);
+	
+	//WaitForStop(door1);
+	Sleep(1.0);
+
+	# Dust off Marduk...
+	SetThingAlpha(marduk, 1.0);
+	SetCollideType(marduk, mr_colltype);
+	SetThingFlags(marduk, 0x80000);		
+	
+	# Replace gem move thing with gem item...
+	itemgem = CreateThing(tpl_gem_key, gem);
+	CaptureThing(itemgem);
+	DestroyThing(gem);
+		
+	# Back to play...
+	DestroyThing(offtarg);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	v_camspot = VectorAdd(VectorTransformToOrient(player, '0.15 -0.02 0.05'), GetThingPos(player));
+	SetCameraPosition(1, v_camspot);
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+		
+    SetThingFlags(probe, 0x00000008);		
+	SetThingFlags(probe, 0x80000000);		
+	ClearActorFlags(probe, 0x100000); # allow target
+	doneVoice = 0;
+    
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+
+	return;   
+
+# ..............................................................................
+
+taken:
+
+	if (GetSenderRef() == itemgem)
+	{
+		SendMessage(hint_cog, user1);
+	}
+
+	return;   
+
+end

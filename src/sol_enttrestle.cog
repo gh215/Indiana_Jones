@@ -1,0 +1,67 @@
+# Jones 3D Cog Script
+#
+# SOL_EntTrestle.cog
+#
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    message     exited
+    
+    thing       player      local
+    thing       trest0
+    thing       trest1
+    thing       trest2
+    
+    sector      sec_OnTop
+    
+    int         onTop=0     local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    player = GetLocalPlayerThing();
+    
+    if(GetSenderRef() == sec_OnTop)
+    {
+        onTop = 1;
+        
+        SetCollideType(trest0, 0);
+        SetCollideType(trest1, 0);
+        SetCollideType(trest2, 0);
+    }
+        
+    return;
+
+# ========================================================================================
+
+exited:
+
+    player = GetLocalPlayerThing();
+    
+    if((GetSenderRef() == sec_OnTop) && (GetSourceRef() == player))
+    {
+        onTop = 0;
+        
+        Sleep(1.0);
+        SetCollideType(trest0, 3);
+        SetCollideType(trest1, 3);
+        SetCollideType(trest2, 3);
+    }
+
+    return;
+    
+# ========================================================================================
+
+end
+

@@ -1,0 +1,214 @@
+# Jones 3D Cog Script
+#
+# Riv_SkitoDevils.cog
+#
+#
+# [PAZ]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		user0
+	message		pulse
+	
+	thing		devilthing								#snow devils
+	thing		devilthing2
+	thing		devilthing3
+   
+	thing		player							local
+	
+	thing		flag1									#r flag
+	thing		flag2									#l flag
+	thing		spot1									#spots for new flags
+	thing		spot2
+	thing		redflag1						local	#captured new flags
+	thing		redflag2						local
+	
+	thing		mill									#windmill 3do
+	thing		animbridge								#moving bridge
+	thing		solidbridge						local	#created solid bridge
+	thing		bridgespot								#spot for bridge
+	
+	template	windflag=markredwind			local	#wind flags
+	
+	template	particle=skitodevil				local
+	template	lilskito=lilskitodevil			local
+	
+	template	still=rivbrdgstll				local
+	
+	keyframe	wind=riv_markred_wind.key		local
+	keyframe	calm=riv_markred_calm.key		local
+	
+	keyframe	gear=riv_gears.key				local
+	keyframe	bridge=riv_bridge_anim.key		local
+	
+	material	mat=riv_4markr_calm.mat			local
+	
+	sound		wind1=gen_wind01.wav			local
+	sound		wind2=gen_wind08.wav			local
+	sound		wind3=gen_wind07.wav			local
+	sound		wind4=gen_canyon_a1.wav			local
+	
+	sound		tunes=mus_riv_intro.wav			local	#intro tunes
+	sound		tunes1=mus_shs_intro.wav		local	#strange tunes
+		
+	int			on=0							local
+	int			flags=0							local
+	int			key1=0                          local
+	
+	int			windy1=0						local
+	int			windy2=0						local
+	
+	vector		blue							local
+	
+	
+end
+
+#========================================================================================
+
+code
+
+user0:
+
+	Sleep(0.5);
+	player=GetLocalPlayerThing();
+	
+	#cue devils
+	SetPulse(0.4);
+	
+	#cue sound, fade up
+	windy1=PlaySoundThing(wind3, devilthing, 0.5, 10, 40, 0x0011);
+	ChangeSoundVol(windy1, 1.0, 5.0);
+    
+	#two pulses	
+	Sleep(0.8);
+	
+	#tunes kick in
+	PlaySoundLocal(tunes1, 1.0, 0, 0x0000, 0);
+	
+	#move devils
+	MoveToFrame(devilthing, 1, 2);  
+	MoveToFrame(devilthing2, 1, 3);
+	WaitForStop(devilthing);
+	
+	#light lildevil
+	blue=VectorSet(0.40, 0.45, 0.65);
+	SetThingLight(devilthing3, blue, 6, 1.5);
+	Sleep(0.6); 
+	
+	#devil3 lags behind for definition
+	MoveToFrame(devilthing3, 1, 4);
+	
+	#wind gets stronger sounding
+	ChangeSoundPitch(windy1, 1.5, 2.0);
+	
+	WaitForStop(devilthing3);
+	
+	#keep moving devils ahead together
+	MoveToFrame(devilthing, 2, 4);
+	MoveToFrame(devilthing2, 2, 5);
+	MoveToFrame(devilthing3, 2, 4);
+
+	WaitForStop(devilthing);
+   
+	#new wind sound...horkin'!
+	windy2=PlaySoundThing(wind2, devilthing2, 0.7, 3, 40, 0x0011);
+	 
+	#flags perk up
+	MaterialAnim(mat, 15, 0);
+	Sleep(0.6);
+  
+	#destroy calm flags, create wind flags
+	DestroyThing(flag1);
+	redflag1=CreateThing(windflag, spot1);	
+	CaptureThing(redflag1);
+ 
+	DestroyThing(flag2);
+	redflag2=CreateThing(windflag, spot2);  
+	CaptureThing(redflag2);
+	Sleep(0.01);
+	
+	WaitForStop(devilthing2);
+	
+	#rotate flags and such...
+	Rotate(redflag1, -95, 1, 0.5);
+	Rotate(redflag2, -80, 1, 0.4);
+	
+	Sleep(0.7); 
+	
+	#2nd tunes kick in
+	#PlaySoundLocal(tunes, 1.0, 0, 0x0000, 0);
+	
+	#flags wave in breeze
+    PlayKey(redflag1, wind, 0, 0x0, 0);
+	PlayKey(redflag2, wind, 0, 0x0, 0);
+	
+	#wind sound for later...
+	PlaySoundThing(wind4, spot1, 0.7, 3, 30, 0x0011);
+	
+	#devils move on towards bridge 	
+	MoveToFrame(devilthing, 3, 4);
+	MoveToFrame(devilthing2, 3, 4);
+	MoveToFrame(devilthing3, 3, 3);
+
+	WaitForStop(devilthing);
+	
+	#windmill action
+	ChangeSoundPitch(windy2, 1.5, 3.0);
+	key1=PlayKey(mill, gear, 0, 0x0, 0);
+	ChangeSoundPitch(windy2, 1.5, 2.0);
+	Sleep(2.0);
+	PlayKey(animbridge, bridge, 0, 0x12, 1);
+	Sleep(0.01);
+	DestroyThing(animbridge);
+	solidbridge=CreateThing(still, bridgespot);
+	CaptureThing(solidbridge);
+	
+	#sound pitch chills down
+	ChangeSoundPitch(windy1, 1.0, 2.5);
+	Sleep(1.0);
+	
+	#devil crossing
+	MoveToFrame(devilthing, 4, 4);
+	MoveToFrame(devilthing2, 4, 6);
+	MoveToFrame(devilthing3, 4, 4);
+	
+    ChangeSoundPitch(windy2, 1.0, 3.0);
+	
+	WaitForStop(devilthing2);
+	
+	#devils slow
+	SetPulse(1);
+	Sleep(3.0); 
+	
+	#windmill stops slowly
+	#StopKey(mill, key1, 6.0);
+
+	#sound ramps down 	
+	ChangeSoundVol(windy1, 0.1, 2.0);
+	ChangeSoundVol(windy2, 0.1, 2.5);   
+	Sleep(1.0);
+	
+	#devils die off
+   	SetPulse(0);
+    
+	return;
+	
+#========================================================================================
+
+pulse:
+
+	CreateThing(particle, devilthing);
+	CreateThing(lilskito, devilthing2);
+	CreateThing(lilskito, devilthing3);
+		
+	return;
+	
+
+#========================================================================================
+	
+
+end
+

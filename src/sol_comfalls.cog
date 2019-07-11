@@ -1,0 +1,768 @@
+# Jones 3D Cog Script
+#
+# SOL_ComFalls.cog
+#
+# Set the levers in the correct sequence to get rid of the minecar commies.
+# Also allows the player access to Gem2. 
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     user1
+    message     user2
+    message     entered
+    message     activated
+    message     timer
+    
+    thing       player          local
+    thing       bombPos         local
+    thing       comCar          local
+    thing       indy1           local
+    thing       indy2           
+    thing       pushed          local
+    thing       ghostCar
+    thing       aframe0
+    thing       aframe1
+    thing       comCam1
+    thing       comCam2
+    thing       comCam3
+    thing       comCam4
+    thing       comCam5
+    thing       comCam6
+    thing       ghostExp
+    thing       ctrlCam1        # look at ctrl panel
+    thing       target1
+    thing       leverGhost
+    thing       indyCam1        # indy walks back to lever5
+    thing       indyCam2        # pull lever5
+    thing       indyCam3        # pull lever5 different angle
+    thing       panelTarget
+    thing       switchCam
+    thing       trkSwitch5
+    thing       trkSwitch4
+    thing       ghost_Focus
+    thing       offsetCam       # control room offsetCam
+    thing       cam_Barricade   # barricade cam
+    thing       cam_FrontShot   # front shot of commies entering switch4
+    
+    surface     trig1           mask=0x004
+    surface     trig2           mask=0x004
+    surface     trig3           mask=0x004
+    surface     trig4           mask=0x004
+    surface     trig5           mask=0x004
+    surface     trig6           mask=0x004
+    surface     aframeTrig      mask=0x004
+    surface     breakTrig       mask=0x004
+    surface     front
+    surface     back
+    surface     trkTemp         mask=0x004
+    surface     switch1
+    surface     switch4
+    surface     switch5
+    surface     trig_Attach     mask=0x004
+    
+    template    tplComCar=mine_2commcar     local
+    template    bomb=ghost                  local
+    template    debris0=woodshrapa_nc       local
+    template    debris1=woodshrapb_nc       local
+    template    debris2=woodshrapc_nc       local
+    template    tplExp=+bazooka_exp         local
+    template    tplActor=indy_sh_actor      local
+    template    tplLevPull=pullever         local
+    
+    keyframe    leverPull=gen_lever_pull.key        local
+    keyframe    indyPull=in_pull_lever.key          local
+    keyframe    com_die=mc_die.key                  local
+    
+    cog         lever4
+    cog         lever5
+    cog         ambush
+    cog         mineDoors
+    cog         panelSay
+    cog         hintCog
+    
+    sound       comFalling=Sl06a01.wav                  local   # arrr...
+    sound       sfxBreak=sol_break_aframe_c.wav         local   # break a-frame
+    sound       sfxCrash=sol_break_barricade_c.wav      local   # break barricade
+    sound       sfxExplode=gen_grenade_explode.wav      local   # temp explosion
+    sound       inDidnt=Inxj092.wav                     local   # that didn't...
+    sound       inBeSafe=Sl06j02.wav                    local   # better throw...
+    sound       inNope=Inxj088.wav                      local   # nope
+    sound       sndSwitchTex=sol_panel_switch_c.wav     local   # click
+    sound       inDangerous=Inxj056.wav                 local   # that looks dangerous
+    sound       sndLever=gen_lever_pull.wav             local   # lever sound
+    sound       inWontWork=Inxj058.wav                  local   # that won't work
+    sound       inBetterNot=Inxj260a.wav                local   # I better not do that
+    
+    int         curCam                  local
+    int         fragment                local
+    int         i                       local
+    int         ready=0                 local
+    int         notQuite=0              local
+    int         playing=0               local
+    int         done=0                  local
+    int         frontShot=0             local
+    
+    # ** subroutines **
+    flex        throwback       local
+    flex        pullit          local
+    flex        wontWork        local
+    flex        betterNot       local
+    flex        barricade       local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    # set all globals to zero at level start
+    global0 = 0;
+    global1 = 0;
+    global2 = 0;
+    global3 = 0;
+    
+    # Make air in com falls no move track
+    SetSurfaceFlags(trkTemp, 0x4000);
+    ClearAdjoinFlags(trkTemp, 2);
+    
+    return;
+    
+# ========================================================================================
+
+user0:
+
+    # switches 1, 4, and 5 are all correct
+    if((GetWallCel(switch1) == 2) && (GetWallCel(switch4) == 2) && (GetWallCel(switch5) == 1))
+    {
+        ready = 1;
+        SetTimer(0.5);
+    }
+        
+    # switches 1 and 4 are correct, switch5 is not
+    if((GetWallCel(switch1) == 2) && (GetWallCel(switch4) == 2) && (GetWallCel(switch5) == 2))
+    {
+        notQuite = 1;
+        SetTimer(0.5);
+    }
+        
+    # switch1 is not correct
+    if(GetWallCel(switch1) == 1)
+    {
+        return;
+    }
+    
+    return;
+        
+# ========================================================================================
+
+user1:
+
+    frontShot = 1;
+    return;
+
+# ========================================================================================
+
+user2:
+
+    frontShot = 0;
+    return;
+
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+
+# ****************************************************
+# all switches are in synch send commies over the edge
+# ****************************************************
+    if((ready == 1) && (done == 0)  && (GetSourceRef() == comCar))
+    {
+        if(GetSenderRef() == trig1)
+        {
+            # Cut to comCam2
+            SetCameraFocus(2, comCam2);
+            SetCameraSecondaryFocus(2, comCar);
+            SetCurrentCamera(2);
+            SetCameraFOV(40, 0, 0.0);
+            SetCameraFOV(90, 1, 1.0);
+        }
+            
+        else if(GetSenderRef() == trig2)
+        {
+            # Cut to comCam3
+            SetCameraFocus(2, comCam3);
+            SetCameraSecondaryFocus(2, comCar);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+        }
+            
+        else if(GetSenderRef() == trig3)
+        {
+            # Cut to comCam4 with focus on ghost_Focus
+            SetCameraFocus(2, comCam4);
+            SetCameraSecondaryFocus(2, ghost_Focus);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+        }
+        
+        else if(GetSenderRef() == trig_Attach)
+        {
+            # attach ghost_Focus to comCar
+            AttachThingToThing(ghost_Focus, comCar);
+        }
+            
+        else if(GetSenderRef() == trig4)
+        {
+            # Cut to comCam5
+            SetCameraFocus(2, comCam5);
+            SetCameraSecondaryFocus(2, aframe1);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+            
+            # detach ghost_Focus from comCar
+            DetachThing(ghost_Focus);
+        }
+            
+        else if(GetSenderRef() == aframeTrig)
+        {
+            # bust thru A-frame
+            SetCollideType(aframe0, 0);
+            SetCollideType(aframe1, 0);
+            PlaySoundLocal(sfxBreak, 1.0, 0.0, 0x0, 0);
+            
+            # create A-fram debris
+            for(i=0; i<10; i=i+1)                                                        	            
+            {
+                fragment = CreateThing(debris0[RandBetween(0, 2)], aframe0);                                 
+                SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 2));
+                SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));    	            
+            }
+                
+            # rotate A-frams out of the way
+            Rotate(aframe0, -75, 0, 0.25);
+            Rotate(aframe1, 75, 0, 0.25);
+            
+            # reset collide
+            WaitForStop(aframe0);
+            SetCollideType(aframe0, 3);
+            SetCollideType(aframe1, 3);
+        }
+            
+        else if(GetSenderRef() == trig5)
+        {
+            # Cut to comCam6
+            SetCameraFocus(2, comCam6);
+            SetCameraSecondaryFocus(2, comCar);
+            SetCurrentCamera(2);
+            SetCameraFOV(20, 0, 0.0);
+            SetCameraFOV(90, 1, 2.0);
+        }   
+            
+        else if(GetSenderRef() == breakTrig)
+        {
+            # break out the boards
+            SetWallCel(front, 1);
+            SetWallCel(back, 1);
+            SetAdjoinFlags(front, 2);
+            setadjoinflags(back, 2);
+            
+            PlaySoundLocal(sfxCrash, 1.0, 0.0, 0x0, 0);
+            bombpos = CreateThingAtPos(bomb, GetSurfaceSector(back), GetSurfaceCenter(back), VectorSet(0, 0, 0));
+            
+            for(i=0; i<40; i=i+1)                                                        	            
+            {
+                fragment = CreateThing(debris0[RandBetween(0, 2)], bombpos);                                 
+                SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 2));
+                SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));    	            
+            }
+            
+            # play com die key
+            PlayKey(comCar, com_die, 4, 0x0, 0);
+        }
+                
+        else if(GetSenderRef() == trkTemp)
+        {
+            # zoom camera back
+            SetCameraFOV(120, 1, 2.0);
+            Sleep(0.1);
+            
+            # pull track out from under comCar
+            ClearSurfaceFlags(trkTemp, 0x4000);
+            SetAdjoinFlags(trkTemp, 2);
+            DetachThing(comCar);
+            
+            # nose her in
+            SetThingRotVel(comCar, '-90.0 0.0 0.0');
+            
+            # make commies scream!
+            PlaySoundLocal(comFalling, 1.0, 0.0, 0x0, 0);
+            Sleep(0.8);
+            
+            # create explosion and sfx
+            PlaySoundLocal(sfxExplode, 1.0, 0.0, 0x0, 0);
+            PlaySoundLocal(sfxBreak, 1.0, 0.0, 0x0, 0);
+            CreateThing(tplExp, ghostExp);
+            CreateThing(tplExp, comCar);
+            SetThingLight(ghostExp, '1.0 0.75 0.75', 5.0, 0.1);
+            
+            # hide comCar
+            SetThingFlags(comCar, 0x10);
+            StopAllSoundsThing(comCar);
+            
+            Sleep(1.0);
+            
+            # fade out light
+            SetThingLight(ghostExp, '0.0 0.0 0.0', 0.0, 0.25);
+            
+            Sleep(1.0); #1.5
+            
+            # throw switch back
+            Call throwBack;
+            
+            # tell sol_ambush.cog that secondLap = 1
+            SendMessage(ambush, user0);
+            
+            # tell panelSay.cog not to talk
+            SendMessage(panelSay, user1);
+            
+            # solve hint17
+            SendMessage(hintCog, user0);
+            
+            # turn basic ambients back on
+            global4 = 0;
+            
+            ready = 0;
+            done = 1;
+        }
+    }
+        
+# *****************************************
+# Switch 5 is in wrong position, do partial
+# *****************************************
+    if( (notQuite == 1) && (GetSourceRef() == comCar))
+    {
+        if(GetSenderRef() == trig1)
+        {
+            # do cutscene stuff
+            MakeMeStop();
+            StartCutscene(0);
+            
+            # Cut to comCam2
+            SetCameraFocus(2, comCam2);
+            SetCameraSecondaryFocus(2, comCar);
+            SetCurrentCamera(2);
+            SetCameraFOV(30, 0, 0.0);
+            SetCameraFOV(90, 1, 2.0);
+        }
+            
+        if(GetSenderRef() == trig6)
+        {
+            Sleep(1.0);
+            DestroyThing(comCar);
+            
+            # reset cam to ctrlroom
+            SetCameraFocus(2, offsetCam);
+            SetCameraSecondaryFocus(2, player);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+            Sleep(0.5);
+            
+            # play voice line
+            PlayVoice(player, inDidnt, 1.0, 1);
+            
+            # restore controls and camera
+            ClearActorFlags(player, 0x200000);
+            SetCurrentCamera(1);
+            
+            # restore player controls
+            ClearActorFlags(player, 0x200000);
+            
+            EndCutscene();
+        }
+    }
+        
+    return;
+
+# ========================================================================================
+
+activated:
+
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+    
+    # lever 5 control
+    if((GetSenderRef() == pushed) && (ready == 0) && (playing == 0))
+    {
+        # player tries to use oil on lever -- duh
+        if(GetCurItem(player) == 81)
+        {
+            Call wontWork;
+        }
+        
+        # player can't throw switch5 any more
+        else
+        {
+            Call betterNot;
+        }
+    }
+    
+    # player activates the front side of the barricade
+    else if((GetSenderRef() == front) && (playing == 0))
+    {
+        playing = 1;
+        Call barricade;
+    }
+            
+    return;
+
+# ========================================================================================
+
+throwback:
+    
+    player = GetLocalPlayerThing();
+    
+    # destroy comCar
+    DestroyThing(comCar);
+    
+    # destroy old lever
+    SendMessage(lever5, user1);
+    
+    # create new lever in this cog     
+    pushed = CreateThing(tplLevPull, leverGhost);
+    CaptureThing(pushed);
+    
+    # if player was standing at lever1 when 
+    # commies were sent over the edge, do this.
+    if(global0 == 1)
+    {
+        # do cutscene stuff
+        MakeMeStop();
+        
+        # create indy1 actor
+        indy1 = CreateThing(tplActor, player);
+        CaptureThing(indy1);
+        Sleep(0.01);
+        
+        # outfit indy actors
+        CopyPlayerHolsters(player, indy1);
+        CopyPlayerHolsters(player, indy2);
+        
+        # get indy1 ready for cutscene
+        AISetCutsceneMode(indy1);
+        
+        # hide player show actor
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(indy1, 0x80000);
+        Sleep(0.5);
+
+        # Cut to indyCam1 in control room
+        SetCameraFocus(2, indyCam1);
+        SetCameraSecondaryFocus(2, indy1);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        # Walk indy1 to lever 5
+        AISetMoveSpeed(indy1, 1.2);
+        AISetLookThing(indy1, target1);
+        AISetMoveThing(indy1, target1, 1);
+        
+        # hide indy1 show indy2
+        SetThingFlags(indy1, 0x80000);
+        ClearThingFlags(indy2, 0x80000);
+        
+        # cut to indyCam2
+        SetCameraFocus(2, indyCam2);
+        SetCameraSecondaryFocus(2, indy2);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        Sleep(0.5);
+        
+        # play voice line
+        PlayVoice(indy2, inBeSafe, 1.0, 1);
+        
+        # pull the lever
+        Call pullit;
+    }
+        
+    # if player was standing at lever4 when 
+    # commies were sent over the edge, do this.
+    if(global1 == 1)
+    {
+        # do cutscene stuff
+        MakeMeStop();
+        
+        # create indy1 actor
+        indy1 = CreateThing(tplActor, player);
+        CaptureThing(indy1);
+        Sleep(0.01);
+        
+        # outfit indy actors
+        CopyPlayerHolsters(player, indy1);
+        CopyPlayerHolsters(player, indy2);
+        
+        # get indy1 ready for cutscene
+        AISetCutsceneMode(indy1);
+        
+        # hide player show actor
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(indy1, 0x80000);
+        Sleep(0.5);
+        
+        # Cut to indyCam2
+        SetCameraFocus(2, indyCam2);
+        SetCameraSecondaryFocus(2, indy1);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        # Walk Indy to lever 5
+        AISetMoveSpeed(indy1, 1.2);
+        AISetLookThing(indy1, target1);
+        Sleep(0.5);
+        AISetMoveThing(indy1, target1, 1);
+        AISetLookThing(indy1, pushed);
+        Sleep(0.5);
+        
+        # play voice line
+        PlayVoice(indy1, inBeSafe, 1.0, 1);
+        
+        # hide indy1 show indy2
+        SetThingFlags(indy1, 0x80000);
+        ClearThingFlags(indy2, 0x80000);
+        
+        # Cut to indyCam3
+        SetCameraFocus(2, indyCam3);
+        SetCameraSecondaryFocus(2, indy2);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        # pull the lever
+        Call pullit;
+    }
+        
+    # if player was standing at lever5 when 
+    # commies were sent over the edge, do this.
+    if(global2 == 1)
+    {
+        # do cutscene stuff
+        MakeMeStop();
+        
+        # outfit indy actor
+        CopyPlayerHolsters(player, indy2);
+        
+        # hide player show actor
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(indy2, 0x80000);
+        Sleep(0.5);
+        
+        # Cut to indyCam2
+        SetCameraFocus(2, indyCam2);
+        SetCameraSecondaryFocus(2, indy2);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        Sleep(0.5);
+        
+        # play voice line
+        PlayVoice(indy2, inBeSafe, 1.0, 1);
+        
+        # pull the lever
+        Call pullit;
+    }   
+        
+    return;
+        
+# ========================================================================================
+
+pullit:
+
+    player = GetLocalPlayerThing();
+    
+    # pull the lever
+    PlayKey(pushed, leverPull, 4, 0x14, 0);
+    PlayKey(indy2, indyPull, 4, 0x12, 0);
+    Sleep(0.75);
+    PlaySoundLocal(sndLever, 1.0, 0.0, 0x0, 1);
+    
+    # Cut to Control Panel cam
+    SetCameraFocus(2, ctrlCam1);
+    SetCameraSecondaryFocus(2, panelTarget);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    Sleep(0.5);
+    
+    # flip panel switch
+    SetWallCel(switch5, 2);
+    PlaySoundLocal(sndSwitchTex, 1.0, 0.0, 0x0, 1);
+    Sleep(0.5);
+    
+    # Cut to switch cam
+    SetCameraFocus(2, switchCam);
+    SetCameraSecondaryFocus(2, trkSwitch5); 
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # rotate track switch
+    Rotate(trkSwitch5, -90, 1, 1.0);
+    Sleep(2.0);
+    
+    # get player into positon
+    CopyOrientAndPos(indy2, player);
+    
+    # hide actor show player
+    SetThingFlags(indy2, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # restore player controls
+    ClearActorFlags(player, 0x200000);
+    
+    # return camera to player
+    SetCurrentCamera(1);
+    
+    EndCutscene();
+    
+    return;    
+
+# ========================================================================================
+
+wontWork:
+
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+
+    playing = 1;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # activate lever
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # play voice line
+    PlayVoice(player, inWontWork, 1.0, 1);
+    
+    # restore controls and camera
+    ClearActorFlags(player, 0x200000);
+    SetCurrentCamera(curCam);
+    
+    EndCutscene();
+    playing = 0;
+
+    return;
+    
+# ========================================================================================
+
+betterNot:
+
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+
+    playing = 1;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(0);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # activate lever
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # play voice line
+    PlayVoice(player, inBetterNot, 1.0, 1);
+    
+    # restore controls and camera
+    ClearActorFlags(player, 0x200000);
+    SetCurrentCamera(curCam);
+    
+    EndCutscene();
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+barricade:
+
+    player = GetLocalPlayerThing();
+
+    # play voice line
+    PlayVoice(player, inDangerous, 1.0, 1);
+    playing = 0;
+
+    return;
+    
+# ========================================================================================
+
+timer:
+    
+    # create comcar and disable player controls
+    #StartCutscene(1);   # make hud go away
+    #SetActorFlags(player, 0x200000);
+    
+    # create comCar
+    comCar = CreateThing(tplComCar, GhostCar);
+    CaptureThing(comCar);
+    
+    if(frontShot == 1)
+    {
+        # Cut to cam_FrontShot
+        SetCameraFocus(2, cam_FrontShot);
+        SetCameraSecondaryFocus(2, trkSwitch4);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+    }
+    
+    else
+    {
+        # Cut to comCam1
+        SetCameraFocus(2, comCam1);
+        SetCameraSecondaryFocus(2, trkSwitch4);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+    }
+    
+    # tell ctrlLever4 to rotate switch4
+    if(frontShot == 0) SendMessage(lever4, user1);
+    
+    Sleep(2.0);
+    
+    # open the doors and keep them open
+    SendMessage(mineDoors, user0);
+    
+    # give comcar some thrust
+    SetThingThrust(comCar, '0.0 4.0 0.0');
+    
+    return;
+
+# ========================================================================================
+
+end
+

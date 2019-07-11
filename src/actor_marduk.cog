@@ -1,0 +1,118 @@
+# Jones 3D Cog Script
+#
+# actor_marduk.cog
+#
+# [SCHOLL]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+#	#####  Notes  #####
+#
+# ===================================================================
+
+symbols
+
+message		created
+message		timer
+
+thing	t_Marduk	local
+thing	t_Indy		local 
+
+int		n_TimerID		local
+vector	v_TrailPos		local
+vector	v_MardukPos 	local
+vector	v_MardukVel		local
+vector	v_TrailVel		local
+vector	v_MardukLook		local
+thing	t_Trail			local
+
+int			TIMER_ID_MARDUK_TRAIL=0		local
+
+flex		MARDUK_TRAIL_DELAY=0.05				local
+
+int		n_leftnode	local
+int		n_rightnode	local
+
+template	tpl_MardukTrail=mardukTrail			local
+
+# for engine to use
+template		expl=mardukBombSpr		local
+
+end
+
+# ===================================================================
+
+code
+# ...................................................................
+
+created:
+	t_Marduk = GetSenderRef();
+	t_Indy = GetLocalPlayerThing();
+	AISetSubMode(t_Marduk, 0x80000); # slow mode anim fade
+	SetTimerEX(MARDUK_TRAIL_DELAY, TIMER_ID_MARDUK_TRAIL, t_Marduk, 0);
+
+	n_leftnode = GetNodeByName(t_Marduk, "wml4arm");
+	n_rightnode = GetNodeByName(t_Marduk, "wmr4arm");
+
+ 	return;
+
+
+timer:
+	n_TimerID = GetSenderID();
+	t_Marduk = GetParam(0);
+
+	if (n_TimerID == TIMER_ID_MARDUK_TRAIL)
+	{
+		if (!BITTEST(GetThingFlags(t_Marduk), 0x80000) && (GetThingAlpha(t_Marduk) > 0.75))
+		{
+			v_MardukPos = GetThingPos(t_Marduk);
+			v_MardukLook = GetThingLVec(t_Marduk);
+			v_MardukLook = VectorScale(v_MardukLook, 0.025);
+			v_TrailPos = VectorSet(0.0, 0.0, -0.05);
+			v_TrailPos = VectorAdd(VectorAdd(v_TrailPos, v_MardukPos), v_MardukLook);
+			t_Trail = CreateThingAtPos(tpl_MardukTrail, FindNewSectorFromThing(t_Marduk, v_TrailPos), v_TrailPos, '0 0 0');
+			if (t_Trail != -1)
+			{
+				v_MardukVel = GetThingVel(t_Marduk);
+				v_MardukVel = VectorScale(v_MardukVel, 0.2);
+				v_TrailVel = GetThingVel(t_Trail);
+				v_TrailVel = VectorAdd(v_MardukVel, v_TrailVel);
+				SetThingVel(t_Trail, v_TrailVel);
+			}
+
+			v_TrailPos = GetThingJointPos(t_Marduk, n_leftnode);
+			v_TrailPos = VectorSet(VectorX(v_TrailPos), VectorY(v_TrailPos), VectorZ(v_TrailPos) - 0.03);
+			t_Trail = CreateThingAtPos(tpl_MardukTrail, FindNewSectorFromThing(t_Marduk, v_TrailPos), v_TrailPos, '0 0 0');
+			if (t_Trail != -1)
+			{
+				SetThingVel(t_Trail, v_TrailVel);
+			}
+			v_TrailPos = GetThingJointPos(t_Marduk, n_rightnode);
+			v_TrailPos = VectorSet(VectorX(v_TrailPos), VectorY(v_TrailPos), VectorZ(v_TrailPos) - 0.03);
+			t_Trail = CreateThingAtPos(tpl_MardukTrail, FindNewSectorFromThing(t_Marduk, v_TrailPos), v_TrailPos, '0 0 0');
+			if (t_Trail != -1)
+			{
+				SetThingVel(t_Trail, v_TrailVel);
+			}
+		}
+
+		SetTimerEX(MARDUK_TRAIL_DELAY, TIMER_ID_MARDUK_TRAIL, t_Marduk, 0);
+	}
+
+	return;
+
+
+# ...................................................................
+
+
+# ...................................................................
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+
+
+end
+

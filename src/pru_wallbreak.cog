@@ -1,0 +1,86 @@
+
+# Jones 3D Cog Script
+#
+# PRU_wallbreak.cog    Boulder smashes through wall, opening an exit for Indy.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		user0
+message		arrived
+
+thing		block0			#top block on upstream side
+thing		block1			#upper middle block on upstream side
+thing		block2			#upper middle block on upstream side
+thing		block3			#bottom block on upstream side
+thing		block4			#downstream side, top
+thing		block5			#downstream side, upper middle
+thing		block6			#downstream side, lower middle
+thing		block7			#downstream side, bottom
+
+thing		boulder
+
+thing		ghost
+thing		BldrGhost0
+thing		BldrGhost1
+thing		BldrGhost2
+thing		BldrGhost3
+thing		BldrGhost4
+
+template	debris0=stoneshrapa	local
+template	debris1=stoneshrapb	local
+template	debris2=stoneshrapc	local
+
+sound		tumble=pru_boulder_wallcrash_c.wav	local
+
+int			fragment	local
+int			i			local
+int			nPos=0		local
+
+flex		crashSpeed0=4	local
+flex		crashSpeed1=3	local
+flex		crashSpeed2=2	local
+flex		crashSpeed3=2	local
+flex		crashSpeed4=2	local
+
+end
+# ========================================================================================
+code
+
+user0:
+    Print("entered");
+    
+	DestroyThing(block0);
+	DestroyThing(block1);
+	DestroyThing(block2);
+    DestroyThing(block3);
+	DestroyThing(block4);
+	DestroyThing(block5);
+    DestroyThing(block6);
+	DestroyThing(block7);
+    
+	PlaySoundLocal(tumble, 1.0, 0.0, 0x0, 0);
+    for(i=0; i<40; i=i+1)                                                        	            
+    {
+        fragment = CreateThing(debris0[3.0 * rand()], ghost);
+		SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.05'), 2.0));
+		SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));    	            
+    }
+    
+	MoveThingToPos(Boulder, GetThingPos(BldrGhost0), crashSpeed0);
+	return;
+	
+arrived:
+	if(nPos < 4)
+	{
+		nPos = nPos + 1;
+		MoveThingToPos(Boulder, GetThingPos(BldrGhost0[nPos]), crashSpeed0[nPos]);
+	}
+    return;
+# .................................................................................	
+end
+

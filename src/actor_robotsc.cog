@@ -1,0 +1,203 @@
+# Jones 3D Cog Script
+#
+# actor_RobotSc.cog
+#
+# Special case behavior for the scissor robot
+#
+# [MDR] 
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		created
+	message		aievent
+	message		damaged
+	message		killed
+
+# *********************** SUBROUTINES **************************
+	flex		RobotActivate			local
+	flex		RobotDeactivate			local
+
+# ************************** TEMPLATES *************************
+	template	tpl_glow=+robotglow_lg	local
+
+# *********************** MISC LOCAL VARS **********************
+	thing		t_sender				local
+	thing		t_glow					local
+
+	int			eventType				local
+	flex		f_userData				local
+	int			n_damageType			local
+	int			n_damageAmount			local
+
+	int			FLAG_SETARMEDMODE		local
+	int			FLAG_FIRE				local
+
+	vector		vec_pos					local
+
+end
+
+# ========================================================================================
+code
+
+# ........................................................................................
+startup:
+
+	FLAG_SETARMEDMODE	= 0x20;
+	FLAG_FIRE			= 0x40;
+
+	return;
+
+
+# ........................................................................................
+created:
+
+	t_sender = GetSenderRef();
+
+	AISetMode(t_sender, 0x8000000);						# Set MODE_ARMOREDSKIN
+	AISetMode(t_sender, 0x10000);						# Set MODE_WANTALLEVENTS
+	AISetMode(t_sender, 0x2000000);						# Set MODE_NOCHASING
+
+	SetArmedMode(t_sender, 7);							# Switch to non-active armed mode
+
+	SetThingUserData(t_sender, 0);
+
+	return;
+
+
+# ........................................................................................
+aievent:
+
+	t_sender	= GetSenderRef();
+	f_userData	= GetThingUserData(t_sender);
+	eventType	= GetParam(0);
+
+	if ( BITTEST(f_userData, FLAG_SETARMEDMODE) )		# If an armed mode change pending, bail
+		return;
+
+	if ( eventType == 0x40 )							#---- EVENT_MOVETARGETCHANGED
+	{
+		if ( AIGetArmedMode(t_sender) == 7 )				# Non-active armed mode?
+		{
+			call RobotActivate;
+		}
+	}
+
+	if ( BITTEST(eventType, 0x80800 ) )					#---- EVENT_GOAL(UNREACHABLE|REACHED)
+	{
+		if ( !BITTEST(AIGetMode(t_sender), 0x202) )
+		{
+			call RobotDeactivate;
+		}
+	}
+
+	return;
+
+
+# ........................................................................................
+damaged:
+
+	t_sender		= GetSenderRef();
+	n_damageAmount	= GetParam(0);
+	n_damageType	= GetParam(1);
+
+	if ( BITTEST(n_damageType, 0x07) )						# DAMAGE_(IMPACT|ENERGY|FIRE)?
+	{
+		if ( !BITTEST(GetActorFlags(t_sender), 0x40000) )
+		{
+			PlayMode(t_sender, 61, 0);						# Play the deflected anim
+		}
+		else
+		{
+			if ( BITTEST(n_damageType, 0x01) )				# DAMAGE_IMPACT?
+			{
+				PlaySoundClass(t_sender, 85);				# Play ricochet sound
+			}
+		}
+	}
+
+	if ( BITTEST(n_damageType, 0x18) )						# DAMAGE_(FISTS|WHIP)?
+	{
+		ReturnEx(0);
+	}
+
+	return;
+
+
+# ........................................................................................
+killed:
+
+	t_sender	= GetSenderRef();
+
+	t_glow = GetThingAttachedThing(t_sender, 13);
+	if ( t_glow > -1 )
+	{
+		DestroyThing(t_glow);
+	}
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ........................................................................................
+# Assumes t_sender has been set
+# ........................................................................................
+RobotActivate:
+
+	f_userData	= GetThingUserData(t_sender);
+
+	ResetThing(t_sender);
+	PlayMode(t_sender, 69, 0);						# Play the stand to walk anim
+	PlaySoundClass(t_sender, 131);					# Play spin up sound
+	SetArmedMode(t_sender, 0);						# Switch to active armed mode
+	PlaySoundClass(t_sender, 123);					# Play hover sound
+
+	vec_pos	= VectorAdd( GetThingPos(t_sender), '0 0 -0.04' );
+	t_glow	= CreateThingAtPos(tpl_glow, FindNewSectorFromThing(t_sender, vec_pos), vec_pos, '0 0 0');
+	if ( t_glow > -1 )
+	{
+		AttachThingToThingEx(t_glow, t_sender, 0x08);
+	}
+
+	SetThingUserData(t_sender, f_userData);
+
+	return;
+
+# ........................................................................................
+# Assumes t_sender has been set
+# ........................................................................................
+RobotDeactivate:
+
+	f_userData = GetThingUserData(t_sender);
+	f_userData = BITSET(f_userData, FLAG_SETARMEDMODE);
+	SetThingUserData(t_sender, f_userData);
+
+	StopThing(t_sender);
+	ResetThing(t_sender);
+	SetArmedMode(t_sender, 7);						# Switch to non-active armed mode
+	StopSoundClass(t_sender, 123);					# Stop hover sound
+	PlaySoundClass(t_sender, 132);					# Play spin down sound
+	PlayMode(t_sender, 70, 0);						# Play the walk to stand anim
+
+	t_glow = GetThingAttachedThing(t_sender, 13);
+	if ( t_glow > -1 )
+	{
+		DestroyThing(t_glow);
+	}
+
+	f_userData = GetThingUserData(t_sender);
+	f_userData = BITCLEAR(f_userData, FLAG_SETARMEDMODE);
+	SetThingUserData(t_sender, f_userData);
+
+	return;
+
+
+end
+
+

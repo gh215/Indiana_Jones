@@ -1,0 +1,54 @@
+# Jones 3D Cog Script
+#
+# PRU_camerashake.cog    The camera shakes when the blocks fall.
+# Triggered by PRU_finale.cog.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		user0				//recieved from PRU_finale.cog
+message		pulse
+
+int			counter=0			local
+
+vector		posOffset			local
+vector		angOffset			local
+
+flex		posDelta=10.0		local
+flex		angDelta=180.0		local
+
+end
+
+# ========================================================================================
+
+code
+
+user0:
+posOffSet = VectorSet(RandBetween(-1, 1) * 0.001, RandBetween(-1, 1) * 0.001, RandBetween(-1, 1) * 0.001);
+angOffSet = VectorSet(RandBetween(-6, 6) * 0.1, RandBetween(-4, 4) * 0.1, RandBetween(-2, 2) * 0.1);
+
+SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+SetPulse(0.1);
+return;
+
+# .................................................................................
+pulse:
+if (counter < 15) 
+{
+	counter=counter+1;
+	posOffSet = VectorSet(RandBetween(-1, 1) * 0.001, RandBetween(-1, 1) * 0.001, RandBetween(-1, 1) * 0.001);
+	angOffSet = VectorSet(RandBetween(-6, 6) * 0.1, RandBetween(-4, 4) * 0.1, RandBetween(-2, 2) * 0.1);
+    SetPOVShake(posOffSet, angOffSet, posDelta, angDelta);
+}
+else if (counter == 15) 
+{
+	SetPulse(0);
+	counter=0;
+}
+return;
+
+end

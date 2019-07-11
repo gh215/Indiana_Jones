@@ -1,0 +1,620 @@
+# Jones 3D Cog Script
+#
+# aet_marduk2.cog   
+#
+# [SCHOLL]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	startup
+message	arrivedwpnt
+message timer
+message	touched
+message	user0
+message	damaged
+
+
+# ************************** MARDUK VARS *******************
+
+template	tpl_marduk2=marduk2	local
+thing	t_Marduk=-1			local	#mask=0x0
+int		n_WpntSetActive=0	local 
+int		n_TraverseDir=1 	local
+int		n_MardukAtWaypoint=0 local
+int		n_MardukNextWaypoint=1 local
+vector	v_MardukPos			 local 
+vector	v_MardukLook		 local 
+vector	v_MardukToIndy		 local 
+flex	f_TraverseSpeed		 local
+int		n_MoveSoundChannel=-1		local
+int		n_CollideType		local
+
+flex	MARDUK_BASE_TRAVERSE_SPEED=0.7 local
+flex	MARDUK_HURRY_TRAVERSE_SPEED=1.8 local
+flex	HURRY_DURATION=3.0				local
+flex	HIT_ANIM_TIME=1.4				local
+flex	HURRY_MAX_ROT_THRUST=300.0		local 
+flex	BASE_MAX_ROT_THRUST=90.0		local
+flex	MIN_ALPHA=0.3					local
+
+vector		v_MardukVel				local
+flex		f_MardukVelMag			local
+flex		MIN_MOVE_VOL=0.4		local
+flex		MAX_MOVE_VOL=1.0		local
+flex		VEL_VOL_MUL=1.2			local
+flex		f_MoveVol				local
+flex		MIN_MOVE_PITCH=0.9		local
+flex		MAX_MOVE_PITCH=1.0		local
+flex		VEL_PITCH_MUL=0.4		local
+flex		f_MovePitch				local
+flex		UPDATE_SOUND_PULSE=0.25	local
+
+# ************************** INDY VARS *******************
+
+thing	t_Indy					local
+int		b_OKToDamageIndy=1		local
+vector	v_IndyPos				local
+
+# ===========================SHOCK LIGHT VARIABLES================================================
+
+vector		v_MinLight							local 
+vector		v_MaxLight							local 
+int			n_ShockLightAnim=-1		local
+flex		SHOCK_LIGHT_DURATION=0.25	local
+
+# ************************** TIMER IDS *******************
+
+int			TIMER_ID_STOP_SHOCK_LIGHT=0		local
+int			TIMER_ID_START_HURRY_TOUCH=1	local
+int			TIMER_ID_START_HURRY_WHIP=2		local
+int			TIMER_ID_STOP_HURRY=3			local
+int			TIMER_ID_UPDATE_SOUND=4			local
+
+
+# ===========================WAYPOINTS================================================
+int			NUM_WAYPOINTS=16		local
+int			NUM_WAYPOINTS_SET_1=9	local
+int			NUM_WAYPOINTS_SET_2=15	local
+thing		t_Waypoint00
+thing		t_Waypoint01
+thing		t_Waypoint02
+thing		t_Waypoint03
+thing		t_Waypoint04
+thing		t_Waypoint05
+thing		t_Waypoint06
+thing		t_Waypoint07
+thing		t_Waypoint08
+thing		t_Waypoint09
+thing		t_Waypoint10
+thing		t_Waypoint11
+thing		t_Waypoint12
+thing		t_Waypoint13
+thing		t_Waypoint14
+thing		t_Waypoint15
+
+int			NUM_CIRCLE_WAYPOINTS=6		local
+thing		t_CWaypoint0	
+thing		t_CWaypoint60	
+thing		t_CWaypoint120	
+thing		t_CWaypoint180	
+thing		t_CWaypoint240	
+thing		t_CWaypoint300	
+
+# ************************** MISC LOCAL VARS *******************
+
+int			n_TimerID				local
+vector		v_TempVec				local
+int			n_Waypoint			local
+int			n_idx				local
+int			n_idx2				local
+
+# ===========================MISC CONSTANTS================================================
+
+flex		ActivateWaypointSet1	local
+flex		ActivateWaypointSet2	local
+flex		DeactivateWaypoints		local
+flex		SwitchDirection			local
+flex		RankWaypointSet1ForCCW local
+flex		RankWaypointSet1ForCW	local
+flex		RankWaypointSet2ForCCW local
+flex		RankWaypointSet2ForCW	local
+
+# ************************** SOUNDS *******************
+
+sound		shock=aet_mr_hit_indy.wav		local
+sound		fly=aet_mr_fly.wav				local
+sound		hurt=aet_mr_damaged.wav			local
+sound		rico=gen_ricochet_boss.wav		local
+
+model		torso=torso_wm_nogem.3do		local
+int			torsoMesh						local
+int			torsoMeshRef					local
+
+template	tpl_ChargeSparks=mardukCharge					local
+
+end
+# ========================================================================================
+
+code
+startup:
+	t_Indy=GetLocalPlayerThing();
+	
+	// Just for testing
+//	Sleep(40.0);
+//	SendMessageEx(GetSelfCog(), 27, 1, 0, 0, 0);
+
+	return;
+
+
+# ========================================================================================
+// Damage indy on contact with marduk
+touched:
+	if ( (GetSourceRef() == t_Indy)
+		 && (GetSenderRef() == t_Marduk)
+		 && b_OKToDamageIndy
+		 )
+	{
+//		Print("Touched Indy");
+		DamageThing(t_Indy, 50, 0x00100000, t_Marduk);
+
+	    PlaySoundThing(shock, t_Indy, 1.0, 0.0, 10.0, 0x880);
+		v_MinLight = VectorSet(0.0, 0.0, 0.0);
+		v_MaxLight = VectorSet(1.0, 1.0, 1.0);
+		n_ShockLightAnim = ThingLightAnim(t_Marduk, v_MinLight, 20.0, v_MaxLight, 20.0, 0.025);
+		SetTimerEx(SHOCK_LIGHT_DURATION, TIMER_ID_STOP_SHOCK_LIGHT, 0, 0);
+		CreateThing(tpl_ChargeSparks, t_Indy);
+		
+		SetTimerEx(0.0, TIMER_ID_START_HURRY_TOUCH, 0, 0);
+		b_OKToDamageIndy=0;
+		Sleep(1.0); // so we don't damage him every frame
+		b_OKToDamageIndy=1;
+	}
+	
+	return;
+
+# ========================================================================================
+damaged:
+#	DebugPrint("Marduk Damaged");
+	if (BITTEST(GetParam(1), 0x800)) // ElectroWhip
+	{
+#		DebugPrint("Marduk Damaged by ElectorWhip");
+		StopThing(t_Marduk);
+		PlaySoundThing(hurt, t_Marduk, 1.0, 0.0, 20.0, 0x880);
+		SetTimerEx(HIT_ANIM_TIME, TIMER_ID_START_HURRY_WHIP, 0, 0);
+		ReturnEx(20); // 20 damage guarantees will play hit animation. Will heal him later
+	}
+	else 
+	{
+		if (BITTEST(GetParam(1), 0x1)) 
+		{
+			PlaySoundThing(rico, t_Marduk, 1.0, 20.0, 40.0, 0x880);
+		}
+		ReturnEx(0);
+	}
+
+	return;
+
+
+# ========================================================================================
+timer:
+	n_TimerID = GetSenderID();
+//	DebugFlex(n_TimerID, "Timer");
+	if (n_TimerID == TIMER_ID_STOP_SHOCK_LIGHT)
+	{
+//		DebugPrint("Stop Probe Light");
+		if (n_ShockLightAnim != -1)
+		{
+			StopAnim(n_ShockLightAnim);
+			n_ShockLightAnim = -1;
+			v_TempVec = VectorSet(0.0, 0.0, 0.0);
+			SetThingLight(t_Marduk, v_TempVec, 0.0, 0.0);
+		}
+		return;
+	}
+
+	// Check to see if final bridge retracted before timer went off
+	if (t_Marduk == -1)
+	{
+		return;
+	}
+
+	if (n_TimerID == TIMER_ID_START_HURRY_WHIP)
+	{
+		f_TraverseSpeed = MARDUK_HURRY_TRAVERSE_SPEED;
+		SetThingMaxRotVel(t_Marduk, HURRY_MAX_ROT_THRUST);
+		call SwitchDirection;
+		SetThingHealth(t_Marduk, GetThingMaxHealth(t_Marduk)); // heal that boy
+
+		SetTimerEx(HURRY_DURATION, TIMER_ID_STOP_HURRY, 0, 0);
+	}
+	else if (n_TimerID == TIMER_ID_START_HURRY_TOUCH)
+	{
+		SetCollideType(t_Marduk, 0); // avoid multiple collisions
+		SetThingAlpha(t_Marduk, 1.0);
+		ThingFadeAnim(t_Marduk, 1.0, MIN_ALPHA, HURRY_DURATION * 4, 0);
+
+		f_TraverseSpeed = MARDUK_HURRY_TRAVERSE_SPEED;
+		AITraverseWpnts(t_Marduk, n_MardukNextWaypoint, f_TraverseSpeed, 0.0, 1);
+		SetThingMaxRotVel(t_Marduk, HURRY_MAX_ROT_THRUST);
+
+		SetTimerEx(HURRY_DURATION, TIMER_ID_STOP_HURRY, 0, 0);
+	}
+	else if (n_TimerID == TIMER_ID_STOP_HURRY)
+	{
+		SetCollideType(t_Marduk, n_CollideType); 
+		f_TraverseSpeed = MARDUK_BASE_TRAVERSE_SPEED;
+		AISetMoveSpeed(t_Marduk, f_TraverseSpeed);
+		SetThingMaxRotVel(t_Marduk, BASE_MAX_ROT_THRUST);
+		
+		SetThingAlpha(t_Marduk, MIN_ALPHA);
+
+		// slow down now so that we don't hit anything
+		v_MardukVel = GetThingVel(t_Marduk);
+		v_MardukVel = VectorNorm(v_MardukVel);
+		v_MardukVel = VectorScale(v_MardukVel, 0.25); 
+		SetThingVel(t_Marduk, v_MardukVel);
+	}
+	else if (n_TimerID == TIMER_ID_UPDATE_SOUND)
+	{
+		if (n_MoveSoundChannel != -1)
+		{
+			v_MardukVel = GetThingVel(t_Marduk);
+			f_MardukVelMag = VectorLen(v_MardukVel);
+	//		DebugFlex(f_MardukVelMag, "Vel");
+			f_MoveVol = (VEL_VOL_MUL * f_MardukVelMag) + MIN_MOVE_VOL;
+			if (f_MoveVol > MAX_MOVE_VOL)
+			{
+				f_MoveVol = MAX_MOVE_VOL;
+			}
+	
+	//		DebugFlex(f_MoveVol, "Vol");
+			ChangeSoundVol(n_MoveSoundChannel, f_MoveVol, UPDATE_SOUND_PULSE);
+	
+			f_MovePitch = (VEL_PITCH_MUL * f_MardukVelMag) + MIN_MOVE_PITCH;
+			if (f_MovePitch > MAX_MOVE_PITCH)
+			{
+				f_MovePitch = MAX_MOVE_PITCH;
+			}
+	
+	//		DebugFlex(f_MovePitch, "Pitch");
+			ChangeSoundPitch(n_MoveSoundChannel, f_MovePitch, UPDATE_SOUND_PULSE);
+	
+		}
+		else
+		{
+			// Try again to get sound playing
+			n_MoveSoundChannel = PlaySoundThing(fly, t_Marduk, 1.0, 0.0, 30.0, 0x881);
+		}
+	
+		SetTimerEx(UPDATE_SOUND_PULSE, TIMER_ID_UPDATE_SOUND, 0, 0);
+	}
+
+
+	return;
+
+# ========================================================================================
+arrivedwpnt:
+	
+	n_MardukAtWaypoint = GetParam(0);
+	n_MardukNextWaypoint = GetParam(1);
+#	DebugFlex(n_MardukAtWaypoint, "Marduk At Waypoint");
+
+	return;
+
+# ========================================================================================
+user0:
+	if (GetParam(0) == 1)
+	{
+		// The beginning. First bridge pulled back
+		t_Marduk = CreateThing(tpl_marduk2, t_Waypoint05);
+		CaptureThing(t_Marduk); // so I get all the messages I need
+		f_TraverseSpeed = MARDUK_BASE_TRAVERSE_SPEED;
+		n_MoveSoundChannel = PlaySoundThing(fly, t_Marduk, 1.0, 0.0, 30.0, 0x881);
+		SetTimerEx(UPDATE_SOUND_PULSE, TIMER_ID_UPDATE_SOUND, 0, 0);
+	
+		torsoMesh = GetMeshByName(t_Marduk, "wmtorsfr");
+		torsoMeshRef = SetThingMesh(t_Marduk, torsoMesh, torso, 0);
+	
+		SetThingAlpha(t_Marduk, MIN_ALPHA);
+		SetThingMaxRotVel(t_Marduk, BASE_MAX_ROT_THRUST);
+		n_CollideType = GetCollideType(t_Marduk);
+		call ActivateWaypointSet1;
+	}
+	else if (GetParam(0) == 2)
+	{
+		SetCollideType(t_Marduk, 0); // don't get whacked by the retracting bridge
+		StopThing(t_Marduk);
+		Sleep(10.0);
+		SetThingMaxRotVel(t_Marduk, BASE_MAX_ROT_THRUST);
+		SetCollideType(t_Marduk, n_CollideType);
+		call ActivateWaypointSet2;
+	}
+	else if (GetParam(0) == 3)
+	{
+		DestroyThing(t_Marduk);
+		t_Marduk = -1;
+	}
+
+	return;
+
+
+# ========================================================================================
+SwitchDirection:
+	v_MardukPos = GetThingPos(t_Marduk);
+	v_IndyPos = GetThingPos(t_Indy);
+	v_MardukLook = GetThingLVec(t_Marduk);
+	v_MardukToIndy = VectorNorm(VectorSub(v_IndyPos, v_MardukPos));
+
+	// If Indy is in front, then switch direction.
+	// Traverse toward last waypoint he was at
+	if (VectorDot(v_MardukLook, v_MardukToIndy) > 0.0)
+	{
+		if (n_WpntSetActive == 1)
+		{
+			if (n_TraverseDir == 1)
+			{
+				call RankWaypointSet1ForCCW;
+				AITraverseWpnts(t_Marduk, n_MardukAtWaypoint, f_TraverseSpeed, 0.0, 1);
+			}
+			else
+			{
+				call RankWaypointSet1ForCW;
+				AITraverseWpnts(t_Marduk, n_MardukAtWaypoint, f_TraverseSpeed, 0.0, 1);
+			}
+		}
+		else if (n_WpntSetActive == 2)
+		{
+			if (n_TraverseDir == 1)
+			{
+				call RankWaypointSet2ForCCW;
+				AITraverseWpnts(t_Marduk, n_MardukAtWaypoint, f_TraverseSpeed, 0.0, 1);
+			}
+			else
+			{
+				call RankWaypointSet2ForCW;
+				AITraverseWpnts(t_Marduk, n_MardukAtWaypoint, f_TraverseSpeed, 0.0, 1);
+			}
+		}
+	}
+	else
+	{
+		AITraverseWpnts(t_Marduk, n_MardukNextWaypoint, f_TraverseSpeed, 0.0, 1);
+	}
+
+
+	return;
+
+# ========================================================================================
+ActivateWaypointSet1:
+	if (n_WpntSetActive == 1)
+	{
+		return;
+	}
+
+#	DebugPrint("ACTIVATING WAYPOINT SET 1 FOR MARDUK 2");
+	n_WpntSetActive = 1;
+	AISetInstinctWpntMode(t_Marduk);
+
+	call RankWaypointSet1ForCW;
+	AISetSubMode(t_Marduk, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+	n_MardukAtWaypoint = AIFindNearestWpnt(t_Marduk);
+	AITraverseWpnts(t_Marduk, n_MardukAtWaypoint, f_TraverseSpeed, 0.0, 1);
+
+	return;
+
+# ========================================================================================
+ActivateWaypointSet2:
+	if (n_WpntSetActive == 2)
+	{
+		return;
+	}
+
+#	DebugPrint("ACTIVATING WAYPOINT SET 2 FOR MARDUK 2");
+	n_WpntSetActive = 2;
+	AISetInstinctWpntMode(t_Marduk);
+
+	call RankWaypointSet2ForCW;
+	AISetSubMode(t_Marduk, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+	n_MardukAtWaypoint = AIFindNearestWpnt(t_Marduk);
+	AITraverseWpnts(t_Marduk, n_MardukAtWaypoint, f_TraverseSpeed, 0.0, 1);
+
+	return;
+
+# ========================================================================================
+RankWaypointSet1ForCW:
+	n_TraverseDir = 1;
+
+	for ( n_idx = 0; n_idx < NUM_WAYPOINTS_SET_1; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx);
+		AISetWpntRank(n_idx, 1);
+	}
+
+	for ( n_idx = 0; n_idx < NUM_CIRCLE_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_CWaypoint0[n_idx], n_idx + NUM_WAYPOINTS_SET_1);
+		AISetWpntRank(n_idx + NUM_WAYPOINTS_SET_1, 0);
+	}
+
+	AIConnectWpntsOneWay(0, 1);
+	AIConnectWpntsOneWay(1, 2);
+	AIConnectWpntsOneWay(2, 3);
+	AIConnectWpntsOneWay(3, 4);
+	AIConnectWpntsOneWay(4, 5);
+	AIConnectWpntsOneWay(5, 6);
+	AIConnectWpntsOneWay(6, 7);
+	AIConnectWpntsOneWay(7, 8);
+	
+	AIConnectWpntsOneWay(4 + NUM_WAYPOINTS_SET_1, 0);
+	AIConnectWpntsOneWay(8, 4 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(4 + NUM_WAYPOINTS_SET_1, 3 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(3 + NUM_WAYPOINTS_SET_1, 2 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(2 + NUM_WAYPOINTS_SET_1, 1 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(1 + NUM_WAYPOINTS_SET_1, 0 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(0 + NUM_WAYPOINTS_SET_1, 5 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(5 + NUM_WAYPOINTS_SET_1, 4 + NUM_WAYPOINTS_SET_1);
+
+	return;
+
+# ========================================================================================
+RankWaypointSet1ForCCW:
+	n_TraverseDir = -1; 
+
+	for ( n_idx = 0; n_idx < NUM_WAYPOINTS_SET_1; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx);
+		AISetWpntRank(n_idx, 1);
+	}
+
+	for ( n_idx = 0; n_idx < NUM_CIRCLE_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_CWaypoint0[n_idx], n_idx + NUM_WAYPOINTS_SET_1);
+		AISetWpntRank(n_idx + NUM_WAYPOINTS_SET_1, 0);
+	}
+
+	AIConnectWpntsOneWay(1, 0);
+	AIConnectWpntsOneWay(2, 1);
+	AIConnectWpntsOneWay(3, 2);
+	AIConnectWpntsOneWay(4, 3);
+	AIConnectWpntsOneWay(5, 4);
+	AIConnectWpntsOneWay(6, 5);
+	AIConnectWpntsOneWay(7, 6);
+	AIConnectWpntsOneWay(8, 7);
+
+	AIConnectWpntsOneWay(4 + NUM_WAYPOINTS_SET_1, 8);
+	AIConnectWpntsOneWay(0, 4 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(4 + NUM_WAYPOINTS_SET_1, 5 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(5 + NUM_WAYPOINTS_SET_1, 0 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(0 + NUM_WAYPOINTS_SET_1, 1 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(1 + NUM_WAYPOINTS_SET_1, 2 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(2 + NUM_WAYPOINTS_SET_1, 3 + NUM_WAYPOINTS_SET_1);
+	AIConnectWpntsOneWay(3 + NUM_WAYPOINTS_SET_1, 4 + NUM_WAYPOINTS_SET_1);
+
+	return;
+
+# ========================================================================================
+RankWaypointSet2ForCW:
+	n_TraverseDir = 1;
+
+	// All initial waypoints except one on end of second bridge are
+	// part of set 2
+	n_idx2 = 0;		
+	for ( n_idx = 0; n_idx < NUM_WAYPOINTS_SET_1 - 1; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx2);
+		AISetWpntRank(n_idx2, 1);
+		n_idx2 = n_idx2 + 1;
+	}
+
+	for ( n_idx = 0; n_idx < NUM_WAYPOINTS_SET_2 - (NUM_WAYPOINTS_SET_1 - 1); n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint09[n_idx], n_idx2);
+		AISetWpntRank(n_idx2, 1);
+		n_idx2 = n_idx2 + 1;
+	}
+
+	for ( n_idx = 0; n_idx < NUM_CIRCLE_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_CWaypoint0[n_idx], n_idx2);
+		AISetWpntRank(n_idx2, 0);
+		n_idx2 = n_idx2 + 1;
+	}
+
+	AIConnectWpntsOneWay(0, 1);
+	AIConnectWpntsOneWay(1, 2);
+	AIConnectWpntsOneWay(2, 3);
+	AIConnectWpntsOneWay(3, 4);
+	AIConnectWpntsOneWay(4, 5);
+	AIConnectWpntsOneWay(5, 6);
+	AIConnectWpntsOneWay(6, 7);
+	AIConnectWpntsOneWay(7, 8);
+	AIConnectWpntsOneWay(8, 9);
+	AIConnectWpntsOneWay(9, 10);
+	AIConnectWpntsOneWay(10, 11);
+	AIConnectWpntsOneWay(11, 12);
+	AIConnectWpntsOneWay(12, 13);
+	AIConnectWpntsOneWay(13, 14);
+	
+	AIConnectWpntsOneWay(2 + NUM_WAYPOINTS_SET_2, 0);
+	AIConnectWpntsOneWay(14, 2 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(2 + NUM_WAYPOINTS_SET_2, 3 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(3 + NUM_WAYPOINTS_SET_2, 4 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(4 + NUM_WAYPOINTS_SET_2, 5 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(5 + NUM_WAYPOINTS_SET_2, 0 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(0 + NUM_WAYPOINTS_SET_2, 1 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(1 + NUM_WAYPOINTS_SET_2, 2 + NUM_WAYPOINTS_SET_2);
+	
+
+	return;
+
+# ========================================================================================
+RankWaypointSet2ForCCW:
+	n_TraverseDir = -1; 
+	n_idx2 = 0;		
+	for ( n_idx = 0; n_idx < NUM_WAYPOINTS_SET_1 - 1; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx2);
+		AISetWpntRank(n_idx2, 1);
+		n_idx2 = n_idx2 + 1;
+	}
+
+	for ( n_idx = 0; n_idx < NUM_WAYPOINTS_SET_2 - (NUM_WAYPOINTS_SET_1 - 1); n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint09[n_idx], n_idx2);
+		AISetWpntRank(n_idx2, 1);
+		n_idx2 = n_idx2 + 1;
+	}
+
+	for ( n_idx = 0; n_idx < NUM_CIRCLE_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_CWaypoint0[n_idx], n_idx2);
+		AISetWpntRank(n_idx2, 0);
+		n_idx2 = n_idx2 + 1;
+	}
+
+	AIConnectWpntsOneWay(1, 0);
+	AIConnectWpntsOneWay(2, 1);
+	AIConnectWpntsOneWay(3, 2);
+	AIConnectWpntsOneWay(4, 3);
+	AIConnectWpntsOneWay(5, 4);
+	AIConnectWpntsOneWay(6, 5);
+	AIConnectWpntsOneWay(7, 6);
+	AIConnectWpntsOneWay(8, 7);
+	AIConnectWpntsOneWay(9, 8);
+	AIConnectWpntsOneWay(10, 9);
+	AIConnectWpntsOneWay(11, 10);
+	AIConnectWpntsOneWay(12, 11);
+	AIConnectWpntsOneWay(13, 12);
+	AIConnectWpntsOneWay(14, 13);
+	
+	AIConnectWpntsOneWay(2 + NUM_WAYPOINTS_SET_2, 14);
+	AIConnectWpntsOneWay(0, 2 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(2 + NUM_WAYPOINTS_SET_2, 1 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(1 + NUM_WAYPOINTS_SET_2, 0 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(0 + NUM_WAYPOINTS_SET_2, 5 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(5 + NUM_WAYPOINTS_SET_2, 4 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(4 + NUM_WAYPOINTS_SET_2, 3 + NUM_WAYPOINTS_SET_2);
+	AIConnectWpntsOneWay(3 + NUM_WAYPOINTS_SET_2, 2 + NUM_WAYPOINTS_SET_2);
+
+	return;
+
+# ========================================================================================
+DeactivateWaypoints:
+	if (!n_WpntSetActive)
+	{
+		return;
+	}
+
+#	DebugPrint("DEACTIVATING WAYPOINTS FOR MARDUK 2");
+	n_WpntSetActive = 0;
+	AIClearInstinctWpntMode(t_Marduk);
+	StopThing(t_Marduk);
+
+	return;
+
+
+end
+

@@ -1,0 +1,58 @@
+# Jones 3D Cog Script
+#
+# cheat_WhatAilsYa.cog
+#
+# [RT]
+#
+# Health packs & poison kits cheat script.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message	selected
+	
+	thing	indy		local
+
+end
+
+# ===================================================================
+
+code
+
+selected:
+
+	indy = GetSourceRef();
+
+    # Big herbs
+    ChangeInv(indy, 38, 5);                      
+	SetInvAvailable(indy, 38, 1);                                     
+																	  
+    # Small herbs
+	ChangeInv(indy, 39, 5);                     
+	SetInvAvailable(indy, 39, 1);
+
+	# Poison Kits
+	ChangeInv(indy, 46, 5);                      
+	SetInvAvailable(indy, 46, 1);
+
+    # Big health packs
+    ChangeInv(indy, 48, 5);                      
+	SetInvAvailable(indy, 48, 1);                                     
+																	  
+    # Small health packs
+	ChangeInv(indy, 49, 5);                     
+	SetInvAvailable(indy, 49, 1);
+
+    # Raft kits
+	ChangeInv(indy, 56, 5);                     
+	SetInvAvailable(indy, 56, 1);
+	SetInvDisabled(indy, 56, 1);
+	return;
+
+SetCollideType(0);
+
+end
+

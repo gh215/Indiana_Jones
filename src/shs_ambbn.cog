@@ -1,0 +1,76 @@
+# Jones 3D Cog Script
+#
+# shs_AmbBN.cog
+#
+# Plays a random sound at random intervals with random volume and panning
+#
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+   	message	    entered
+    
+   	# by the gate
+    sector      start_BNgate    linkID=1
+    sector      stop_BNgate     linkID=0
+    # by upper nave
+    sector      start_UN      	linkID=1
+    sector      stop_UN       	linkID=0
+	# by big door
+	sector      start_BNdoor    linkID=1
+    sector      stop_BNdoor     linkID=0
+	# by lil nave
+    sector      start_LN      	linkID=1
+    sector      stop_LN       	linkID=0
+	# under statue
+	sector      start_Hall      linkID=1
+    sector      stop_Hall       linkID=0
+	
+	thing		player			local
+    thing		soundPos0		nolink
+
+	sound		ambient0=shs_waterfall.wav   local
+	    
+    int         looping     local
+	
+    
+
+end
+
+# ========================================================================================
+
+
+code
+
+# ........................................................................................
+
+startup:
+    player = GetLocalPlayerThing();
+	return;
+
+# ........................................................................................
+
+	entered:
+	
+		if(GetSenderID() == 1)
+		{
+			#looping=PlaySoundThing(ambient0, soundPos0, 1.0, 3, 30, 0x045);
+		}
+		
+		if(GetSenderID() == 0)
+		{
+			Print("amb should stop");
+			#StopSound(looping, 1.0);
+        }
+		
+		return;
+
+# ========================================================================================
+
+			
+end
+	
+	
+

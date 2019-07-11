@@ -1,0 +1,135 @@
+# Jones 3D Cog Script
+#
+# CYN_opening.cog
+#
+#	[cmg]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message     startup
+    
+	
+	# Actors
+    thing		player					local
+	thing	indyActor
+
+	# Props
+	thing	door0
+	thing	door1
+	
+	# Actor move targets
+	thing	in_mvtarg0
+
+
+    # sectors
+    sector	doorSector	local
+
+
+	# Camera objects
+    thing	openCam1
+	
+    
+	# saylines
+    sound       indyline=sw01j01.wav         local       # brrrr...
+	sound		music0=mus_shw_intro.wav	local
+	# keyframes
+	keyframe	in_brushoff=0in_cleanspants_1_1.key		local
+	keyframe	in_hat=0in_figithat_4_4.key		local
+	keyframe	in_brush=0in_stand1_bd_4.key		local
+	keyframe	in_stand4=0in_stand4.key		local
+
+
+	int         inmarcus=0
+	int         track				local
+	int         snd					local
+	int		curCam					local
+
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+if (inmarcus == 1) return;
+else
+	{
+	Sleep(0.01);
+	curCam = GetCurrentCamera();
+	player = GetLocalPlayerThing();
+	
+	# hide the player, show the actor
+	SetThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	
+	# SET UP THE ACTOR WITH CORRECT WEAPONS
+	CopyPlayerHolsters(player, indyActor);
+	ClearThingFlags(indyActor, 0x80000);
+	StartCutscene(2);
+	
+	# setup cutscene camera
+	SetCameraFocus(2, openCam1);
+	SetCameraSecondaryFocus(2, indyActor);
+	SetCameraPosInterp(2, 0);				
+	SetCameraLookInterp(2, 0);				#default
+	SetCurrentCamera(2);
+	SetCameraFOV(120, 0, 0);	
+	MoveToFrame(openCam1, 1, 0.75);
+    SetCameraFOV(60, 1, 8.5);
+	
+    #play the intro theme
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+	Sleep(2.0);
+
+	# open the doors
+	Rotate(door0, 90, 1, 4);
+    Rotate(door1, -90, 1, 4);
+    Sleep(1.5);
+	
+    # move the actor through the doorway
+	AISetLookThingEyeLevel(indyActor, in_mvtarg0);
+	AISetMoveSpeed(indyActor, 1.0);
+	AISetMoveThing(indyActor, in_mvtarg0, 0);
+    
+	
+    Sleep(3.5);
+	
+    Rotate(door0, -90, 1, 3);
+    Rotate(door1, 90, 1, 3);
+	AIWaitForStop(indyActor);
+    	track = PlayKey(indyActor, in_Stand4, 2, 0x0, 0);
+	#PlayKey(indyActor, in_1to4, 4, 0x12, 1);
+	PlayKey(indyActor, in_hat, 4, 0x12, 0);
+	Sleep(0.75);
+	snd = PlayVoice(indyActor, indyline, 1.0, 0);
+	StopKey(indyActor, track, 0.5);
+
+	# when line finishes restore player control
+	WaitForSound(snd);
+    Sleep(0.25);
+
+	# move player to indyActors' position and restore player
+	CopyOrientAndPos(indyActor, player);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	SetThingFlags(indyActor, 0x80000);
+    AIClearCutSceneMode(indyActor);
+    # Restore camera, end cutscene
+	ResetCameraFOV(0,0);
+	SetCameraPosition(1, (GetThingPos(openCam1))); # prep follow-cam to swing behind indy
+    SetCurrentCamera(curCam);
+    SetCameraFOV(90, 0, 0.0);
+	
+	doorSector = GetThingSector(door0);
+	SetSectorAdjoins(doorSector, 0);
+	EndCutscene();
+	}
+	return;
+
+end
+

@@ -1,0 +1,179 @@
+# Jones 3D Cog Script
+#
+# SHS_Intro.cog
+#
+#	[JWC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message     startup
+	message     user0
+    message		pulse
+
+	template 	particle
+
+    thing		player					local
+   	thing       intro_indy
+    
+	thing       cam1
+	thing		cam1_target1
+    thing       cam1_target2
+	thing		cam2
+	thing		cam2_target1
+	thing		fader
+
+	thing		door0
+	thing		door1
+	thing		snowobj0
+	thing		snowobj1
+
+    sound		music0=mus_shs_intro.wav		local
+    sound   	doormove=shs_door_double.wav	local
+	sound   	doorstop=shs_door_double_stop.wav	local
+	
+    int			bSeen=0					local
+
+	vector		camVec					local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	# Start on black...
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, cam1_target1);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCurrentCamera(2);
+	SetCameraFOV(94, 0, 0.0);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+#   if you're going to switch the camera to start your level cutscene, do it first before anything else!
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, cam1_target1);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCurrentCamera(2);
+	SetCameraFOV(94, 0, 0.0);
+
+#   cutscene camera is set up and set as current, now sleep for 0.01 to let the engine generate a frame
+    sleep(0.01);
+
+#	then you can do the rest of the stuff you need to start your cutscene.
+#   IMPORTANT! -- don't do a StartCutscene() until after the new camera is set and has had a chance
+#   to render a frame! 
+
+	player = GetLocalPlayerThing();
+	StartCutscene(2);
+	
+	# Have Doors Open
+	Rotate(door0, -90, 1, 1.0);
+	Rotate(door1, 90, 1, 1.0);
+	SetCollideType(door0, 0);		
+    SetCollideType(door1, 0);
+	
+	# Show Indy
+	SetThingFlags(player, 0x80000);			# hide him
+	SetActorFlags(player, 0x200000);		# paralyze him
+	ClearThingFlags(intro_indy, 0x80000);	# reveal our actor
+
+	# Make it snow
+	Setpulse(.5);
+
+	# Fade In
+	ThingFadeAnim(fader, 1, 0, 2.0, 0);
+
+	# Music
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+
+	# Hold on aerial shot of monastery
+	Sleep(2.0);
+    DestroyThing(fader);				# possible bug fix
+	Sleep(2.0);
+
+	# Pan down to door
+
+	SetCameraLookInterp(2, 1);			# enable pan & tilt to lock on 2nd target
+	SetCameraPosInterp(2, 1);			# enable dolly mode 
+	SetCameraInterpSpeed(2, 3.75);		# slow down	pan
+	Sleep(.01);
+	SetCameraSecondaryFocus(2, cam1_target2);	# look at door
+	SetCameraFOV(70, 1, 3.75);
+	Sleep(1.8);							# amount of time before see Indy
+
+	# Indy walks into shot
+	AISetMoveSpeed(intro_indy, 1.0);
+	AISetMoveThing(intro_indy, player, 0);
+	Sleep(2.0);	 					# amount of time to finish camera move
+
+	# Move camera towards Indy
+	SetCameraInterpSpeed(2, 7.5);		# slow down	pan
+	Sleep(0.01);
+	SetCameraFocus(2, cam2);					# switch cameras
+	SetCameraSecondaryFocus(2, cam2_target1);	# look at door
+	SetCameraFOV(90, 1, 7.5);
+
+	# Doors start to close
+	Sleep(4.0);			  			# allow indy to get past door
+    rotate(door0, 90, 1, 4.0);
+	rotate(door1, -90, 1, 4.0);
+	
+	PlaySoundLocal(doormove, 1.0, 0.0, 0x0, 0);
+
+	# Stop Snow
+	SetPulse(0);
+
+	WaitforStop(door0);
+	PlaySoundLocal(doorstop, 1.0, 0.0, 0x0, 0);
+	SetCollideType(door0, 3);		
+    SetCollideType(door1, 3);
+    sleep(1);
+   
+	# Return Control
+	SetThingFlags(intro_indy, 0x80000);	# make actor invisible
+	ClearThingFlags(player, 0x80000);	# bring player back
+	ClearActorFlags(player, 0x200000);
+
+    ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	Sleep(0.01);
+    camVec = VectorTransformToOrient(player, '-0.25 -0.1 0.0'); # from the left side of indy
+	camVec = VectorAdd(camVec, GetThingPos(player));
+	SetCameraPosition(1, camVec);	 
+    SetCurrentCamera(1);
+	EndCutscene();
+    
+	return;
+
+# ..............................................................................
+
+pulse:
+	
+	CreateThing(particle, snowobj0);
+	CreateThing(particle, snowobj1);
+    return;
+  
+end
+
+

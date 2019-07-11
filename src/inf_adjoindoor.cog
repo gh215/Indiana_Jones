@@ -1,0 +1,100 @@
+# Jones 3D Cog Script
+#
+# gen_Door.cog
+#
+# Generic Door Script
+#
+# [IS]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message	    startup		
+	message	    entered	
+    message     pulse
+	message	    blocked		
+
+    thing       player              local
+	thing		door0
+    sector      sector0             linkid=3
+    sector      sector1             linkid=3
+    sector      sector2             linkid=3
+
+	float		moveSpeed=8.0
+	float		sleepTime=2.0
+
+	vector	    vecLightValue		local
+    int         alreadyin=0         local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player=GetLocalPlayerThing();
+	SectorAdjoins(sector1, 0);
+    
+return;
+
+# ........................................................................................
+entered:
+
+    if (alreadyin == 1) return;
+    if (GetSenderID() == 3)
+    {
+        alreadyin = 1;
+        SetPulse(1);
+        MoveToFrame(door0, 1, 2);
+	    SectorAdjoins(sector1, 1);
+    }
+
+return;
+
+# ........................................................................................
+pulse:
+
+    //print("pulse hit");
+    //printint(SectorPlayerCount(sector0));
+    //printint(SectorPlayerCount(sector1));
+    //printint(SectorPlayerCount(sector2));
+    
+    if ((SectorPlayerCount(sector0) == 1) ||
+        (SectorPlayerCount(sector1) == 1) ||
+        (SectorPlayerCount(sector2) == 1))
+        {
+            alreadyin = 1;
+            return;
+        }
+        
+    if ((SectorPlayerCount(sector0) == 0) &&
+        (SectorPlayerCount(sector1) == 0) &&
+        (SectorPlayerCount(sector2) == 0))
+        {
+            alreadyin = 0;
+            MoveToFrame(door0, 0, 2);
+            SectorAdjoins(sector1, 0);
+            SetPulse(0);
+            return;
+        }
+        
+return;
+
+# ........................................................................................
+blocked:
+    
+    if (GetSenderRef() == door0)
+    {    
+        MoveToFrame(door0, 0, 2);
+    }
+    
+return;
+
+# ........................................................................................
+
+end
+

@@ -1,0 +1,85 @@
+# Jones 3D Cog Script
+#
+# PRU_voicelineAnotherWay.cog
+#
+# plays a line of dialogue as you enter a sector.  Modified to wait a moment
+# 
+# [SXC] [GGJ]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	entered
+	message	startup
+    
+	thing	actor				local
+	thing	player				local
+	int		bnosound=0       		local
+	int		tracknum				local
+	flex		dialoguelength=3.0
+	sector	triggersector
+	sound		dialogue
+    template    tplActor=indy_sh_actor	            	local
+	keyframe	armsCrossed=0in_stand2.key			local
+	keyframe	crossingArms=0in_stand1_bd_2.key	local
+end
+
+# ========================================================================================
+
+code
+startup:
+	bnosound=0;
+	player = GetLocalPlayerThing();
+    return;
+
+# ........................................................................................
+
+entered:
+	if (bnosound==0)
+	{
+        bnosound=1;
+		sleep(1.0);
+		StartCutscene(1);
+		
+		#Stop the player from moving and put him in a standing position
+        MakeMeStop();
+		DeselectWeaponWait(player);
+		Sleep(0.01);
+		
+		#Create an actor at the player's location and swap them out
+		actor = CreateThing(tplActor, player);
+		CaptureThing(actor);
+		
+		CopyPlayerHolsters(player, actor);
+		SetThingFlags(player, 0x80000);
+		SetActorFlags(player, 0x200000);
+		ClearThingFlags(actor, 0x80000);
+    
+		#Bring the camera around
+		SetExtCamLookOffset('0.0 0.04 0.014');
+		SetExtCamOffset('0.7 0.07 0.09');	#SetExtCamOffset('0.15 0.08 0.09');
+		
+		Sleep(0.25);
+		
+		#Indy crosses his arms, shakes his head, and says his line
+		trackNum = PlayKey(actor, armsCrossed, 2, 0x10, 0);
+		PlayVoice(actor, dialogue, 1, 0);
+		PlayKey(actor, crossingArms, 4, 0x12, 1);
+        StopKey(actor, trackNum, 0.5);
+		
+		#Move the player again so he's in the same spot as the actor, and swap them back
+		CopyOrientandPos(actor, player);
+		SetThingFlags(actor, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		
+		RestoreExtCam();
+		EndCutscene();
+        
+		}
+	return;
+
+end
+
+

@@ -1,0 +1,76 @@
+# Jones 3D Cog Script
+#
+# item_Bucket.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	activated
+message	touched
+message	taken
+
+cog		talkCog					local
+
+sound	foundSnd=Inxj233.wav	local		# "Hmm, this might be important"
+
+thing	player					local
+
+int		bin=117					local
+
+end
+
+# ===================================================================
+
+code
+
+activated:
+
+	StartCutscene(0);
+
+	talkCog = GetCogByIndex(0);
+	SendMessage(talkCog, 27);
+
+	SetExtCamOffset('-0.07 -0.05 0.15');
+
+	return;
+
+# -------------------------------------------------------------------
+
+touched:
+
+	player = GetSourceRef();
+
+	if (GetInv(player, bin) < GetInvMax(player, bin))
+	{
+		TakeItem(GetSenderRef(), player);
+	}
+	else
+	{
+		EndCutscene();
+	}
+	
+	return;
+
+# -------------------------------------------------------------------
+
+taken:
+
+	player = GetSourceRef();
+
+	ChangeInv(player, bin, 1.0);
+	SetInvAvailable(player, bin, 1);
+	JonesInvItemChanged(bin);
+
+	Sleep(1.0);
+	PlayVoice(player, foundSnd, 1.0, 0);
+
+    EndCutscene();
+
+	return;
+
+end

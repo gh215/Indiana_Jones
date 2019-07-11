@@ -1,0 +1,21 @@
+# Jones 3D Cog Script
+#
+# Make Indy disappear (for screenshots)
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup	
+thing		player	nolink
+end
+
+code
+# ........................................................................................
+
+startup:
+	player = GetLocalPlayerThing();
+	SetThingFlags(player, 16);
+	return;
+
+end

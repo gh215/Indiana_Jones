@@ -1,0 +1,61 @@
+# Jones 3D Cog Script
+#
+# SOL_DynaLight.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+
+    thing       dynalight0
+    thing       dynalight1
+    thing       dynalight2
+    thing       dynalight3
+    thing       dynalight4
+    thing       dynalight5
+    thing       dynalight6
+    thing       dynalight7
+    thing       dynalight8
+    thing       dynalight9
+    
+    flex        rval=0.44
+    flex        gval=0.28
+    flex        bval=0.03
+    
+    flex        speed=2.0
+    #flex        radius=2.0
+
+    vector      color           local
+
+    int         numLights=10     local
+    int         index           local
+             
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    color = VectorSet(rval, gval, bval);
+    
+    for (index = 0; index <= numLights; index = index + 1)
+    {
+        if (dynalight0[index] > -1)
+        {
+            SetThingLight(dynalight0[index], color, 0.3, 0.5);
+        }
+    }
+    
+    return;
+           
+# ========================================================================================
+
+end
+

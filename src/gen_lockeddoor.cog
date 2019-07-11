@@ -1,0 +1,134 @@
+# Jones 3D Cog Script
+#
+# gen_LockedDoor.cog
+#
+# Indy notes locked doors whose keyhole is elsewhere
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+# NOTE: This is a random verbal door reaction cog.  Glue it into your level and
+# reach it from a calling cog like this:
+#
+# 1. Create a valid reference to this cog in your calling cog;
+#
+# 2. Use the following verb:
+#    SendMessageEx(thiscogREF, i_userMessage, f_parm0, f_parm1, f_parm2, f_parm3);
+#    (see each section below for details...)
+#
+# 3. Use global15 as a semaphore and return value where neeeded;
+#
+# The resulting chatter is pre-approved by HB...
+#
+# PRODUCT SUPPORT:  cogsrus x8371
+
+# ==============================================================================
+
+symbols
+
+# ................................. MESSAGES ...................................
+
+	message user0
+
+# ................................. SAY LINES ..................................
+
+	# door locked lines...
+	sound	in_sayline=Inxj076.wav				local # This...locked-->in_sayline[0]
+	sound	in_islocked=Inxj077.wav				local # It's locked.
+	sound	in_locked=Inxj078.wav				local # Locked.
+	sound	in_lockedagain=Inxj079.wav			local # Locked again.
+	sound	in_lockedluck=Inxj080.wav			local # Locked...luck never changes.
+	sound	in_whyalwayslocked=Inxj081.wav		local # Oh no...why...always locked?
+
+# ............................... VARIABLES ....................................
+
+	flex	talkerREF							local
+	flex	forceTalk							local
+	flex	forceLine							local
+
+	int		alreadyworking=0					local
+
+	int		newline=50							local # init outside actual range
+	int		oldline=50							local
+
+	int		dummy
+		
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+user0:
+
+	# Indy reacts verbally to a locked door player has ACTIVATED...
+	#
+	# Proper command to reach this response section from the calling cog is:
+	#
+	# SendMessageEx(lockdoorcogREF, user0, f_talkerREF, f_rightItem, f_triedItem, 0);
+	#
+	# global15 is used by this cog and the calling cog, like so:
+	#
+	# global15 == 0 while this cog is at work (waiting for line to finish)
+	# global15 == 1 upon return
+	#
+	# The calling cog can use the 0 value as a semaphore to pause execution, thus:
+	#
+	# global15 = 0; # init just in case in your own cog!
+	# while (global15 == 0)
+	# {
+	#	# Wait for line to finish...
+	#	Sleep(0.01);
+	# }
+
+	if (alreadyworking != 0)
+	{
+		return;
+	}
+
+	global15 = 0; # init each call
+
+	talkerREF = GetParam(0); # is player or an actor talking? (a cast)
+	forceTalk = GetParam(1); # force a choice
+	forceLine = GetParam(2); # actual line choice
+	
+	alreadyworking = 1; # stall multiple calls
+
+	if (forceTalk != 0)
+	{
+		newline = forceLine; # choose this line
+		oldline = 0;
+	}
+
+	while (newline == oldline)
+	{		
+		newline = RandBetween(0, 19);
+		if (newline < 16)
+		{	
+			newline = RandBetween(0, 2); # ~1/4 chance for 0 thru 2
+		}
+		if (newline > 17)
+		{
+			newline = (newline - 14); # 1/20 chance for 4 or 5 
+		}	
+		if (newline > 15)
+		{
+			newline = 3; # 1/10 chance for 3
+		}
+	}
+	oldline = newline;
+
+	PlayVoice(talkerREF, in_sayline[newline], 1, 1);
+
+	global15 = 1;
+	alreadyworking = 0;
+
+	return;
+
+end
+
+

@@ -1,0 +1,55 @@
+# Jones 3D Cog Script
+#
+# PRU_SectorsOn.cog
+#
+# Turns on sector adjoins as you approach them.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message		startup
+message		entered
+
+thing      	player		local
+
+sector		CurrentSector0	linkid=1
+sector		CurrentSector1	linkid=1
+sector		FarSector0		nolink
+sector		FarSector1		nolink
+sector		FarSector2		nolink
+sector		FarSector3		nolink
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    if (FarSector0 >=0) SectorAdjoins(FarSector0, 0);
+	if (FarSector1 >=0) SectorAdjoins(FarSector1, 0);
+	if (FarSector2 >=0) SectorAdjoins(FarSector2, 0);
+	if (FarSector3 >=0) SectorAdjoins(FarSector3, 0);
+	return;
+
+entered:
+	player = GetLocalPlayerThing();					#
+    if (GetSourceRef() != player) return;
+	if (GetSenderID() != 1) return;
+	Print("switching adjoins");
+
+	if (FarSector0 >= 0) SectorAdjoins(FarSector0, 1);
+	if (FarSector1 >= 0) SectorAdjoins(FarSector1, 1);
+	if (FarSector2 >= 0) SectorAdjoins(FarSector2, 1);
+	if (FarSector3 >= 0) SectorAdjoins(FarSector3, 1);
+
+return;
+
+end
+
+

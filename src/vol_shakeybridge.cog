@@ -1,0 +1,88 @@
+# Jones 3D Cog Script
+#
+# VOL_shakeyBridge.cog
+#
+# [CM]
+#
+# Random screenshakes for unstable areas.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+#........................MESSAGES....................
+    message		entered
+    message		user0
+
+#........................COGS....................
+	cog			nextTile
+   
+#........................ACTORS....................
+	thing		player							local
+	
+
+#........................TRIGGERS....................
+	thing		floor1	linkID=2				
+	
+#........................PROPS....................
+	thing		fragment1						local				
+	thing		fragment2						local				
+				
+#........................VARIABLES....................
+    flex		shake							local
+	int			rumblesound						local
+	int			dir								local
+	int			hit=0							local
+	int			i=0								local
+	
+#........................TEMPLATES....................
+	template	debris=stoneshrapa				local
+
+#........................SOUNDS....................
+	sound		quake=nub_bull_move1_c.wav		local
+
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	If (GetSenderRef() == floor1) 
+		{
+user0:		If (hit == 0)
+			{
+            hit = 1;
+			rumblesound=PlaySoundLocal(quake, 1, 0, 0x01, 0);
+			for (i=0 ; i <= 10 ; i = i + 1) 
+			{
+            dir=RandBetween(0, 1);
+			#SetPOVShake('0.0 0.0 0.0', '0.0 0.0 0.005', 80.0, 0.80);
+			Rotate(floor1, 3, dir, .05);
+			Sleep(0.06);
+            Rotate(floor1, -6, dir, .05);
+            Sleep(0.06);
+            }
+            
+			SendMessage(nextTile, user0);
+            StopSound(rumblesound, 0.5);
+    		
+			fragment1 = CreateThing(debris, floor1);                                 
+			fragment2 = CreateThing(debris, floor1);
+			SetThingMass(fragment1, 1);
+			SetThingMass(fragment2, 1);
+			SetThingVel(fragment1, VectorSet(RandBetween(0, 4)/10, RandBetween(0, 2)/10, -.5));
+			SetThingVel(fragment2, VectorSet(RandBetween(0, 4)/10, RandBetween(0, 2)/10, -.5));
+			SetThingRotVel(fragment1, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 100.0));
+			SetThingRotVel(fragment2, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 100.0));
+
+			DestroyThing(floor1);
+			}
+		}
+return;
+# ========================================================================================
+end
+

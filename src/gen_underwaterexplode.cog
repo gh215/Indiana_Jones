@@ -1,0 +1,75 @@
+# Jones 3D Cog Script
+#
+# gen_UnderwaterExplode.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		killed
+
+	template	tplExplode=+uw_blast	local
+	template	tplBubble=+bubbles		local
+	template	tplGhost=ghost			local
+
+    template	x=+uw_spr_blast			local
+	template	y=+uw_spr_explode		local
+
+	thing		destroyedThing
+	thing		ghost					local
+	thing		bubble					local
+
+	int			i						local
+
+	vector		bubbleVel				local
+
+end
+
+# ========================================================================================
+
+code
+
+killed:
+
+	ghost = CreateThing(tplGhost, destroyedThing);
+	CreateThing(tplExplode, ghost);
+
+	Sleep(0.25);
+
+	for (i = 0; i < 100; i = i + 1)
+	{
+		# Make a bubble
+		bubble = CreateThing(tplBubble, ghost);
+
+		# Set the life left to a random value
+		SetLifeLeft(bubble, Rand() * 20.0);
+
+		# Set it to die when it hits air
+		SetThingFlags(bubble, 0x10000000);
+
+		# Animate the bubble sprite
+		AnimateSpriteSize(bubble, '0.001 0.001 1.0', '0.06 0.06 1.0', 0.5);
+
+		# Set the bubble to a random velocity
+		bubbleVel = VectorSet(Rand() - 0.35, Rand() - 0.35, Rand() + 0.5);
+		bubbleVel = VectorScale(bubbleVel, 0.4);
+        if (Rand() < 0.5)
+		{
+            bubbleVel = VectorSet(-VectorX(bubbleVel), VectorY(bubbleVel), VectorZ(bubbleVel));
+		}
+		if (Rand() < 0.5)
+		{
+            bubbleVel = VectorSet(VectorX(bubbleVel), -VectorY(bubbleVel), VectorZ(bubbleVel));
+		}
+		SetThingVel(bubble, bubbleVel);
+	}
+
+	DestroyThing(ghost);
+
+	return;
+
+end

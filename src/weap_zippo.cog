@@ -1,0 +1,165 @@
+# Jones 3D Cog Script
+#
+# weap_Zippo.cog
+#
+# This cog controls Indy's trusty Zippo lighter.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		activated
+message		deactivated
+message		selected
+message		deselected
+message		callback
+message		pulse
+
+material	mat=gen_a4sfx_lighterglow.mat	local	# Autoloaded
+
+model		lighter=hand_in_ziplit.3do		local	# Autoloaded
+
+sound		open=gen_zippo_open.wav			local	# Autoloaded
+sound		close=gen_zippo_close.wav		local	# Autoloaded
+
+template	glow=zippo_glow					local	# Autoloaded
+
+thing		player							local
+thing		spriteThing						local
+
+int			handMesh						local
+int			callNum							local
+int			swapRef							local
+int			lightAnim						local
+
+int			oldCell=1						local
+int			newCell=0						local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	handMesh = GetMeshByName(player, "inrhand");
+
+	return;
+
+# -------------------------------------------------------------------
+
+fire:
+
+	SetFireWait(player, 2.0);
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+	SetAimWait(player, 0.0);
+	SetFireWait(player, 0.0);
+	ActivateWeapon(player, 2.0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deactivated:
+
+	DeactivateWeapon(player);
+	return;
+
+# -------------------------------------------------------------------
+
+selected:
+
+	SetMountWait(player, 1.0);
+
+	SetArmedMode(player, 7);
+	SetCurWeapon(player, 13);
+
+	CaptureThing(player);
+	PlayMode(player, 68, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deselected:
+
+	SetMountWait(player, 1.0);
+	StopMode(player, 68, 0);
+
+	CaptureThing(player);
+	PlayMode(player, 67, 0);
+
+	PlaySoundThing(close, player, 1, -1, -1, 0x880);
+
+	SetArmedMode(player, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	callNum = GetParam(1);
+
+	# Pull lighter
+	if (callNum == 28)
+	{
+		SetWeaponModel(player, 13);
+	}
+	# Put lighter
+	else if (callNum == 29)
+    {
+        ReleaseThing(player);
+		ResetWeaponModel(player);
+	}
+	# Create & attach sprite
+	else if (callNum == 30)
+	{
+       	ReleaseThing(player);
+		PlaySoundThing(open, player, 1, -1, -1, 0x880);
+		swapRef = SetThingMesh(player, handMesh, lighter, 0);
+		spriteThing = AttachThingToThingMesh(player, glow, handMesh);
+		# 0.855 0.6 0.4    0.6
+		lightAnim = ThingLightAnim(spriteThing, '0.825 0.57 0.37', 0.6, '0.885 0.63 0.43', 0.6, 0.75);
+		SetPulse(0.125);
+	}
+	# Destroy sprite
+	else if (callNum == 31)
+	{
+		StopAnim(lightAnim);
+        RestoreThingMesh(player, swapRef);
+		DetachThingMesh(spriteThing);
+		SetPulse(0);
+	}
+    
+	return;
+
+# -------------------------------------------------------------------
+
+pulse:
+
+	# Pick 1 of 4 possible random frames...no repeats
+	while (newCell == oldCell) 
+	{
+		newCell = RandBetween(0, 3);
+	}
+
+	oldCell = newCell;
+	SetMaterialCel(mat, newCell);
+
+	return;
+
+end

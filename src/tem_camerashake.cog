@@ -1,0 +1,183 @@
+# Jones 3D Cog Script
+#
+# TEM_CameraShake.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     user0
+    message     user1
+    message     user2
+    message     user3
+    message     pulse
+    
+    vector      posOffset       local
+    vector      angOffset       local
+    
+    int	        counter=10      local
+    int         scaling=0       local
+    int         shake=0         local
+    int         vibe            local
+    
+end
+
+# ========================================================================================
+
+code
+
+user0:
+
+    SetPulse(0.1);
+    return;   
+    
+# ========================================================================================
+
+user1:
+
+    setPulse(0.0);
+    return;
+
+# ========================================================================================
+
+user2:
+
+    scaling = 1;
+    SetPulse(0.1);
+    return;
+    
+# ========================================================================================
+
+user3:
+
+    scaling = 0;
+    setPulse(0.0);
+    return;
+    
+# ========================================================================================
+
+pulse:
+    
+	if(scaling == 1)
+    {
+        shake = shake + 1;
+        vibe = RandBetween(1, 4);
+        
+        if (shake <= 5)
+        {
+            if(vibe == 1)
+            {
+                posOffset = '0.01 -0.01 0.005'; #2
+                angOffset = '0.005 0.00 -0.005';
+            }
+            
+            if(vibe == 2)
+            {
+                posOffset = '0.005 0.01 -0.01'; #3
+    			angOffset = '-0.005 0.005 -0.00';
+            }
+            
+            if(vibe == 3)
+            {
+                posOffset = '-0.015 0.00 0.01'; #4 was .01x
+    			angOffset = '0.00 0.00 0.01';
+            }
+            
+            if(vibe == 4)
+            {
+                posOffset = '-0.01 0.00 -0.005'; #1
+    			angOffset = '0.00 -0.005 0.005';
+            }
+        }
+        
+        else if (shake <= 10)
+        {
+            if(vibe == 1)
+            {
+                posOffset = '-0.02 0.00 0.02'; #4 was .01x
+        		angOffset = '0.00 0.00 0.01';
+            }
+            
+            if(vibe == 2)
+            {
+                posOffset = '0.01 0.02 -0.02'; #3
+                angOffset = '-0.01 0.01 -0.01';
+            }
+            
+            if(vibe == 3)
+            {
+                posOffset = '-0.025 0.00 -0.01'; #1 was .02x
+    			angOffset = '0.00 -0.01 0.01';
+            }
+            
+            if(vibe == 4)
+            {
+                posOffset = '0.02 -0.02 0.01'; #2
+    			angOffset = '0.01 0.00 -0.01';
+            }
+        }
+        
+        else if (shake <= 30)
+        {
+            if (vibe == 1)
+        	{
+        		posOffset = '-0.05 0.00 -0.02';
+        		angOffset = '0.00 -0.02 0.02';
+        	}
+        	if (vibe == 2)
+        	{
+        		posOffset = '0.05 -0.05 0.02';
+        		angOffset = '0.02 0.00 -0.02';
+        	}
+        	if (vibe == 3)
+        	{
+        		posOffset = '0.02 0.05 -0.05';
+        		angOffset = '-0.02 0.002 -0.02';
+        	}
+        	if (vibe == 4)
+        	{
+        		posOffset = '-0.02 0.0 0.05';
+        		angOffset = '0.00 0.00 0.02';
+        	}
+        }
+        
+        SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+    }
+
+    else
+    {
+        # shake the camera
+    	vibe = RandBetween(1, 4);
+    	if (vibe == 1)
+    	{
+    		posOffset = '-0.005 0.00 -0.002';
+    		angOffset = '0.00 -0.002 0.002';
+    	}
+    	if (vibe == 2)
+    	{
+    		posOffset = '0.005 -0.005 0.002';
+    		angOffset = '0.002 0.00 -0.002';
+    	}
+    	if (vibe == 3)
+    	{
+    		posOffset = '0.002 0.005 -0.005';
+    		angOffset = '-0.002 0.002 -0.002';
+    	}
+    	if (vibe == 4)
+    	{
+    		posOffset = '-0.002 0.00 0.005';
+    		angOffset = '0.00 0.00 0.002';
+    	}
+        
+    	SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+    }
+
+    return;
+        
+# ========================================================================================
+
+end
+

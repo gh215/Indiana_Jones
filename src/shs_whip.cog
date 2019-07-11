@@ -1,0 +1,58 @@
+# Jones 3D Cog Script
+#
+# shs_Whip.cog    To climb or to swing, that is the question.  
+#
+# [JWC, RT]  
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message startup
+message entered
+
+sector  swing
+
+thing   block
+thing	strut  				 
+thing   player  local
+                           
+flex    wait=2
+
+      
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    
+    player = GetLocalPlayerThing();
+    return;
+    
+entered:
+    If (GetSenderRef() == block) 
+        {
+        If (GetSourceRef() != player) return;
+        SetThingFlags(strut, 0x8);  //makes whip climb
+       	Print("climbable");
+		return;
+        }
+    If (GetSenderRef() == swing)
+        {
+		If (GetSourceRef() != player) return;
+		SetThingFlags(strut, 0x80000000);   //makes whip swing
+        Print("Swingable");
+		return;
+        }
+    return;
+
+
+
+end
+
+
+

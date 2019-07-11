@@ -1,0 +1,47 @@
+# Jones 3D Cog Script
+#
+# TEO_VectorRep.cog
+#
+#
+# Reports the current player upvector.
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup		
+	message	pulse	
+
+   float    pulserate
+   vector   lvec
+   vector   rvec
+   thing    player0
+end
+
+
+# ========================================================================================
+
+code
+
+startup:
+   SetPulse(pulserate);
+   return;
+
+# ........................................................................................
+
+pulse:
+   lvec = GetThingLVec(player0);
+   rvec = GetThingUVec(player0);
+   print("Uvec");
+   printflex(VectorZ(rvec));
+   //print("Yvec");
+   //printflex(VectorY(lvec));
+   //print("dot is");
+   //(VectorAdd(rvec,lvec));
+
+   return;
+
+   end
+

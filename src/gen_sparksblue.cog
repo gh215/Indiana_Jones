@@ -1,0 +1,45 @@
+# Jones 3D Cog Script
+#
+# gen_SparksBlue.cog
+#
+# Generates animated blue sparks from the master.tpl
+#
+# [TRM]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+    message	startup
+	message	pulse
+	
+	thing		origin
+	
+    template    tplBlueSparks=bluesparks    local
+        
+    material    mat1=gen_a4sprite_flash_purple.mat  local
+	
+	flex		pulsetime=0.25
+    
+end
+
+# ========================================================================================
+code
+
+startup:
+
+	setpulse(pulsetime);
+	MaterialAnim(mat1, 10, 1);
+    return;
+
+# ========================================================================================
+
+pulse:
+	
+    CreateThing(tplBlueSparks, origin);
+    return;
+	
+# ========================================================================================
+
+end

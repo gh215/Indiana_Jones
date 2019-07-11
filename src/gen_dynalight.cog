@@ -1,0 +1,59 @@
+# Jones 3D Cog Script
+#
+# TEM_DynaLight.cog
+#
+# Attatch up to 4 things to create dynamic light at those positions.
+#
+# [TRM]
+#
+# 10/21/98 RT: Added radius
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+
+    thing       thing0
+    thing       thing1
+    thing       thing2
+    thing       thing3
+
+    flex        rval=1
+    flex        gval=1
+    flex        bval=1
+    flex        radius=1.0
+    flex        speed=1.0
+
+    vector      color           local
+
+    int         numThings=4     local
+    int         index           local
+             
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    Sleep(5.0); #remove this later
+    
+    color = VectorSet(rval, gval, bval);
+    
+    for (index = 0; index <= numThings; index = index + 1)
+        {
+            if (thing0[index] > -1)
+            {
+                SetThingLight(thing0[index], color, radius, speed);
+            }                
+        }
+    
+    return;
+           
+# ========================================================================================
+
+end

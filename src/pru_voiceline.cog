@@ -1,0 +1,58 @@
+# Jones 3D Cog Script
+#
+# PRU_voiceline.cog    Plays a voice line when Indy sees something.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	entered
+message sighted
+message	user0
+
+sector	trigger
+
+sector	neartrigger0
+sector	neartrigger1
+sector	neartrigger2
+sector	neartrigger3
+sector	neartrigger4
+
+sound	dialogue
+
+int		once=0	local
+int		close=0	local
+int		turnoff=0	local
+
+flex	dialogueLength
+
+end
+# ========================================================================================
+code
+
+entered:
+    Print("entered but not verified");
+    if (GetSenderType() != 5) return;
+    Print("entered");
+	#Reset the sector so that it "hasn't been seen yet."
+	ClearSectorFlags(trigger, 0x4000);
+	close = 1;
+	return;
+
+sighted:
+	if ((GetSenderRef() == trigger) && (once == 0) && (close == 1) && (turnoff == 0))
+	{
+		once = 1;
+		Print("sighted");
+		PlaySoundLocal(dialogue, 1, 0, 0x0, 0);
+        sleep(dialogueLength);
+        
+    }
+	return;
+end
+# .................................................................................
+
+

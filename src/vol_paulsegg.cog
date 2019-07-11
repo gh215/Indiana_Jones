@@ -1,0 +1,135 @@
+# Jones 3D Cog Script
+#
+# VOL_Paul's Egg.cog
+#
+# Easter egg control for Paul Lefevre.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+    
+#...............MESSAGES..............
+    message  	startup
+    message  	activated
+    
+
+#...............ACTORS..............
+	thing		player									local
+	thing		indyActor									
+
+#...............ACTOR MARKS.............
+	thing		in_MK0
+
+#...............CAMERAS..............
+	thing		eggcam
+
+#...............LOOK TARGETS..............
+	thing		in_lktarg1
+
+#...............PROPS..............
+	surface		eggsurf 		
+	surface		actsurf 		
+
+    
+#...............MATERIALS..............
+	material	eggskin=VOL_princess.mat				local
+
+
+#...............SOUNDS..............
+	sound   in_princess=tm06j02.wav						local
+	sound   zap=aet_gemdoor_stop.wav					local
+
+
+#...............VARIABLES..............
+	int		shown=0										local
+	int		track										local
+
+
+#...............KEYFRAMES..............
+	keyframe	in_hat=0in_figithat_4_4.key				local
+	keyframe	in_brush=0in_stand1_bd_4.key			local
+	keyframe	in_stand4=0in_stand4.key				local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+	
+	player=GetLocalPlayerThing();
+	
+return;
+
+# ========================================================================================
+activated:
+
+	If (GetSenderRef() != actsurf) return;
+	If (shown == 1) return;
+	{
+		shown = 1;	# scene will not repeat
+		
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		
+		StartCutScene(1);
+        SetActorFlags(player, 0x200000);
+
+		# Set up actor
+		CopyPlayerHolsters(player, indyActor);
+		CopyOrientAndPos(player, indyActor);
+		AISetCutSceneMode(indyActor);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indyActor, 0x80000);
+		PlayMode(indyActor, 60, 1);
+
+        # change the material
+		PlaySoundLocal(zap, 0.5, 0.0, 0x0, 0);
+        SetSurfaceMat(eggsurf, eggskin);
+    
+		# move cam to known position
+		SetExtCamOffsetToThing(eggcam);
+		
+		# move the actor into position
+		AIEnableHeadTracking(indyActor, in_lktarg1);
+	    AISetLookThing(indyActor, in_lktarg1);
+		AISetMoveSpeed(indyActor, 1.0);
+		AISetMoveThing(indyActor, in_MK0, 1);
+        
+        # play indy's anims and voice line
+		track = PlayKey(indyActor, in_Stand4, 2, 0x0, 0);
+		PlayVoice(indyActor, in_princess, 1.0, 0);
+		PlayKey(indyActor, in_hat, 4, 0x12, 0);
+
+        # offset camera to thing.
+		SetExtCamLookOffsetToThing(in_lktarg1);
+
+		Sleep(2.0);
+
+        # put the player at actors' position, clear actor, show player
+		CopyOrientAndPos(indyActor, player);
+		AIClearCutSceneMode(indyActor);
+		AIDisableHeadTracking(indyActor);
+		ClearThingFlags(player, 0x80000);
+		StopKey(indyActor, track, 0);
+		SetThingFlags(indyActor, 0x80000);
+	
+		# Restore the cam, end the scene
+		SetCameraPosition(1, GetThingPos(eggcam));
+		SetCurrentCamera(1);
+		RestoreExtCam();
+		SetCameraFOV(90, 0, 0.0);
+        ClearActorFlags(player, 0x200000);
+		EndCutScene();
+	
+    }
+return;
+
+# ========================================================================================
+end
+
+

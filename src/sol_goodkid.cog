@@ -1,0 +1,46 @@
+# Jones 3D Cog Script
+#
+# SOL_GoodKid.cog
+#
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     activated
+    
+    thing       player      local
+    thing       t_GoodKid
+    
+    sound       snd_Line=tm06j01.wav        local
+
+    int         playing=0          local
+
+end
+
+# ========================================================================================
+
+code
+
+activated:
+
+    player = GetLocalPlayerThing();
+    Sleep(0.1);
+    
+    if((GetSenderRef() == t_GoodKid) && (playing == 0))
+    {
+        playing = 1;
+        PlayVoice(player, snd_Line, 1.0, 1);
+        Sleep(0.25);
+        playing = 0;
+    }
+        
+    return;
+
+# ========================================================================================
+
+end
+

@@ -1,0 +1,95 @@
+# Jones 3D Cog Script
+#
+# gen_ElevCall.cog
+#
+# This Cog controls one elevator that can be summoned to any number of floors
+# A cog must be placed at each floor to be attached to the call button, the up and down
+# buttons, and the elevator.
+# You have to manually assign to each cog what floor level it is on.
+# Remember that the elevators first frame is 0 even though your first floor may be one.
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+
+symbols
+	message	activate
+	message	user0
+
+	thing		callbutton                       //calls elevator to level
+	thing		upbutton                         //sends elevator up
+	thing		dnbutton                         //sends elevator down
+
+	thing		elevator                         //currently handles only one elevator
+
+	float		speed=5.0                        //sets speed default is 5
+	float		floorlevel=0.0                   //sets floor level for each cog
+	float		totalfloors=0.0                  //lastfloor + 1
+#	sound		callbutt=beep2.wav	local    	//button sounds
+#	sound		updnbutt=beep1.wav	local
+
+	int		switch					local    	//check variable for cog internal use
+	int		bnosound=0				local
+	int		movespeed=2				local
+end
+
+# .......................................................................................
+
+code
+
+# .......................................................................................
+activate:
+
+   switch = GetSenderRef();
+        if ((GetCurFrame(elevator) == floorlevel) &&       //if elevator is at the current floor
+            (switch == callbutton))
+        {
+			  MoveToFrame(callbutton, 0, movespeed);
+        }
+   else if ((switch == callbutton) &&                         //if callbutton is pushed
+            (bnosound == 0))
+        {
+         // PlaySoundPos(callbutt, GetSurfaceCenter(callbutton), 0.6, -1, -1, 0 );
+         bnosound = 1;
+         MoveToFrame(callbutton, 1, movespeed);
+         MoveToFrame(elevator,floorlevel,speed);
+         WaitForStop(elevator);
+         bnosound = 0;
+         MoveToFrame(callbutton, 0, movespeed);
+        }
+   else if ((switch == upbutton) &&                        //if upbutton is pushed
+            (floorlevel == GetCurFrame(elevator)) &&
+            (GetCurFrame(elevator) < totalfloors))
+        {
+         // PlaySoundPos(updnbutt, GetSurfaceCenter(upbutton), 0.6, -1, -1, 0 );
+         MoveToFrame(upbutton, 1, movespeed);
+         MoveToFrame(elevator,(floorlevel+1),speed);
+         WaitForStop(elevator);
+         MoveToFrame(upbutton, 0, movespeed);
+        }
+   else if ((switch == dnbutton) &&                        //if down button is pushed
+            (floorlevel == GetCurFrame(elevator)) &&
+            (floorlevel > 0))
+        {
+         // PlaySoundPos(updnbutt, GetSurfaceCenter(dnbutton), 0.6, -1, -1, 0 );
+         MoveToFrame(dnbutton, 1, movespeed);
+         MoveToFrame(elevator, (floorlevel-1), speed);
+         WaitForStop(elevator);
+         MoveToFrame(dnbutton, 0, movespeed);
+        }
+        return;
+
+# .......................................................................................
+user0:
+
+	MoveToFrame(callbutton, 0, movespeed);
+	MoveToFrame(upbutton, 0, movespeed);
+	MoveToFrame(dnbutton, 0, movespeed);
+	return;
+# .......................................................................................
+
+end
+
+

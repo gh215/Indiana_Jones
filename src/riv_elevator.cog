@@ -1,0 +1,525 @@
+# Jones 3D Cog Script
+#
+# RIV_Elevator.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     exited
+    message     activated
+    message     arrived
+    message     timer
+    message     pulse
+
+    thing       player          local
+    thing       pushed          local
+    thing       pulled          local
+    thing       indy_Elevator   local
+    
+    thing       indy
+    thing       lever_Pos
+    thing       offsetCam
+    thing       elevator_Cam1
+    thing       elevator_Cam2
+    thing       lever_Look
+    thing       cam2_Look
+    thing       walkTarg1
+    thing       walkTarg2
+    
+    thing       water_Wheel
+    thing       elevator
+    thing       wheel_Shaft
+    thing       pully
+    
+    # ** poly line things **
+    thing       st_Elevator     # attach to top of elevator
+    thing       st_Gear         # gear in elevator base
+    thing       end_Pully1      # end for st_Elevator
+    thing       end_Pully2      # end for st_Gear
+    thing       poly_Rope1      local
+    
+    sector      start_Amb
+    sector      stop_Amb
+    
+    surface     surf0       linkID=1
+    
+    template    tplLevPull=pullever         local
+    template    tplLevPush=pushlever        local
+    template    tpl_Indy=indy_actor         local
+    
+    keyframe    leverPull=gen_lever_pull.key        local
+    keyframe    leverPush=gen_lever_push.key        local
+    
+    keyframe    indyPull=in_pull_lever.key          local
+    keyframe    indyPush=in_push_lever.key          local
+    
+    sound       sndLever=gen_lever_pull.wav             local
+    sound       snd_Shaft=riv_elev_gears_turn.wav       local
+    sound       snd_Engage=riv_elev_wheel_engage.wav    local
+    sound       snd_Elevator1=riv_elev_stop.wav         local
+    sound       snd_Pully=riv_elev_topwheel_turn.wav    local
+    sound       snd_Wheel=nub_bull_move2_c.wav          local
+    
+    # ** rope sfx **
+    sound		ambient0=tem_bridge_b.wav   local
+    sound		ambient1=tem_bridge_c.wav   local
+    
+    material	mat_Rope=fhead_rope_sde.mat				local
+    #material	mat_Rope=wheel_water_rpsde.mat          local
+    
+    # ** subroutines **
+    flex        pullLever           local
+    flex        pushLever           local
+    flex        lowerElevator       local
+    
+    int         onSpot=0            local
+    int         lever_Ready=1       local
+    int         wheel_Ready=0       local
+    int         elevator_Ready=0    local
+    int         inElevator=0        local
+    int         at_Top=0            local
+    int         shaft_Track         local
+    int         pully_Track         local
+    int         wheel_Track         local
+    int         playing=0           local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    pushed = CreateThing(tplLevPull, lever_Pos);
+    CaptureThing(pushed);
+    
+    player = GetLocalPlayerThing();
+    
+    SetThingLight(water_Wheel, '0.25 0.25 0.35', 0.001, 0.1);
+    SetThingLight(wheel_Shaft, '0.25 0.25 0.35', 0.001, 0.1);
+    SetThingLight(elevator, '0.25 0.25 0.35', 0.001, 0.1);
+    SetThingLight(pushed, '0.25 0.25 0.35', 0.001, 0.1);
+    
+    # draw ropes start at top
+    CreatePolylineThing(end_Pully1, st_Elevator, '0 0 0', mat_Rope, 0.007, 0.007, 0.0);
+    CreatePolylineThing(end_Pully2, st_Gear, '0 0 0', mat_Rope, 0.007, 0.007, 0.0);
+    
+    # draw ropes start at bottom
+    poly_Rope1 = CreatePolylineThing(st_Elevator, end_Pully1, '0 0 0', mat_Rope, 0.007, 0.007, 0.0);
+    CreatePolylineThing(st_Gear, end_Pully2, '0 0 0', mat_Rope, 0.007, 0.007, 0.0);
+    CaptureThing(poly_Rope1);
+    
+    Sleep(0.1);
+    AttachThingToThing(st_Elevator, elevator);
+    AttachThingToThing(poly_Rope1, elevator);
+    
+    SetCollideType(pully, 0);
+    SetCollideType(wheel_Shaft, 3);
+    
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    if(GetSenderID() == 1)
+    {
+        onSpot = 1;
+    }
+    
+    if((GetSenderRef() == start_Amb) && (playing == 0))
+    {
+        # turn on rope ambient
+        SetPulse(2.0);
+    }
+    
+    if(GetSenderRef() == stop_Amb)
+    {
+        # turn off rope ambient
+        SetPulse(0.0);
+    }
+    
+    if((GetSenderRef() == elevator) && (elevator_Ready == 1))
+    {
+        inElevator = 1;
+        elevator_Ready = 0;
+        
+        # do cutscene stuff
+        MakeMeStop();
+        StartCutscene(2);
+        
+        indy_Elevator = CreateThing(tpl_Indy, player);
+        CaptureThing(indy_Elevator);
+        
+        # outfit Indy actor
+        CopyPlayerHolsters(player, indy_Elevator);
+        
+        # switch to elevator_Cam1
+        SetCameraFocus(2, elevator_Cam1);
+        SetCameraSecondaryFocus(2, indy_Elevator);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        # show actor hide player
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(indy_Elevator, 0x80000);
+        
+        # get the player out of the way
+        TeleportThing(player, walkTarg2);
+        
+        # walk actor to center of elevator
+        AISetCutsceneMode(indy_Elevator);
+        AISetMoveSpeed(indy_Elevator, 1.0);
+        AISetLookThing(indy_Elevator, walkTarg1);
+        AISetMoveThing(indy_Elevator, walkTarg1, 1);
+        
+        # look up as elevator raises
+        AISetLookThing(indy_Elevator, cam2_Look);
+        
+        # raise elevator
+        MoveToFrame(elevator, 1, 8.0);
+        PlaySoundLocal(snd_Elevator1, 1.0, 0.0, 0x0, 0);
+        
+        Sleep(2.0);
+        
+        # make indy turn 180 degrees
+        AISetLookThing(indy_Elevator, walkTarg2);
+        
+        Sleep(2.0);
+        
+        # switch to elevator_Cam2
+        SetCameraFocus(2, elevator_Cam2);
+        SetCameraSecondaryFocus(2, indy_Elevator);      #cam2_Look
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        Sleep(1.0);
+        
+        # zoom camera out
+        MoveToFrame(elevator_Cam2, 1, 2.0);
+        
+        WaitForStop(elevator);
+        
+        # play elevator stop sound
+        PlaySoundLocal(snd_Elevator1, 1.0, 0.0, 0x0, 0);
+        StopSound(pully_Track, 1.0);
+        StopThing(pully);
+        
+        # tell arrived that it's at the top
+        at_Top = 1;
+        
+        Sleep(0.25);
+        
+        # walk actor out of elevator
+        AISetMoveSpeed(indy_Elevator, 1.0);
+        AISetLookThing(indy_Elevator, walkTarg2);
+        AISetMoveThing(indy_Elevator, walkTarg2, 1);
+        
+        # move player into position
+        CopyOrientAndPos(indy_Elevator, player);
+        
+        # show player and return controls
+        SetThingFlags(indy_Elevator, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        ClearActorFlags(player, 0x200000);
+        
+        # return camera to player
+        SetCameraPosition(1, GetThingPos(elevator_Cam2));
+        SetCurrentCamera(1);
+        
+        EndCutscene();
+        
+        # ready camera for next time
+        MoveToFrame(elevator_Cam2, 0, 4.0);
+        
+        Call lowerElevator;
+    }
+    
+    return;
+    
+# ========================================================================================
+
+exited:
+
+    if((GetSenderID() == 1) && (GetSourceRef() == player))
+    {
+        onSpot = 0;
+    }
+    
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    if((GetSenderRef() == pushed) && (lever_Ready == 1) && (onSpot == 1))
+    {
+        lever_Ready = 0;
+        Call pullLever;
+    }
+    
+    else if((GetSenderRef() == pulled) && (lever_Ready == 1) && (onSpot == 1))
+    {
+        lever_Ready = 0;
+        Call pushLever;
+    }
+
+    return;
+    
+# ========================================================================================
+
+pullLever:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # outfit Indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, lever_Look);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # show actor hide player
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # pull the lever
+    PlayKey(pushed, leverPull, 4, 0x14, 0);
+    PlayKey(indy, indyPull, 4, 0x12, 0);
+    Sleep(0.75);
+    PlaySoundLocal(sndLever, 1.0, 0.0, 0x0, 1);
+    
+    # move water wheel into water
+    MoveToFrame(water_Wheel, 2, 1.0);
+    PlaySoundLocal(snd_Engage, 1.0, 0.0, 0x0, 0);
+    WaitForStop(water_Wheel);
+    
+    Sleep(0.01);
+    
+    # spin that bad boy
+    Rotate(water_Wheel, -360, 2, 2.0);
+    Rotate(wheel_Shaft, 360, 2, 2.0);
+    Rotate(pully, 360, 2, 2.0);
+    
+    # start looping sfx
+    shaft_Track = PlaySoundThing(snd_Shaft, wheel_Shaft, 1.0, 5.0, 20.0, 0x0001);
+    pully_Track = PlaySoundThing(snd_Pully, pully, 1.0, 5.0, 20.0, 0x0001);
+    wheel_Track = PlaySoundThing(snd_Wheel, water_Wheel, 1.0, 8.0, 23.0, 0x0001);
+    
+    # Destroy old lever and create a new one
+    DestroyThing(pushed);
+    pulled = CreateThing(tplLevPush, lever_Pos);
+    CaptureThing(pulled);
+    
+    SetThingLight(pulled, '0.25 0.25 0.35', 0.001, 0.1);
+    
+    # stop any unfinished animations
+    ResetThing(indy);
+    #ResetThing(player);
+    
+    Sleep(1.0);
+    
+    # show player and return controls
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    
+    # return camera to player
+    SetCurrentCamera(1);
+    
+    EndCutscene();
+    
+    lever_Ready = 1;
+    wheel_Ready = 1;
+    elevator_Ready = 1;
+    
+    SetTimer(10.0);
+    
+    return;
+
+# ========================================================================================
+
+pushLever:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # switch to offsetCam
+    SetCameraFocus(2, offsetCam);
+    SetCameraSecondaryFocus(2, lever_Look);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # show actor hide player
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # push the lever
+    PlayKey(pulled, leverPush, 4, 0x14, 0);
+    PlayKey(indy, indyPush, 4, 0x12, 0);
+    Sleep(0.85);
+    PlaySoundLocal(sndLever, 1.0, 0.0, 0x0, 1);
+    
+    wheel_Ready = 0;
+    
+    # stop wheel and shaft
+    StopThing(water_Wheel);
+    StopThing(wheel_Shaft);
+    
+    # stop looping sfx
+    StopSound(shaft_Track, 1.0);
+    StopSound(wheel_Track, 1.0);
+    
+    Sleep(1.0);
+    
+    # move water wheel out of water
+    MoveToFrame(water_Wheel, 0, 1.0);
+    PlaySoundLocal(snd_Engage, 1.0, 0.0, 0x0, 0);
+    WaitForStop(water_Wheel);
+    
+    # lower elevator
+    MoveToFrame(elevator, 0, 10.0);
+    
+    # Destroy old lever and create a new one
+    DestroyThing(pulled);
+    pushed = CreateThing(tplLevPull, lever_Pos);
+    CaptureThing(pushed);
+    
+    SetThingLight(pushed, '0.25 0.25 0.35', 0.001, 0.1);
+    
+    # stop any unfinished animations
+    ResetThing(indy);
+    #ResetThing(player);
+    
+    Sleep(1.0);
+    
+    # show player and return controls
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    ClearActorFlags(player, 0x200000);
+    
+    # return camera to player
+    SetCurrentCamera(1);
+    
+    EndCutscene();
+    
+    WaitForStop(elevator);
+    lever_Ready = 1;
+    elevator_Ready = 0;
+    at_Top = 0;
+    
+    # turn off rope ambient
+    SetPulse(0.0);
+    
+    #SetTimerEx(10.0, 1, 0.0, 0.0);
+    
+    return;
+
+# ========================================================================================
+
+lowerElevator:
+
+    wheel_Ready = 0;
+    
+    # stop wheel and shaft
+    StopThing(water_Wheel);
+    StopThing(wheel_Shaft);
+    
+    # stop looping sfx
+    StopSound(shaft_Track, 1.0);
+    StopSound(wheel_Track, 1.0);
+    
+    Sleep(1.0);
+    
+    # move water wheel out of water
+    MoveToFrame(water_Wheel, 0, 1.0);
+    PlaySoundLocal(snd_Engage, 1.0, 0.0, 0x0, 0);
+    WaitForStop(water_Wheel);
+    
+    # lower elevator
+    MoveToFrame(elevator, 0, 10.0);
+    
+    # Destroy old lever and create a new one
+    DestroyThing(pulled);
+    pushed = CreateThing(tplLevPull, lever_Pos);
+    CaptureThing(pushed);
+    
+    SetThingLight(pushed, '0.25 0.25 0.35', 0.001, 0.1);
+    
+    WaitForStop(elevator);
+    lever_Ready = 1;
+    at_Top = 0;
+    
+    return;
+
+# ========================================================================================
+
+arrived:
+
+    if((GetSenderRef() == water_Wheel) && (wheel_Ready == 1))
+    {
+        #Print("arrived: water_Wheel");
+        Rotate(water_Wheel, -360, 2, 2.0);
+    }
+    
+    if((GetSenderRef() == wheel_Shaft) && (wheel_Ready == 1))
+    {
+        #Print("arrived: wheel_Shaft");
+        Rotate(wheel_Shaft, 360, 2, 2.0);
+    }
+    
+    if((GetSenderRef() == pully) && (at_Top == 0))
+    {
+        #Print("arrived: pully");
+        Rotate(pully, 360, 2, 2.0);
+    }
+    
+    return;
+
+# ========================================================================================
+
+timer:
+
+    if((GetSenderID() == 1) && (inElevator == 0))
+    {
+        # raise elevator
+        MoveToFrame(elevator, 1, 6.0);
+    }
+
+    return;
+
+# ========================================================================================
+
+pulse:
+
+    PlaySoundThing(ambient0[RandBetween(0, 1)], pully, 1.0, 8.0, 20.0, 0);
+    PlaySoundThing(ambient0[RandBetween(0, 1)], elevator, 1.0, 8.0, 20.0, 0);
+
+    return;
+
+# ========================================================================================
+
+end
+

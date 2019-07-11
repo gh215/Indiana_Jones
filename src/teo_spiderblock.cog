@@ -1,0 +1,191 @@
+# Jones 3D Cog Script
+#
+# TEO_SpiderBlocks.cog
+#
+# Last in the stair script
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+    message     crossed
+    
+	surface	    crossurf0       
+    surface	    crossurf1    	
+    
+    thing       player          local
+    thing       actorindy
+    thing       spiderCamPos
+    thing       doorCamPos    
+    thing       unlokblok        
+    thing		spiderblock	     
+    thing       door0            
+    thing       door1
+    thing       spycam_tgt           
+
+	flex		moveSpeed=10.0
+    flex        camSpeed=1.0
+    flex        camTimer=0.5
+    
+    sound       indylineb0=inxj058.wav      local
+    sound       indylineb1=inxj059.wav      local
+    sound       indylineb2=inxj060.wav      local
+    sound       indylineb3=inxj061.wav      local
+    sound       indylineb4=inxj090.wav      local
+    sound       indylineb5=inxj095.wav      local
+    
+    int         wepnum=1                    local
+    int         lastrand=-1                 local
+    int         currand=0                   local
+    int         door0chan       local
+    int         door1chan       local
+    int         spiderchan      local        
+    int         surfflag0=0     local                                       
+    int         surfflag1=0     local
+    int         check0=0        local
+    int         check1=0        local
+    int         check2=0        local
+        
+        
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    
+return;        
+
+# ........................................................................................
+
+activate:
+
+    if ((GetSenderRef() == unlokblok) && 
+        (check2 == 0) && 
+        (GetCurItem(player) == 0) && 
+        (GetCurWeapon(player) == 0))
+    {
+        check2=1;
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        PlayMode(player, 60, 0);
+        MoveToFrame(unlokblok, 1, 0.5);
+        Sleep(1);
+        SetCameraFocus(0, doorCamPos);
+        SetCurrentCamera(0);
+        MoveToFrame(door0, 0, (moveSpeed/10));
+        MoveToFrame(door1, 0, (moveSpeed/10));
+        WaitForStop(door0);
+        Sleep(1);
+        SetCurrentCamera(1);
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        return;
+    }
+    
+    if ((GetSenderRef() == unlokblok) && 
+        (check2 == 0) && 
+        (GetCurItem(player) == 0) && 
+        (GetCurWeapon(player) != 0))
+    {
+        check2=1;
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player);
+            DeselectWeaponWait(player);
+        }
+        StopThing(player);
+        PlayMode(player, 60, 0);
+        MoveToFrame(unlokblok, 1, 0.5);
+        Sleep(1);
+        SetCameraFocus(0, doorCamPos);
+        SetCurrentCamera(0);
+        MoveToFrame(door0, 0, (moveSpeed/10));
+        MoveToFrame(door1, 0, (moveSpeed/10));
+        WaitForStop(door0);
+        Sleep(1);
+        SetCurrentCamera(1);
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        wepnum=1;
+        return;
+    }
+    
+    if ((GetCurItem(player) != 0) && (GetSenderRef() == unlokblok))
+    {
+        StopThing(player);
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        currand = RandBetween(0, 5);
+        While (lastrand == currand)
+        {
+            currand = RandBetween(0, 5);
+        }
+        PlayVoice(player, indylineb0[currand], 1, 1);
+        lastrand = currand;
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }                        
+    return;                      
+
+# ........................................................................................
+
+crossed:
+	if ((GetSenderRef() == crossurf0) &&
+       (check0 == 0))
+	{
+        check0=1;
+	    MoveToFrame(door0, 1, moveSpeed);
+        surfflag0=1;
+	}
+        
+    if ((GetSenderRef() == crossurf1) &&
+       (check1 == 0) &&
+       (surfflag0 == 1))
+    {
+        check1=1;
+        MoveToFrame(door1, 1, moveSpeed);
+        MakeMeStop();
+    	DeselectWeaponWait(player);
+        StartCutscene(1);
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(actorindy, 0x80000);
+        CopyPlayerHolsters(player, actorindy);
+        AISetCutsceneMode(actorindy);
+        
+        SetCameraFocus(2, spiderCamPos);
+        SetCameraSecondaryFocus(2, spycam_tgt);
+        SetCurrentCamera(2);
+        Sleep(0.5);
+        AISetLookThing(actorindy, unlokblok);
+        MoveToFrame(spycam_tgt, 1, (moveSpeed/10));
+        Sleep(1);
+        MoveToFrame(spiderblock, 1, 1);
+        WaitForStop(spiderblock);
+        Sleep(1);
+        
+        TeleportThing(player, actorindy);
+        SetThingFlags(actorindy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0);
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }                
+   	return;
+
+# ........................................................................................
+
+end
+

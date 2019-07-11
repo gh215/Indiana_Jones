@@ -1,0 +1,585 @@
+# Jones 3D Cog Script
+#
+# nub_DoorRotate.cog
+#
+# [RKD] [TL] et al... [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message		startup		
+message		activated	
+message		arrived		
+message		touched
+message		pulse
+message		damaged
+message		taken
+message		crossed
+message		entered
+message		exited
+
+#.......................... THINGS ........................
+thing	door0									#door without arm
+thing	lever
+thing	ledge
+thing	arm				mask=0x08	#fake arm (path move object)
+thing	camera						#camera for lever
+thing	indy			local		#actor Indy for lever pulling
+thing	player			local
+thing	Camerapos1					#camera for door opening
+thing	camera2
+thing	ghostinv
+thing	door1						#door with arm
+thing	horus			linkid=1			
+thing	greenlight0
+thing	greenlight1
+thing	greenlight2
+thing	greenlight3
+thing	greenlight4
+thing	greenlight5
+thing	greenlight6
+thing	whitelight
+thing	ghostindy
+thing	armitem					#mask=0x08	#what you actually pick up
+thing	armActor							#places the arm
+thing	hingInvisibox	linkid=1
+thing	armCam
+thing	armTarg
+thing	flyingarm		local
+#thing	itemGhost					#moves the fallen arm to a more natural position.
+thing	invisibox		linkid=1	#covers the "handle" that sticks out of the door.
+thing	sender			local
+
+#.......................... SOUNDS .......................
+sound	startdoor
+sound	stopdoor
+sound	armclick
+sound	leversound
+sound	leversound2
+sound	lighton
+sound	voice0=nb02j01a.wav					local	#Who or what are you.  The doorman I'll bet.  Missing an arm, though.
+sound	voice1=nb02j02.wav					local	#This thing's arm is missing.
+sound	lockedwav=inxj096.wav				local	#I can't open it.
+sound	noarmwav=inxj146.wav				local	#Hmmmm.
+sound	openwav=inxj104.wav					local	#Open sesame.
+sound	whipwav=inxj112.wav					local	#That ought to do it.
+sound	pickupwav=inxj153.wav				local	#An interesting gadget.
+sound	elevMus=mus_pyr_pyramid1.wav		local
+sound	sesameMus=mus_nub_annubisarm.wav	local
+sound	newTech=nb02j03.wav					local	#This place is strange.  And I used to think I knew a lot about archeology.
+sound	wrongSpot0=INXJ224.wav				local	#I need to find a better spot.
+sound	wrongSpot1=INXJ219.wav				local	#I'm not lined up right
+#sound	wrongSpot2=INXJ090.wav				local	#That didn't work.  I'm doing something wrong	#Removed because of tester confusion.
+sound	armFallSnd=olv_rockhead_hitearth_c.wav	local
+
+#.......................... TEMPLATES ....................
+template	arminv=anubisarm				local #type of key from template
+template	actorindy
+
+#.......................... KEYFRAMES ....................
+keyframe	in_pull=in_pull_lever.key		local
+keyframe	lever_pull=gen_lever_pull.key	local
+keyframe	in_one
+keyframe	in_hat
+keyframe	reachHigh=in_reach_high.key		local
+
+#.......................... MODELS .......................
+model	whipHand=weap_whip.3do		   	local
+
+#.................... SECTORS & SURFACES .................
+sector	doorSector
+sector	doorSector2
+surface	adjoin0
+surface	positionSurf
+
+#........................... COGS ........................
+cog		commie0
+cog		commie1
+cog		commie2
+cog		hint
+
+#......................... VARIABLES .....................
+int		open=0			local
+int		placed=0		local
+int		curCam			local
+int		begun=0			local
+int		hit=0			local
+int		hit1=0			local
+int		talkstarted=0	local
+int		lockeddone=0	local
+int		passed=0		local
+int		ponderScene=0	local
+int		positioned=0	local
+
+flex	doorspeed=1.0
+flex	cameraspeed=1.0
+flex	rvalmax
+flex	gvalmax
+flex	bvalmax
+flex	rvalmin
+flex	gvalmin
+flex	bvalmin
+flex	lituptime
+flex	playery			local
+flex	playerx			local
+
+vector	maxlite			local
+vector	minlite			local
+vector	playervec		local
+vector	v_targetpos		local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+Sleep(0.01);
+Print("Setting adjoin in startup");
+SetSectorAdjoins(doorSector, 0);
+PrintInt(doorsector);
+SetThingFlags(door1, 0x80000);
+SetThingFlags(armitem, 0x80000);
+#Dynamic light stuff
+maxlite = VectorSet(rvalmax, gvalmax, bvalmax);
+minlite = VectorSet(rvalmin, gvalmin, bvalmin);
+AttachThingToThing(invisibox, door0);
+Print("Attached in startup");
+PrintInt(invisibox);
+PrintInt(door0);
+
+player = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+crossed:
+
+if (passed == 1) return;
+
+if (GetSenderRef() == adjoin0)
+{
+	passed = 1;
+	Rotate(door1, -110, 1, doorspeed);
+
+    PlaySoundLocal(elevMus, 1.0, 0, 0x0000, 0);
+
+	SetThingLight(greenlight0, minlite, 0.4, lituptime);
+	SetThingLight(greenlight1, minlite, 0.4, lituptime);
+	SetThingLight(greenlight2, minlite, 0.4, lituptime);
+	SetThingLight(greenlight3, minlite, 0.4, lituptime);
+	SetThingLight(greenlight4, minlite, 0.4, lituptime);
+	SetThingLight(greenlight5, minlite, 0.4, lituptime);
+	SetThingLight(greenlight6, minlite, 0.4, lituptime);
+
+	PlaySoundLocal(startdoor, 1.0, 0, 0x0000, 0);
+    Sleep(doorspeed);
+	SetSectorAdjoins(doorSector2, 0);
+	
+	Sleep(0.5);
+	PlayVoice(player, newTech, 1.0, 0);
+}
+
+return;
+
+# ........................................................................................
+damaged:
+
+if (hit == 1) return;
+
+sender = GetSenderRef();
+if (sender == arm)
+{
+    # Easy outs...
+	if (GetParam(1) != 0x10) return;
+	if (GetCurFrame(arm) == 0) return;
+
+    hit = 1;
+	StartCutscene(0);
+
+    SetCameraFocus(2, armCam);
+	SetCameraSecondaryFocus(2, armTarg);
+	SetCurrentCamera(2);
+	SetCameraFOV(100, 0, 0.0);
+
+	flyingarm = CreateThing(arminv, ghostinv);
+	CaptureThing(flyingArm);
+	
+	
+	SetThingMoveSize(flyingarm, 0.04);
+	DestroyThing(arm);
+	ApplyForce(flyingarm, '-100.0 400.0 100.0');
+	Sleep(1.0);
+	PlayVoice(player, whipwav, 1.0, 0);
+	Sleep(0.1);
+	SetThingVel(flyingarm, '0 0 0');
+	SetThingMass(flyingarm, 0.0);
+	PlaySoundThing(armFallSnd, armitem, 1.0, -1.0, -1.0, 0x0);
+	Sleep(2.0);
+	#CopyOrientAndPos(itemGhost, armitem);
+	
+    ClearThingFlags(armitem, 0x80000);
+	SetThingFlags(flyingArm, 0x80000);
+
+	#Sleep(1.0);
+
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	
+	#Clear flags that Randy C. Tudor sets in whip cog.
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	
+}
+
+return;
+
+# ........................................................................................
+touched:
+
+if (ponderScene == 1) return;
+#Code checks that Indy is facing statue... see below.
+playervec = GetThingLVec(player);
+playery = VectorY(playervec);
+playerx = VectorX(playervec);
+
+sender = GetSenderRef();
+if ((sender == horus) && ((playerx > 0) && ((playery > -0.7) && (playery < 0.7))))		#|| (GetSenderRef() == talkface2))
+{
+	if (talkstarted == 1) return;
+	talkstarted = 1;
+	ponderScene = 1;
+
+	MakeMeStop();
+	DeselectWeaponWait(player); 					# stow any weapon or lighter
+	StartCutscene(1);
+    indy = CreateThing(actorindy, player);
+	CaptureThing(indy);
+	CopyPlayerHolsters(player, indy); 				# make sure actor has matching props
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indy, 0x80000);
+	SetCurrentCamera(0);
+	SetCameraFocus(0, camera2);
+	SetCameraFOV(90, 0, 0.0);
+
+	PlayVoice(indy, voice0, 1.0, 0);
+	PlayKey(indy, in_one, 4, 0x12, 1);
+	Sleep(2.0);
+	SetCurrentCamera(1);
+	SetCameraFocus(0, player);
+	DestroyThing(indy);         
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+}
+
+return;
+
+# ........................................................................................
+activated:
+Print("activated");
+
+sender = GetSenderRef();
+
+if ((GetCurItem(player) == 52) && (GetSenderID() != 1))
+{
+    PlayVoice(player, wrongSpot0[randbetween(0, 1)], 1.0, 1);
+	return;
+}
+
+if (sender == armitem)
+{
+	Print("activated armitem");
+	Sleep(0.5);
+	#PlayVoice(player, pickupwav, 1.0, 0);			#handled by Randy
+	SendMessage(commie0, user0);
+	SendMessage(commie1, user0);
+	SendMessage(commie2, user0);
+	SendMessage(hint, user0);
+}
+
+if ((begun) == 1) return;
+if (lockeddone == 1) return;
+
+if ((sender == door0) && (open == 0))
+{
+	lockeddone = 1;
+	PlayMode(player, 60, 0);        
+	PlayVoice(player, lockedwav, 1.0, 1);
+}
+else if ((sender == door1) && (open == 0))
+{
+	lockeddone = 1;
+	PlayMode(player, 60, 0);        
+	PlayVoice(player, lockedwav, 1.0, 1);
+}
+lockeddone = 0;
+
+curCam = GetCurrentCamera();
+
+if (sender == lever)
+{
+    if (placed == 0)
+	{
+        begun = 1;
+
+		MakeMeStop();
+		DeselectWeaponWait(player); 					# stow any weapon or lighter
+
+        #switch player with actor indy and show lever-pulling cutscene. (no door)
+		StartCutscene(1);
+        
+		indy = CreateThing(actorindy, ghostindy);
+		CaptureThing(indy);
+		CopyPlayerHolsters(player, indy); 				# make sure actor has matching props
+		
+		SetCameraLookInterp(2, 0);
+        SetCameraPOSInterp(2, 0);
+
+		SetCameraFocus(2, camera);
+		SetCameraSecondaryFocus(2, lever);
+        SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0.0);
+		
+		ClearThingFlags(indy, 0x80000);
+		SetThingFlags(player, 0x80000);
+
+		PlayKey(lever, lever_pull, 4, 0x12, 0);
+		PlayKey(indy, in_pull, 4, 0x12, 0);
+		Sleep(1.2);
+		PlaySoundLocal(leversound, 1.0, 0, 0x0000, 0);
+		Sleep(1.4);
+		PlaySoundLocal(leversound2, 1.0, 0, 0x0000, 1);
+		Sleep(0.3);
+		
+		SetCameraPosition(1, GetThingPos(camera));
+		SetCurrentCamera(1);
+		
+		#SetCameraFocus(0, player);
+		DestroyThing(indy);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		PlayVoice(player, noarmwav, 1.0, 1);
+
+		begun = 0;
+		EndCutscene();
+	}
+	else if	(open == 0)
+    {
+		StartCutscene(1);
+		begun = 1;
+		#switch player with actor indy and show lever-pulling cutscene.
+		DeselectWeaponWait(player); 					# stow any weapon or lighter
+		SetThingFlags(player, 0x80000);
+		SetActorFlags(player, 0x200000);
+		indy = CreateThing(actorindy, ghostindy);
+		CaptureThing(indy);
+		CopyPlayerHolsters(player, indy); 				# make sure actor has matching props
+		SetCurrentCamera(0);
+		SetCameraFocus(0, camera);
+		SetCameraFOV(90, 0, 0.0);
+		ClearThingFlags(indy, 0x80000);
+		PlayKey(lever, lever_pull, 4, 0x12, 0);
+		PlayKey(indy, in_pull, 4, 0x12, 0);
+		Sleep(1.2);
+		PlaySoundLocal(leversound, 1.0, 0, 0x0000, 0);
+		Sleep(1.4);
+		PlaySoundLocal(leversound2, 1.0, 0, 0x0000, 1);
+		Sleep(0.3);
+		#show Aetherium Door opening in it's own cutscene and play sound then return to player.
+
+		SetSectorAdjoins(doorSector, 1);
+		SetCurrentCamera(0);
+		SetCameraFocus(0, Camerapos1);
+		SetCameraFOV(90, 0, 0.0);
+		AiSetLookThing(indy, door1);
+		PlayKey(indy, in_hat, 4, 0x12, 0);
+		PlayVoice(indy, openwav, 1.0, 1);
+		PlaySoundLocal(sesameMus, 1.0, 0, 0x0000, 0);
+
+		SetThingLight(greenlight0, maxlite, 0.4, lituptime);
+		SetThingLight(greenlight1, maxlite, 0.4, lituptime);
+		SetThingLight(greenlight2, maxlite, 0.4, lituptime);
+		SetThingLight(greenlight3, maxlite, 0.4, lituptime);
+		SetThingLight(greenlight4, maxlite, 0.4, lituptime);
+		SetThingLight(greenlight5, maxlite, 0.4, lituptime);
+		SetThingLight(greenlight6, maxlite, 0.4, lituptime);
+		DestroyThing(whitelight);
+
+		PlaySoundLocal(lighton, 1.0, 0, 0x0000, 1);
+		PlaySoundLocal(startdoor, 1.0, 0, 0x0000, 0);
+		Rotate(door1, 110, 1, doorspeed);
+		MoveToFrame(Camerapos1, 1, cameraspeed);
+		WaitForStop(Camerapos1);
+		Sleep(1.0);
+
+		#AiSetLookThing(indy, lever);
+		Sleep(1.5);
+        
+		#SetCameraFocus(0, player);
+		Movetoframe(Camerapos1, 0, 10);
+		CopyOrientandPos(indy, player);
+		DestroyThing(indy);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+
+        # revert cam
+		v_targetpos = VectorAdd(VectorTransformToOrient(player, '-0.2 -0.05 0.0'), GetThingPos(player));	
+		SetCameraPosition(1, v_targetpos);
+        
+		SetCurrentCamera(1);
+
+		EndCutscene();
+		begun = 0;
+	}
+	else
+	{
+		StartCutscene(1);
+		begun = 1;
+		#same as above.
+		DeselectWeaponWait(player); 					# stow any weapon or lighter
+		SetThingFlags(player, 0x80000);
+		SetActorFlags(player, 0x200000);
+		indy = CreateThing(actorindy, ghostindy);
+		CaptureThing(indy);
+		CopyPlayerHolsters(player, indy); 				# make sure actor has matching props
+		SetCurrentCamera(0);
+		SetCameraFocus(0, camera);
+		SetCameraFOV(90, 0, 0.0);
+		ClearThingFlags(indy, 0x80000);
+		PlayKey(lever, lever_pull, 4, 0x12, 0);
+		PlayKey(indy, in_pull, 4, 0x12, 0);
+		Sleep(1.2);
+		PlaySoundLocal(leversound, 1.0, 0, 0x0000, 0);
+		Sleep(1.4);
+		PlaySoundLocal(leversound2, 1.0, 0, 0x0000, 1);
+		Sleep(0.3);
+		#same as above but closes door.
+		Rotate(door1, -110, 1, doorspeed);
+		SetCurrentCamera(0);
+		SetCameraFocus(0, Camerapos1);
+		SetCameraFOV(90, 0, 0.0);
+
+		SetThingLight(greenlight0, minlite, 0.4, lituptime);
+		SetThingLight(greenlight1, minlite, 0.4, lituptime);
+		SetThingLight(greenlight2, minlite, 0.4, lituptime);
+		SetThingLight(greenlight3, minlite, 0.4, lituptime);
+		SetThingLight(greenlight4, minlite, 0.4, lituptime);
+		SetThingLight(greenlight5, minlite, 0.4, lituptime);
+		SetThingLight(greenlight6, minlite, 0.4, lituptime);
+
+		PlaySoundLocal(startdoor, 1.0, 0, 0x0000, 0);
+		MoveToFrame(Camerapos1, 1, cameraspeed);
+		WaitForStop(Camerapos1);
+		Sleep(1.5);
+		SetCurrentCamera(1);
+		Movetoframe(Camerapos1, 0, 10);
+		SetThingFlags(indy, 0x80000);
+		DestroyThing(indy);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		begun = 0;
+		SetSectorAdjoins(doorSector, 0);
+		EndCutscene();
+	}
+}
+if ((GetSenderID() == 1) && (positioned == 1))			#was "else if"
+{
+	if (hit1 == 1) return;
+
+	#if Indy has the Anubis Arm key...then switch doors and delete arm from inventory.
+	if (GetCurItem(player) == 52)
+	{
+		hit1 = 1;
+        ponderScene = 1;
+        
+		MakeMeStop();
+		DeselectWeaponWait(player); 					# stow any weapon or lighter
+        StartCutscene(1);
+		SetThingFlags(player, 0x80000);
+        CopyPlayerHolsters(player, armActor); 				# make sure actor has matching props
+		ClearThingFlags(armActor, 0x80000);
+		
+		SetCameraFocus(2, camera2);
+		SetCameraSecondaryFocus(2, hingInvisibox);
+        SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0.0);
+        PlayKey(armActor, reachHigh, 4, 0x12, 0);
+        Sleep(0.5);
+        
+		AttachThingToThing(invisibox, door1);
+		DestroyThing(door0);
+		ClearThingFlags(door1, 0x80000);
+		PlaySoundLocal(armclick, 1.0, 0, 0x0000, 0);
+		ChangeInv(player, 52, -1);
+		placed = 1;
+		Sleep(0.5);
+        ClearThingFlags(player, 0x80000);
+        ClearActorFlags(player, 0x200000);
+		SetThingFlags(armActor, 0x80000);
+		SetCurrentCamera(1);
+        SendMessage(hint, user1);
+		EndCutscene();
+	}
+	else if ((placed == 0) && (ponderScene == 1))
+	{
+		hit1 = 1;
+		PlayVoice(player, voice1, 1.0, 1);
+	}
+	hit1 = 0;
+	return;
+}
+
+return;
+
+# ........................................................................................
+arrived:
+
+if (GetSenderRef() == door1) 
+{
+    open = 1 - open;
+	PlaySoundLocal(stopdoor, 1.0, 0, 0x0000, 0);
+}
+
+return;
+
+# ........................................................................................
+taken:
+PRINT("taken");
+
+#if (GetSenderRef() == armitem)
+#	{
+#	Sleep(0.5);
+#	PlayVoice(player, pickupwav, 1.0, 0);
+#	SendMessage(commie, user0);
+#	}
+
+return;
+
+# ........................................................................................
+entered:
+
+if (GetSenderRef() == positionSurf)
+{
+	positioned = 1;
+	return;
+}
+return;
+
+# ........................................................................................
+exited:
+
+if (GetSenderRef() == positionSurf)
+{
+	positioned = 0;
+	return;
+}
+return;
+
+# ........................................................................................
+end
+

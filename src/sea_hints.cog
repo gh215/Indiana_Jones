@@ -1,0 +1,210 @@
+# Jones 3D Cog Script
+#
+# sea_hints.cog
+#
+# level hints    
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+	message		startup
+	message		entered
+	message		activated
+	message		taken
+	message		removed
+	message		crossed
+	message		user0			# pump cog
+	message		user1			# weapon cog
+	message		user2			# crane cog
+	message		user3			# ladder cog
+	message		user4			# launch cog
+        
+	thing			player		local
+	thing			hint1
+	thing			hint2
+	thing			hint3
+	thing			hint4
+	thing			hint5
+	thing			hint6
+	thing			hint7
+	thing			hint8
+	thing			hint9
+	thing			hint10
+	thing			hint11
+	thing			hint12
+	thing			hint13
+	thing			hint14
+	thing			hint15
+	thing			hint16
+	thing			hint17
+
+	thing		brigdoor
+	thing		lock
+	thing		mp1
+#	thing		mp2			created:doh!
+	thing		mp3
+	thing		crankwheel
+	int		escaped=0					local
+	sector	brighall
+	sector	vent
+	surface	hold1upper
+	surface	hold2upper
+	surface	hold2upper2
+	surface	hole_1
+	surface	hole_2
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+
+activated:
+	if(getsenderref() == brigdoor)
+	{
+	if(escaped == 1) return;
+	SetHintSolved(hint1);
+	SetHintUnsolved(hint2);
+	}
+	return;
+
+removed:
+	if(getsenderref() == lock)
+	{
+	SetHintSolved(hint2);
+	}
+	return;
+
+crossed:
+	if(getsenderref() == hole_1)
+	{
+	SetHintSolved(hint9);
+	return;
+	}
+	if(getsenderref() == hole_2)
+	{
+	SetHintSolved(hint10);
+	}
+	return;
+
+
+entered:
+	if(getsenderref() == vent)
+	{
+	SetHintSolved(hint2);
+	}
+	if(getsenderref() == brighall)
+	{
+	escaped=1;
+	SetHintSolved(hint1);
+	SetHintSolved(hint2);
+	SetHintSolved(hint3);
+	}
+	if(getsenderref() == hold1upper)
+	{
+	SetHintSolved(hint7);
+	}
+	if((getsenderref() == hold2upper) || (getsenderref() == hold2upper2))
+	{
+	SetHintSolved(hint14);
+	}
+	return;                           
+
+taken:
+	if(getsenderref() == mp1)
+	{
+	SetHintSolved(hint8);
+	}
+	if(getsenderref() == mp3)
+	{
+	SetHintSolved(hint11);
+	}
+	if(getsenderref() == crankwheel)
+	{
+	SetHintSolved(hint16);
+	}
+	return;
+
+user0:						#leverpump cog
+	if(getparam(1) == 1)			#imp#2 picked up
+	{
+	SetHintSolved(hint4);
+	SetHintSolved(hint5);
+	return;
+	}
+	if(getparam(0) == 1)			#pump on
+	{
+	SetHintSolved(hint4);
+	return;
+	}
+	if(getparam(0) == 2)			#pump off back in cell
+	{
+	escaped=0;
+	SetHintUnsolved(hint1);
+	SetHintUnsolved(hint2);
+	SetHintUnsolved(hint3);
+	SetHintUnsolved(hint4);
+	return;
+	}
+	if(getparam(0) == 0)			#pump off
+	{
+	SetHintUnsolved(hint4);
+	}
+	return;
+
+user1:						#weapons cog
+	if(getparam(0) == 1)			#weapons picked up
+	{
+	SetHintSolved(hint6);
+	return;
+	}
+	if(getparam(0) == 2)			#weapons picked up
+	{
+	SetHintUnsolved(hint3);
+	SetHintUnsolved(hint4);
+	SetHintUnsolved(hint5);
+	return;
+	}
+	return;
+
+user2:
+	if(getparam(0) == 1)			#crate attach.
+	{
+	SetHintSolved(hint12);
+	}
+	if(getparam(0) == 2)			#jewel lifted.
+	{
+	SetHintSolved(hint13);
+	}
+	return;
+
+user3:
+	if(getparam(0) == 1)			#ladder down.
+	{
+	SetHintSolved(hint15);
+	return;
+	}
+	else
+	{
+	SetHintUnsolved(hint15);
+	}
+	return;
+
+user4:
+	if(getparam(0) == 1)			#Thats All Folks.
+	{
+	SetHintSolved(hint17);
+	}
+	return;
+
+end
+

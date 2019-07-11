@@ -1,0 +1,403 @@
+# Jones 3D Cog Script
+#
+# SOL_RedGem.cog
+#
+# [TRM]
+#
+# GemC = 97 (red)
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     activated
+    message     entered
+    message     touched
+    message     arrived
+    message     sighted
+    message     pulse
+    
+    thing       player      local
+    thing       deadIndy    local
+    thing       gem
+    thing       interpCam
+    thing       deathCam
+    
+    thing       kill_Block0     linkID=1
+    thing       kill_Block1     linkID=1
+    thing       kill_Block2     linkID=1
+    
+    thing       block_Block0    linkID=1
+    thing       block_Block1    linkID=1
+    thing       block_Block2    linkID=1
+    thing       block_Block3    linkID=1
+    thing       block_Block4    linkID=1
+    thing       block_Block5    linkID=1
+    
+    surface     surf0
+    
+    sector      trig_Say
+    sector      lookAtMe
+    
+    template    tpl_Indy=indy_sh_actor          local
+
+    keyframe    inDie=in_die_buckle.key         local
+    
+    sound       snd_Gem1=Inxj193.wav    local   # First gem: One of King Sol's jewels.
+    sound       snd_Gem2=Inxj194.wav    local   # Second gem: Another Jewel...
+    sound       snd_Gem3=Inxj195.wav    local   # Third gem: A third gem...
+    
+    # ** sfx **
+    sound       sfx_Block=sol_block_crash_c.wav         local   # landing blocks
+    sound       sndDie=tem_temspikes_up_kill_c.wav      local
+    sound       say_Trap=inxj041a.wav                   local   # i sense a trap
+    sound       snd_Snakes=Inxj069.wav                  local   # snakes
+    sound       say_Ugh=inxj018a.wav                    local   # Ugh...
+    
+    # ** music **
+    sound       snd_Music=mus_gen_danger1.wav           local
+    
+    cog         blueGem
+    cog         greenGem
+    cog         fallingDebris
+    cog			talkCog					local
+    
+    vector      posOffset           local
+    vector      angOffset           local
+    
+    int         gemsFound=0         local
+    int         gotIt=0             local
+    int         deadMan=0           local
+    int         safe=0              local
+    int         once=0              local
+    int         sighted_Once=0      local
+    int         vibe                local
+    int         victim              local
+    
+    # ** subroutines **
+    flex        pickUpGem           local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetThingLight(gem, '0.8 0.3 0.3', 0.01, 0.1);
+    player = GetLocalPlayerThing();
+    
+    SetCollideType(kill_Block0, 0);
+    SetCollideType(kill_Block1, 0);
+    SetCollideType(kill_Block2, 0);
+    
+    SetCollideType(block_Block0, 0);
+    SetCollideType(block_Block1, 0);
+    SetCollideType(block_Block2, 0);
+    SetCollideType(block_Block3, 0);
+    SetCollideType(block_Block4, 0);
+    SetCollideType(block_Block5, 0);
+        
+    return;
+
+# ========================================================================================
+
+user0:
+
+    gemsFound = gemsFound + 1;
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    player = GetLocalPlayerThing();
+    
+    if((GetSenderRef() == gem) && (gotIt == 0))
+    {
+        # player activated with an IMP part so bail out
+        if((GetCurWeapon(player) >= 14) && (GetCurWeapon(player) <= 18)) return;
+        
+        # player activated with lighter
+        else if(GetCurWeapon(player) == 13)
+        {
+            gotIt = 1;
+            
+            # put away the lighter
+            DeselectWeapon(player);
+            DeselectWeaponWait(player);
+            
+            Call pickupGem;
+        }
+        
+        # normal activation
+        else
+        {
+            gotIt = 1;
+            
+            # wait for weapon to be put away
+            DeselectWeaponWait(player);
+            
+            Call pickupGem;
+        }
+    }
+
+    return;
+            
+# ========================================================================================
+
+pickupGem:
+
+    # increase gemsfound in the other cogs
+    SendMessage(blueGem, user0);
+    SendMessage(greenGem, user0);
+    
+    # do cutscene stuff
+    MakeMeStop();
+    
+    # offset camera
+    SetExtCamOffsetToThing(interpCam);
+    
+    # pick up the gem
+    PlayMode(player, 24, 0);
+    
+    # Call the Pickup Lines cog
+    talkCog = GetCogByIndex(0);
+    SendMessage(talkCog, 27);
+    
+    # wait a bit then destroy gem
+    Sleep(0.3);
+    DestroyThing(gem);
+    
+    # sleep for a bit to wait for talkCog
+    Sleep(1.0);
+    
+    # add gemc to inventory
+    SetInvAvailable(player, 97, 1);
+    ChangeInv(player, 97, 1.0);
+    JonesInvItemChanged(97);
+    
+    # play dialog as gems spins into inventory
+    if(gemsFound == 0)
+    {
+        PlayVoice(player, snd_Gem1, 1.0, 1);
+    }
+    
+    else if(gemsFound == 1)
+    {
+        PlayVoice(player, snd_Gem2, 1.0, 1);
+    }
+    
+    else if(gemsFound == 2)
+    {
+        PlayVoice(player, snd_Gem3, 1.0, 1);
+    }
+    
+    # return control to player
+    ClearActorFlags(player, 0x200000);
+    
+    # increase gemsfound in this cog
+    gemsFound = gemsFound + 1;
+    
+    RestoreExtCam();
+    
+    # rest to let camera return
+    #Sleep(1.0);
+    Sleep(0.5);
+    
+    # turn on falling debris
+    SendMessage(fallingDebris, user0);
+    SetPulse(0.1);
+    
+    # drop first row block blocks to block exit
+    #PlaySoundThing(sfx_Block, block_Block0, 1.0, 5.0, 10.0, 0);
+    movetoframe(block_Block0, 1, 8.0);
+    Sleep(0.1);
+    PlaySoundThing(sfx_Block, block_Block1, 1.0, 5.0, 10.0, 0);
+    movetoframe(block_Block1, 1, 8.0);
+    Sleep(0.25);
+    PlaySoundThing(sfx_Block, block_Block2, 1.0, 5.0, 10.0, 0);
+    movetoframe(block_Block2, 1, 8.0);
+    
+    # give 3dos collision back after they pass thru geometry
+    SetCollideType(block_Block0, 3);
+    SetCollideType(block_Block1, 3);
+    SetCollideType(block_Block2, 3);
+    
+    # drop second row
+    #PlaySoundThing(sfx_Block, block_Block3, 1.0, 5.0, 10.0, 0);
+    movetoframe(block_Block3, 1, 8.0);
+    Sleep(0.25);
+    PlaySoundThing(sfx_Block, block_Block4, 1.0, 5.0, 10.0, 0);
+    movetoframe(block_Block4, 1, 8.0);
+    Sleep(0.1);
+    PlaySoundThing(sfx_Block, block_Block5, 1.0, 5.0, 10.0, 0);
+    movetoframe(block_Block5, 1, 8.0);
+    
+    # give 3dos collision back after they pass thru geometry
+    SetCollideType(block_Block3, 3);
+    SetCollideType(block_Block4, 3);
+    SetCollideType(block_Block5, 3);
+    
+    WaitForStop(block_Block5);
+    ClearAdjoinFlags(surf0, 2);         # no move
+    
+    # drop kill blocks
+    #PlaySoundThing(sfx_Block, kill_Block0, 1.0, 5.0, 10.0, 0);
+    movetoframe(kill_Block0, 1, 8.0);
+    Sleep(0.25);
+    PlaySoundThing(sfx_Block, kill_Block1, 1.0, 5.0, 10.0, 0);
+    movetoframe(kill_Block1, 1, 8.0);
+    Sleep(0.15);
+    PlaySoundThing(sfx_Block, kill_Block1, 1.0, 5.0, 10.0, 0);
+    movetoframe(kill_Block2, 1, 8.0);
+    
+    # give 3dos collision back after they pass thru geometry
+    SetCollideType(kill_Block0, 3);
+    SetCollideType(kill_Block1, 3);
+    SetCollideType(kill_Block2, 3);
+    
+    # turn off falling debris
+    Sleep(4.0);
+    SendMessage(fallingDebris, user1);
+    SetPulse(0.0);
+    
+    return;
+
+# ========================================================================================
+
+entered:
+
+    if((GetSenderRef() == trig_Say) && (once == 0))
+    {
+        once = 1;
+        PlayVoice(player, say_Trap, 1.0, 0);
+        PlaySoundLocal(snd_Music, 1.0, 0.0, 0x0, 0);
+    }
+    
+    return;
+    
+# ========================================================================================
+
+touched:
+
+    if((deadMan == 1) || (safe == 1)) return;
+
+    if(GetSenderID() == 1)
+    {
+        deadMan = 1;
+        
+        # remove collisions so blocks pass thru player
+        SetCollideType(kill_Block0, 0);
+        SetCollideType(kill_Block1, 0);
+        SetCollideType(kill_Block2, 0);
+        
+        SetCollideType(block_Block0, 0);
+        SetCollideType(block_Block1, 0);
+        SetCollideType(block_Block2, 0);
+        SetCollideType(block_Block3, 0);
+        SetCollideType(block_Block4, 0);
+        SetCollideType(block_Block5, 0);
+        
+        # cut to deathCam
+        SetCameraFocus(2, deathCam);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+        Sleep(0.01);
+        
+        # kill the player
+        DamageThing(player, 1000.0, 0x1, victim);
+        Sleep(0.1);
+        PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+        PlaySoundLocal(say_Ugh, 1.0, 0.0, 0x0, 0);
+                            
+        # hide player
+        SetThingFlags(player, 0x80000);
+        
+        # create actor indy
+        deadIndy = CreateThing(tpl_Indy, player);
+        CaptureThing(deadIndy);
+                            
+        # Show actor Indy and play Keyframe
+        ClearThingFlags(deadIndy, 0x80000);
+        PlayKey(deadIndy, inDie, 4, 0x14, 1);
+    }
+
+    return;
+    
+# ========================================================================================
+
+arrived:
+
+    if((GetSenderRef() == kill_Block2) && (safe == 0))
+    {
+        # it's safe to touch the blocks now
+        safe = 1;
+        
+        # play falling block sound again
+        PlaySoundThing(sfx_Block, block_Block5, 1.0, 5.0, 10.0, 0);
+        
+        # reset proper collision on kill blocks
+        SetCollideType(kill_Block0, 3);
+        SetCollideType(kill_Block1, 3);
+        SetCollideType(kill_Block2, 3);
+        
+        # retore interpCam back to player
+        #RestoreExtCam();
+    }
+    
+    return;
+
+# ========================================================================================
+
+sighted:
+
+    if((GetSenderRef() == lookAtMe) && (sighted_Once == 0))
+	{
+		Print("sighted");
+        sighted_Once = 1;
+		PlayVoice(player, snd_Snakes, 1.0, 1);
+    }
+
+    return;
+
+# ========================================================================================
+
+pulse:
+
+    # shake the camera
+	vibe = RandBetween(1, 4);
+	if (vibe == 1)
+	{
+		posOffset = '-0.005 0.00 -0.002';
+		angOffset = '0.00 -0.002 0.002';
+	}
+	if (vibe == 2)
+	{
+		posOffset = '0.005 -0.005 0.002';
+		angOffset = '0.002 0.00 -0.002';
+	}
+	if (vibe == 3)
+	{
+		posOffset = '0.002 0.005 -0.005';
+		angOffset = '-0.002 0.002 -0.002';
+	}
+	if (vibe == 4)
+	{
+		posOffset = '-0.002 0.00 0.005';
+		angOffset = '0.00 0.00 0.002';
+	}
+
+	SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+    
+    return;
+    
+# ========================================================================================
+        
+end
+

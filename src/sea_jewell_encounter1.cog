@@ -1,0 +1,150 @@
+
+# Jones 3D Cog Script
+#
+# SEA_Cargo_Encounter1.cog
+# 
+# Sets up a one time scripted encounter with some commies soon after Volodnikov is alerted to Indy's escape 
+# 
+#
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message         startup
+message         entered
+message         crossed
+message         killed
+message         User0
+#message        timer
+
+# ==================== SUBROUTINES ===================
+
+flex            attack          local
+
+# =================== REFERENCES ===============================
+
+thing           Commie00            LinkID=1
+thing           Commie01            LinkID=1
+
+surface         SurfaceTrigger00    LinkID=2
+
+surface         AdjoinAIOn0         LinkID=3
+surface         AdjoinAIOn1         LinkID=3
+surface         AdjoinAIOn2         LinkID=3
+         
+surface         AdjoinAIOff0        LinkID=4 
+surface         AdjoinAIOff1        LinkID=4
+surface         AdjoinAIOff2        LinkID=4
+
+thing           SoundGhost00        
+
+# ===================== MISC LOCAL VARIABLES ===================
+
+int         counter             local
+int         TempCommie          local
+int         StartCheck=0        local
+
+# =========================== SOUNDS ============================
+
+sound		DoorSound=sea_doors_open_c.wav  	local
+
+
+# ==================== CONSTANTS ==========================
+
+int         NUMBER_OF_COMMIES=2         local
+flex        ATTACK_DELAY=0.5            local #Needed for timing if music is inserted at a later date
+flex        COMMIE_ACTIVATE_DELAY=1.0   local
+end
+
+# ======================= CODE =============================
+code
+
+# =========================================================
+startup:
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+    {
+        SetThingFlags(Commie00[counter], 0x80000);
+    }
+    
+    return;
+    
+# =========================================================
+entered:
+
+    if(GetSenderID() == 2)
+    {
+        if(StartCheck == 1) return;
+        
+        StartCheck = 1;
+        Call attack;
+    }
+       
+    
+    return;
+# =========================================================
+crossed:
+    
+    if(GetSenderID() == 3)
+    {
+        for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1) 
+        {
+            if(Commie00[counter] != -1)
+                AISetInstinctWpntMode(Commie00[counter]);
+        }
+    }
+    else if(GetSenderID() == 4)
+    {
+        for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+        {
+            if(Commie00[counter] != -1)
+                AIClearInstinctWpntMode(Commie00[counter]);
+        }
+    }
+    
+    return;
+    
+# =========================================================
+killed:
+
+    if(GetSenderID() == 1)
+    {
+        TempCommie = GetSenderRef();
+        
+        for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+        {
+            if(Commie00[counter] == TempCommie)
+            {
+                Commie00[counter] = -1;
+            }
+        }
+    }
+    
+    return;
+    
+# =========================================================
+//The initial script for the three Commies Jumping Indy after his whip swing
+attack:
+
+    sleep(ATTACK_DELAY);
+    
+    PlaySoundThing(DoorSound, SoundGhost00, 1.0, 5, 14, 0);
+    
+    sleep(COMMIE_ACTIVATE_DELAY);
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+    {   
+        ClearThingFlags(Commie00[counter], 0x80000);
+            
+        AISetInstinctWpntMode(Commie00[counter]);
+    }
+    
+    return;
+
+# ============================================================
+
+end

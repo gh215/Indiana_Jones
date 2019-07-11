@@ -1,0 +1,263 @@
+# Jones 3D Cog Script
+#
+# aet_Hints.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+    
+message		startup
+message		entered
+message		activated
+message		crossed
+message		damaged
+message		user0
+message		user1
+message		user2
+message		user3
+message		user4
+message		user5
+message		user6
+
+thing		player		local
+
+thing		hint2		# "Hint1" Bread Crumb(BC) to first passage (green). *entered*
+sector		hintsector2	#
+int			hint2done=0	local
+
+thing		hint4		# "Hint2" Tool from beyond pick up. 				*activated*
+thing		tool4		#
+
+thing		hint6		# "Hint3" BC to start of RIV passage (blue).		*entered*
+sector		hintsector6	#
+
+thing		hint8		# "Hint4" RIV POR dilation.							*damaged*
+surface		RIVPORface8 													mask=0x408
+
+thing		hint10		# "Hint5" BC to end of passage after RIV.			*entered*
+sector		hintsector10#
+
+thing		hint12		# "Hint6" BC to top of AET tube into Marduk room.	*entered*
+sector		hintsector12#
+
+thing		hint14		# "Hint7" TEO POR dilation.							*damaged*
+surface		TEOPORface14													mask=0x408
+
+thing		hint16		# "Hint8" Mirror pick up.							*sendmessage(user6)*
+
+thing		hint18		# "Hint9" Defeating Marduk the first time.		   	*sendmessage(user0)*
+
+thing		hint20		# "Hint10" Pick up gem.								*sendmessage(user1)*
+
+thing		hint22		# "Hint11" Use gem on button.						*activated*
+thing		button22	#
+
+thing		hint24		# "Hint12" Whip Probe.								*damaged*
+thing		probe24		#
+
+thing		hint26		# "Hint13" Use whip on "door" probe.				*damaged*
+thing		probe26		#
+
+thing		hint28		# "Hint14" First bridge probe.						*damaged*
+thing		probe28		#
+
+thing		hint30		# "Hint15" First gem.								*activated*
+thing		greengem30	#
+
+thing		hint32      # "Hint16" Second probe.							*damaged*
+thing		probe32		#
+
+thing		hint34      # "Hint17" Second gem.								*activated*
+thing		bluegem34	#
+
+thing		hint36      # "Hint18" Third probe.								*damaged*
+thing		probe36		#
+
+thing		hint38      # "Hint19" Third gem.								*activated*
+thing		redgem38	#
+
+thing		hint40      # "Hint20" Green gem door.							*activated*
+thing		greendoor40	#
+
+thing		hint42      # "Hint21" Green leakage.							*sendmessage(user3*
+
+thing		hint44      # "Hint22" Blue gem door.							*activated*
+thing		bluedoor44	#
+
+thing		hint46      # "Hint23" Blue leakage.							*sendmessage(user4)*
+
+thing		hint48      # "Hint24" Red gem door.							*activated*
+thing		reddoor48	#
+
+thing		hint50      # "Hint25" Red leakage. 							*sendmessage(user5)*
+
+thing		hint52      # "Hint26" Center platform to defeat Mophia.		*sendmessage(user2)*
+
+thing		hint54      # "Hint27" Run in to correct BAB POR to escape.		*entered*
+sector		hintsector54#
+
+thing		hint56      # "Hint28" End of escape at top.					*entered*
+sector		hintsector56#
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+entered:
+
+# "Hint1" Bread Crumb(BC) to first passage to tool room (green).
+if (GetSenderRef() == hintsector2) 
+	{
+    hint2done = 1;
+	SetHintSolved(hint2);
+	}
+
+# "Hint3" BC to start of RIV passage to POR (blue).
+if ((GetSenderRef() == hintsector6) && (hint2done == 1)) 
+	{
+	SetHintSolved(hint6);
+	}
+
+# "Hint5" BC to end of passage after RIV POR leading to boss room.
+if (GetSenderRef() == hintsector10) SetHintSolved(hint10);
+
+# "Hint6" BC to top of AET tube into Marduk room.
+if (GetSenderRef() == hintsector12) SetHintSolved(hint12);
+
+# "Hint27" Run into correct BAB POR to escape.
+if (GetSenderRef() == hintsector54) SetHintSolved(hint54);
+
+# "Hint28" End of escape at top.
+if (GetSenderRef() == hintsector56) SetHintSolved(hint56);
+
+return;
+
+# ........................................................................................
+crossed:
+
+# "Hint4" RIV POR dilation.                        
+if (GetSenderRef() == RIVPORface8) SetHintSolved(hint8);
+
+# "Hint7" TEO POR dilation.
+if (GetSenderRef() == TEOPORface14) SetHintSolved(hint14);
+
+return;
+
+# ........................................................................................
+activated:
+
+# "Hint2" Tool from beyond pick up.
+if (GetSenderRef() == tool4) SetHintSolved(hint4);
+
+# "Hint11" Use gem on button to lower probe.
+if (GetSenderRef() == button22) SetHintSolved(hint22);
+
+# "Hint15" First gem pick up (green).
+if (GetSenderRef() == greengem30) SetHintSolved(hint30);
+
+# "Hint17" Second gem pick up (blue).
+if (GetSenderRef() == bluegem34) SetHintSolved(hint34);
+
+# "Hint19" Third gem pick up (red).
+if (GetSenderRef() == redgem38) SetHintSolved(hint38);
+
+# "Hint20" Green gem door open.
+if (GetSenderRef() == greendoor40) SetHintSolved(hint40);
+
+# "Hint22" Blue gem door open.
+if (GetSenderRef() == bluedoor44) SetHintSolved(hint44);
+
+# "Hint24" Red gem door open.
+if (GetSenderRef() == reddoor48) SetHintSolved(hint48);
+
+return;
+
+# ........................................................................................
+damaged:
+
+# "Hint12" Whip probe to charge it.
+if ((GetSenderRef() == probe24) && (GetParam(1) == 0x10)) SetHintSolved(hint24);
+
+# "Hint13" Use whip on "door" probe to open door.
+if ((GetSenderRef() == probe26) && (GetParam(1) == 0x800)) SetHintSolved(hint26);
+
+# "Hint14" First bridge probe retraction.
+if ((GetSenderRef() == probe28) && (GetParam(1) == 0x800)) SetHintSolved(hint28);
+
+# "Hint16" Second bridge probe retraction.
+if ((GetSenderRef() == probe32) && (GetParam(1) == 0x800)) SetHintSolved(hint32);
+
+# "Hint18" Third bridge probe retraction.
+if ((GetSenderRef() == probe36) && (GetParam(1) == 0x800)) SetHintSolved(hint36);
+
+return;
+
+# ........................................................................................
+user0: # This message sent by skitoscene. 
+
+# "Hint9" Defeating Marduk the first time.
+SetHintSolved(hint18);
+
+return;
+
+# ........................................................................................
+user1: # This message sent by skitoscene. 
+
+# "Hint10" Pick up  Marduk gem.
+SetHintSolved(hint20);
+
+return;
+
+# ........................................................................................
+user2: # This message sent by rotatecage cog.
+
+# "Hint26" Go to center platform to defeat Mophia.
+SetHintSolved(hint52);
+
+return;
+
+# ........................................................................................
+user3: # This message sent by enddilator cog.
+
+# "Hint21" Green leakage.
+SetHintSolved(hint42);
+
+return;
+
+# ........................................................................................
+user4: # This message sent by enddilator cog.
+
+# "Hint23" Blue leakage.
+SetHintSolved(hint46);
+
+return;
+
+# ........................................................................................
+user5: # This message sent by enddilator cog.
+
+# "Hint25" Red leakage.
+SetHintSolved(hint50);
+
+return;
+
+# ........................................................................................
+user6: # This message sent by getmirror cog.	
+
+# "Hint8" Mirror pick up.
+SetHintSolved(hint16);
+
+return;
+
+# ........................................................................................
+end
+

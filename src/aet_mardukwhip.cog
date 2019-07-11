@@ -1,0 +1,288 @@
+# Jones 3D Cog Script
+#
+# aet_MardukWhip.cog
+#
+# [TL, RT & HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+message		startup
+message		damaged
+message		callback
+
+keyframe	in_whip_up=in_whip_topprobe.key		local
+keyframe	in_ravel=in_attack_ravel_whip.key	local
+keyframe	wh_whip_up=wh_whip_topprobe.key		local
+keyframe	wh_ravel=wh_attack_whip_ravel.key	local
+
+model		whipHand=weap_whip.3do				local
+
+sound		unroll=gen_whip_unravel.wav			local
+sound		snap=gen_whip_fire.wav				local
+sound		zap=aet_whip_crack.wav				local
+sound		roll=gen_whip_ravel.wav				local
+sound		full=INXJ112.WAV					local
+sound		charge=aet_mr_chargeup.wav			local
+
+template	whipTpl=+whip_actor					local
+template	tpl_ghost=ghost						local
+template	sparks0=mophiaSparksLg				local
+template	chargesprite=+tower_glow			local
+
+sector		camsector							local
+
+thing		player								local
+thing		whipThing							local
+
+thing		indy									
+thing		probe
+thing		m_cam1spot							nolink
+thing		m_cam1look							nolink
+
+thing		offcam								local
+thing		offtarg								local
+thing		spritespot
+
+vector		v_camspot							local
+
+flex		endScene							local
+
+int			curcam								local
+int			curSound							local
+int			damageType							local
+int			sender								local
+int			callNum								local
+int			joint								local
+int			offcamexists=0						local
+int			probactive=0						local
+int			bSpoken=0							local
+int			sprite0								local
+
+cog			doortalk
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	global6 = 0;
+
+	return;
+
+# ..............................................................................
+
+damaged:
+
+	# Charge whip here...
+	if (GetSenderRef() == probe)
+	{
+		if (probactive != 0)
+		{
+			return;
+		}
+		probactive = 1;
+
+        damageType = GetParam(1);
+        if ((damageType != 0x10) && (damageType != 0x800)) return;
+
+        if (GetInv(player, 2) < 25)
+		{
+			bSpoken = 0;
+		}
+
+        if (global6 == 0)
+		{
+			global6 = 1;
+		}
+
+		# Prep...
+		if (MakeMeStop() == -1) return;
+
+		SetActorFlags(player, 0x200000);
+		StartCutScene(0);
+
+        CopyPlayerHolsters(player, indy);
+		ClearThingFlags(indy, 0x80000);
+		TeleportThing(indy, player);
+		SetThingFlags(player, 0x80000);
+
+		# Set up camera...
+		if (offcamexists != 0)
+		{
+			DestroyThing(offcam);
+			DestroyThing(offtarg);
+		}
+		v_camspot = VectorAdd(VectorTransformToOrient(indy, '-0.5 0.3 0.6'), GetThingPos(indy));	
+		camsector = FindNewSectorFromThing(indy, v_camspot);
+		offcam = CreateThingAtPos(tpl_ghost, camsector, v_camspot, '0 0 0');
+		CaptureThing(offcam);
+
+		v_camspot = VectorAdd(VectorTransformToOrient(indy, '0.0 0.05 0.2'), GetThingPos(indy));	
+		camsector = FindNewSectorFromThing(indy, v_camspot);
+		offtarg = CreateThingAtPos(tpl_ghost, camsector, v_camspot, '0 0 0');
+		CaptureThing(offtarg);
+		offcamexists = 1;
+	
+		ResetCameraFOV(0, 0.0);
+		MakeCamera2LikeCamera1(m_cam1spot, m_cam1look);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, m_cam1spot);
+		SetCameraSecondaryFocus(2, m_cam1look);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 1.5);
+		Sleep(0.01);
+
+		# Slide cam out...
+		SetCameraFocus(2, offcam);
+		SetCameraSecondaryFocus(2, offtarg);
+
+		# Prep whip...
+		whipThing = AttachThingToThingMesh(indy, whipTpl, 15);
+		SetThingMesh(indy, 15, whipHand, 0);
+
+		# Do that whip thang...
+		PlayKey(indy, in_whip_up, 2, 0x12, 0);		# Indy anim...
+		PlayKey(whipThing, wh_whip_up, 2, 0x12, 0);	# Whip anim...
+
+		# Play the unravel sound...
+		curSound = PlaySoundThing(unroll, indy, 1, -1, -1, 0x80);
+		WaitForSound(curSound);
+		Sleep(0.25);
+        
+		# Play the appropriate fire sound and increment bin...
+		if (BitTest(GetActorFlags(player), 0x40000000)) # Electric whip
+		{
+            if (GetInv(player, 2) < 25)
+				{
+                PlaySoundThing(charge, indy, 1, -1, -1, 0x80);
+				CreateThing(sparks0, probe);
+				CreateThing(sparks0, probe);
+				sprite0 = CreateThing(chargesprite, spritespot);
+				AnimateSpriteSize(sprite0, '0.25 0.25 1.0', '0.35 0.35 0.0', 1.0);
+				}
+			ChangeInv(player, 2, 5); # Add 5 shots to the whip bin...
+		}
+		else
+		{
+			PlaySoundThing(charge, indy, 1, -1, -1, 0x80);
+			CreateThing(sparks0, probe);
+			CreateThing(sparks0, probe);
+			sprite0 = CreateThing(chargesprite, spritespot);
+			
+			AnimateSpriteSize(sprite0, '0.25 0.25 1.0', '0.35 0.35 0.0', 1.0);
+			SetWhipElectric(1);
+			ChangeInv(player, 2, 4); # Add 4 shots to the whip bin...already has 1
+		}	
+	}
+
+	return;
+
+# ..............................................................................
+
+callback:
+
+	sender = GetSenderRef();
+	callNum = GetParam(1);
+
+	if (sender == indy)
+	{
+		ReleaseThing(indy);
+
+		if (callNum == 24)
+		{
+			# Start wind-ups...
+			PlayKey(indy, in_ravel, 4, 0x12, 0);
+			if (whipThing != -1)
+			{
+				CaptureThing(whipThing);
+				PlayKey(whipThing, wh_ravel, 4, 0x12, 0);
+			}
+
+			PlaySoundThing(roll, indy, 1, -1, -1, 0x80);
+        }
+	}
+	else if (sender == whipThing)
+	{
+		if (callNum == 28)
+		{
+			for (joint = 12; joint > 4; joint = joint - 1)
+			{
+				AmputateJoint(whipThing, joint);
+			}
+		}
+		else if (callNum == 29)
+		{
+			AmputateJoint(whipThing, 4);
+		}
+		else if (callNum == 30)
+		{
+			AmputateJoint(whipThing, 3);
+		}
+		else if (callNum == 31)
+		{
+			ReleaseThing(whipThing);
+			AmputateJoint(whipThing, 2);
+
+			if (whipThing != -1)
+			{
+				DetachThingMesh(whipThing);
+				SetWeaponModel(indy, 2); 
+			}
+			whipThing = -1;
+
+			call endScene;
+		}
+	}
+
+	return;
+
+# ..............................................................................
+
+endScene:
+
+    if (GetInv(player, 2) == 25)
+	{
+        if (!bSpoken)
+		{
+			bSpoken = 1;
+			PlayVoice(indy, full, 1.0, 1); # "That oughta do it"
+		}
+		else
+		{
+			SendMessageEx(doorTalk, user3, player, 0, 0, 0);
+			while (global15 == 0)
+			{
+				# Wait for line to finish...
+				Sleep(0.01);
+			}
+		}
+	}
+
+	# Cleanup...
+	SetThingFlags(indy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	
+	v_camspot = VectorAdd(VectorTransformToOrient(player, '-0.18 0.0 0.1'), GetThingPos(player));
+	SetCameraPosition(1, v_camspot);
+	
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+	probactive = 0; # reset
+    
+	return;
+
+end
+

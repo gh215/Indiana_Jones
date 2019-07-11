@@ -1,0 +1,113 @@
+
+# Jones 3D Cog Script
+#
+# shs_Dlog_deadend.cog   Say the line, Indy.  
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message 	startup
+message 	entered
+                                                          
+
+sound		in_deadend=Ss06j03.wav			local
+
+surface 	trigger
+
+thing		indy   
+thing		player			local
+thing   	cam1
+thing		c1_t1
+thing		c1_t2
+thing 		dummy
+thing		look_window
+
+int			curCam			local
+int			played=0		local
+int			in_rotRate		local
+
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+      	
+	player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+	return;
+
+
+entered:
+	
+	if ((GetSenderRef() == trigger) && (played == 0)) 
+	{
+	    played=1;
+
+		MakeMeStop();
+		StartCutscene(1);
+        SetThingFlags(player, 0x80000); # hide him
+        CopyPlayerHolsters(player, indy);	# make sure our actor has matching props
+		ClearThingFlags(indy, 0x80000); # reveal our actor
+		
+      
+		# Prep camera & cut...
+		SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+		SetCameraPosInterp(2, 0);			# kill dolly mode too
+		SetCameraFocus(2, cam1);
+		SetCameraSecondaryFocus(2, c1_t1);
+		Sleep(0.01);
+		SetCurrentCamera(2);
+        SetCameraFOV(60, 0, 0.0);
+		sleep(.5);
+		
+		# "This is a deadend..."
+		PlayVoice(indy, in_deadend, 1.0, 0);
+		Sleep(1);
+		 
+		# Indy look at window
+        in_rotRate = GetThingMaxRotVel(indy); 	# remember Indy rate
+		SetThingMaxRotVel(indy, 10.0);
+        AISetLookThing(indy, look_window);		
+
+		# Pan and show window
+		SetCameraLookInterp(2, 1); # pan & tilt
+		SetCameraInterpSpeed(2, 2.5);
+		Sleep(0.01);
+		SetCameraSecondaryFocus(2, c1_t2);
+		SetCameraFOV(50, 1, 2.5);
+        Sleep(3.0);
+
+		
+        # Cleanup
+		
+		SetThingMaxRotVel(indy, in_rotRate);# reset indy rotate velocity
+		CopyOrientAndPos(indy, player); # move player to actor's spot
+    	SetThingFlags(indy, 0x80000); # hide actor	
+        ClearThingFlags(player, 0x80000); # player visible
+		
+		SetCameraPosition(1, GetThingPos(dummy)); # prep to swing back to follow-cam
+		SetCameraLookInterp(2, 0); # kill pan & tilt mode
+		SetCameraPosInterp(2, 0); # kill dolly mode
+		sleep(.01);
+		ResetCameraFOV(0, 0.0);
+		SetCurrentCamera(1);  
+		ResetCameraFOV(0, 0.0);
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();	
+	
+	}
+	
+return;
+     
+  
+
+end

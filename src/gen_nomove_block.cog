@@ -1,0 +1,34 @@
+# Jones 3D Cog Script
+#
+# VOL_Crate_Puzzle.cog
+#
+# This elevator will come down to frame one, sleep, then return to frame 0.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+#...............MESSAGES..............
+	message  startup
+    
+
+#...............PROPS..............
+	thing	pushblock 		
+				
+end
+
+# ========================================================================================
+code
+startup:
+		
+	ClearThingFlags(pushblock, 0x40000000);
+
+return;
+
+# ========================================================================================
+end
+
+

@@ -1,0 +1,78 @@
+# Jones 3D Cog Script
+#
+# RIV_AmbRivCanyon1.cog
+#
+# Plays random ambient sounds at random positions and drops
+# snow at all the positions all the time.
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message	    entered
+    message     pulse
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+    thing		soundPos2		nolink
+    
+    sector      start_Amb1      linkID=1
+    
+    sector      stop_Amb1       linkID=0
+    sector      stop_Amb2       linkID=0
+    
+	sound		ambient0=shw_amb1.wav   local
+	sound		ambient1=shw_amb2.wav   local
+	sound		ambient2=shw_amb3.wav   local
+	sound		ambient3=shw_amb4.wav   local
+	sound		ambient4=shw_amb5.wav   local
+    sound		ambient5=shw_amb6.wav   local
+    sound		ambient6=shw_amb7.wav   local
+    
+    template	tpl_Snow=skitosnow      local
+    
+    int         playing=0               local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+	if((GetSenderID() == 1) && (playing == 0))
+    {
+        playing = 1;
+        setpulse(2.0);
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        playing = 0;
+        SetPulse(0.0);
+    }
+    
+	return;
+
+# ========================================================================================
+
+pulse:
+
+    PlaySoundThing(ambient0[RandBetween(0, 6)], soundPos0[RandBetween(0, 2)], 1.0, 15, 30, 0);
+    
+    if(GetPerformanceLevel() >= 2)
+    {
+        CreateThing(tpl_Snow, soundPos0);
+    	CreateThing(tpl_Snow, soundPos1);
+    	CreateThing(tpl_Snow, soundPos2);
+    }
+    
+    return;
+
+# ========================================================================================
+
+end

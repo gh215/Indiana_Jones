@@ -1,0 +1,384 @@
+# Jones 3D Cog Script
+#
+# lag_BoomRotate.cog
+#
+# Rotating Boom Script
+#
+# [DS & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+	message	startup
+	message	activated	
+	message	arrived
+	message	timer	
+
+	keyframe	pull=in_turn_crank1.key					local   
+	keyframe	turnbd=in_turn_bd_stand_crank1.key		local   
+	keyframe	standbd=in_stand_bd_turn_crank1.key		local
+	keyframe	turncrnk=lag_crnk_rsty.key				local
+	keyframe	in_reach=in_activate_medium.key			local
+	keyframe	in_bothup=0in_armsup_1_1.key			local
+
+# Indy saylines...
+	sound		crnkplace=inxj108.wav		local		#there.
+
+# no item line...	
+	sound		nocrnk=lg02j02.wav		local		#if I had the right tool....
+
+# wrong item...
+	sound	in_itemline0=Inxj089.wav		local # That didn't work.
+	sound	in_itemline1=Inxj090.wav		local # ...something wrong.
+	sound	in_itemline2=Inxj092.wav		local # Hmm...didn't quite work.
+	sound	in_itemline3=Inxj060.wav		local # I don't think...right answer.
+	sound	in_itemline4=Inxj087.wav		local # Whoops.
+	sound	in_itemline5=Inxj088.wav		local # Nope.
+	sound	in_itemline6=Inxj091.wav		local # Of course that didn't work.
+
+# wrong spot...
+	sound	in_wrongspot0=Inxj219.wav		local # Not lined up right
+	sound	in_wrongspot1=Inxj220.wav		local # Need to line up
+	sound	in_wrongspot2=Inxj221.wav		local # Need to move over.
+	sound	in_wrongspot3=Inxj222.wav		local # Not quite in position.
+	sound	in_wrongspot4=Inxj223.wav		local # Need to get in position.
+	sound	in_wrongspot5=Inxj224.wav		local # Need to find better spot.
+
+# sfx...
+	sound		crankmove=shw_crank_turn.wav			local
+	sound		placecrnk=sea_launch_wheel_attach.wav	local
+
+   	thing	player							local
+
+	thing		boom0
+	thing		crank0
+	thing		crate0
+	thing		pully0
+	thing		crnkghost	
+
+	thing		indyactor
+	thing		crankindy
+	thing		campos
+	thing		lookpos									local
+
+	thing		walkpos									nolink	# offstage spot
+	thing		rstycrnk								local
+	thing		crankcam								local
+
+	template	tpl_crank=rstcrnkmove					local
+	template	tpl_ghost=ghost							local
+	template	tpl_indy=indy_sh_actor					local
+
+	sector		camsector								local
+
+	cog			hints											# send message when complete. 
+
+# labels...	
+	flex		cameramove								local
+	flex		randlocationlines						local
+	flex		randwrongitemlines						local
+
+# vars...	
+	vector		v_camspot								local
+	vector		v_ipyr									local
+
+	flex		yaw										local
+
+	int			open=1									local
+	int			talking=0								local
+	int			ready=0									local
+
+	int			l_newline=50							local
+	int			l_oldline=50							local
+	int			wi_newline=50							local
+	int			wi_oldline=50							local
+	int			played=0								local
+	int			doplay									local
+	int			cursound								local
+
+	int			speak0									local
+	int			curcam									local
+	int			stopcall=0								local
+
+end
+
+# ==============================================================================
+
+code
+	
+startup:
+
+	AttachThingToThing(pully0, boom0);
+	player = GetLocalPlayerThing();
+	ClearThingFlags(crate0, 0x4000000);		# non-climbable crate
+
+	return;
+
+# ..............................................................................
+
+activated:
+
+	if ((getsenderref() == crank0) || (getsenderref() == rstycrnk))
+	{
+		if (stopcall != 0) return;
+		stopcall = 1;
+		if (isMoving(boom0)) return;
+
+		if (GetCurItem(player) == 73)
+		{
+		
+			curcam = GetCurrentCamera();
+			MakeMeStop();
+			DeselectWeaponWait(player);
+			StartCutscene(1);
+			CopyPlayerHolsters(player, indyactor);
+			SetThingFlags(player, 0x80000);
+			ClearThingFlags(indyactor, 0x80000);
+			AISetCutsceneMode(indyactor);
+			SetCollideType(indyactor, 0);
+
+			# Make cam...
+			v_camspot = VectorAdd(VectorTransformToOrient(indyactor, '-0.15 0.2 0.15'), GetThingPos(indyactor));	
+			camsector = FindNewSectorFromThing(player, v_camspot);
+			crankcam = CreateThingAtPos(tpl_ghost, camsector, v_camspot, '0 0 0');
+			CaptureThing(crankcam);
+
+			# Cut to high angle...
+			SetCameraLookInterp(2, 0);
+			SetCameraPosInterp(2, 0);
+			SetCameraFocus(2, crankcam);
+			SetCameraSecondaryFocus(2, crank0);
+			SetCurrentCamera(2);
+			SetCameraFOV(70, 0, 0.0);
+
+			AISetLookThing(indyactor, crank0);			
+			AIWaitForStop(indyactor);
+				
+			PlayKey(indyactor, in_reach, 4, 0x12, 0);
+			Sleep(0.3);
+
+			rstycrnk = CreateThing(tpl_crank, crnkghost);
+			CaptureThing(rstycrnk);
+
+			PlaySoundThing(placecrnk, rstycrnk, 1.0, 10, 25, 0);
+			ChangeInv(player, 73, -1);
+
+			# set to crank...
+			ready = 1;
+
+			PlayVoice(indyactor, crnkplace, 1.0, 1);
+			TeleportThing(player, indyactor);
+			Sleep(0.5);
+
+			v_camspot = VectorAdd(VectorTransformToOrient(indyactor, '-0.15 -0.3 0.1'), GetThingPos(indyactor));	
+			SetCameraPosition(1, v_camspot);
+			SetCurrentCamera(curcam);
+			SetThingFlags(indyactor, 0x80000);
+			ClearThingFlags(player, 0x80000);
+
+			EndCutscene();
+			ClearActorFlags(player, 0x200000);
+
+			stopcall = 0;
+			return;
+		}
+
+		if (ready == 1)
+		{	
+			curcam = GetCurrentCamera();
+			MakeMeStop();
+			DeselectWeaponWait(player);
+			StartCutscene(1);
+			CopyPlayerHolsters(player, crankindy);
+			
+			v_ipyr = GetThingLVecPYR(player);
+			yaw = VectorY(v_ipyr);
+			if ((yaw > -50) || (yaw < -125))
+			{
+				call randlocationlines;
+				EndCutscene();
+				ClearActorFlags(player, 0x200000);
+				
+				stopcall = 0;
+				return;
+			}
+
+			SetThingFlags(player, 0x80000);
+			ClearThingFlags(crankindy, 0x80000);
+
+			SetCameraLookInterp(2, 0);
+			SetCameraPosInterp(2, 0);
+			SetCameraFocus(2, campos);
+			SetCameraSecondaryFocus(2, crank0);
+			SetCurrentCamera(2);
+			SetTimer(1.0);
+			PlayKey(crankindy, standbd, 4, 0x12, 1);
+			PlaySoundLocal(crankmove, 0.75, 0, 0x0, 0);
+			PlayKey(rstycrnk, turncrnk, 4, 0x12, 0);
+			PlayKey(crankindy, pull, 4, 0x12, 0);
+
+			SetCameraLookInterp(2, 1);
+			SetCameraInterpSpeed(2, 2.0);
+			Sleep(1.5);
+
+			# Pan to pulley...
+			SetCameraSecondaryFocus(2, pully0);
+			Sleep(2.5);
+			PlayKey(crankindy, turnbd, 4, 0x12, 1);
+			CopyOrientAndPos(crankindy, player);
+			SetCameraLookInterp(2, 0);
+			SetCameraFOV(90, 0, 0);
+			SetCameraInterpSpeed(2, 1.0);
+			
+			SetCameraPosition(1, GetThingPos(campos));
+			SetCurrentCamera(curCam);
+			ResetCameraFOV(0, 0.0);
+			SetThingFlags(crankindy, 0x80000);
+			ClearThingFlags(player, 0x80000);
+
+			EndCutscene();
+			ClearActorFlags(player, 0x200000);
+
+			stopcall = 0;
+			return;
+		}
+		else
+		{
+			if (talking == 1) return;
+			talking = 1;
+			MakeMeStop();
+			DeselectWeaponWait(player);
+			StartCutscene(0);
+			SetExtCamOffsetToThing(campos);
+			PlayKey(player, in_reach, 4, 0x12, 0);
+
+			if (GetCurItem(player) >= 1)
+			{
+				# player is using a wrong item
+				Sleep(0.5);
+				call randwrongitemlines;
+			}
+			else
+			{
+				# player isn't using anything
+				Sleep(0.5);
+				speak0 = PlayVoice(player, nocrnk, 1.0, 0);
+			}
+
+			WaitForSound(speak0);
+			RestoreExtCam();
+			EndCutscene();
+			ClearActorFlags(player, 0x200000);
+
+			talking = 0;
+			stopcall = 0;
+			return;
+		}
+	}
+
+	stopcall = 0;
+	return;
+
+# ..............................................................................
+
+arrived:	
+
+	SetCollideType(boom0, 3);
+	Print("Boom arrived");
+
+	return;
+
+# ..............................................................................
+
+timer:
+
+	if (open==1)
+	{
+		open = 0;
+		SetCollideType(boom0, 0);
+		Rotate(boom0, -50, 1, 4);
+		SendMessageEx(hints, user4, 1, 0, 0, 0);   	 #param0=1; solved.
+
+		return;
+	}
+
+	if (open==0)
+	{
+		open = 1;
+		SetCollideType(boom0, 0);
+		Rotate(boom0, 50, 1, 4);
+		SendMessageEx(hints, user4, 0, 0, 0, 0);   	 #param0=0; Unsolved.
+
+		return;
+	}
+
+	return;
+
+# ..............................................................................
+
+cameramove:
+
+	SetCameraLookInterp(2, 1);
+	SetCameraInterpSpeed(2, 2);
+	Sleep(0.1);
+#	SetCameraSecondaryFocus(2, lookpos);
+
+	return;
+
+# ..............................................................................
+
+randlocationlines:
+
+	Print("locationlines");
+	
+	while (l_newline == l_oldline)
+	{		
+		l_newline = RandBetween(0, 5);
+	}
+	l_oldline = l_newline;
+	
+	cursound = PlayVoice(player, in_wrongspot0[l_newline], 1, 0);
+
+	doplay = Randbetween(0, 2);
+	if ((doplay == 0) || (played == 0))
+	{
+		Print("playing key...");
+		PlayKey(player, in_bothup, 4, 0x12, 0);
+		played = 1;
+	}
+	WaitForSound(cursound);
+
+	return;
+
+# ..............................................................................
+
+randwrongitemlines:
+
+	while (wi_newline == wi_oldline)
+	{		
+		wi_newline = RandBetween(0, 19);
+		if (wi_newline < 15)
+		{	
+			wi_newline = RandBetween(0, 3); # ~1/5 chance for lines 0 thru 3
+		}
+		if (wi_newline == 19)
+		{
+			wi_newline = 6; # 1/20 chance for line 6 
+		}
+		if (wi_newline > 16)
+		{
+			wi_newline = 5; # 1/10 chance for line 5 
+		}
+		if (wi_newline > 14)
+		{
+			wi_newline = 4; # 1/10 chance for line 4
+		}
+	}
+	wi_oldline = wi_newline;	
+	speak0 = PlayVoice(player, in_itemline0[wi_newline], 1, 1);
+	return;
+
+end
+

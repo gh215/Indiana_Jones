@@ -1,0 +1,125 @@
+# Jones 3D Cog Script
+#
+# TEM_Spike.cog
+# 
+# Player is killed by shooting spike if he/she steps on face.
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message     startup
+    message     entered
+    message     touched
+    message     arrived
+    message     timer
+        
+    thing       player      local
+    thing       deadIndy    local
+    thing       spike0
+    
+    surface     hole0
+    
+    template    tpl_Indy=indy_sh_actor      local
+
+    keyframe    inDie=in_die_buckle.key     local
+    
+    sound       sndSpike=tem_temspikes_activate_c.wav       local
+    sound       sndDie=tem_temspikes_up_kill_c.wav          local
+    sound       sndprime=tem_tikikeymove_rotate_c.wav       local
+    
+    flex        shootSpeed=5.0
+    
+    int         deadMan=0       local
+    int         up=0            local
+    int         safe=0          local
+    int         victim	        local
+    
+end
+       
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+
+# ========================================================================================
+
+entered:
+
+    if((GetSenderRef() == hole0) && (up == 0))
+    {
+        up = 1;
+        
+        PlaySoundLocal(sndSpike, 1.0, 0.0, 0x0, 0);
+        MoveToFrame(spike0, 1, shootSpeed);
+        SetTimer(3);
+    }
+        
+    return;
+
+# ========================================================================================
+
+touched:
+
+    if((deadMan == 1) || (safe == 1)) return;
+
+    if((GetSenderRef() == spike0) && (safe == 0))
+    {
+        deadMan = 1;
+        
+        SetCollideType(spike0, 0);
+        
+        PlaySoundLocal(sndDie, 1.0, 0.0, 0x0, 0);
+        
+        # Disable and hide player
+        #SetActorFlags(player, 0x200000);
+        SetThingFlags(player, 0x10);
+        
+        deadIndy = CreateThing(tpl_Indy, player);
+        CaptureThing(deadIndy);
+        
+        # Show actor Indy and play Keyframe
+        ClearThingFlags(deadIndy, 0x80000);
+        PlayKey(deadIndy, inDie, 4, 0x14, 0);
+        
+        DamageThing(player, 1000.0, 0x1, victim);
+    }
+    
+    return;
+
+# ========================================================================================
+
+arrived:
+
+    if((up == 1) && (deadMan == 0))
+    {
+        safe = 1;
+    }
+    
+    return;
+    
+# ========================================================================================
+
+timer:
+
+    MoveToFrame(spike0, 0, 1);
+    PlaySoundThing(sndprime, spike0, 1, 1, 5, 0x80);
+    WaitForStop(spike0);
+    safe = 0;
+    up = 0;
+    
+return;
+
+
+# ========================================================================================
+    
+
+end
+

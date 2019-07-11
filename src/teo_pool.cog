@@ -1,0 +1,199 @@
+# Jones 3D Cog Script
+#
+# TEO_Pool.cog
+#
+# Pool door puzzle in Teotihuacan
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate                             
+                                                     
+    thing       keypos                               
+    template    keytemplate
+    sound       keysound
+    sound       gurgling
+    sound       columnrise=mus_teo_statuerise.wav    local
+    
+    thing       indyactor                   local
+    thing       indyactorkey    
+    template    actortemplate
+    thing       actorpos
+    keyframe    in_placekey=in_activate_medium.key      local
+    keyframe	in_activate=in_uw_pullswitch.key	    local                             
+                                                     
+    thing       wallSwitch                  local        
+    thing       keyhole                              
+    thing       fishSwitch                           
+    thing       stoneBar0                            
+    thing       stoneBar1                            
+                                                     
+    thing       stonePlug0                           
+    thing       stonePlug1                           
+    thing       stonePlug2
+    
+    thing       woodColumn                           
+                                                     
+    thing       keycamera       
+    thing       actorcam
+    thing       plugCam
+    thing       stoneBarCam
+    thing       woodColumnCam
+    thing       tgt_Col
+    thing       player                      local                
+                                                     
+    int         flag=0                      local                
+    int         keycheck=0                  local                
+    int         stonebarchan                local                
+    int         moveSpeed=1 
+    int         wepnum=1                    local
+    int         lastrand=-1                 local
+    int         currand=0                   local
+    
+    flex        camTime                              
+    flex        camSpeed 
+    
+    sound       indylineb0=inxj058.wav      local
+    sound       indylineb1=inxj059.wav      local
+    sound       indylineb2=inxj060.wav      local
+    sound       indylineb3=inxj061.wav      local
+    sound       indylineb4=inxj090.wav      local
+    sound       indylineb5=inxj095.wav      local                            
+    
+end                                              
+
+code
+
+# ........................................................................................
+startup:
+
+    player = GetLocalPlayerThing();    
+    
+return;                            
+
+# ........................................................................................        
+activate:
+
+    if ((GetSenderRef() == keyhole) && (GetCurItem(player) == 55) &&         
+        (flag == 0))                                                         
+    {
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        SetThingFlags(player, 0x80000);
+        flag = 1;
+        SetCameraFocus(0, keycamera);                                                          
+        SetCurrentCamera(0);
+        CopyPlayerHolsters(player, indyactorkey);
+        ClearThingFlags(indyactorkey, 0x80000);
+        PlayKey(indyactorkey, in_placekey, 4, 0x12, 0);
+        sleep(0.25);                                                                    
+        wallSwitch = CreateThing(keytemplate, keypos);                          
+        CaptureThing(wallSwitch);                                            
+        ChangeInv(player, 55, -1);
+        MoveToFrame(wallSwitch, 1, 1);
+        MoveToFrame(keypos, 1, 1);
+        WaitForStop(wallSwitch);                                     
+        PlaySoundLocal(keysound, 1, 0, 0, 1);
+        sleep(1);
+        MoveToFrame(stoneBar0, 1, moveSpeed);                                             
+        MoveToFrame(stoneBar1, 1, moveSpeed);   
+        SetCameraFocus(0, stoneBarCam);
+        SetCurrentCamera(0);                                                       
+        MoveToFrame(stoneBarCam, 1, camSpeed);
+        WaitForStop(stoneBarCam);
+        DestroyThing(indyactorkey);
+        sleep(1);
+        SetCurrentCamera(1);
+        ClearActorFlags(player, 0x200000);
+        ClearThingFlags(player, 0x80000);
+        EndCutscene();
+    }
+    
+    if ((GetSenderRef() == keyhole) &&
+        ((GetCurItem(player) != 55) || (GetCurWeapon(player) != 0)) &&
+        (flag == 0))
+    {
+        StopThing(player);
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        currand = RandBetween(0, 5);
+        While (lastrand == currand)
+        {
+            currand = RandBetween(0, 5);
+        }
+        PlayVoice(player, indylineb0[currand], 1, 1);
+        lastrand = currand;
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }                                                                        
+                                                                             
+    if ((GetSenderRef() == fishSwitch) && (flag == 1) && (GetCurItem(player) == 0))                                  
+                                                                
+    {
+        While(wepnum !=0)
+        {
+            wepnum = GetCurWeapon(player);
+            DeselectWeaponWait(player);
+            DeselectWeapon(player);
+        }
+        //print("hit underwater switch");
+        flag=2;
+        StartCutscene(1);   
+        SetActorFlags(player, 0x200000);                        //shut off controls                                                                        
+        SetThingFlags(player, 0x80000);                         //shut off vis
+        indyactor = CreateThing(actortemplate, actorpos);       //create stuntman
+        CaptureThing(indyactor);                                //
+	    SetCameraFocus(0, actorcam);                            //camera shot of indy pulling switch
+	    SetCurrentCamera(0);
+	    ClearThingFlags(indyactor, 0x80000);
+	    //SetThingTimer(fishSwitch, 1.5);
+        CopyPlayerHolsters(player, indyactor);
+	    PlayKey(indyactor, in_activate, 4, 0x12, 0);
+        sleep(1);
+        MoveToFrame(fishSwitch, 1, 0.35);
+        sleep(1);                                               
+        SetCameraFocus(0, plugCam);
+        SetCurrentCamera(0);
+        SetCameraFOV(100, 0, 0);
+        Sleep(0.8);                                                                              
+        RotatePivot(plugCam, 1, 4);                             //spin camera around column                          
+        MoveToFrame(stonePlug0, 1, moveSpeed);                  //move stone plugs                          
+        sleep(1.5);                                                                       
+        MoveToFrame(stonePlug1, 1, moveSpeed);                                            
+        sleep(1.5);                                                                       
+        MoveToFrame(stonePlug2, 1, moveSpeed);                                            
+        sleep(2.5);
+        //play gurgling noise
+        PlaySoundThing(gurgling, woodColumn, 1, 5, 10, 0x80);
+        PlaySoundLocal(columnrise, 1, 0, 0, 0);
+        //cut to column camera
+        SetCameraFocus(2, woodColumnCam);
+        SetCameraSecondaryFocus(2, tgt_Col);
+        SetCurrentCamera(2);
+        SetCameraFOV(100, 0, 0);
+        MoveToFrame(woodColumn, 1, 1);
+        MoveToFrame(tgt_Col, 1, 1);
+        WaitForStop(woodColumn);
+        Sleep(1);
+	    SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0);                                 //reset camera to player
+	    SetThingFlags(indyactor, 0x80000);                      //shut off vis on stuntman
+        DestroyThing(indyactor);                                //destroy the stuntman
+	    ClearThingFlags(player, 0x80000);                       //turn on player vis
+        ClearActorFlags(player, 0x200000);                      //return control to player
+        wepnum = 1;
+        EndCutScene();                                                           
+    }
+    
+    return;                                                                  
+        
+# ........................................................................................
+                
+end
+
+

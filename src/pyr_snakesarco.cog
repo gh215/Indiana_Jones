@@ -1,0 +1,99 @@
+# Jones 3D Cog Script
+#
+# pyr_snakesarco.cog
+#
+# Snake sarcophagus under pyramid 1
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ==============================================================================
+
+symbols
+message		startup
+message		activated
+
+# world things
+thing	sarcophagus		nolink
+thing	button
+thing	player			local
+thing	skeleton
+
+# cameras and lookthings
+thing	sarcocam	nolink
+thing	sarcolook	nolink
+
+# surfaces
+surface	snakeblock
+surface indyblock
+
+# animations
+keyframe	sarcopen=pyr_srcfgs_snake.key	local
+
+# sounds
+sound	opensound2=pyr_sarc_open.wav	local
+
+# subroutines
+flex		opensarc=0.0	local
+flex		pushbutton=0.0	local
+end
+
+
+code
+startup:
+	sleep(.01);
+	
+	# light things up
+	SetThingLight(skeleton, '25 25 100', .001, .01);
+	SetThingLight(button, '25 25 100', .001, .01);
+
+	# snakes need to get through this
+	SetCollideType(sarcophagus, 0);
+
+	# keep snakes at bay, and Indy out of the crawlspace
+	ClearAdjoinFlags(snakeblock, 0x2);
+	SetAdjoinFlags(indyblock, 0x10);
+	return;
+
+activated:
+	if (GetCurFrame(button) == 1) return;
+	
+	# freeze indy
+	player = GetLocalPlayerThing();
+	
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+
+	StartCutscene(0);
+	
+	call pushbutton;
+	call opensarc;
+
+	# alter collisions so snakes and Indy can get through
+	SetCollideType(button, 0);
+	SetAdjoinFlags(snakeblock, 0x2);
+	ClearAdjoinFlags(indyblock, 0x10);
+	
+	# unfreeze indy
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+
+	return;
+		
+pushbutton:
+#	SetCameraInterpSpeed(1, .2);
+	SetExtCamOffsetToThing(sarcocam);
+	PlayMode(player, 60, 0);
+	Sleep(.25);
+	MoveToFrame(button, 1, 2);
+	return;
+
+opensarc:
+	sleep(.7);
+	PlayKey(sarcophagus, sarcopen, 4, 0x14, 0);
+	PlaySoundThing(opensound2, sarcophagus, 1, -1, -1, 0);
+	Sleep(1);
+	RestoreExtCam();
+	return;
+	
+end

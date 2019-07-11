@@ -1,0 +1,121 @@
+# Jones 3D Cog Script
+#
+# BAB_introsceme.cog
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     user0
+   
+    thing       player                              local
+    thing       indyactor
+    thing       actor_sight0
+    cog         targetcog
+    
+    thing       spinpos
+    
+    thing       cam0
+    thing       cam0_tgt0
+    thing       cam0_tgt1
+    
+    surface     tripsurf
+    
+    keyframe    inStand2=0in_stand2.key             local
+    keyframe    in_stand1_2=0in_stand1_bd_2.key      local
+    keyframe    in_leanin=0in_leanin_2_2.key        local
+    
+    sound       indyline0=bb01j02.wav               local
+    sound       indyline1=bb03j02.wav               local
+    sound       redmusic=mus_gen_russsubdued1.wav   local
+    
+    int         checkit=0                           local
+    int         in_track0                           local
+    int         themechan=0                         local
+    int         jeepchan=0                          local
+    
+end
+
+code
+
+# ========================================================================================
+startup:
+	player = GetLocalPlayerThing();
+    return;
+        
+# ========================================================================================
+user0:
+
+    checkit = 1;
+    
+return;
+
+# ========================================================================================
+entered:
+    if ((checkit == 0) && (GetSenderRef() == tripsurf))
+    {
+        checkit=1;
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        PlayMode(player, 1, 0);
+        TeleportThing(indyactor, player);
+        
+        //cut to valley cam
+        SetCameraFocus(2, cam0);
+        SetCameraSecondaryFocus(2, cam0_tgt0);
+        SetCurrentCamera(2);
+        SetCameraFOV(50, 0, 0);
+        PlaySoundLocal(redmusic, 0.75, 0, 0, 0);
+        
+        //start the scene
+        CopyPlayerHolsters(player, indyactor);
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(indyactor, 0x80000);
+        AISetCutsceneMode(indyactor);
+        AISetMoveSpeed(indyactor, 1);
+        AISetLookThing(indyactor, actor_sight0);
+        AISetMoveFrame(indyactor, 1);
+        AIWaitForStop(indyactor);
+        
+        //start to move Camera in
+        SetCameraLookInterp(2, 1);
+        SetCameraInterpSpeed(2, 4);
+        Sleep(0.01);
+        
+        //play keys and voice files
+        in_track0 = PlayKey(indyactor, instand2, 2, 0x00, 0);
+        PlayKey(indyactor, in_stand1_2, 4, 0x12, 0);
+        PlayVoice(indyactor, indyline0, 1, 1);
+        SetCameraSecondaryFocus(2, cam0_tgt1);
+        SetCameraFOV(90, 1, 1);
+        PlayVoice(indyactor, indyline1, 1, 1);
+        StopKey(indyactor, in_track0, 0.75);
+        Sleep(2);
+        
+        //Restore Everything
+        CopyOrientAndPos(indyactor, player);
+        SetCameraLookInterp(2, 0);
+        SetCameraPosInterp(2, 0);
+        SetCameraInterpSpeed(2, 0);
+        ClearThingFlags(player, 0x80000);
+        SetThingFlags(indyactor, 0x80000);
+        Sleep(1);
+        SetCameraPosition(1, GetThingPos(spinpos));
+        SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0);
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+        SendMessage(targetcog, user4);
+    }
+        
+return;
+        
+#----------------------------------------------------------------------------------------
+
+end

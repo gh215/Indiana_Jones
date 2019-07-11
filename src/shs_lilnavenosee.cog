@@ -1,0 +1,76 @@
+# Jones 3D Cog Script
+#
+# SHS_LilNaveNoSee.cog   Isolate Lil Nave sectors for framerate.
+# 
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+
+symbols
+	
+    message	startup
+    message crossed
+    
+   	surface FromBigNaveOn	    linkid=1	    
+    surface ToBigNaveOff	    linkid=2
+  
+
+    sector  WindowSec0
+	sector  WindowSec1
+	sector  WindowSec2
+	sector  WindowSec3
+	sector	BigNaveSec        
+    
+	int 	player		local
+
+    
+end
+
+code
+
+startup:
+	
+	player=GetLocalPlayerThing();
+	SetSectorAdjoins(WindowSec0, 0);
+    SetSectorAdjoins(WindowSec1, 0);
+    SetSectorAdjoins(WindowSec2, 0);
+	SetSectorAdjoins(WindowSec3, 0);
+  	SetSectorAdjoins(BigNaveSec, 0);	 # turn off
+	
+	return;
+
+crossed:
+	
+
+	# make sure Indy player is sending message
+	If (GetSourceRef() != player) return;
+
+	# draw sector
+	If (GetSenderId() == 1 )
+    {
+        Print("draw sector");
+        SetSectorAdjoins(WindowSec0, 1);
+        SetSectorAdjoins(WindowSec1, 1);
+        SetSectorAdjoins(WindowSec2, 1);
+        SetSectorAdjoins(WindowSec3, 1);
+		SetSectorAdjoins(BigNaveSec, 1);
+	}    
+    
+	# don't draw sector 
+	If ((GetSenderId() == 2))
+    {
+        Print("draw off");
+		SetSectorAdjoins(WindowSec0, 0);
+        SetSectorAdjoins(WindowSec1, 0);
+        SetSectorAdjoins(WindowSec2, 0);
+        SetSectorAdjoins(WindowSec3, 0);
+	    SetSectorAdjoins(BigNaveSec, 0);	   
+	}
+	return;
+	
+
+
+end
+
+

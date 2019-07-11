@@ -1,0 +1,77 @@
+# Jones 3D Cog Script
+#
+# SOL_CrateNoPush.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered         
+    message     exited
+    
+    thing       crate0          linkid=3
+        
+    surface     lockoutsurf
+    
+    surface     pushsurf        linkid=4    mask=0x481
+    surface     blocksurf       linkid=4    mask=0x481
+    
+    thing       player          local
+        
+end
+
+# ========================================================================================
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    SetAdjoinFlags(lockoutsurf, 0x10); //no move
+    ClearThingFlags(crate0, 0x40000000);
+    
+return;
+      
+# ========================================================================================
+entered:
+
+    if ((GetSenderRef() == pushsurf) && (GetSourceRef() == crate0))
+    {
+        //print("block has entered pushsurf");
+        ClearAdjoinFlags(lockoutsurf, 0x10);
+    }
+    
+    if ((GetSenderRef() == blocksurf) && (GetSourceRef() == crate0))
+    {
+        //print("block has entered blocksurf");
+        SetAdjoinFlags(lockoutsurf, 0x10);
+    }
+
+    if ((GetSenderID() == 4) && (GetSourceRef() == player))
+    {
+        //print("player has entered a surf");
+        SetThingFlags(crate0, 0x40000000);      //make moveable
+        ClearThingFlags(crate0, 0x00000080);
+    }        
+    
+return;
+
+# ========================================================================================
+exited:
+
+    if ((GetSenderID() == 4) && (GetSourceRef() == player))
+    {
+        //print("player has entered a surf");
+        ClearThingFlags(crate0, 0x40000000);
+        SetThingFlags(crate0, 0x00000080);
+    }
+    
+return;
+
+# ========================================================================================
+
+end
+

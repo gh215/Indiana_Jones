@@ -1,0 +1,118 @@
+# Jones 3D Cog Script
+#
+# SOL_CtrlRmWin.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     exited
+    message     damaged
+    
+    thing       t_Sound
+    thing       win_Targ        mask=0x408
+    
+    sector      sec_WinTarg0    linkID=1
+    sector      sec_WinTarg1    linkID=1
+    
+    surface     surf_Win1_0     mask=0x408
+    surface     surf_Win1_1     mask=0x408
+    
+    surface     surf_Win2_0
+    surface     surf_Win2_1
+    
+    material    mat1=sol_4cntrlrm_window_b.mat      local   # opaque big window
+    material    mat2=sol_4_wall_grate_b.mat         local   # small opaque window
+    material    mat3=sol_4cntrlrm_window_2.mat      local   # clear broken big window
+    
+    sound		snd_Shatter=shs_glassbreak.wav      local
+    
+    int         breakable=0     local
+    int         broken=0        local
+    int         canSee=0        local
+    int         win1=2          local
+    int         win2=2          local
+    int         i=0             local
+    int         x=0             local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetThingFlags(win_Targ, 0x80000);
+
+    if(GetPerformanceLevel() < 2)
+    {
+        for(i=0; i<win1; i=i+1)
+        {
+            SetSurfaceMat(surf_Win1_0[i], mat1);
+            ClearAdjoinFlags(surf_Win1_0[i], 1);     # no see
+        }
+        
+        for(x=0; x<win2; x=x+1)
+        {
+            SetSurfaceMat(surf_Win2_0[x], mat2);
+            ClearAdjoinFlags(surf_Win2_0[x], 1);     # no see
+        }
+    }
+    
+    else breakable = 1;
+
+    return;
+        
+# ========================================================================================
+
+entered:
+
+    if((GetSenderID() == 1) && (canSee == 0) && (breakable == 1) && (broken == 0))
+    {
+        canSee = 1;
+        ClearThingFlags(win_Targ, 0x80000);
+    }
+
+    return;
+
+# ========================================================================================
+
+exited:
+
+    if((GetSenderID() == 1) && (canSee == 1) && (breakable == 1) && (broken == 0))
+    {
+        canSee = 0;
+        SetThingFlags(win_Targ, 0x80000);
+    }
+
+    return;
+
+# ========================================================================================
+
+damaged:
+
+    if(breakable == 1)
+    {
+        for(i=0; i<win1; i=i+1)
+        {
+            broken = 1;
+            PlaySoundThing(snd_Shatter, t_Sound, 1.0, 20, 80, 0x0040);
+            SetSurfaceMat(surf_Win1_0[i], mat3);
+            SetAdjoinFlags(surf_Win1_0[i], 2);     # move
+            SetAdjoinFlags(surf_Win1_0[i], 0x10);  # no player move
+            if(canSee == 1) DestroyThing(win_Targ);
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

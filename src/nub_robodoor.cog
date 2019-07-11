@@ -1,0 +1,57 @@
+# Jones 3D Cog Script
+#
+# nub_RoboDoor.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+message	startup
+message	damaged
+
+thing	button0		mask=0x8
+thing	robot
+
+surface	adjoin0
+
+thing	player		local
+
+int		done=0		local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+StartCutscene(1);
+EndCutscene();
+player = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+damaged:
+
+if ((GetSenderRef() == button0) && (GetParam(1) == 0x4000))
+	{
+		if (done == 1) return;
+		done = 1;
+		StopThing(player);
+		SetActorFlags(player, 0x200000);
+		//PlayMode(player, 60, 0);
+		SetAdjoinFlags(adjoin0, 2);
+		print("Looks like that charged the door...");
+		Sleep(1.0);
+		print("I guess I can open it now...");
+		ClearActorFlags(player, 0x200000);
+		SendMessageEX(GetThingClassCog(robot), user0, robot, 0, 0, 0);
+    }
+
+return;
+
+# ........................................................................................
+end
+

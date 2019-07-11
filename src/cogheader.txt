@@ -1,0 +1,13 @@
+# Jones 3D Cog Script
+#
+# cogname.cog
+#
+# Cog description
+#
+# [XX]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+# -------------------------------------------------------------------

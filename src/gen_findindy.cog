@@ -1,0 +1,53 @@
+# Jones 3D Cog Script
+#
+# gen_FindIndy.cog
+#
+# Periodically prints Indy's position to the console.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message		startup
+message		pulse
+
+thing      	indy				local
+
+flex		interval=5.0
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	indy = GetLocalPlayerThing();
+	SetPulse(interval);
+
+	return;
+
+# ........................................................................................
+
+pulse:
+
+	Print("Indy's XYZ position:");
+	PrintVector(GetThingPos(indy));
+    Print("Indy's look vector PYR:");
+	PrintVector(GetThingLVecPYR(indy));
+    Print("Indy's head PYR:");
+    PrintVector(GetActorHeadPYR(indy));
+
+    return;
+
+end
+
+
+
+
+

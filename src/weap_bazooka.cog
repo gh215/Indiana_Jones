@@ -1,0 +1,296 @@
+# Jones 3D Cog Script
+#
+# weap_Bazooka.cog
+#
+# This COG controls the Bazooka.  Yeah, cool.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		activated
+message		deactivated
+message		selected
+message		deselected
+message		removed
+message		callback
+message		timer
+
+keyframe	fly=gen_chicken.key				local	# Autoloaded
+
+material	matBaz=rckt_a4bzoka_fire.mat	local	# Autoloaded
+material	matRkt=gen_a4sfx_rokt_flame.mat	local	# Autoloaded
+
+sound		bang=gen_bazooka_fire.wav		local	# Autoloaded
+sound		pull=gen_bazooka_pull.wav		local	# Autoloaded
+sound		put=gen_bazooka_put.wav			local	# Autoloaded
+sound		cluck=mus_guybrush.wav			local	# Autoloaded
+sound		rktFire=gen_rocket.wav			local	# Autoloaded
+sound		rktLoop=gen_rocket_loop.wav		local	# Autoloaded
+
+template	projectile=+bazooka				local	# Autoloaded
+template	chicken=+bazooka_chicken		local	# Autoloaded
+template	exhaust=+bazooka_exhaust		local	# Autoloaded
+template	smoke=+bazooka_smoke			local	# Autoloaded
+template	rocketFlame=+baz_spr_rocket		local	# Autoloaded
+
+thing		player							local
+thing		rocket=-1						local
+thing		flame=-1						local
+thing		sender							local
+thing		curFlame						local
+
+flex		aimFOV=15.0						local
+flex		aimMax=3.0						local
+flex		fireWait=1.65					local
+flex		smokeTime=0.1					local
+flex		newTime=0.0						local
+
+int			handNode						local
+int			holsterMesh						local
+int			weaponNum=10					local
+int			numRockets=0					local
+int			flameTrack=-1					local
+int			callNum							local
+
+int			bGuybrush=0						local
+
+vector		firePos							local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	handNode = GetNodeByName(player, "inrhand");
+	holsterMesh = GetMeshByName(player, "intorso");
+	bGuybrush = 0;
+
+	if (IsThingModelName(player, "gen_in_shirt.3do"))
+	{
+		LoadHolsterModel(weaponNum, "torso_shirt_bazooka.3do");
+	}
+	else if (IsThingModelName(player, "gen_in.3do"))
+	{
+		LoadHolsterModel(weaponNum, "torso_in_bazooka.3do");
+	}
+	else
+	{
+		LoadHolsterModel(weaponNum, "torso_guy_bazooka.3do");
+		bGuybrush = 1;
+	}
+
+	if (GetLastRifle(player) == weaponNum)
+	{
+		SetHolsterModel(player, weaponNum, holsterMesh);
+	}
+    
+	if (GetSenderRef() == 9999) # Call is from Guybrush cheat...
+	{
+		if (GetCurWeapon(player) == weaponNum)
+		{
+			ResetHolsterModel(player, 3);
+		}
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+fire:
+
+	# Make sure Indy's not out of ammo
+	if (GetInv(player, weaponNum) < 1)
+	{
+		PlayVoiceMode(player, 123);
+		SelectWeapon(player, 3);
+		return;
+	}
+
+	# Fire away...
+	firePos = GetThingJointPos(player, handNode);
+	
+	if (bGuybrush)
+	{
+		# Chicken away...
+		rocket = FireProjectile(player, chicken, bang, 65, firePos, '-10.5 0.0 0.0', 1.0, 0x120, aimFOV, aimMax);
+        fireWait = 3.0;
+
+		# Make some exhaust
+		MaterialAnim(matBaz, 32, 0x8);
+		AttachThingToThingMesh(player, exhaust, GetMeshByName(player, "inrhand"));
+
+		# Animate el pollo
+		PlayKey(rocket, fly, 2, 0x10, 0);
+
+		# Cluck cluck
+		PlaySoundThing(cluck, rocket, 1.0, -1, -1, 0x481);
+	}
+	else
+	{
+		rocket = FireProjectile(player, projectile, bang, 65, firePos, '-10.5 0.0 0.0', 1.0, 0x120, aimFOV, aimMax);
+        fireWait = 1.65;
+        
+		# Make some exhaust
+		MaterialAnim(matBaz, 32, 0x8);
+		AttachThingToThingMesh(player, exhaust, GetMeshByName(player, "inrhand"));
+
+		# Add some flame to the rocket
+		flame = AttachThingToThingMesh(rocket, rocketFlame, 0);
+		flameTrack = MaterialAnim(matRkt, 16, 0x1);
+                                  
+		# Store flame index
+		SetThingUserData(rocket, flame);
+
+		# Play the rocket's sound
+		PlaySoundThing(rktFire, player, 1.0, 5, 20, 0x880);
+		PlaySoundThing(rktLoop, rocket, 1.0, 1, 90, 0x881);
+	
+		# Start the smoke trail
+		SetThingTimer(rocket, smokeTime);
+		CreateThing(smoke, rocket);
+
+		# Store the smoke timer
+		SetThingUserData(flame, smokeTime);
+	}
+
+	CaptureThing(rocket);
+    numRockets = numRockets + 1;
+
+	ChangeInv(player, weaponNum, -1.0);
+	SetFireWait(player, fireWait);
+
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+	ActivateWeapon(player, 0.01);
+	return;
+
+# -------------------------------------------------------------------
+
+deactivated:
+
+	DeactivateWeapon(player);
+	return;
+
+# -------------------------------------------------------------------
+
+selected:
+
+	SetAimWait(player, 0);
+	SetMountWait(player, 1.67);
+
+	SetArmedMode(player, 5);
+	SetCurWeapon(player, weaponNum);
+	SetThingFireOffset(player, '-0.003 0.065 0.01'); 
+
+	CaptureThing(player);
+	PlayMode(player, 62, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deselected:
+
+	SetMountWait(player, 1.67);
+
+	StopMode(player, 62, 0);
+
+	CaptureThing(player);
+	PlayMode(player, 64, 0);
+
+	SetArmedMode(player, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+removed:
+
+	# Which rocket?
+	sender = GetSenderRef();
+
+	# Make sure this ain't no chicken
+	if (!IsThingModelName(sender, "gen_rckt_bzooka.3do"))
+	{
+		if (IsThingModelName(sender, "gen_chicken.3do"))
+		{
+			numRockets = numRockets - 1;
+		}
+		return;
+	}
+
+	# Kill the flame
+	DestroyThing(GetThingUserData(sender));
+	
+	numRockets = numRockets - 1;
+    
+	# If there are no more rockets, stop flame anim
+	if (numRockets < 1)
+    {
+		if (flameTrack != -1)
+		{
+			StopAnim(flameTrack);
+			flameTrack = -1;
+		}
+	}
+    
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	callNum = GetParam(1);
+	ReleaseThing(player);
+
+	if (callNum == 28)
+	{
+		PlaySoundThing(pull, player, 1, -1, -1, 0x880);
+		ResetHolsterModel(player, 3);
+		SetWeaponModel(player, weaponNum);
+	}
+	else if (callNum == 29)
+	{
+		PlaySoundThing(put, player, 1, -1, -1, 0x880);
+		SetHolsterModel(player, weaponNum, holsterMesh);
+		ResetWeaponModel(player);
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+timer:
+
+	# Which rocket?
+	sender = GetSenderRef();
+
+	# Which flame?
+	curFlame = GetThingUserData(sender);
+
+	# Lengthen the smoke time and store it
+    newTime = GetThingUserData(curFlame) + 0.008;
+    SetThingUserData(curFlame, newTime);
+
+	# Smoke...
+	CreateThing(smoke, sender);
+	SetThingTimer(rocket, newTime);
+
+	return;
+
+end

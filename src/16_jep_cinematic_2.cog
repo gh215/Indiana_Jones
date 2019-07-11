@@ -1,0 +1,575 @@
+# Jones 3D Cog Script
+#
+# 16_JEP_Cinematic_2.cog
+#
+# Sophia rescues Indy by helicopter
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		entered
+	message		pulse
+	
+# .................................. KEYFRAMES .................................
+	
+	keyframe	in_climbincop=0in_climbinheli.key		local
+	keyframe	in_grabladder=0ij_grab_ladder.key		local
+	keyframe	in_hangladder=0in_ladder_hang.key		local
+	keyframe	in_sitcop=0in_lookfwd_sit.key			local
+	keyframe	in_leftfwd=0in_lookL_bd_fwd_sit.key		local
+	keyframe	in_lookleft=0in_lookL_sit.key			local
+	keyframe	in_fwdleft=0in_lookfwd_bd_L_sit.key		local
+
+	keyframe	so_idlecop=0so_stand6.key				local
+	keyframe	so_sitcop=0so_lookfwd_sit.key			local
+	keyframe	so_fwdright=0so_lookfwd_bd_R_sit.key	local
+	keyframe	so_lookright=0so_lookR_sit.key			local
+	keyframe	so_rightfwd=0so_lookR_bd_fwd_sit.key	local
+	keyframe	so_leftup=0so_lefthand_sit.key			local
+
+	keyframe	chopFly=cyn_chopr_fly.key				local
+		
+# .................................. MODELS ....................................
+		
+	model		chop_blad=cyn_chopr_blade.3do			local
+	model		chop_rot=cyn_chopr_rotor.3do			local
+
+	model  		mod_so_Helmet=head_so_helmet.3do		local 
+			
+# .................................. SOUNDS ....................................
+    
+	sound		so_worried=Jp02s01.wav					local
+	sound		in_metoo=Jp02j02.wav					local
+	sound		so_voltoteo=Jp02s03.wav					local
+	sound		in_mexico=Jp02j04.wav					local
+	sound		so_builtbab=Jp02s05.wav					local
+	sound		in_azerim=Jp02j06.wav					local
+	sound		so_getjump=Jp02s07.wav					local
+	sound		helirun1=helicopter_rev1.wav			local
+	sound		helirun2=helicopter_rev2.wav			local
+
+	sound		music0=mus_jep_indyrescue1.wav			local
+	sound		music1=mus_jep_indyrescue2.wav			local
+
+	
+# ............................... ACTOR THINGS .................................
+
+	thing		player									local
+	thing		indy 	    							linkid=0
+	thing		sophia
+	thing		copter
+	thing		jeepactor
+#	thing		jeep
+	thing		ladder
+	thing		indyladder
+ 	
+# .............................. OBJECT THINGS .................................
+
+	thing		tree1									nolink
+	thing		tree2									nolink
+	thing		tree3									nolink
+	thing		tree4									nolink
+	thing		tree5									nolink
+	thing		tree6									nolink
+	thing		tree7									nolink
+	thing		tree8									nolink
+	thing		tree9									nolink
+	thing		tree10									nolink
+
+	thing		rock1									nolink
+	thing		rock2									nolink
+	thing		rock3									nolink
+	thing		rock4									nolink
+	thing		rock5									nolink
+	thing		rock6									nolink
+	thing		rock7									nolink
+	thing		rock8									nolink
+
+# .............................. CAMERA THINGS .................................
+
+	thing		cam_1									nolink
+	thing		cam_2									nolink
+	thing		cam_3									nolink
+	thing		cam_4									nolink
+	thing		cam_5									nolink
+	thing		cam_6									nolink
+	thing		cam_7									nolink
+	
+	thing		ct_1									nolink
+	thing		ct_2									nolink
+	thing		ct_3 									nolink
+	thing		ct_4a									nolink
+	thing		ct_4b									nolink
+	thing		ct_5									nolink
+	thing		ct_6									nolink
+	thing		ct_7									nolink
+	thing		fader						# gen_fadeplat thing
+
+
+# .............................. TARGET THINGS .................................
+
+	thing		so_mk_1									nolink
+
+	thing		jep_mk_1								nolink
+	thing		jep_mk_2								nolink
+	
+	thing		cop_mk_1								nolink
+	thing		cop_mk_2								nolink
+	thing		cop_mk_3								nolink
+	thing		cop_mk_4								nolink
+	thing		cop_mk_5								nolink
+
+	thing		ldr_mk_1								nolink
+
+# ........................ OTHER ENGINE REFERENCES .............................
+			
+	sector		trigger
+
+	surface		invisiface								mask=0x404
+	surface		cloudface1
+	surface		cloudface2
+	
+# ............................... VARIABLES ....................................
+	
+	vector		posOffset								local
+	vector		angOffset								local
+
+#	flex		in_rotRate								local
+	flex		cop_rotRate								local
+
+	int			cutSceneState=0							local
+
+	int			in_keyTrack1							local
+	int			so_keyTrack1							local
+	int			cop_keyTrack1							local
+		
+	int			curSound								local
+	int			coptersound1							local
+	int			coptersound2							local
+
+#	int			curCam									local
+	int			vibe									local
+
+# .............................. SUBROUTINES ...................................
+	
+	flex		prep_jeep								local
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+
+	# Prep actors...
+    SetThingFlags(indy, 0x80000);
+	SetThingFlags(copter, 0x80000);
+	cop_rotRate = GetThingMaxRotVel(copter);
+
+	# Prep the set...
+	SetThingFlags(jeepactor, 0x80000);
+	SetThingFlags(ladder, 0x80000);
+	SetFaceGeoMode(cloudface1, 0x0);
+	SetFaceGeoMode(cloudface2, 0x0);
+
+	SetThingAlpha(fader, 0.0);
+
+	return;
+
+# ..............................................................................
+
+entered:
+
+	if (GetSenderRef() == invisiface)
+	{
+		# Drop jeep off cliff...
+		# (kill mine car track as it enters off-edge section) 
+		Sleep(0.1);
+		SetAdjoinFlags(invisiface, 0x2); # makes this adjoin traversable
+		DetachThing(GetLocalPlayerThing());
+	}	
+		if (cutSceneState > 0)
+	{
+		return;
+	}
+	if(GetSenderRef() == trigger)
+	{
+	# Prep...
+		call prep_jeep;
+		player = GetLocalPlayerThing(); # now that he's in the jeep
+		cutSceneState = 1;
+		StartCutScene(1);
+		SetCameraLookInterp(2, 0); # no
+		SetCameraPosInterp(2, 0);
+
+	# Cut to down shot of Indy in the jeep...
+		SetActorFlags(player, 0x200000);
+		SetThingFlags(player, 0x80000);
+		StopThing(player);
+CopyPlayerHolsters(player, jeepactor);
+		ClearThingFlags(jeepactor, 0x80000);
+		AttachThingToThing(ct_1, jeepactor);
+		SetCameraFocus(2, cam_1);
+		SetCameraSecondaryFocus(2, ct_1);
+		SetCurrentCamera(2);
+		SetCameraFOV(30, 0, 0.0); # was 45
+		
+	# Move that jeep...
+		SetThingThrust(jeepactor, '0.0 2.0 0.0');
+		Sleep(0.01);
+		SetCameraFOV(90, 1, 5.5);
+
+	# Camera tracks jeep's progress...
+		MoveToFrame(ct_1, 1, 0.2);
+		MoveToFrame(cam_1, 1, 6.6);
+		Sleep(0.8);
+
+	# Copter appears...
+		ClearThingFlags(copter, 0x80000);
+		ClearThingFlags(ladder, 0x80000);	
+		ClearThingFlags(sophia, 0x80000);
+		SetThingMesh(copter, 3, chop_blad, 0); # main rotor
+		SetThingMesh(copter, 1, chop_rot, 0); # tail rotor
+		cop_keyTrack1 = PlayKey(copter, chopFly, 4, 0x10, 0);
+		AttachThingToThingEx(ladder, copter, 0x000C);
+		### ldr_keyTrack1 = PlayKey(ladder, lad_flap, 4, 0x10, 0);
+		
+	# Swap in Sophia's goggle head
+		SetThingMesh(sophia, 2, mod_so_Helmet, 0);
+		SetThingMesh(sophia, 3, mod_so_Helmet, 1);
+		SetThingMesh(sophia, 4, mod_so_Helmet, 2);
+		SetThingMesh(sophia, 5, mod_so_Helmet, 3);
+		SetThingMesh(sophia, 6, mod_so_Helmet, 4);
+		SetThingMesh(sophia, 7, mod_so_Helmet, 5);
+		SetThingMesh(sophia, 8, mod_so_Helmet, 6);
+		SetThingMesh(sophia, 9,  mod_so_Helmet, 7);
+		SetThingMesh(sophia, 10, mod_so_Helmet, 8);
+
+	# RT: Set up new voice heads!
+		SetThingVoiceHeads(sophia, "sohead", "head_so_helmet.3do", "head_so_helmet_asound.3do", "head_so_helmet_amsound.3do", "head_so_helmet_osound.3do");
+
+		so_keyTrack1 = PlayKey(sophia, so_idlecop, 4, 0x10, 0);
+		AttachThingToThingEx(sophia, copter, 0x000C);
+
+
+#======== Copter Outside Sound ========================
+coptersound1=PlaySoundThing(helirun2, copter, 0.2, 35, 100, 1);
+ChangeSoundVol(coptersound1, 1.0, 2.0);
+	
+	# Copter decelerates as it moves into frame...
+		AISetMoveSpeed(copter, 4.0);
+		AISetMoveThing(copter, cop_mk_1, 0);
+		Sleep(0.35); # magic number to control copter frame position
+		AISetMoveSpeed(copter, 3.2); # magic number
+		Sleep(0.5); # magic number
+		AISetMoveSpeed(copter, 2.4); # magic number
+		Sleep(0.8); # magic number
+		AISetMoveSpeed(copter, 1.8); # magic number
+		Sleep(3.0);
+
+#---------- First music cue -------------
+PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+
+	# Cut to up angle past jeep to copter...
+		DestroyThing(rock1);
+		DestroyThing(tree1);
+		DestroyThing(tree2);
+		DestroyThing(tree3);
+		TeleportThing(copter, cop_mk_2);
+		SetThingFlags(sophia, 0x10); # hide Sophia for a while
+		TeleportThing(jeepactor, jep_mk_1);
+		AISetMoveSpeed(copter, 1.6); # was 1.7
+		AISetMoveThing(copter, cop_mk_3, 0);
+		SetCameraFocus(2, cam_2);
+		SetCameraSecondaryFocus(2, ct_2);
+		SetCameraFOV(100, 0, 0.0);
+		MoveToFrame(cam_2, 1, 6.6);
+		MoveToFrame(ct_2, 1, 6.6);
+		Sleep(0.01);
+		SetCameraFOV(80, 1, 4.8);
+		Sleep(1.4);
+
+
+	# Indy grabs for the ladder...
+		PlayKey(jeepactor, in_grabladder, 4, 0x12, 0);
+		Sleep(3.4);
+
+	# Cut to jeep falling off cliff as Indy hangs onto ladder...
+		### StopKey(ladder, ldr_keytrack1, 0.0);
+		DestroyThing(rock2);
+		DestroyThing(rock3);
+		DestroyThing(rock4);
+		DestroyThing(tree4);
+		DestroyThing(tree5);
+		DestroyThing(tree6);
+		DestroyThing(tree7);
+		DestroyThing(ladder);
+		SetThingFlags(copter, 0x10); # hide copter for a while
+		TeleportThing(indyladder, ldr_mk_1);
+		ClearThingFlags(indyladder, 0x80000);
+	#======== Copter Outside Sound ========================
+		coptersound1=PlaySoundThing(helirun2, indyladder, 1.0, 45, 100, 1);
+
+#---------- Second music cue -------------
+PlaySoundLocal(music1, 1.0, 0.0, 0x0, 0);
+
+		TeleportThing(jeepactor, jep_mk_2);	
+		AmputateJoint(jeepactor, 7); # stop drawing Indy in the jeep
+		AttachThingToThingEx(indyladder, ldr_mk_1, 0x000C);
+		SetCameraFocus(2, cam_3);
+		SetCameraSecondaryFocus(2, ct_3);
+		SetCameraFOV(70, 0, 0.0);
+		in_keyTrack1 = PlayKey(indyladder, in_hangladder, 4, 0x10, 0);
+		MoveToFrame(cam_3, 1, 7.0);
+		MoveToFrame(ldr_mk_1, 1, 9.0); # was 7.0
+		MoveToFrame(ct_3, 1, 7.0);
+		Sleep(0.01);
+		SetCameraFOV(80, 1, 3.0);
+		Sleep(2.7); # was 3.0
+
+	
+	# Cut to inside helicopter...
+		SetFaceGeoMode(cloudface1, 0x04); # now see clouds only behind copter
+		SetFaceGeoMode(cloudface2, 0x04);
+		StopKey(indyladder, in_keyTrack1, 0.0);
+		DestroyThing(rock5);
+		DestroyThing(rock6);
+		DestroyThing(rock7);
+		DestroyThing(rock8);
+		DestroyThing(tree8);
+		DestroyThing(tree9);
+		DestroyThing(tree10);
+		DestroyThing(indyladder);
+		DestroyThing(jeepactor);
+		TeleportThing(copter, cop_mk_4);
+
+	#================= copter inside sound ===============
+		StopSound(coptersound1, 0.01);
+		coptersound2=PlaySoundLocal(helirun1, 1, 0.0, 0x9, 0);
+
+		TeleportThing(sophia, so_mk_1);
+		AttachThingToThingEx(sophia, copter, 0x000C);
+		StopKey(sophia, so_keyTrack1, 0.0);
+		so_keyTrack1 = PlayKey(sophia, so_sitcop, 4, 0x10, 0);
+		ClearThingFlags(copter, 0x10); # see copter 
+		ClearThingFlags(sophia, 0x10); # see Sophia
+		ClearThingFlags(indy, 0x80000); # see Indy
+		AttachThingToThingEx(indy, copter, 0x000C);
+		SetCameraFocus(2, cam_4);
+		SetCameraSecondaryFocus(2, ct_4a);
+		SetCameraFOV(85, 0, 0.0); # was 75
+		SlideHorizonSky(-0.02, 0.0);
+
+	# Helicopter vibrates in flight...
+		SetPulse(0.15);
+
+	# Indy climbs aboard...
+#		in_keyTrack1 = PlayKey(indy, in_sitcop, 2, 0x10, 0);
+		PlayKey(indy, in_climbincop, 4, 0x12, 0);
+	
+	# Pan to Sophia...
+		SetCameraLookInterp(2, 1); # pan
+		SetCameraInterpSpeed(2, 3.0);
+		Sleep(0.01);
+		SetCameraSecondaryFocus(2, ct_4b);
+		SetCameraFOV(55, 1, 3.0);
+		Sleep(1.2);
+		SlideHorizonSky(0.02, 0.0);
+		StopKey(indy, in_keyTrack1, 0.0);
+		in_keyTrack1 = PlayKey(indy, in_lookleft, 2, 0x10, 0);
+		PlayKey(indy, in_fwdleft, 4, 0x12, 0);
+	
+	# Sophia:  "About time, Jones.  I was almost worried."
+		Sleep(0.1); # was 0.5
+		curSound = PlayVoice(sophia, so_worried, 1.0, 0);
+		Sleep(0.1);
+		SlideHorizonSky(0.02, 0.0);
+		StopKey(sophia, so_keyTrack1, 0.0);
+		so_keyTrack1 = PlayKey(sophia, so_lookright, 2, 0x10, 0);
+		PlayKey(sophia, so_fwdright, 4, 0x12, 0);
+		WaitForSound(curSound);
+
+	# Cut to Indy...
+		SetCameraLookInterp(2, 0);
+		SetCameraFocus(2, cam_5);
+		SetCameraSecondaryFocus(2, ct_5);
+		SetCameraFOV(40, 0, 0.0);
+		SlideHorizonSky(-0.04, 0.0);
+
+	# Indy: "Yeah?  Me too."
+		curSound = PlayVoice(indy, in_metoo, 1.0, 0);
+		### Sleep(0.2);
+		WaitForSound(curSound);
+		StopKey(indy, in_keyTrack1, 0.0);
+		in_keyTrack1 = PlayKey(indy, in_sitcop, 2, 0x10, 0);
+		PlayKey(indy, in_leftfwd, 4, 0x12, 0);
+	
+    # Swap in Sophia's goggle head
+		#call goggleHead;
+
+    # Cut to Sophia...
+		SetCameraFocus(2, cam_6);
+		SetCameraSecondaryFocus(2, ct_6);
+		SetCameraFOV(35, 0, 0.0);
+		SlideHorizonSky(0.04, 0.0);
+
+	# Sophia: "Listen...Volodnikov got word...Teotihuacan..."
+		curSound = PlayVoice(sophia, so_voltoteo, 1.0, 0);
+		Sleep(1.0);
+		StopKey(sophia, so_keyTrack1, 0.0);
+		so_keyTrack1 = PlayKey(sophia, so_sitcop, 2, 0x10, 0);
+		PlayKey(sophia, so_rightfwd, 4, 0x12, 0);
+		Sleep(5.5);
+		PlayKey(sophia, so_leftup, 4, 0x12, 0);
+		Sleep(2.5); # was 3.0
+		StopKey(sophia, so_keyTrack1, 0.0);
+		so_keyTrack1 = PlayKey(sophia, so_lookright, 2, 0x10, 0);
+		PlayKey(sophia, so_fwdright, 4, 0x12, 0);
+		WaitForSound(curSound);
+
+	# Cut to Indy...
+		SetCameraFocus(2, cam_5);
+		SetCameraSecondaryFocus(2, ct_5);
+		SetCameraFOV(37, 0, 0.0);
+		SlideHorizonSky(-0.04, 0.0);
+
+	# Indy: "Mexico?"
+		curSound = PlayVoice(indy, in_mexico, 1.0, 0);
+		StopKey(indy, in_keyTrack1, 0.0);
+		in_keyTrack1 = PlayKey(indy, in_lookleft, 2, 0x10, 0);
+		PlayKey(indy, in_fwdleft, 4, 0x12, 1);
+		WaitForSound(curSound);
+
+	# Sophia (voice over): "Built by...Azerim, I think."
+		PlayVoice(sophia, so_builtbab, 1.0, 1);
+
+	# Indy: "Azerim?"
+		curSound = PlayVoice(indy, in_azerim, 1.0, 0);
+		StopKey(indy, in_keyTrack1, 0.0);
+		in_keyTrack1 = PlayKey(indy, in_sitcop, 2, 0x10, 0);
+		PlayKey(indy, in_leftfwd, 4, 0x12, 1);
+
+		WaitForSound(curSound);
+
+	# Cut to helicopter heading for the horizon...
+
+	#======== Copter Outside Sound ========================
+		StopSound(coptersound2, 0.01);
+		coptersound1=PlaySoundThing(helirun2, copter, 0.8, 20, 100, 1);
+		ChangeSoundPitch(coptersound1, 0.8, 4.0);
+		ChangeSoundVol(coptersound1, 0.0, 6.0);
+
+		SetPulse(0); # stop the vibration
+		SetCameraFocus(2, cam_7);
+		SetCameraSecondaryFocus(2, ct_7);	
+		SetCameraFOV(25, 0, 0.0);
+		SlideHorizonSky(0.02, 0.0);
+		AttachThingToThing(ct_7, copter);
+		AISetMoveSpeed(copter, 1.7); # was 2.0
+		AISetLookThing(copter, cop_mk_5);
+		AISetMoveThing(copter, cop_mk_5, 0);
+
+	# Sophia: "And you might just get a jump on our friends...boat."
+		curSound = PlayVoice(sophia, so_getjump, 1.0, 0);
+		SetCameraFOV(90, 1, 7.5);
+		WaitForSound(curSound);
+
+		Sleep(2.0);
+
+	#============== Fade Out ======================
+		AttachThingToThing(fader, cam_7); 
+		ThingFadeAnim(fader, 0, 1, 1.7, 0);
+		Sleep(2.0);
+
+	# Clean up...
+		ClearThingFlags(player, 0x80000);
+		StopKey(copter, cop_keyTrack1, 0.0);
+		StopKey(sophia, so_keyTrack1, 0.0);
+		StopKey(indy, in_keyTrack1, 0.0);
+
+	# RT: Restore default voice heads
+		SetThingVoiceHeads(sophia, "sohead", "head_so_msound.3do", "head_so_asound.3do", "head_so_amsound.3do", "head_so_osound.3do");
+
+        SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		EndCutScene();
+	
+	
+	# Restore control (TEMP!  This cog should end the level!)...
+#		ClearActorFlags(player, 0x200000);
+#		SetCurrentCamera(1);
+		ResetCameraFOV(0, 0.0);
+
+	JonesEndLevel();					# On to the next level.
+	}
+	return;
+
+# ..............................................................................
+
+pulse:
+
+	vibe = RandBetween(1, 3);
+	if (vibe == 1)
+	{
+		posOffset = '-0.0004 0.000 -0.0002'; # 4 was 3
+		angOffset = '0.000 0.0003 0.0003'; # 3 was 2
+	}
+	if (vibe == 2)
+	{
+		posOffset = '0.0002 -0.0004 0.000';
+		angOffset = '0.0003 0.000 -0.0003';
+	}
+	if (vibe == 3)
+	{
+		posOffset = '0.000 0.0002 0.0004';
+		angOffset = '-0.0003 -0.0003 0.000';
+	}
+	vibe = RandBetween(1, 3);
+	if (vibe == 1)
+	{
+		SetPulse(0.05);
+	}
+	if (vibe == 2)
+	{
+		SetPulse(0.1);
+	}
+	if (vibe == 3)
+	{
+		SetPulse(0.15);
+	}
+	SetPOVShake(posOffSet, angOffSet, 10.0, 10.0);
+	return;
+
+# ..............................................................................
+
+prep_jeep:
+
+	CopyPlayerHolsters(GetLocalPlayerThing(), jeepactor); 
+	
+	if(GetInv(GetLocalPlayerThing(), 66))
+	{
+		# can in inventory, not on jeep.
+		SendMessageEx(GetThingClassCog(jeepactor), user0, jeepactor, 0, 0, 0);
+	}
+	else
+	{
+		# Can on jeep.
+		SendMessageEx(GetThingClassCog(jeepactor), user1, jeepactor, 0, 0, 0);
+	}
+	return;
+
+end

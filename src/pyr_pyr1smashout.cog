@@ -1,0 +1,300 @@
+# Jones 3D Cog Script
+#
+# pyr_pyr1smashout.cog
+#	
+# Blow block out of pyramid 1 with IMP#1
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	activated
+message	damaged
+message	pulse
+
+# world things
+thing	bigblock		nolink
+thing	zookaghost
+thing	indyactor		nolink
+thing	player			nolink		local
+thing	dustthing		nolink		local
+thing	blocksnap		nolink
+
+# camera things and lookthings
+thing	saycam
+thing	kaboomcam
+
+# hint thing
+thing	hint5
+
+# templates
+template	zooka=+dummy_debris		local
+template	dust=dustcloud4ever		local
+
+# world surfaces
+surface	wall0		mask=0x408
+surface	wall1		nolink		
+surface	wall2		nolink	
+surface	wall3		nolink	
+surface	indymark	nolink
+surface	nofall		nolink
+
+# materials
+material	dustmat=gen_a4sfx_dustcloud.mat	local
+
+# sectors
+sector	hideitall	nolink
+
+# sounds
+sound	boom=gen_bazooka_fire.wav		local
+sound	imp1charge=imp1_chargeup.wav	local
+sound	rumble=imp1_wall_break.wav		local
+
+# indy saylines
+sound	nowwhat=inxj143.wav				local
+sound	crumble=inxj025.wav				local
+sound	vibrate=inxj026.wav				local
+
+# variables
+int		i=0			local
+
+# subroutines
+flex	startscene=0.0	local
+flex	endscene=0.0	local
+flex	fixcams=0.0		local
+flex	fauxdamage=0.0	local
+flex	kaboom=0.0		local
+flex	indywalk=0.0	local
+end
+
+code
+startup:
+	Sleep(.01);
+	
+	#prepare surfaces
+	for (i=0; i < 4; i=i+1)
+	{
+		# make faces no-move
+		ClearAdjoinFlags(GetSurfaceAdjoin(wall0[i]), 2);
+		ClearAdjoinFlags(wall0[i], 2);
+	
+		# make faces no-see, so sector won't be drawn
+		ClearAdjoinFlags(wall0[i], 1);
+		ClearAdjoinFlags(GetSurfaceAdjoin(wall0[i]), 1);
+		
+		SetFaceGeoMode(wall0[i], 4);
+		SetFaceGeoMode(GetSurfaceAdjoin(wall0[i]), 4);
+	}
+	
+	# reset variable for saylines
+	i = 0;
+	
+	# nofall is the face just next to the block after it tumbles out
+	SetAdjoinFlags(nofall, 0x2);
+
+	# hideitall is the sector containing the block
+	SetSectorAdjoins(hideitall, 0);
+
+	return;
+
+activated:
+# --- > cracked wall
+
+	if (GetSenderRef() != wall0) return;
+	player = GetLocalPlayerThing();
+
+	# if holding IMP1, make it a damage event
+	if ((GetCurWeapon(player) == 14) || (InEditor()))
+	{
+		call fauxdamage;
+		return;
+	}
+
+	# of not holding MP1, do saylines instead
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+	
+	StartCutscene(0);
+	
+	# interp camera
+    SetExtCamOffsetToThing(saycam);
+
+    # say line shifts with every activation
+    Sleep(0.3);
+	if (i == 0)
+	{
+		PlayVoice(player, vibrate, 1.0, 1);
+	}
+	else
+	{
+		PlayVoice(player, crumble, 1.0, 1);
+	}
+
+	i = 1 - i;
+
+    # restore controls and camera
+    RestoreExtCam();
+    EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+damaged:
+# ---> cracked wall
+	
+	#if damage wasn't caused by MP1, return
+	if (GetParam(1) != 0x1000) return;
+
+fauxdamage:
+# ---> shortcut to get around "activation with IMP#1"
+	
+	player = GetLocalPlayerThing();
+
+	if (MakeMeStop() == -1) return;
+
+	# give Urgon's part a chance to open up and close again
+	Sleep(.35);
+	
+	call startscene;
+	call kaboom;
+	call indywalk;
+	return;
+
+startscene:
+	# prepare camera and player
+	call fixcams;	
+
+	StartCutscene(1);
+	
+	# change to outside camera
+	SetCameraFocus(2, kaboomcam);
+	SetCameraSecondaryFocus(2, indyactor);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0);
+	
+	ResetThing(player);
+	TeleportThing(indyactor, player);
+	CopyPlayerHolsters(player, indyactor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyactor, 0x80000);
+
+	return;
+		
+kaboom:
+	# make adjoin see-through beforehand
+	SetSectorAdjoins(hideitall, 1);
+
+	# remove collision from big block
+	SetCollideType(bigblock, 0);
+
+	# start camerashake
+	SetPulse(0.05);
+	
+	# play chargeup effect
+	PlaySoundThing(imp1charge, indyactor, 1.0, 10.0, 20.0, 0);
+	Sleep(1.5);
+	
+	# play crackling effect
+	PlaySoundThing(rumble, indyactor, 1.0, 10.0, 20.0, 0);
+	Sleep(1);
+
+	# pause for drama, then boom
+	PlaySoundThing(boom, bigblock, 1.0, 10.0, 20.0, 0);
+	CreateThing(zooka, zookaghost);
+
+	# clear surfaces
+	for (i=0; i < 4; i=i+1)
+	{
+		# make all adjoins move-through
+		SetAdjoinFlags(wall0[i], 2);
+		SetAdjoinFlags(GetSurfaceAdjoin(wall0[i]), 2);
+		
+		# make all adjoins see-through
+		SetAdjoinFlags(wall0[i], 1);
+		SetAdjoinFlags(GetSurfaceAdjoin(wall0[i]), 1);
+	
+		# turn off face visibility
+		SetFaceGeoMode(wall0[i], 0);
+		SetFaceGeoMode(GetSurfaceAdjoin(wall0[i]), 0);
+	}
+
+	# shove block out
+	MoveToFrame(bigblock, 2, 10);
+
+	# stop the madness
+	SetPulse(0);
+
+	# create and animate the dust sprites
+	SetMaterialCel(dustmat, 0);
+	MaterialAnim(dustmat, 1.0, 1);
+	dustthing = CreateThing(dust, zookaghost);
+	AnimateSpriteSize(dustthing, '0.2 0.2 0.5', '0.6 0.6 0.0', 4.0);
+	sleep(.3);
+	dustthing = CreateThing(dust, indyactor);
+	AnimateSpriteSize(dustthing, '0.2 0.2 0.5', '0.6 0.6 0.0', 4.0);
+	
+	# take care of hints
+	SetHintSolved(hint5);
+
+	return;
+
+indywalk:
+	# make indy walk forward while camera swings inward
+	MoveToFrame(kaboomcam, 1, 1);
+	sleep(1);
+
+    # Indywalks forward, looks at block
+	AISetMovePos(indyactor, GetSurfaceCenter(indymark), 0);
+	AISetLookThing(indyactor, bigblock);
+	AIWaitForStop(indyactor);
+
+	# Indy: Now What?
+	PlayVoice(indyactor, nowwhat, 1, 1);
+	sleep(1);
+
+	# snap block to perfect position for pushing
+	TeleportThing(bigblock, blocksnap);
+	
+	# restore collision to big block
+	SetCollideType(bigblock, 3);
+
+   	# keep player from falling through adjoin next to box
+	ClearAdjoinFlags(nofall, 0x2);
+
+	call endscene;
+	return;
+
+endscene:
+	# put player in place, end the cutscene
+	TeleportThing(player, indyactor);
+	SetThingFlags(indyactor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	SetCurrentCamera(1);
+
+	DeselectWeaponWait(player);
+	ClearActorFlags(player, 0x200000);
+	
+	call fixcams;
+
+	EndCutscene();
+	return;
+
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(1, 0);
+	SetCameraLookInterp(1, 0);
+	RestoreExtCam();
+	return;
+
+pulse:
+	SetPOVShake('0.0 0.0 0.005', '0.0 0.0 0.1', 80.0, 0.80);
+
+	return;
+	
+end

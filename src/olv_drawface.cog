@@ -1,0 +1,57 @@
+# Jones 3D Cog Script
+#
+# olv_drawface.cog
+#
+# Cog description
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+symbols
+
+message	startup
+message	entered
+message	exited
+
+
+surface	drawface
+sector	on_sec0
+sector	on_sec1
+sector	off_sec0
+
+thing		player				local
+
+end
+# -------------------------------------------------------------------
+
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+entered:
+	if(getsenderref() == off_sec0)
+	{
+	SetFaceGeoMode(drawface, 0);
+	}
+	if(getsenderref() == on_sec1)
+	{
+	SetFaceGeoMode(drawface, 4);
+	}
+	return;
+
+exited:
+	if(getsenderref() == on_sec0)
+ 	{
+	SetFaceGeoMode(drawface, 4);
+	}
+	return;
+
+end
+
+
+
+

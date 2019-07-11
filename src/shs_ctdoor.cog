@@ -1,0 +1,110 @@
+# Jones 3D Cog Script
+#
+# shs_CTdoor.cog     Make the clock tower door open/close.  
+#
+# [JWC]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message activated
+message startup
+
+sector  CTsector
+
+thing   CTdoor                        	# Clock Tower door 
+thing   CTbutton                
+thing   player          	local
+thing	interpCam
+
+int		position=0			local
+
+cog		NoWorkTalkcog
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    #turn off door sector
+    SetSectorAdjoins(CTsector, 0);
+    player= GetLocalPlayerThing();
+    return;
+
+activated:
+	
+    if (GetCurItem(player) != 0) return; # prevents activating with chalk
+
+	if (GetSenderRef() != CTbutton) return;
+
+    SetActorFlags(player, 0x200000);
+    StartCutscene(0);
+    StopThing(player);
+	DeselectWeapon(player);
+	DeselectWeaponWait(player);
+		
+	SetExtCamOffsetToThing(interpCam);
+	
+	PlayMode(player, 60, 0);
+
+    # synch with button
+	Sleep(.3);
+
+	# door button goes in  
+	MoveToFrame(CTbutton, 1, 1); 
+	WaitForStop(CTbutton);
+
+  	
+	if (global3 == 1) // We're being told that the clock is now powered, so start things up!
+    {
+        SetSectorAdjoins(CTsector, 1);
+        
+        # check door position
+		if (position == 0)			# 0 = door closed
+        {
+            # open door 
+			Rotate(CTdoor, 90, 1, 1);
+            WaitForStop(CTdoor);
+			position=1;				# 1 = door open
+		}
+		else
+		{
+            # close door
+			Rotate(CTdoor, -90, 1, 1);
+            WaitForStop(CTdoor);
+			SetSectorAdjoins(CTsector, 0);
+            position=0;
+        }
+	}
+    
+	if (global3 == 0)	// We're being told that the clock is no longer powered. 
+	{
+		# Call NoWorkTalkCog
+		Sleep(.3);
+		SendMessageEx(NoWorkTalkCog, user1, 0, 0, 0, 0);
+		global15 = 0; # per Randy
+		while (global15 == 0)
+		{
+			Sleep(0.01); # wait for line to finish
+		}
+	}
+	
+	# door button comes out
+	MoveToFrame(CTbutton, 0, 1); 
+	WaitForStop(CTbutton);
+	
+	RestoreExtCam();
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	return;
+
+
+
+end
+

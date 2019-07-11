@@ -1,0 +1,133 @@
+# Jones 3D Cog Script
+#
+# actor_LavaGuy.cog
+#
+# [RT] [MDR]
+#
+# Animates little Lava Guy's texture and other exciting stuff.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		initialized
+	message		aievent
+	message		damaged
+	message		timer
+	message		pulse
+
+# ************************** TEMPLATES *************************
+	template	tpl_ghost=ghost					local
+	template	tpl_sparks=+imp2_trail			local		# Lava guy shot sparks
+	material	flame=flame4_01.mat				local
+
+	flex		fps=8.0							local
+
+# ************************** MISC LOCAL VARS *******************
+	thing		t_sender						local
+	thing		t_obj							local
+	int			n_animID=-1						local
+	int			n_srfFlags						local
+	int			damageType						local
+
+end
+
+# ========================================================================================
+
+code
+
+# ...................................................................
+initialized:
+
+	t_sender = GetSenderRef();
+
+	if ( n_animID == -1 )
+	{
+		n_animID = MaterialAnim(flame, fps, 1);
+	}
+	AISetAllowedSurfaceType(t_sender, 0x200001);			# Allow SURFACE_(LAVA|ISFLOOR) stepping
+	PlaySoundClass(t_sender, 123);							# play 'reserved1'
+
+	t_obj = CreateThing(tpl_ghost, t_sender);				# Create a GHOST for as a VFX "timer"
+	if ( t_obj > -1 )
+	{
+		CaptureThing(t_obj);
+		SetThingPulse(t_obj, 0.02);
+		SetLifeLeft(t_obj, 1.5);
+		AttachThingToThingEx(t_obj, t_sender, 0x08);
+	}
+
+	return;
+
+# ...................................................................
+aievent:
+
+	t_sender = GetSenderRef();
+
+	if ( GetParam(0) == 0x4000 )								#---- EVENT_FIRE
+	{	
+		# Firing on something... blow up reeeal good!
+		DamageThing(t_sender, GetThingHealth(t_sender), 1, t_sender);
+	}
+	else if ( GetParam(0) == 0x200000 )							#---- EVENT_LANDFLOOR
+	{															# Param(2) == surface index
+		n_srfFlags = GetSurfaceFlags(GetParam(2));
+
+		if ( n_srfFlags > -1 && BITTEST(n_srfFlags, 0x200000) )		# Landed on lava?
+		{
+#			DEBUGPRINT("Lava guy landed on lava");
+
+			SetThingUserData(t_sender, 1);							# Mark him as 'absorbed by lava'
+
+			StopThing(t_sender);									# Stop him
+			AISetMode(t_sender, 0x2000);							# Disable him
+			ThingFadeAnim(t_sender, 1, 0, 2, 0);					# Fade him
+			SetThingTimer(t_sender, 2);								# Destroy him in a few sec
+			PlaySoundClass(t_sender, 123);							# play 'reserved1'
+		}
+	}
+
+	return;
+
+# ...................................................................
+damaged:
+
+	damageType = GetParam(1);
+    
+	# RT: Don't pay attention to chicken damage....
+	if ( BITTEST(damageType, 0x80000000) )
+	{
+		ReturnEx(0);
+	}
+
+	return;
+
+
+# ...................................................................
+timer:
+
+	t_sender = GetSenderRef();
+	if ( GetThingUserData(t_sender) == 1 )
+	{
+		# NOTE: SetLifeLeft wont work, want AI to disappear even when seen
+		DestroyThing(t_sender);
+	}
+
+	return;
+
+
+# ...................................................................
+pulse:
+
+	t_sender = GetSenderRef();
+	if ( GetThingType(t_sender) == 8 )								# SITH_THING_GHOST?
+	{
+		CreateThingAtPos(tpl_sparks, GetThingSector(t_sender), GetThingPos(t_sender), '0 0 0');
+	}
+	return;
+
+
+end
+

@@ -1,0 +1,335 @@
+# Jones 3D Cog Script
+#
+# 10_SEA_Alarm.cog
+#
+# Guard warns Volodnikov that Jones has escaped
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		activated
+	message		arrived
+	message		callback
+	message		user4 # to note player has weapons	
+	
+# .................................. KEYFRAMES .................................
+	
+	keyframe	vo_armsATback=vo_stand2_arms_back.key	local
+	keyframe	vo_glasses=0vo_alarmglasses_2_2.key		local
+	keyframe	vo_leftup3=0vo_leftup_3_3.key			local
+	keyframe	vo_bothup=0vo_bothup_3_3.key			local
+		
+# .................................. MODELS ....................................
+
+	model  		mod_vo_head=head_vo_noglasses.3do		local
+	model  		mod_vo_glasses=hand_vo_glasses.3do		local
+
+# .................................. SOUNDS ....................................
+
+	sound		sl_jonesescaped=Se05r01.wav				local
+	sound		vo_retakehim=Se05v02.wav				local
+	sound		sl_understood=Se05r03.wav				local
+
+	sound		dr_open=sea_doors_open_c.wav			local
+	sound		dr_close=sea_doors_close_c.wav			local
+
+#	sound		music0=mus_gen_russremin2.wav			local
+	
+# ............................... ACTOR THINGS .................................
+
+	thing		bowdoorswitch
+	thing		bowdoor
+	thing		player									local
+	thing		alarm_sailor							nolink
+	thing		alarm_volod								nolink
+ 	
+# .............................. OBJECT THINGS .................................
+
+	thing		alarm_door								nolink
+	thing		alarm_desk								nolink
+	thing		alarm_lamp								nolink
+
+# .............................. CAMERA THINGS .................................
+
+	thing		alarm_cam_1								nolink
+		
+	thing		alarm_ct_1								nolink
+	thing		alarm_ct_2								nolink
+
+	
+# .............................. TARGET THINGS .................................
+
+	thing		alarm_mk_1								nolink
+	thing		alarm_mk_2								nolink
+
+# ........................ OTHER ENGINE REFERENCES .............................
+
+	cog			bowdoorcog
+	
+	# sector		startsector
+
+# ............................... VARIABLES ....................................
+	
+	flex		sl_rotRate								local
+	flex		sl_headRate								local
+	flex		vo_rotRate								local
+	flex		vo_headRate								local
+
+	flex		duration=1.5							local
+
+	int			cutSceneState=0							local
+	int			gotweapons=0							local
+
+	int			vo_keyTrack1							local
+	int			vo_keyTrack2
+
+	int			vo_swapitem1							local
+	int			vo_swapitem2							local
+
+	int			cursound								local
+	int			curcam									local
+
+	int			sl_colltype								local
+
+	int			callbackNum								local
+
+# .............................. SUBROUTINES ...................................
+
+	flex		opendoor								local
+	flex		closedoor								local
+	flex		entersailor								local
+	
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	# Prepare for much later...
+	SetThingFlags(alarm_sailor, 0x80000);
+	SetThingFlags(alarm_volod, 0x80000);
+	cutSceneState = 0;
+
+	return;
+
+# ..............................................................................
+
+user4:
+
+	# stop cutscene until player has retrieved his weapons...
+	gotweapons = 1;
+	return;
+
+# ..............................................................................
+
+activated:
+
+	if (gotweapons == 0)
+	{
+		# No cutscene until player has his weapons...
+		return;
+	}
+	
+	if (GetSenderRef() != bowdoorswitch)
+	{
+		# Must be triggered by correct switch...
+		return;
+	}
+
+	if (cutSceneState != 0)
+	{
+		# Only run cutscene once...
+		return;
+	}
+
+	# Prep engine...
+	cutSceneState = 1;
+	player = GetLocalPlayerThing();
+	MakeMeStop();
+	StartCutScene(1);
+
+	SendMessage(bowdoorcog, user5); # keep bow door open
+
+	# Wait for the bowdoor to fully open...
+
+	return;
+
+# ..............................................................................
+
+arrived:
+
+	if (GetSenderRef() != bowdoor)
+	{
+		# Continue only when bowdoor is fully open...
+		return;
+	}
+
+	if (cutSceneState != 1)
+	{
+		# Only respond on first fully open arrival...
+		return;
+	}
+	
+	# Prep...
+	cutSceneState = 2;
+	ClearThingFlags(alarm_volod, 0x80000);
+	ClearThingFlags(alarm_sailor, 0x80000);
+	sl_colltype = GetCollideType(alarm_sailor);
+	sl_rotRate = GetThingMaxRotVel(alarm_sailor);
+	sl_headRate = GetThingMaxHeadVel(alarm_sailor);
+	vo_rotRate = GetThingMaxRotVel(alarm_volod);
+	vo_headRate = GetThingMaxHeadVel(alarm_volod);
+	AISetCutSceneMode(alarm_volod);
+	AISetCutSceneMode(alarm_sailor);
+
+	# Volodnikov starts to clean his glasses...
+	CaptureThing(alarm_volod);
+	vo_keyTrack1 = PlayKey(alarm_volod, vo_armsATback, 2, 0x10, 0);
+	PlayKey(alarm_volod, vo_glasses, 4, 0x12, 0); # RT: Triggers callbacks
+
+	# Cut to shot of Volodnikov...
+	curcam = GetCurrentCamera();
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, alarm_cam_1);
+	SetCameraSecondaryFocus(2, alarm_ct_1);
+	SetCurrentCamera(2);
+	SetCameraFOV(55, 0, 0.0);
+	
+	# Maybe a touch of melodramatic music...
+	# PlaySoundLocal(music0, 0.8, 0.0, 0x0, 0);	
+
+# ..............................................................................
+
+callback:
+
+	if (GetSenderRef() != alarm_volod) return;
+
+    callbackNum = GetParam(1);
+
+	if (callbackNum == 21)
+	{
+		# Volodnikov removes his glasses...
+		vo_swapitem1 = SetThingMesh(alarm_volod, 2, mod_vo_head, 0); # no glasses head
+		vo_swapitem2 = SetThingMesh(alarm_volod, 8, mod_vo_glasses, 0); # hand with glasses
+	}
+	else if (callbackNum == 22)
+	{
+		# Volodnikov replaces his glasses...
+		RestoreThingMesh(alarm_volod, vo_swapitem1);
+		RestoreThingMesh(alarm_volod, vo_swapitem2);
+
+		Call opendoor;
+		Call entersailor;
+	}
+
+	return;
+
+# ..............................................................................
+
+opendoor:
+
+	Rotate(alarm_door, -90, 1, duration);
+	PlaySoundThing(dr_open, alarm_door, 1, 5, 10, 0);
+	return;
+
+# ..............................................................................
+
+closedoor:
+
+	Rotate(alarm_door, 90, 1, duration);
+	Sleep(0.5);
+	PlaySoundThing(dr_close, alarm_door, 1, 5, 10, 0);
+	return;
+
+# ..............................................................................
+
+entersailor:
+
+	# The door opens and a sailor enters...
+	SetCollideType(alarm_sailor, 0);
+	SetCollideType(alarm_volod, 0);
+	SetThingFlags(alarm_desk, 0x80000);
+	SetThingFlags(alarm_lamp, 0x80000);
+	AISetMoveSpeed(alarm_sailor, 0.9);
+	AISetLookThingEyeLevel(alarm_sailor, alarm_mk_1);
+	AISetMoveThing(alarm_sailor, alarm_mk_1, 0);
+	AISetLookThingEyeLevel(alarm_sailor, alarm_volod);
+	StopKey(alarm_volod, vo_keyTrack1, 0.5);
+	StopKey(alarm_volod, vo_keyTrack2, 0.5);
+	Sleep(0.2);
+
+	# Volodnikov turns to face sailor...
+	SetThingMaxHeadVel(alarm_volod, 120.0);
+	SetThingMaxRotVel(alarm_volod, 100.0);
+	AIEnableBodyTracking(alarm_volod, alarm_sailor);
+	
+	# Re-frame toward door...
+	SetCameraLookInterp(2, 1);
+	# SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 1.0);
+	Sleep(0.01);
+	MoveToFrame(alarm_cam_1, 1, 0.5);
+	SetCameraSecondaryFocus(2, alarm_ct_2);
+	Sleep(1.0);
+
+	# Sailor: "Comrade! Jones has escaped!"
+	cursound = PlayVoice(alarm_sailor, sl_jonesescaped, 1.0, 0);
+	AIWaitForStop(alarm_sailor);
+	WaitForSound(cursound);
+
+	# Volodnikov: "What?! Retake him immediately...alive...dead..."
+	AIDisableBodyTracking(alarm_volod);
+	cursound = PlayVoice(alarm_volod, vo_retakehim, 1.0, 0);
+	Sleep(0.5);
+	PlayKey(alarm_volod, vo_leftup3, 4, 0x12, 1);
+	Sleep(0.8);
+	PlayKey(alarm_volod, vo_bothup, 4, 0x12, 0);
+	WaitForSound(cursound);
+
+	# Sailor: "Understood, sir!"
+	cursound = PlayVoice(alarm_sailor, sl_understood, 1.0, 0);
+
+	# Sailor exits...
+	AISetLookThingEyeLevel(alarm_sailor, alarm_mk_2);
+	Sleep(0.5);
+	AISetMoveThing(alarm_sailor, alarm_mk_2, 0);
+	Sleep(1.0);
+
+	# Door closes...
+	Call closedoor;
+	Sleep(2.0);
+
+	# Clean up...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	RestoreExtCam();
+	SetCurrentCamera(curcam);
+	ResetCameraFOV(0, 0.0);
+	DestroyThing(alarm_sailor);
+	DestroyThing(alarm_volod);
+	ClearThingFlags(alarm_desk, 0x80000);
+	ClearThingFlags(alarm_lamp, 0x80000);
+
+	# Restore control...
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+
+	Sleep(4.0);
+	SendMessage(bowdoorcog, user6); # allow bow door to close
+
+	return;
+
+end

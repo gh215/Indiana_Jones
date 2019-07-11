@@ -1,0 +1,1254 @@
+# Jones 3D Cog Script
+#
+# Riv_Candelabra.cog
+#
+# candlea = 88
+# candleb = 89
+# candlec = 90
+# candled = 91
+#
+# [TRM & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+    message		startup
+    message     entered
+    message     activated
+	message		user0
+
+    # ** misc local things **
+    thing       player          local
+    thing       indy            local
+	thing		camindy			local
+	thing		offsetcam		local
+    thing       candleA         local
+    thing       candleB         local
+    thing       candleC         local
+    thing       candleD         local
+    thing       bridge_Anim     local
+    thing       exit_Bridge     local
+    thing       wind_Flag1      local
+    thing       wind_Flag2      local
+    
+    # ** misc things **
+    thing       candelabra
+    thing       windmill		nolink
+	thing		tower			nolink
+    thing       bridge
+    thing       bridge2
+	thing		centerspot		nolink
+    
+    # ** candle holders **
+    thing       candleArm_N     linkID=2
+    thing       candleArm_S     linkID=2
+    thing       candleArm_E     linkID=2
+    thing       candleArm_W     linkID=2
+
+	# ** candle holder positions **
+    thing       candlePos_N		nolink
+    thing       candlePos_S		nolink
+    thing       candlePos_E		nolink
+    thing       candlePos_W		nolink
+	thing		candlepos_X		local # var
+    
+    # ** camera offsets **
+    thing       offset_N		nolink
+    thing       offset_S		nolink
+    thing       offset_E		nolink
+    thing       offset_W		nolink
+	thing		offset_L		local # var
+    
+    # ** snow devils **
+    thing       devil0			nolink
+    thing       devil1			nolink
+    thing       devil2			nolink
+    thing       devil3			nolink
+    
+    # ** fourwinds cutscene things **
+    thing       wm_cam_1		nolink
+    thing       wm_cam_2		nolink
+    thing       wm_cam_3		nolink
+	thing       wm_cam_4		nolink
+    thing       wm_cam_5		nolink
+	thing       wm_ct_1			nolink
+    thing       wm_ct_2			nolink
+    thing       wm_ct_3			nolink
+    thing       wm_ct_4			nolink
+    thing       wm_ct_5			nolink
+	thing		wm_ct_6			nolink
+	thing		wm_mk_1			nolink
+	thing		wm_mk_2			nolink
+	thing       wm_mk_3			nolink
+    thing       fadePlate		nolink
+	thing		camspot			nolink
+	thing		camlookspot		nolink
+    thing       flag1           nolink
+    thing       flag2           nolink
+        
+    # ** cogs **
+	cog			northcandlecog
+	cog			southcandlecog
+	cog			eastcandlecog
+	cog			westcandlecog
+	cog			somecandlecog=0					local # var
+    cog         hintCog
+
+	# ** sectors **
+    sector      sec0
+	sector		camsector						local # var
+    
+    # ** templates **
+    template    tpl_CandleA=cndlamove           local
+    template    tpl_CandleB=cndlbmove           local
+    template    tpl_CandleC=cndlcmove           local
+    template    tpl_CandleD=cndldmove           local
+    template    tpl_BridgeAnim=rivbridge        local
+    template    tpl_BridgeStill=rivbrdgstll     local
+    template    tpl_Indy=indy_actor             local
+    template    tpl_Devil=skitodevil            local
+    template    tpl_LilDevil=lilskitodevil      local
+	template	tpl_ghost=ghost					local
+    template    tpl_WindFlag=markredwind        local
+    
+    # ** keyframes **
+    keyframe    key_Gears=riv_gears.key				local
+    keyframe    key_Bridge=riv_bridge_anim.key		local
+	keyframe	in_think=0in_thinking_4_4.key		local # 150x
+	keyframe	in_sideTOhips=0in_stand1_bd_4.key	local
+	keyframe	in_handsONhips=0in_stand4.key		local
+	keyframe	in_botharmsup=0in_armsup_1_1.key	local
+	keyframe	in_rtarmup=0in_armsout_1_1.key		local
+    keyframe    key_Flag=riv_markred_wind.key       local
+      
+    # ** candelabra voice lines **
+    sound       say_Candelabra=Rv05j02.wav      local # it looks like a candle holder...
+    sound       say_pray1=Rv05j03.wav           local # pray to the four winds
+    sound       say_Pray2=Rv05j04.wav           local # ...okay, I'm praying.  Now what?
+    
+    # ** success lines **
+	sound	    in_Success0=Inxj110.wav			local # Success!
+	sound	    in_Success1=Inxj108.wav			local # There!
+	sound	    in_Success2=Inxj109.wav			local # It fits!
+	sound		in_Success3=Inxj112.wav			local # That ought to do it!
+    
+    # ** using the wrong or no item lines **
+	sound	    in_WrongItem0=Inxj089.wav       local # That didn't work
+	sound	    in_WrongItem1=Inxj090.wav		local # ...something wrong.
+	sound	    in_WrongItem2=Inxj092.wav		local # Hmm...didn't quite work.
+	sound	    in_WrongItem3=Inxj088.wav		local # Nope.
+	sound		in_WrongItem4=Inxj061.wav		local # Not sure good idea.
+    
+    # ** standing on the wrong spot lines **
+	sound	    in_WrongSpot0=Inxj060.wav		local # I don't think...right answer
+	sound	    in_WrongSpot1=Inxj095.wav		local # Must be a different way
+	sound		in_WrongSpot2=Inxj058.wav		local # That won't work.
+    
+    # ** misc sounds **
+    sound       sfx_Gust0=riv_wind_gust_small.wav       local # small wind sound
+    sound       sfx_Gust1=riv_wind_gust_big.wav         local # big wind sound
+    sound       say_Strange=Rv05j01.wav                 local # strange place for a windmill
+	sound		say_worked=Inxj111.wav					local # What know it worked	
+    
+    # ** sound fx **
+    sound       sfx_Start=riv_bridge_start_c.wav        local
+    sound       sfx_Move=riv_bridge_move_c.wav          local
+    sound       sfx_Stop=riv_bridge_stop_c.wav          local
+    sound       sfx_Gears=riv_windmill_gears_c.wav      local
+    
+    # ** music **
+    sound       mus_Cue1=mus_riv_windmillcutscene.wav   local
+    sound       mus_Cue2=mus_riv_endlevel.wav           local
+        
+    # ** subroutines **
+    flex        placecandle			local
+	flex		lightcandle			local
+    flex        fourWinds           local
+    flex        endCut              local
+    flex        speak_Success       local
+    flex        speak_Item          local
+    flex        speak_Wrong         local 
+	flex		backtoplay			local 
+
+	# ** vector vars **
+	vector		v_clvec				local
+	vector		v_crvec				local
+	vector		v_aimci				local
+	vector		v_slewoff			local
+	vector		v_aimcam			local
+	vector		v_campos			local
+	vector		v_cam1pos			local
+	vector		v_cam1lookpos		local
+
+	# ** flex vars **
+	flex		viewangle			local
+	flex		f_dotl				local
+	flex		f_dotr				local
+
+    # ** cardinal ints **
+    int         spot=0              local
+	int			spot45=0			local
+    int         north=1             local
+    int         south=2             local
+    int         east=3              local
+    int         west=4              local
+    
+    # ** misc ints **
+    int         curItem=0           local
+    int         curWeap=0           local
+    int         playing=0           local
+    int         placed_Count=0      local
+    int         lit_Count=0         local
+    int         done=0              local
+    int         move_Track          local
+
+	int			sender				local
+	int			sendid				local
+	int			sendcog				local
+	int			getinfo=0			local
+	int			visits=0			local
+	int			in_keyTrack1		local
+	int			in_keyTrack2		local
+	int			wm_keyTrack1		local
+	int			wm_sndTrack1		local
+	int			curcam				local
+	int			cursound			local
+	int			offcamexists=0		local
+	int			pl_colltype			local
+	int			wm_colltype			local
+	int			t_colltype			local
+    
+    int         placed_N=0			local
+    int         placed_S=0			local
+    int         placed_E=0		    local
+    int         placed_W=0		    local
+    
+    int         lit_CandleN=0       local
+    int         lit_CandleS=0       local
+    int         lit_CandleE=0       local
+    int         lit_CandleW=0       local
+   
+    int         newSuccess=0        local
+    int         oldSuccess=0        local
+    int         newItem=0           local
+    int         oldItem=0           local
+    int         newWrong=0          local
+    int         oldWrong=0          local
+    
+ end 
+ 
+
+# ==============================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();        
+    SetThingAlpha(fadePlate, 0.0);
+	SetThingFlags(fadeplate, 0x80000);
+
+	Print("...candelabracog started...");
+    
+    return;
+	
+# ==============================================================================
+
+user0:
+
+	# Notify when candles blow out...
+	
+	sendcog = GetSenderRef();
+	
+	if (sendcog == northcandlecog)
+	{
+		lit_CandleN = 0;
+	}
+	if (sendcog == southcandlecog)
+	{
+		lit_CandleS = 0;
+	}
+	if (sendcog == eastcandlecog)
+	{
+		lit_CandleE = 0;
+	}
+	if (sendcog == westcandlecog)
+	{
+		lit_CandleW = 0;
+	}
+
+	# play small wind sound
+    PlaySoundLocal(sfx_Gust0, 1.0, 0.0, 0x0, 0);
+
+	return;
+
+#===============================================================================
+
+entered:
+  
+    if ((GetSenderRef() == exit_Bridge) && (done == 0))
+    {
+        done = 1;
+        Call endCut;
+    }
+
+    return;
+
+#===============================================================================
+
+activated:
+
+    # Take snapshot...
+	curcam = GetCurrentCamera();
+	viewangle = GetCameraFOV();
+	pl_colltype = GetCollideType(player);
+	curItem = GetCurItem(player);
+    curWeap = GetCurWeapon(player);
+	sender = GetSenderRef();
+	sendid = GetSenderID();
+
+	# prep cam
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+
+	# Is player checking candleholders for info?		
+	getinfo = 0;
+	if (sender == candelabra || sendid == 2)
+	{
+		getinfo = 1;
+	}
+	if ((curWeap == 13) && (lit_Count != 4))
+	{
+		if ((sender == candleArm_N) && (placed_N != 0))
+		{
+			getinfo = 0;
+		}
+		if ((sender == candleArm_S) && (placed_S != 0))
+		{
+			getinfo = 0;
+		}
+		if ((sender == candleArm_E) && (placed_E != 0))
+		{
+			getinfo = 0;
+		}
+		if ((sender == candleArm_W) && (placed_W != 0))
+		{
+			getinfo = 0;
+		}
+	}
+
+	# Where's player?
+	spot = 0;
+	v_clvec = GetThingLVec(candelabra);
+	v_crvec = GetThingRVec(candelabra);
+	v_aimci = VectorSub((GetThingPos(candelabra)), (GetThingPos(player)));
+
+	f_dotl = VectorDot(VectorNorm(v_aimci), v_clvec);
+	f_dotr = VectorDot(VectorNorm(v_aimci), v_crvec);
+
+	if (f_dotl < 0)
+	{
+		if (f_dotr < 0)
+		{
+			spot = east;
+		}
+		else
+		{
+			spot = north;
+		}
+	}
+	else
+	{
+		if (f_dotr < 0)
+		{
+			spot = south;
+		}
+		else
+		{
+			spot = west;
+		}
+	}
+
+	spot45 = 0;
+	v_clvec = GetThingLVec(centerspot);
+	v_crvec = GetThingRVec(centerspot);
+	v_aimci = VectorSub((GetThingPos(centerspot)), (GetThingPos(player)));
+
+	f_dotl = VectorDot(VectorNorm(v_aimci), v_clvec);
+	f_dotr = VectorDot(VectorNorm(v_aimci), v_crvec);
+
+	if (f_dotl < 0)
+	{
+		if (f_dotr < 0)
+		{
+			spot45 = east;
+		}
+		else
+		{
+			spot45 = north;
+		}
+	}
+	else
+	{
+		if (f_dotr < 0)
+		{
+			spot45 = south;
+		}
+		else
+		{
+			spot45 = west;
+		}
+	}
+	
+	# continuous camera offset...
+	camindy = CreateThing(tpl_indy, player);
+	CaptureThing(camindy);
+	v_aimcam = VectorNorm(VectorSub(GetThingPos(centerspot), GetThingPos(camindy)));
+	v_aimcam = VectorNorm(VectorSet(VectorX(v_aimcam), VectorY(v_aimcam), 0.0));		
+	SetThingLook(camindy, v_aimcam);
+
+	if (spot == spot45)
+	{
+		v_campos =
+		VectorAdd(VectorTransformToOrient(camindy, '0.21 0.06 0.19'), GetThingPos(camindy));
+	}
+	else
+	{
+		v_campos =
+		VectorAdd(VectorTransformToOrient(camindy, '-0.21 0.06 0.19'), GetThingPos(camindy));
+	}
+
+	camsector = FindNewSectorFromThing(camindy, v_campos);
+	DestroyThing(camindy);
+	if (offcamexists != 0)
+	{
+		DestroyThing(offsetcam);
+		offcamexists = 0;
+	}
+	offsetcam = CreateThingAtPos(tpl_ghost, camsector, v_campos, '0 0 0');
+	CaptureThing(offsetcam);
+	offcamexists = 1;
+
+    # **************************
+    # ** first visit cutscene **
+    # **************************
+
+	if ((getinfo != 0) && (visits == 0) && (curItem == 0) && (playing == 0))
+    {
+		#### test only!
+		#### call fourWinds;
+		#### return;
+		
+		playing = 1;
+        visits = 1;
+        
+        # prep
+		MakeMeStop();
+		StartCutscene(1);
+        DeselectWeaponWait(player);       
+		indy = CreateThing(tpl_Indy, player);
+		CaptureThing(indy);
+		ClearThingFlags(indy, 0x80000);
+		SetCollideType(indy, 0);
+		CopyPlayerHolsters(player, indy);
+		SetThingAlpha(indy, 1.0);
+		SetThingFlags(player, 0x80000);
+
+		AISetLookThing(indy, centerspot);
+
+		# set cam
+		MakeCamera2LikeCamera1(camspot, camlookspot);
+		SetCameraFocus(2, camspot);
+		SetCameraSecondaryFocus(2, camlookspot);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		# Sleep(0.01);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 0.8);
+		Sleep(0.01);
+		SetCameraFocus(2, offsetcam);
+		SetCameraSecondaryFocus(2, centerspot);
+		SetCameraFOV(98, 1, 0.8);
+		
+		if (lit_Count == 4)
+		{
+			cursound = PlayVoice(indy, say_worked, 1.0, 0);
+			PlayKey(indy, in_rtarmup, 4, 0x12, 1);
+			WaitForSound(cursound);
+		}
+		else
+		{
+			cursound = PlayVoice(indy, say_Candelabra, 1.0, 0); # 5.3s
+			in_keyTrack1 = PlayKey(indy, in_handsONhips, 2, 0x10, 0);
+			PlayKey(indy, in_sideTOhips, 4, 0x12, 1);
+			in_keyTrack2 = PlayKey(indy, in_think, 4, 0x12, 0);
+			WaitForSound(cursound);
+
+			cursound = PlayVoice(indy, say_Pray1, 1.0, 0); # 2.4s
+			Sleep(2.0);
+			StopKey(indy, in_keyTrack1, 0.5);
+			StopKey(indy, in_keyTrack2, 0.5);
+			Sleep(0.5);
+		}
+        
+        # Clean up & restore controls
+		ClearThingFlags(player, 0x80000);
+		DestroyThing(indy);			
+		Call backtoplay;		     
+        playing = 0;
+    }
+    
+    # *******************************
+    # ** subsequent visit cutscene **
+    # *******************************
+ 
+    else if ((getinfo != 0) && (visits != 0) && (curItem == 0) && (playing == 0))
+    { 
+        playing = 1;
+        
+        # prep
+		MakeMeStop();
+		StartCutscene(1);
+        DeselectWeaponWait(player);
+		indy = CreateThing(tpl_Indy, player);
+		CaptureThing(indy);
+		ClearThingFlags(indy, 0x80000);
+		SetCollideType(indy, 0);
+		CopyPlayerHolsters(player, indy);
+		SetThingAlpha(indy, 1.0);
+		SetThingFlags(player, 0x80000);
+
+		AISetLookThing(indy, centerspot);
+  
+        # set cam
+		MakeCamera2LikeCamera1(camspot, camlookspot);
+		SetCameraFocus(2, camspot);
+		SetCameraSecondaryFocus(2, camlookspot);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 0.8);
+		Sleep(0.01);
+		SetCameraFocus(2, offsetcam);
+		SetCameraSecondaryFocus(2, centerspot);
+		SetCameraFOV(98, 1, 0.8);
+
+		if (lit_Count == 4)
+		{
+			cursound = PlayVoice(indy, say_worked, 1.0, 0);
+			PlayKey(indy, in_rtarmup, 4, 0x12, 1);
+			WaitForSound(cursound);
+		}
+		else
+		{
+			if (RandBetween(0,1) == 1)
+			{
+				cursound = PlayVoice(indy, say_Pray1, 1.0, 0); # 2.4s
+				PlayKey(indy, in_rtarmup, 4, 0x12, 1);
+				WaitForSound(cursound);
+			}
+			else
+			{
+				cursound = PlayVoice(indy, say_Pray2, 1.0, 0); # 3.3s
+				Sleep(1.5);
+				PlayKey(indy, in_botharmsup, 4, 0x12, 1);
+				WaitForSound(cursound);
+			}
+		}
+        
+        # Clean up & restore controls
+		ClearThingFlags(player, 0x80000);
+		DestroyThing(indy);	
+		Call backtoplay;
+
+		visits = visits + 1;
+		if (visits > 2)
+		{
+			visits = 0;
+		}
+        
+        playing = 0;
+    }
+    
+    # **********************
+    # ** candle placement **
+    # **********************
+
+    else if ((sendid == 2) && (curItem != 0) && (playing == 0))
+    {		
+		# ** north holder **
+        if ((sender == candleArm_N) && (placed_N == 0))	
+        {		
+			if ((curItem >= 88) && (curItem <= 91))
+            {
+			    # player may use any candle on a holder
+                placed_N = 1;
+                spot = north;
+				Call placecandle;	
+            }
+            else
+            {
+                # player is using something other than a candle
+	            playing = 1;
+                Call speak_Item;
+            }
+        }
+        
+        # ** south holder **
+        else if ((sender == candleArm_S) && (placed_S == 0))
+        {
+            if ((curItem >= 88) && (curItem <= 91))
+            {
+                placed_S = 1;
+                spot = south;
+				Call placecandle;
+            }
+            else
+            {
+                playing = 1;
+                Call speak_Item;
+            }
+        }
+        
+        # ** east holder **
+        else if ((sender == candleArm_E) && (placed_E == 0))
+        {
+            if ((curItem >= 88) && (curItem <= 91))
+            {
+                placed_E = 1;
+                spot = east;
+				Call placecandle;
+            }
+            else
+            {
+                playing = 1;
+                Call speak_Item;
+            }
+        }
+        
+        # ** west holder **
+        else if ((sender == candleArm_W) && (placed_W == 0))
+        {
+            if ((curItem >= 88) && (curItem <= 91))
+            {
+                placed_W = 1;
+                spot = west;
+				Call placecandle;
+            }
+            else
+            {
+                playing = 1;
+                Call speak_Item;
+            }
+        }
+    }
+
+	# ** NOT any holder **
+    else if (sender == candelabra)
+    {
+		
+		if ((curItem >= 88) && (curItem <= 91))
+        {   
+		   # player is using a candle on wrong spot
+			playing = 1;
+            Call speak_Wrong;
+        }
+        else if (curWeap != 13) 
+        {	            
+			# player is using something other than a candle
+            playing = 1;
+            Call speak_Item;
+        }
+    }
+    
+    # *********************
+    # ** candle ignition **
+    # *********************
+	
+	else if ((sender == candleArm_N) && (curWeap == 13) && (lit_CandleN == 0) && (placed_N == 1) && (playing == 0))
+    {
+		playing = 1;
+		spot = north;
+		Call lightcandle;
+	}
+    else if ((sender == candleArm_S) && (curWeap == 13) && (lit_CandleS == 0) && (placed_S == 1) && (playing == 0))
+    {
+		playing = 1;
+		spot = south;
+		Call lightcandle;
+	}
+    else if ((sender == candleArm_E) && (curWeap == 13) && (lit_CandleE == 0) && (placed_E == 1) && (playing == 0))
+    {
+		playing = 1;
+		spot = east;
+		Call lightcandle;
+	}
+    else if ((sender == candleArm_W) && (curWeap == 13) && (lit_CandleW == 0) && (placed_W == 1) && (playing == 0))
+    {
+		playing = 1;
+		spot = west;
+		Call lightcandle;
+    }
+
+    return;
+    
+#===============================================================================
+
+placecandle:
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+	# put away any weapon
+    DeselectWeaponWait(player);
+	
+	# prep
+	if (spot == north)
+	{		
+		offset_L = candleArm_N;
+		candlePos_X = candlePos_N;
+	}
+	if (spot == south)
+	{
+		offset_L = candleArm_S;
+		candlePos_X = candlePos_S;
+	}
+	if (spot == east)
+	{
+		offset_L = candleArm_E;
+		candlePos_X = candlePos_E;
+	}
+	if (spot == west)
+	{
+		offset_L = candleArm_W;
+		candlePos_X = candlePos_W;
+	}
+	
+    # slew camera
+	MakeCamera2LikeCamera1(camspot, camlookspot);
+	SetCameraFocus(2, camspot);
+	SetCameraSecondaryFocus(2, camlookspot);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	# SetCameraFOV(viewangle, 0, 0.0);
+	# Sleep(0.1);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.8);
+	Sleep(0.1);
+	SetCameraFocus(2, offsetcam);
+	SetCameraSecondaryFocus(2, offset_L);
+	SetCameraFOV(98, 1, 0.8);
+   
+    # reach for candelabra
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+	
+	if (curItem == 88)
+	{
+		# candle A	
+		candleA = CreateThing(tpl_CandleA, candlePos_X);		
+		CaptureThing(candleA);
+		SetCollideType(candleA, 0);
+    
+		# remove candle A from inventory
+		ChangeInv(player, 88, -1);
+	}
+
+    if (curItem == 89)
+	{
+		# candle B
+		candleB = CreateThing(tpl_CandleB, candlePos_X);			
+		CaptureThing(candleB);
+		SetCollideType(candleB, 0);
+
+		ChangeInv(player, 89, -1);
+	}
+
+	if (curItem == 90)
+	{
+		# candle C
+		candleC = CreateThing(tpl_CandleC, candlePos_X);
+		CaptureThing(candleC);
+		SetCollideType(candleC, 0);
+
+		ChangeInv(player, 90, -1);
+    }
+
+	if (curItem == 91)
+	{
+		# candle D	
+		candleD = CreateThing(tpl_CandleD, candlePos_X);
+		CaptureThing(candleD);
+		SetCollideType(candleD, 0);
+
+		ChangeInv(player, 91, -1);
+	}
+
+	placed_Count = placed_Count + 1;
+    
+    # play success line
+    call speak_Success;
+    
+    # restore controls
+	Call backtoplay;
+
+    return;
+
+#===============================================================================
+	
+lightcandle:
+
+	# do cutscene stuff
+    MakeMeStop();
+    StartCutscene(1);
+    
+    # prep
+	if (spot == north)
+	{
+		lit_CandleN = 1;
+		offset_L = candleArm_N;
+		somecandlecog = northcandlecog;
+	}
+	if (spot == south)
+	{
+		lit_CandleS = 1;
+		offset_L = candleArm_S;
+		somecandlecog = southcandlecog;
+	}
+	if (spot == east)
+	{
+		lit_CandleE = 1;
+		offset_L = candleArm_E;
+		somecandlecog = eastcandlecog;
+	}
+	if (spot == west)
+	{
+		lit_CandleW = 1;
+		offset_L = candleArm_W;
+		somecandlecog = westcandlecog;
+	}
+	
+    # slew camera
+	MakeCamera2LikeCamera1(camspot, camlookspot);
+	SetCameraFocus(2, camspot);
+	SetCameraSecondaryFocus(2, camlookspot);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	# SetCameraFOV(viewangle, 0, 0.0);
+	# Sleep(0.1);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.8);
+	Sleep(0.1);
+	SetCameraFocus(2, offsetcam);
+	SetCameraSecondaryFocus(2, offset_L);
+	SetCameraFOV(98, 1, 0.8);
+   
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+	# light candle
+	SendMessage(somecandlecog, user1);
+
+    if (placed_Count == 4)
+    {
+		# candles remain lit
+		lit_Count = lit_Count + 1;
+        if (lit_Count == 4)
+		{
+			call fourWinds;
+		}
+		else
+		{
+			Sleep(1.0);
+			Call backtoplay;
+		}
+
+		playing = 0;
+    }
+    else
+	{
+		Sleep(1.0);
+		Call backtoplay;	  
+		playing = 0;
+
+		# blow out candle
+		SendMessage(somecandlecog, user2);
+	}
+
+	return;
+
+#===============================================================================
+
+fourWinds:
+  
+    # Stop sector thrust...
+    SetSectorThrust(sec0, '0.0 0.0 0.0', 0.0);
+    
+    # solve hint40
+    SendMessage(hintCog, user0);
+	
+	# Prep...
+    MakeMeStop();
+	DeselectWeaponWait(player);
+    StartCutscene(2);
+	indy = CreateThing(tpl_Indy, player);
+	CaptureThing(indy);
+	ClearThingFlags(indy, 0x80000);
+	CopyPlayerHolsters(player, indy);
+	SetThingAlpha(indy, 1.0);
+	SetThingFlags(player, 0x80000);
+	SetCollideType(indy, 0);
+
+	# Shot of kiosk & Indy...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+    SetCameraFocus(2, wm_cam_1);
+    SetCameraSecondaryFocus(2, wm_ct_1);
+    SetCurrentCamera(2);
+    SetCameraFOV(70, 0, 0.0);
+
+	# music flourish
+    PlaySoundLocal(mus_Cue1, 1.0, 0.0, 0x0, 0);
+
+	# Indy turns...
+	AISetLookThing(indy, windmill);
+    
+    # wind sounds
+    PlaySoundLocal(sfx_Gust1, 1.0, 0.0, 0x0, 0);
+    
+    # create wind-filled flags
+    wind_Flag1 = CreateThing(tpl_WindFlag, flag1);
+    CaptureThing(wind_Flag1);
+    wind_Flag2 = CreateThing(tpl_WindFlag, flag2);
+    CaptureThing(wind_Flag2);
+    Sleep(0.01);
+    DestroyThing(flag1);
+    DestroyThing(flag2);
+    
+    # animate the flags
+    PlayKey(wind_Flag1, key_Flag, 4, 0x10, 0);
+    PlayKey(wind_Flag2, key_Flag, 4, 0x10, 0);
+    
+    # create snow devils
+    CreateThing(tpl_Devil, devil0);
+    Sleep(0.2);
+    CreateThing(tpl_LilDevil, devil2);
+	Sleep(0.3);
+    
+    # Pan over toward windmill...
+	SetCameraLookInterp(2, 1);
+	SetCameraInterpSpeed(2, 3.0);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, wm_ct_2);
+	Sleep(1.0);
+    
+    # TO DO: flap flags
+    
+    # more devils
+    CreateThing(tpl_Devil, devil1);
+    Sleep(0.2);
+    CreateThing(tpl_LilDevil, devil3);
+    
+    # more wind sounds
+    PlaySoundLocal(sfx_Gust1, 1.0, 0.0, 0x0, 0);
+    
+    Sleep(2.5);
+
+    # Cut to windmill gears...
+	wm_colltype = GetCollideType(windmill);
+	t_colltype = GetCollideType(tower);
+	SetCollideType(windmill, 0);
+	SetCollideType(tower, 0);
+	SetCameraLookInterp(2, 0);
+    SetCameraFocus(2, wm_cam_2);
+    SetCameraSecondaryFocus(2, wm_ct_3);
+	SetCameraFOV(70, 0, 0.0);
+   
+    # Spin windmill...
+    wm_keyTrack1 = PlayKey(windmill, key_Gears, 4, 0x10, 0);
+    wm_sndTrack1= PlaySoundThing(sfx_Gears, windmill, 1.0, 4, 35, 0x881);
+	
+    # small wind sounds
+    PlaySoundLocal(sfx_Gust0, 1.0, 0.0, 0x0, 0);
+    
+    Sleep(1.5);
+    
+    # big wind sounds
+    PlaySoundLocal(sfx_Gust1, 1.0, 0.0, 0x0, 0);
+    
+    # pan up
+	SetCameraLookInterp(2, 1);
+	SetCameraInterpSpeed(2, 3.0);
+	Sleep(0.1);
+    SetCameraSecondaryFocus(2, wm_ct_4);
+	SetCameraFOV(45, 1, 3.0);
+    Sleep(3.2);
+    
+    # dolly back
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 12.0);
+	Sleep(0.1);
+	SetCameraFocus(2, wm_cam_3);
+	SetCAmeraSecondaryFocus(2, wm_ct_3);
+	SetCameraFOV(90, 1, 12.0);
+	Sleep(6.0);
+   
+    # prep indy
+	TeleportThing(indy, wm_mk_1);
+	
+	# create anim bridge
+    bridge_Anim = CreateThing(tpl_BridgeAnim, bridge);
+    CaptureThing(bridge_Anim);
+    DestroyThing(bridge);
+    Sleep(0.01);
+    
+    PlaySoundThing(sfx_Start, bridge_Anim, 1.0, 15, 35, 0x0);
+    move_Track = PlaySoundThing(sfx_Move, bridge_Anim, 1.0, 15, 35, 0x881);
+
+    # pivot bridge
+    PlayKey(bridge_Anim, key_Bridge, 4, 0x14, 0);
+	Sleep(4.0);
+
+	# Indy into frame
+	AISetMoveSpeed(indy, 0.9);
+	AISetLookThingEyeLevel(indy, wm_mk_2);
+	AISetMoveThing(indy, wm_mk_2, 0);   
+    Sleep(2.0);
+
+    StopSound(move_Track, 0.5);
+    PlaySoundThing(sfx_Stop, bridge_Anim, 1.0, 15, 35, 0x0);
+	AIWaitForStop(indy);
+	AISetLookThingEyeLevel(indy, windmill);
+	Sleep(0.5);
+	
+	ClearThingFlags(player, 0x80000);
+	TeleportThing(player, indy);
+	DestroyThing(indy);
+	
+	# clean up
+	SetCollideType(windmill, wm_colltype);
+	SetCollideType(tower, t_colltype);	
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);			
+	v_campos =
+		VectorAdd(VectorTransformToOrient(player, '0.25 -0.05 0.05'), GetThingPos(player));	
+	SetCameraPosition(1, v_campos);
+    SetCurrentCamera(curcam);
+	ResetCameraFOV(0, 0.0);
+    RestoreExtCam();
+	EndCutscene();
+    ClearActorFlags(player, 0x200000);
+    
+    # create walkable bridge
+    exit_Bridge = CreateThing(tpl_BridgeStill, bridge2);
+    CaptureThing(exit_Bridge);
+    DestroyThing(bridge_Anim);
+    
+    return;
+
+#===============================================================================
+
+endCut:
+
+    # prep
+    MakeMeStop();
+    StartCutscene(2);
+    DeselectWeaponWait(player);
+	indy = CreateThing(tpl_Indy, player);
+	CaptureThing(indy);
+	ClearThingFlags(indy, 0x80000);
+	CopyPlayerHolsters(player, indy);
+	SetThingAlpha(indy, 1.0);
+	SetThingFlags(player, 0x80000);
+	AISetCutsceneMode(indy);
+    
+    # play endcut music cue
+    PlaySoundLocal(mus_Cue2, 1.0, 0.0, 0x0, 0);
+  
+    # walk indy into sunset
+    AISetMoveSpeed(indy, 1.0);
+    AISetLookThingEyeLevel(indy, wm_mk_3);
+    AISetMoveThing(indy, wm_mk_3, 0);
+    
+    # Cut to watch
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);			
+    SetCameraFocus(2, wm_cam_4);
+    SetCameraSecondaryFocus(2, wm_ct_5);
+    SetCurrentCamera(2);
+    SetCameraFOV(75, 0, 0.0);
+    
+	# dolly behind
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);			
+	SetCameraInterpSpeed(2, 10.0);
+	Sleep(0.01);
+    SetCameraFocus(2, wm_cam_5);
+    SetCameraSecondaryFocus(2, wm_ct_6);
+    SetCameraFOV(80, 1, 10.0);			
+    Sleep(5.0);
+    
+    # Indy "strange place for a wm"
+    ChangeSoundVol(wm_sndTrack1, 0.3, 0.3);
+	Sleep(0.2);
+	PlayVoice(indy, say_Strange, 1.0, 0); # 1.4 sec
+	Sleep(1.0);
+	ChangeSoundVol(wm_sndTrack1, 0.8, 0.4);
+	Sleep(4.5);
+	AIWaitForStop(indy);
+
+    # Cut to candles
+	StopSound(wm_sndTrack1, 0.0);
+    wm_sndTrack1= PlaySoundThing(sfx_Gears, windmill, 0.4, 45, 80, 0x881);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);			
+    SetCameraFocus(2, offset_N);
+    SetCameraSecondaryFocus(2, centerspot);
+    SetCameraFOV(70, 0, 0.0);
+	Sleep(0.01);
+	SetCameraFOV(60, 1, 2.0);
+	Sleep(1.0);
+
+	# blow out candles
+    PlaySoundLocal(sfx_Gust0, 1.0, 0.0, 0x0, 0);
+	
+    SendMessage(northcandlecog, user3);
+	Sleep(0.2);
+	SendMessage(eastcandlecog, user3);
+	Sleep(0.1);
+	SendMessage(westcandlecog, user3);
+	Sleep(0.2);
+	SendMessage(southcandlecog, user3);
+	Sleep(1.0);
+	
+	# end here
+	ClearThingFlags(fadeplate, 0x80000);	
+	ThingFadeAnim(fadePlate, 0.0, 1.0, 1.0, 0);	
+	StopSound(wm_sndTrack1, 1.0);  
+    Sleep(2.0);    
+	
+    EndCutScene();
+    JonesEndLevel();
+
+	#### temp for debug only ## comment out before builds
+	#ClearThingFlags(player, 0x80000);
+	#DestroyThing(indy);
+	#EndCutScene();
+	#ClearActorFlags(player, 0x200000);
+
+    return;
+
+#===============================================================================
+
+speak_Success:
+
+    while (newSuccess == oldSuccess) 
+    {
+        newSuccess = RandBetween(0, 2);
+    }
+    
+    oldSuccess = newSuccess;
+
+	if (placed_Count == 4)
+	{
+		newSuccess = 3;
+	}
+    
+    # say success line
+    PlayVoice(player, in_Success0[newSuccess], 1.0, 1);
+    
+    return;
+
+    
+#===============================================================================
+
+speak_Item:
+
+    while (newItem == oldItem) 
+    {
+        newItem = RandBetween(0, 4);
+    }
+    
+    oldItem = newItem;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # reach for it
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # say wrong item line
+    PlayVoice(player, in_WrongItem0[newItem], 1.0, 1);
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+
+#===============================================================================
+
+speak_Wrong:
+
+    while (newWrong == oldWrong) 
+    {
+        newWrong = RandBetween(0, 2);
+    }
+    
+    oldWrong = newWrong;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # reach for it
+    # PlayMode(player, 60, 0);
+    # Sleep(0.3);
+    
+    # say wrong spot line
+    PlayVoice(player, in_WrongSpot0[newWrong], 1.0, 1);
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+
+#===============================================================================
+
+backtoplay:
+
+	SetCameraInterpSpeed(2, 0.6);
+	SetCameraFocus(2, camspot);
+	SetCameraSecondaryFocus(2, camlookspot);
+	SetCameraFOV(viewangle, 1, 0.6);
+	Sleep(0.65);
+	SetCurrentCamera(curcam);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+ 
+ return;
+
+end

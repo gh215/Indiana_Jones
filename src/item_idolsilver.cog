@@ -1,0 +1,96 @@
+# Jones 3D Cog Script
+#
+# item_IdolSilver.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	activated
+message	touched
+message	taken
+
+cog		talkCog					local
+
+sound	foundSnd=INXJ151.wav	local
+
+thing	player					local
+
+int		treasureBin=36			local
+int		coinBin=34				local
+int		value=90				local
+
+int		bUnderwater				local
+
+end
+
+# ===================================================================
+
+code
+
+activated:
+
+    player = GetSourceRef();
+	bUnderwater = BitTest(GetThingFlags(player), 0x02000000);
+
+	StartCutscene(0);
+
+	if (!bUnderwater)
+	{
+		talkCog = GetCogByIndex(0);
+		SendMessage(talkCog, 27);
+	}
+
+	if (Rand() < 0.5)
+	{
+		SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+		SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 -0.01');
+
+	return;
+
+# -------------------------------------------------------------------
+
+touched:
+
+	player = GetSourceRef();
+
+	if (GetInv(player, treasureBin) < GetInvMax(player, treasureBin))
+	{
+		TakeItem(GetSenderRef(), player);
+	}
+    else
+	{
+		EndCutscene();
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+taken:
+
+	player = GetSourceRef();
+
+	ChangeInv(player, treasureBin, value);
+	SetInvAvailable(player, treasureBin, 1);
+	JonesInvItemChanged(coinBin);
+
+	Sleep(1.0);
+
+	if (!bUnderwater)
+		PlayVoice(player, foundSnd, 1.0, 0);
+
+    EndCutscene();
+
+	return;
+
+end

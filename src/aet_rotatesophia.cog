@@ -1,0 +1,129 @@
+# Jones 3D Cog Script
+#
+# aet_RotateSophia.cog
+#
+# Rotate Sophia inside the cage
+#
+# [HB] [TL]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		user0
+	message		user1
+	
+# ................................. KEYFRAMES ..................................
+
+	keyframe	so_wobble=0so_spin.key					local
+
+# ................................ ACTOR THINGS ................................
+
+	thing		sophia									nolink
+
+# ............................... OBJECT THINGS ................................
+
+	thing		spin_tgt_1								nolink
+	thing		spin_tgt_2								nolink
+	thing		spin_tgt_3								nolink
+
+# ............................... VARIABLES ....................................
+	
+	vector		v_spos									local
+	vector		v_tpos									local
+	vector		v_aim									local
+
+	flex		f_X										local
+	flex		f_Y										local
+
+	int			shespins=0								local
+	
+end
+
+# ==============================================================================
+
+code
+
+# NOTE ON COG BEHAVIOR:
+# 
+# User1 starts Sophia spinning
+#
+# User0 zeroes our heroine
+#
+# All spinning is clockwise viewed from above,
+# moving sophia's look to ghost targets spaced 120 degrees apart
+
+# ..............................................................................
+
+user0:
+
+	shespins = 0;
+	
+	# Get rid of Sophia...
+	ThingFadeAnim(sophia, 1.0, 0.0, 0.5, 0);
+	Sleep(0.5);
+	ResetThing(sophia);
+	DestroyThing(sophia);
+
+	return;
+
+# ..............................................................................
+
+user1:
+	
+    AISetCutsceneMode(sophia);            	# TL - Added for Sophia actor.
+	ClearThingFlags(sophia, 0x80000);		# TL - Added for Sophia actor.
+	shespins = 1;
+	
+	# Aim Sophia...
+	v_tpos = GetThingPos(spin_tgt_3);
+	v_spos = GetThingPos(sophia);
+	v_aim = VectorNorm(VectorSub(v_tpos, v_spos));
+	f_X = VectorX(v_aim);
+	f_Y = VectorY(v_aim);
+	v_aim = VectorSet(f_X, f_Y, 0.0); # remove Z		
+	SetThingLook(sophia, v_aim);
+
+	# Prevent looking up and down...
+	SetThingMaxHeadPitch(sophia, 0.0);
+	SetThingMinHeadPitch(sophia, 0.0);
+	
+	# Rotate at magic rate...
+	SetThingMaxHeadVel(sophia, 36.0); # no head jerks to next mark
+	SetThingMaxRotVel(sophia, 36.0); # 12 secs to spin 360
+
+	# Play swim anim...
+	PlayKey(sophia, so_wobble, 6, 0x10, 0);
+	
+	while (shespins != 0)
+	{
+		AISetLookThingEyeLevel(sophia, spin_tgt_1);
+		if (shespins != 0)
+		{
+			AIWaitForStop(sophia);
+		}
+		if (shespins != 0)
+		{
+			AISetLookThingEyeLevel(sophia, spin_tgt_2);
+		}
+		if (shespins != 0)
+		{
+			AIWaitForStop(sophia);
+		}
+		if (shespins != 0)
+		{
+			AISetLookThingEyeLevel(sophia, spin_tgt_3);
+		}
+		if (shespins != 0)
+		{
+			AIWaitForStop(sophia);
+		}
+	}
+
+	return;
+
+end

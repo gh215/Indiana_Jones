@@ -1,0 +1,423 @@
+# Jones 3D Cog Script
+#
+# VOL_Boatmover.cog
+#
+# This cog will release the keyboat from it's piers.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+#............MESSAGES..........
+message	startup
+message	activated
+message	arrived
+message	pulse
+message	entered
+message	timer
+
+#............ACTORS..........
+
+thing	indy
+thing	player										local
+			
+thing	shark1										
+thing	shark2										
+#............CAMERAS..........          			
+thing	cam1                            			
+thing	cam2                            			
+thing	curCam										local
+
+thing	sharkCam									
+			
+#............COGS...................
+cog		SharkWaycog
+
+#............CAMERA TARGETS..........   			
+thing	indytarget									local
+
+thing	sharkCamtarget								
+
+
+#............COGS..........
+cog		hintcog
+
+#............PROPS..........
+thing	boat
+thing	piers
+thing	switch
+thing	door
+
+thing	key
+thing	theKing
+thing	doc
+
+thing	shark_bars
+
+
+#............FXEVENTSPOTS..........
+thing	boatring									local
+thing	pierring1									local
+thing	pierring2									local
+thing	pierring3									local
+thing	pierring4									local
+
+thing	pierring1pos
+thing	pierring2pos
+thing	pierring3pos
+thing	pierring4pos
+
+thing	boatringpos
+
+surface	doorfloorSURF
+
+
+#............AIEVENTSPOTS..........
+thing	sharkgenpos1
+thing	sharkgenpos2
+thing	scorp1
+thing	scorp2
+
+thing	scorp1_mv0
+thing	scorp2_mv0
+
+thing	scorplooktarget
+
+#............TRIGGERS...........
+sector	exit_sect
+
+#............VARIABLES..........
+
+int		keysaid=0									local
+int		released=0									local
+int		soundrun									local
+int		index										local
+int		doorloop									local
+int		music										local
+int		i		                                    local
+flex	animId	                                    local
+flex	t_shark00                                   local
+flex	t_shark01                                   local
+int		TIMERID_RIPPLES=1							local
+
+#............VECTORS..........
+vector	look1		  								local
+vector	indyTargPos	  								local
+
+
+vector	pierstart	  								local
+vector	pierend		  								local
+vector	boatstart	  								local
+vector	boatend		  								local
+
+
+#............TEMPLATES..........
+
+template	ring=+ripples							local
+template	ghostTpl=ghost							local
+
+#............KEYFRAMES..........
+keyframe	inReach=in_activate_medium.key        	local
+keyframe	inGrab=in_activate_low.key        		local
+
+
+#............SOUNDS..........
+sound	ancientdevice=nub_aethdoorarm_start_c.wav	local
+sound	waterrush=nub_bull_move2_c.wav				local
+sound	scorpdoor=nub_stonedoor_stop_c.wav			local
+sound	in_akey=INXJ168.WAV	local					local
+sound	in_whathavewe=INXJ005.WAV					local
+sound	huge_groan=nub_bull_move4_c.wav				local
+sound	stonedoor=olv_quetzdoor_move_c.wav			local
+sound	awe_cue=mus_gen_awesome1.wav				local
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    Sleep(0.5);
+    
+    player = GetLocalPlayerThing();
+
+	AttachThingToThingEx(key, boat, 0x000C);
+    AttachThingToThingEx(theKing, boat, 0x000C);
+	
+	# scorpions will not respond to AI
+	AISetCutSceneMode(scorp1);
+	AISetCutSceneMode(scorp2);
+	
+
+	# hide the sharks
+	SetThingFlags(shark1, 0x80000);
+	SetThingFlags(shark2, 0x80000);
+
+	pierstart	= VectorSet(0.2, 0.2, 1.0);
+	pierend	= VectorSet(0.4, 0.4, 0.0);
+	boatstart	= VectorSet(0.5, 0.5, 1.0);
+	boatend	= VectorSet(0.8, 0.8, 0.0);
+
+    # doorfloorSURF is a move adjoin
+	SetAdjoinFlags(doorfloorSURF, 2);
+	SetAdjoinFlags(GetSurfaceAdjoin(doorfloorSURF), 2);
+	
+	return;
+
+# ========================================================================================
+
+activated:
+
+	If ((GetSenderRef() == switch) && (released == 0))	#player hits button in control room
+		{
+			StartCutScene(1);
+            SetActorFlags(player, 0x200000);
+			released = 1;
+            # prep camera
+			curCam = GetCurrentCamera();
+            # offset camera to a known thing
+			DeselectWeaponWait(player);
+			SetExtCamOffsetToThing(cam1);
+			CopyPlayerHolsters(player, indy); # make sure actor has matching props
+			CopyOrientAndPos(player, indy);
+            SetThingFlags(player, 0x80000);
+			ClearThingFlags(indy, 0x80000);
+            
+			# set doc to no collide
+			SetCollideType(doc, 0);
+			
+			# Line Indy up...
+			AISetLookThingEyeLevel(indy, switch);
+			AIWaitForStop(indy);
+
+			# create a target right above and in front of indy actor
+			indyTargPos = VectorAdd(VectorTransformToOrient(indy, '0.0 0.02 0.02'), GetThingPos(indy));
+			indytarget = CreateThingAtPos(ghostTpl, GetThingSector(indy), indyTargPos, '0 0 0');
+			CaptureThing(indytarget);
+
+			Sleep(0.25);
+			PlayKey(indy, inReach, 4, 0x12, 0);
+			Sleep(0.25);
+			MovetoFrame(switch, 1, .35);
+			Sleep(1.0);
+            # get camera 2 to be where the offset is
+			SetCameraFocus(2, cam1);
+			SetCameraSecondaryFocus(2, indytarget);
+			SetCameraLookInterp(2,0);
+			Sleep(.25);
+			SetCurrentCamera(2);
+			SetCameraFOV(90, 0, 0);
+			# ancient machinery sound fx...
+			PlaySoundLocal(ancientdevice, 1.0, 0, 0x0, 0);
+            
+			# move the indytarget out to the boat's position
+			animId = MoveThingToPos(indytarget, GetThingPos(boat), 3.0);
+            Sleep(.5);
+            
+			# focus camera on the boat and move it out for a better view
+			MovetoFrame(cam1, 1, 3.0);
+			WaitforStop(cam1);
+			SetCameraSecondaryFocus(2, boat);
+            
+			# camera interp disabled
+			SetCameraLookInterp(2, 0);
+			DestroyThing(indytarget);
+			
+			Sleep(.25);
+            SetPulse(.1);		# screenshake and ring sprite generation handled on pulse messages
+			
+			# begin movements...
+			MovetoFrame(piers, 1, .5);
+			MovetoFrame(boat, 1, .5);
+			soundrun = PlaySoundLocal(waterrush, 1, 1, 0x01, 0);
+			music=PlaySoundLocal(awe_cue, 1, 1, 0x0, 0);
+        }
+
+If ((GetSenderRef() == key) && (keysaid == 0))
+	{
+        keysaid = 1;
+		# offset the camera to a standard grab pos
+		look1=VectorSet(-0.2, 0.0, 0.2);
+		SetExtCamOffset(look1);
+        
+		# indy says "what have we here..."
+		PlayVoice(player, in_whathavewe, 1, 0);
+		
+		# skip a beat
+		Sleep(0.5);
+		PlayKey(player, inGrab, 4, 0x12, 0);
+		Sleep(1.0);
+		DestroyThing(key);
+		# add the key to Jone's inventory
+		ChangeInv(player, 116, 1);
+		SetInvAvailable(player, 116, 1);
+		JonesInvItemChanged(116);
+
+		# indy says "a key..."
+        PlayVoice(player, in_akey, 1, 0);
+        
+		# restore the camera
+		RestoreExtCam();
+
+		# restore the player
+		ClearActorFlags(player, 0x200000);
+
+		SendMessage(hintcog, user0);
+	}
+
+return;
+		
+		
+# ========================================================================================
+
+arrived:
+
+	If ((GetSenderRef() == piers) && (GetCurFrame(piers) == 1))
+        {
+			StopSound(soundrun, 4.0);
+			SetPulse(0);
+        }
+	
+	If ((GetSenderRef() == boat) && (GetCurFrame(boat) == 1))
+        {
+			MovetoFrame(boat, 2, .25);
+			for (i = 0; i <= 5; i = i + 1) 
+				{
+	                boatring = CreateThing(ring, boatringpos);
+					AnimateSpriteSize(boatring, boatstart, boatend, 1.5);
+					sleep(.5);
+				}
+        }
+	
+	If ((GetSenderRef() == boat) && (GetCurFrame(boat) == 2))
+        {
+			# secondary pier sound effect
+            PlaySoundLocal(scorpdoor, 0.1, 1, 0x0, 0);
+			
+			# attach the ripple object to the boat
+			AttachThingToThing(boatringpos, boat);
+			SetTimerEx(0.5, TIMERID_RIPPLES, 0, 0);		# timer will create ripples at the boats' position until it is stopped
+			MovetoFrame(boat, 12, 1.5);
+			Sleep(6.0);			# wait for boat to go around the corner
+            
+			# switch to shark grill cam
+			SetCameraSecondaryFocus(2, sharkCamtarget);
+			SetCameraFocus(2, sharkCam);
+			Sleep(0.5);
+			SetPulse(0.1);
+			MoveToFrame(shark_bars, 1, 1.0);
+			WaitForStop(shark_bars);
+			SetPulse(0.0);
+			Sleep(0.5);
+            
+			# switch to door cam
+			SetCameraLookInterp(2,0);
+            SetCameraSecondaryFocus(2, scorplooktarget);
+            SetCameraFocus(2, cam2);
+			MoveToFrame(cam2, 1, 0.5);
+			MovetoFrame(door, 1, 4);
+			doorloop=PlaySoundLocal(stonedoor, 0.5, -1, 0x1, 0);
+			WaitForStop(door);
+			StopSound(doorloop, 0);
+			PlaySoundLocal(scorpdoor, 0.5, -1, 0x0, 0);
+			Sleep(0.25);
+
+			# doorfloorSURF becomes no move adjoin
+			ClearAdjoinFlags(doorfloorSURF, 2);
+			ClearAdjoinFlags(GetSurfaceAdjoin(doorfloorSURF), 2);
+			
+			# scorpians rush in
+            AISetMoveSpeed(scorp1, 1.0);
+            AISetMoveThing(scorp1, scorp1_mv0, 0);
+            AISetMoveSpeed(scorp2, 1.0);
+            AISetMoveThing(scorp2, scorp2_mv0, 0);
+			
+            Sleep(1.5);
+            SetCurrentCamera(curCam);
+            ResetCameraFOV(0, 0.0);
+			RestoreExtCam();
+			SetThingFlags(indy, 0x80000);
+			ClearThingFlags(player, 0x80000);
+			ClearActorFlags(player, 0x200000);
+			ClearThingFlags(shark1, 0x80000);
+            SendMessageEx(SharkWaycog, user0, t_shark00, 0, 0, 0);
+			ClearThingFlags(shark2, 0x80000);
+			SendMessageEx(SharkWaycog, user0, t_shark01, 0, 0, 0);
+
+			EndCutScene();
+			AICLearCutSceneMode(scorp1);
+			AICLearCutSceneMode(scorp2);
+        
+	        # restore doc collision
+			SetCollideType(doc, 3);
+
+	
+		}
+
+     If ((GetSenderRef() == boat) && (GetCurFrame(boat) == 4))	# fade the music level down
+            {
+				ChangeSoundVol(music, .5, 5);
+			}        
+
+	
+	If ((GetSenderRef() == boat) && (GetCurFrame(boat) == 12))
+            {
+				DetachThing(key);
+			}	
+    
+	return;
+
+
+# ========================================================================================
+
+pulse:
+
+	SetPOVShake('0.0 0.0 0.007', '0.0 0.0 0.00', 80.0, 0.80);
+	index=index+1;
+	
+	If (index == 3)
+	{
+	pierring1 = CreateThing(ring, pierring1pos);
+	AnimateSpriteSize(pierring1, pierstart, pierend, 1.5);
+	
+	pierring2 = CreateThing(ring, pierring2pos);
+	AnimateSpriteSize(pierring2, pierstart, pierend, 1.5);
+	
+	pierring3 = CreateThing(ring, pierring3pos);
+	AnimateSpriteSize(pierring3, pierstart, pierend, 1.5);
+	
+	pierring4 = CreateThing(ring, pierring4pos);
+	AnimateSpriteSize(pierring4, pierstart, pierend, 1.5);
+	index=0;
+    }
+	
+	return;
+    
+
+# ========================================================================================
+entered:
+
+If ((GetSenderRef() == exit_sect) && (GetSourceRef() == player))
+	{
+		KillTimerEx(TIMERID_RIPPLES);
+	}
+
+return;
+# ========================================================================================
+timer:
+		# water rings at the base of the boat
+		boatring = CreateThing(ring, boatringpos);
+		AnimateSpriteSize(boatring, boatstart, boatend, 1.5);
+		SetTimerEx(0.4, TIMERID_RIPPLES, 0, 0);
+        return;
+
+# ========================================================================================
+end
+
+
+
+

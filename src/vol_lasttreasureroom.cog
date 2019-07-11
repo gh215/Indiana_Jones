@@ -1,0 +1,193 @@
+# Jones 3D Cog Script
+#
+# Vol_LastTreasureRoom.cog
+#
+# script controls the platforms in the final treasure room in VOL
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+#.........................MESSAGES....................
+	message		startup		
+    message		activated		
+    message		pulse		
+    message		arrived		
+		
+#.........................ACTORS....................
+    thing		player								local          
+    thing		indy          
+	
+#.........................ACTOR MARKS....................
+	thing		in_mv0
+	thing		cam_mv0
+
+#.........................PROPS....................
+    thing		ledge		
+	thing		ledge1		
+	thing		ledge2		
+    thing		block1          
+    thing		block2
+    thing		button          
+          
+#.........................CAMERAS....................
+    thing		camPos									
+
+#.........................CAMERAS TARGETS....................
+	thing		strt1MoveTarg							
+
+#.........................VARIABLES....................
+    int			open=0									local
+    int			rocksnd1								local
+    int			ledgesnd								local
+    int			curCam									local
+    int			animId1									local
+    int			animId2									local
+
+#.........................VECTORS....................
+	vector		strt1CamTarg							local
+
+#.........................KEYFRAMES....................
+    keyframe	hitswitch=in_activate_medium.key	local
+
+
+#.........................SOUNDS....................
+	sound		rockmove=nub_bull_move1_c.wav			local
+	sound		rockstop=pyr_sarcophagus_lid.wav		local
+	
+	sound		ledgemove=olv_quetzdoor_move_c.wav		local
+	sound		ledgestop=olv_quetzdoor_start_c.wav		local
+
+#.........................TEMPLATES....................
+	template	ghostTpl=ghost							
+
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+    open = 0;
+	player = GetLocalPlayerThing();
+	AttachThingToThing(ledge1, ledge);
+	AttachThingToThing(ledge2, ledge);
+
+return;
+
+# ........................................................................................
+
+activated:
+
+If (GetSenderRef() != button) return;
+If (IsThingMoving(button) != 0) return;
+If (open == 0)
+{
+    open = 1;
+	# take player control
+	MakemeStop();
+	StartCutScene(1);
+	DeselectWeaponWait(player);
+
+    # get the camera
+	curCam= GetCurrentCamera();
+    SetExtCamOffsetToThing(camPos);
+    SetExtCamLookOffsetToThing(strt1MoveTarg);
+
+	
+    # take player control, line up the actor to the switch
+	CopyOrientAndPos(player, indy);
+	CopyPlayerHolsters(player, indy);
+    SetThingFlags(player, 0x80000);
+	ClearThingFlags(indy, 0x80000);
+	AISetLookThingEyeLevel(indy, button);
+	AISetMoveSpeed(indy, 1);
+	AISetMoveThing(indy, in_mv0, 1);
+    Sleep(0.5);
+
+    
+    
+    # actor hits switch
+    PlayKey(indy, hitswitch, 4, 0x12, 0);
+	MoveToFrame(button, 1, 0.5);
+	Sleep(0.5);
+
+	# jump to camera 2 focus on moveable target
+	SetCameraLookInterp(2, 0);
+	SetCameraSecondaryFocus(2, strt1MoveTarg);
+	SetCameraFocus(2, camPos);
+	SetCurrentCamera(2);
+	Sleep(1.0);
+	
+	# move camera focus object up to block 1
+    animId1 = MoveThingToPos(strt1MoveTarg, GetThingPos(block2), 2.0);
+	#SetCameraLookInterp(2, 3);
+	#SetCameraSecondaryFocus(2, block2);
+
+	# begin screenshake
+	SetPulse(0.1);
+	
+	# block movement and sound fx
+	rocksnd1=PlaySoundLocal(ledgemove, 0.75, 0, 0x1, 0);
+	
+	MoveToFrame(block1, 1, 0.5);
+	MoveToFrame(block2, 1, 0.5);
+	Sleep(2.0);
+	MoveToFrame(camPos, 1, 1.0);
+	
+    # move camera focus object up to ledge
+    animId2 = MoveThingToPos(strt1MoveTarg, GetThingPos(ledge), 1.5);
+
+	Sleep(1.0);
+	# ledge movement and sound fx
+	ledgesnd=PlaySoundThing(ledgemove, ledge, 0.75, 6, 12, 0x1);
+	
+	MoveToFrame(ledge, 1, 0.5);
+	#MoveToFrame(camPos, 1, 1);
+
+}
+return;
+
+# ........................................................................................
+pulse:
+
+	SetPOVShake('0.0 0.0 0.01', '0.0 0.0 0.01', 80.0, 0.80);
+	return;
+
+# ........................................................................................
+arrived:
+
+If (GetSenderRef() == block1)
+{
+	StopSound(rocksnd1, 0);
+	PlaySoundLocal(rockstop, 1.0, 1, 0, 0);
+}
+
+If (GetSenderRef() == ledge)
+{
+	StopSound(ledgesnd, 0);
+	PlaySoundThing(ledgestop, ledge, 1.0, 4, 12, 0x0);
+
+    # stop screenshake
+	SetPulse(0);
+	Sleep(2.0);
+	
+	# restore player
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	SetThingFlags(indy, 0x80000);
+	SetCurrentCamera(curCam);
+    EndCutScene();
+    RestoreExtCam();
+}
+
+return;
+
+	
+# ........................................................................................
+end
+

@@ -1,0 +1,120 @@
+# Jones 3D Cog Script
+#
+# Riv_RaftHouseWpnts.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#========================================================================================
+
+symbols
+   
+    message     startup
+    message     entered
+    message     killed
+    
+    # ** commies **
+    thing       com1
+    
+    # ** com3 waypoints **
+    thing       t_Wpnt0
+    thing       t_Wpnt1
+    thing       t_Wpnt2
+    
+    sector      sec_Activate1       linkID=1
+    sector      sec_Deactivate1     linkID=0
+    sector      sec_Deactivate2     linkID=0
+    
+    int         n_pos=0         local
+    int         n_Wpnts=3       local
+    int         wpntsActive=1   local
+    
+    # ** subroutines **
+    flex        activate_Wpnts      local
+    flex        deactivate_Wpnts    local
+	
+end
+
+#========================================================================================
+
+code
+
+startup:
+
+    # prepare commie
+    AISetCutsceneMode(com1);
+    
+    return;
+
+#========================================================================================
+
+entered:
+
+    if(GetSenderID() == 1)
+    {
+        call activate_Wpnts;
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        call deactivate_Wpnts;
+    }
+    
+    return;
+    
+#========================================================================================
+
+killed:
+
+    if(GetSenderRef() == com1) com1 = -1;
+    
+    return;
+
+#========================================================================================
+
+activate_Wpnts:
+
+    if(wpntsActive == 1) return;
+    
+#    DebugPrint("RaftHouseWpnts Activated!");
+    
+    wpntsActive = 1;
+
+    if(com1 > -1)
+    {
+        # restore commie 'brain'
+        AIClearCutsceneMode(com1);
+        
+        Sleep(0.01);
+        
+        for(n_pos = 0; n_pos < n_Wpnts; n_pos = n_pos + 1)
+        {
+            AISetWpnt(t_Wpnt0[n_pos], n_pos);
+        }
+    
+        # com1 waypoints
+        AIConnectWpnts(0, 1);
+        AIConnectWpnts(1, 2);
+        
+        AITraverseWpnts(com1, 0, 2.0, 20.0, 0);
+    }
+    
+    return;
+
+#========================================================================================
+
+deactivate_Wpnts:
+
+    if(wpntsActive == 0) return;
+    
+#    DebugPrint("RaftHouseWpnts Deactivated!");
+    
+    wpntsActive = 0;
+
+    if(com1 > -1) AIClearInstinctWpntMode(com1);
+
+    return;
+
+#========================================================================================
+
+end

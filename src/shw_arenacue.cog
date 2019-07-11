@@ -1,0 +1,53 @@
+# Jones 3D Cog Script
+#
+# gen_Door.cog
+#
+# Generic Door Script
+#
+# [IS]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+		
+    message	startup	
+    message	entered	
+        
+    #	ACTORS
+	thing		player          local                  
+
+	#	TRIGGER
+    sector  cueArea                
+       
+    
+	#MUSIC AND VOICE LINES
+	sound   dangercue=mus_gen_danger2.wav		local
+    
+	#	VARS
+    int     cued=0		local
+    
+
+end
+
+# ========================================================================================
+
+code
+startup:
+		
+	player = GetLocalPlayerThing();
+	return;
+
+# ........................................................................................
+entered:
+        		
+	If ((GetSenderRef() == cueArea) && (GetSourceRef() == player) && (cued == 0))
+		{
+		cued = 1;
+		PlaySoundLocal(dangercue, 1.0, 0.0, 0x0, 0);
+		}
+    return;
+# ........................................................................................
+
+end
+

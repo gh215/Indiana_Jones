@@ -1,0 +1,71 @@
+# Jones 3D Cog Script
+#
+# jep_blowbridge.cog
+#
+# Cog to destroy bridge.
+#
+#	[DS]
+#	borrowed explode info from [SXC & TRM] 
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message	startup
+	message     entered
+
+	thing       bridge0                           
+	thing       truck0
+	thing		expos
+	sector	blowtime
+	sound		explode_snd=gen_bazooka_fire.wav	local
+	int		blown=0					local
+	int		i						local
+	thing		fragment					local
+	thing		dust						local
+	template	dusttemp=dustcloud			local		
+	template	debris0=stoneshrapa			local 		
+	template	debris1=stoneshrapb			local   		
+	template	debris2=stoneshrapc			local 		
+	template	debris3=stoneshrapa			local 		
+	template	debris4=stoneshrapb			local
+	material	dustmat=gen_a4sfx_dustcloud.mat	local
+	
+
+	thing		player					local
+
+
+end
+
+#----------------------------------------------------------------------
+code
+startup:
+	player=GetLocalPlayerThing(); 
+	return;
+
+entered:
+	if(blown == 1) return;
+	{	
+	blown=1;
+	PlaySoundThing(explode_snd, expos, 1.0, 40.0, 80.0, 0);
+	for(i=0; i<40; i=i+1)                                                        	            
+	{                                                                                    	            
+	fragment = CreateThing(debris0[RandBetween(0, 4)], expos);                                 
+	SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.5 0.0'), 3));
+	SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));    	            
+	}
+dust=CreateThing(dusttemp, expos);
+MaterialAnim(dustmat, 8.0, 0);
+AnimateSpriteSize(dust, '0.02 0.02 1.0', '3.0 3.0 0.0', 3.0);
+	DestroyThing(bridge0);
+      MoveToFrame(truck0, 3, 15);
+	WaitForStop(truck0);
+	DestroyThing(truck0);
+	sleep(3.0);
+	Destroything(dust);
+	}
+	return;
+end
+

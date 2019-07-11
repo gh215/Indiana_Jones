@@ -1,0 +1,96 @@
+# Jones 3D Cog Script
+#
+# TEM_EndLevel.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     crossed
+    
+    thing       player      local
+    thing       indy        local
+    thing       fadeThing
+    thing       ghostThing
+    thing       targ1
+    
+    surface     surf_End
+    
+    template    tpl_Actor=indy_sh_actor     local
+    
+    int         done=0      local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    SetThingAlpha(fadeThing, 0.0);
+    return;
+
+# ========================================================================================
+
+crossed:
+
+    player = GetLocalPlayerThing();
+    
+    if((GetSenderRef() == surf_End) && (done == 0))
+	{
+    	done = 1;
+        
+    	MakeMeStop();
+        StartCutscene(2);
+        
+        SetCameraFadeThing(2, fadeThing, ghostThing, 0);
+        
+        Sleep(0.01);
+        SetCurrentCamera(2);
+        ThingFadeAnim(fadeThing, 0, 1, 1.5, 0);
+        
+        # create indy actor
+        indy = CreateThing(tpl_Actor, player);
+        CaptureThing(indy);
+        
+        # outfit indy actor
+        CopyPlayerHolsters(player, indy);
+        
+        # hide player show actor
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(indy, 0x80000);
+        
+        # walk actor to target1
+        AISetMoveSpeed(indy, 1.2);
+        AISetLookThing(indy, targ1);
+        AISetMoveThing(indy, targ1, 0);
+        
+        Sleep(2.0);
+        
+        ##### Debug only remove before ship ##########
+        # Get the player into position
+        #CopyOrientAndPos(indy, player);
+        
+        # hide actor show player
+        #SetThingFlags(indy, 0x80000);
+        #ClearThingFlags(player, 0x80000);
+
+        # Return control to player
+        #ClearActorFlags(player, 0x200000);
+        ##############################################
+    	
+        EndCutscene();
+        JonesEndLevel();
+    }
+    
+    return;
+        
+# ========================================================================================
+
+end
+

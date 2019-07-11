@@ -1,0 +1,169 @@
+# Jones 3D Cog Script
+#
+# BAB_Bombfloor.cog
+# This cog is based on the brilliant groundbreaking cog work pioneered by Reed Derleth
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     damaged
+    message     crossed
+    message     entered
+    
+    template    debris0=stoneshrapa_nc          local
+    template    debris1=stoneshrapam_nc         local
+    template    debris2=stoneshrapas_nc         local
+    template    debris3=stoneshrapb_nc          local
+    template    debris4=stoneshrapbs_nc         local
+    
+    template    staticfrag0=stnshrpa            local
+    template    staticfrag1=stnshrpb            local
+    template    staticfrag2=stnshrpc            local
+    
+    template    bigboom=+baz_spr_exp_blast      local
+    template    smoke=+baz_spr_exp_smoke        local
+    template    doorboom=+gen_exp_metal         local
+    
+
+    thing       droppos
+    thing       smokepos0                  
+    thing       smokepos1
+    thing       smokepos2
+    thing       boompos
+    
+    thing       fragpos0
+    thing       fragpos1
+    thing       fragpos2
+    thing       fragpos3
+    thing       fragpos4
+    thing       fragpos5
+    thing       fragpos6
+    
+    thing       fallcam0
+    thing       metaldoor
+    thing       metaldoorpos
+              
+    surface     topface                         mask=0x40
+    surface     fallface
+    sector      archsector
+    sector      topsector
+    sector      watersector                     linkid=5
+    sector      watersector1                    linkid=5
+    sector      watersector2                    linkid=5
+                                                
+    int         count                           local
+    int         fragment                        local
+    int         bdone=0                         local
+    int         croscheck                       local
+    thing       player                          local
+    
+    sound       indyfall=mus_flourish.wav       local
+
+end
+
+code
+
+# ========================================================================================
+startup:
+    player = GetLocalPlayerThing();
+    SetFaceGeoMode(topface, 4);         //always draw
+    ClearAdjoinFlags(topface, 2);       //no nove
+    SetSectorAdjoins(topsector, 0);     //adjoins are off
+   
+return;
+
+#----------------------------------------------------------------------------------------
+damaged:
+
+    if ((GetSenderRef() == topface) && (GetSectorPlayerCount(archsector) == 0) && (bdone == 0))
+    {
+        bdone=1;
+        sleep(0.25);
+        for(count=0; count<2; count=count+1)                                                        	            
+        {                                                                                    	            
+            fragment = CreateThing(debris0[RandBetween(0, 4)], boompos);                                 
+            SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 2));
+            SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));    	            
+        }
+        CreateThing(staticfrag0, fragpos0);
+        CreateThing(staticfrag1, fragpos1);
+        CreateThing(staticfrag2, fragpos2);
+        CreateThing(staticfrag0, fragpos3);                
+        CreateThing(staticfrag1, fragpos4);
+        //CreateThing(staticfrag2, fragpos5);
+        //CreateThing(staticfrag0, fragpos6);
+        sleep(0.1);                
+        //print("Getting Damaged");
+        SetFaceGeoMode(topface, 0);         //no draw
+        SetAdjoinFlags(topface, 2);         //move
+        SetSectorAdjoins(topsector, 1);     //render past adjoin
+    }
+    
+    if ((GetSenderRef() == topface) &&
+        (GetSectorPlayerCount(archsector) == 1) && 
+        (bdone == 0) &&
+        (GetCurFrame(metaldoor) == 0))
+    {
+        bdone=1;
+        sleep(0.25);
+        for(count=0; count<2; count=count+1)                                                        	            
+        {                                                                                    	            
+            fragment = CreateThing(debris0[RandBetween(0, 4)], boompos);                                 
+            SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 2));
+            SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));    	            
+        }
+        CreateThing(staticfrag0, fragpos0);
+        CreateThing(staticfrag1, fragpos1);
+        CreateThing(staticfrag2, fragpos2);
+        CreateThing(staticfrag0, fragpos3);                
+        CreateThing(staticfrag1, fragpos4);
+        
+        CreateThing(doorboom, metaldoorpos);
+        sleep(0.1);                
+        //print("Getting Damaged");
+        SetFaceGeoMode(topface, 0);         //no draw
+        SetAdjoinFlags(topface, 2);         //move
+        SetSectorAdjoins(topsector, 1);     //render past adjoin
+    }
+    
+return;
+
+#---------------------------------------------------------------------------------------- 
+crossed:
+
+    if ((GetSenderRef() == fallface) && (GetSourceRef() == player) && (croscheck == 0))       
+    {
+        croscheck = 1;
+        StartCutscene(0);
+        SetActorFlags(player, 0x200000);
+        SetCameraFocus(2, fallcam0);
+        StopThing(player);
+        TeleportThing(player, droppos);
+        ApplyForce(player, '0 0 -1');
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+        PlaySoundLocal(indyfall, 1, 0, 0, 0);
+    }
+    
+return;
+    
+#----------------------------------------------------------------------------------------
+entered:
+
+    if ((GetSenderID() == 5) && (GetSourceRef() == player))        
+    {
+        Sleep(1);
+        SetCurrentCamera(1);
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+    }
+    
+return;
+    
+#----------------------------------------------------------------------------------------        
+end

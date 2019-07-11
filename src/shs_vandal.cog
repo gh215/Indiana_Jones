@@ -1,0 +1,69 @@
+# Jones 3D Cog Script
+#
+# shs_Window.cog "Scheiá das Fenster." 	
+# 
+#  [JWC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     damaged
+    
+	material	brokenout
+	material	brokenin
+
+	surface     insidewindow	mask=0x408		
+	surface	    outsidewindow	mask=0x408	
+    
+	sound		shatter=shs_glassbreak.wav	local
+
+	template	shards=iceshrapa		
+
+	thing       player		local
+	thing		shardpos
+
+	int			broken=0	local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+    player = GetLocalPlayerThing();
+    
+    return;
+    
+# ========================================================================================
+
+damaged:
+    	
+		if(broken == 0)
+		{
+			broken=1;
+			PlaySoundLocal(shatter, 1.0, 0, 0, 0);
+			
+			# Make stuff
+			CreateThing(shards, shardpos);
+			
+			# Swap Texture
+			SetSurfaceMat(insidewindow, brokenin);
+			SetSurfaceMat(outsidewindow,brokenout);
+			
+			# Make adjoin move
+			SetAdjoinFlags(insidewindow, 0x02);
+			SetAdjoinflags(outsidewindow, 0x02);
+
+		 }
+	return;
+
+# ========================================================================================
+
+end
+
+

@@ -1,0 +1,80 @@
+# Jones 3D Cog Script
+#
+# actor_Turner.cog
+#
+# [RT]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message		created
+	message		damaged
+
+	model		head0=head_tu_asound.3do	local
+	model		head1=head_tu_amsound.3do	local
+	model		head2=head_tu_osound.3do	local
+
+	sound		snd0=inxt001.wav			local	# "Don't shoot!"
+	sound		snd1=inxt002.wav			local	# "Watch what you're doing!"
+	sound		snd2=inxt003.wav			local	# "Hey, take it easy, pal!"
+
+	thing		turner						local
+
+	int			newLine						local
+	int			lastLine=-1					local
+
+	int			bTalking=0					local
+
+end
+
+# ===================================================================
+
+code
+
+created:
+
+	turner = GetSenderRef();
+	SetThingVoiceHeads(turner, "inhead", "", "head_tu_asound.3do", "head_tu_amsound.3do", "head_tu_osound.3do");
+	return;
+
+# -------------------------------------------------------------------
+
+damaged:
+
+	if (GetThingParent(GetSourceRef()) != GetLocalPlayerThing()) return;
+
+	if (bTalking) return;
+
+	bTalking = 1;
+
+	turner = GetSenderRef();
+
+	# Impact damage
+	if (BitTest(GetParam(1), 0x1))
+	{
+		while (newLine == lastLine)
+		{
+			newLine = RandBetween(0, 2);
+		}
+	}
+	# Anything else
+	else
+	{
+		while (newLine == lastLine)
+		{
+			newLine = RandBetween(1, 2);
+		}
+	}
+
+	# Start the voice & wait...
+	PlayVoice(turner, snd0[newLine], 1.0, 1);
+
+	bTalking = 0;
+	lastLine = newLine;
+
+	return;
+
+end

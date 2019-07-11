@@ -1,0 +1,73 @@
+# Jones 3D Cog Script
+#
+# PRU_spiderdrop.cog
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message	crossed
+message	killed
+
+
+surface	spiderTrigger
+
+thing	spiderGhost0
+thing	spiderGhost1
+thing	spiderGhost2
+thing	spiderGhost3
+
+thing	spider0	local
+thing	spider1	local
+thing	spider2	local
+thing	spider3	local
+
+template	spiderTpl=spider_wall		local
+
+int		population=0	local
+
+end
+
+# ========================================================================================
+code
+crossed:
+if (population >= 4) return;
+
+population = population + 4;
+
+Sleep(RandBetween(1, 2));
+
+spider0 = CreateThing(spidertpl, spiderGhost0);
+CaptureThing(spider0);
+#sends message to spider_wall's class cog, saying "user0" (27)
+SendMessageEx(GetThingClassCog(spider0), 27, spider0, 0, 0, 0);
+
+Sleep(RandBetween(1, 2));
+
+spider1 = CreateThing(spidertpl, spiderGhost1);
+CaptureThing(spider1);
+SendMessageEx(GetThingClassCog(spider1), 27, spider1, 0, 0, 0);
+
+Sleep(RandBetween(1, 2));
+
+spider2 = CreateThing(spidertpl, spiderGhost2);
+SendMessageEx(GetThingClassCog(spider2), 27, spider2, 0, 0, 0);
+CaptureThing(spider2);
+
+Sleep(RandBetween(1, 2));
+
+spider3 = CreateThing(spidertpl, spiderGhost3);
+SendMessageEx(GetThingClassCog(spider3), 27, spider3, 0, 0, 0);
+CaptureThing(spider3);
+
+return;
+
+Killed:
+Print("killed");
+population = population - 1;
+return;
+
+end

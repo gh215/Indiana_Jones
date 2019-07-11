@@ -1,0 +1,208 @@
+# Jones 3D Cog Script
+#
+# nub_RotateTrap.cog
+#
+# [TL] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+	message	startup
+	message	entered
+	message	exited
+	message	pulse
+	message	crossed
+	message	arrived
+	message	blocked
+
+	thing	player				local
+
+	thing	front1				linkid=5
+	thing	front0				linkid=5
+	thing	center
+	thing	back0				linkid=5
+	thing	back1				linkid=5
+
+	sound	teeterSnd=teo_gears_slide_c.wav		local
+	int		teeterTrack=-1						local
+
+	surface	crossenter0
+	surface	crossexit0
+	surface	crossenter1
+	surface	crossexit1
+
+	flex	rval=0.35			local		#was .25
+	flex	gval=0.35			local		#was .25
+	flex	bval=0.45			local		#was .35
+	flex	radius=0.01			local		#was .1
+	flex	speed=1.0			local
+
+	flex	oneSpeed=2.5		local
+	flex	zeroSpeed=5.0		local	
+	flex	centerSpeed=10.0	local
+
+	vector	color				local
+
+	int		sliding=0			local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	color = VectorSet(rval, gval, bval);
+
+	SetThingLight(front1, color, radius, speed);
+	SetThingLight(front0, color, radius, speed);
+	SetThingLight(center, color, radius, speed);
+	SetThingLight(back0, color, radius, speed);
+	SetThingLight(back1, color, radius, speed);
+
+	AttachThingToThing(front1, center);
+	AttachThingToThing(front0, center);
+
+	AttachThingToThing(back0, center);
+	AttachThingToThing(back1, center);
+
+	return;
+
+# ........................................................................................
+crossed:
+
+	oneSpeed = (2.5 - ((GetDifficulty()) * 0.25));				#was * .2
+	zeroSpeed = (7.0 - ((GetDifficulty()) * 0.25));				#was * .2 AND initial number was 5
+	CenterSpeed = (10.0 - ((GetDifficulty()) * 0.25));			#was * .2
+
+
+	if (GetSenderRef() == crossenter0)
+	{
+		SetPulse(0.5);
+	}
+
+	if (GetSenderRef() == crossexit0)
+	{
+		SetPulse(0.0);
+		StopThing(center);
+		RotateToPYR(center, '0.0 0.0 0.0', centerSpeed);
+	}
+
+	if (GetSenderRef() == crossenter1)
+	{
+		SetPulse(0.5);
+	}
+
+	if (GetSenderRef() == crossexit1)
+	{
+		SetPulse(0.0);
+		StopThing(center);
+		RotateToPYR(center, '0.0 0.0 0.0', centerSpeed);
+	}
+
+	return;
+
+# ........................................................................................
+entered:
+
+	oneSpeed = (2.5 - ((GetDifficulty()) * 0.25));				#was * .2
+	zeroSpeed = (7.0 - ((GetDifficulty()) * 0.25));				#was * .2 AND initial number was 5
+	CenterSpeed = (10.0 - ((GetDifficulty()) * 0.25));			#was * .2
+
+
+
+	Print("diff = ");
+	PrintInt(getdifficulty());
+
+	Print("onespeed = ");
+	PrintFlex(onespeed);
+	Print("zerospeed = ");
+	PrintFlex(zerospeed);
+	Print("centerspeed = ");
+	PrintFlex(centerspeed);
+
+	if (sliding == 1)
+		return;
+
+	if (GetSourceRef() == player)
+	{
+		if (GetSenderRef() == front1)
+		{
+			RotateToPYR(center, '0.0 0.0 -90.0', oneSpeed);
+        }	
+
+		if (GetSenderRef() == front0)
+		{
+			RotateToPYR(center, '0.0 0.0 -90.0', zeroSpeed);
+		}	
+
+		if (GetSenderRef() == center)
+		{
+			RotateToPYR(center, '0.0 0.0 0.0', centerSpeed);
+		}	
+
+		if (GetSenderRef() == back0)
+		{
+			RotateToPYR(center, '0.0 0.0 90.0', zeroSpeed);
+		}	
+
+		if (GetSenderRef() == back1)
+		{
+			RotateToPYR(center, '0.0 0.0 90.0', oneSpeed);
+		}	
+
+		if (teeterTrack == -1)
+			teeterTrack = PlaySoundThing(teeterSnd, center, 1, -1.0, -1.0, 0x801);
+	}
+
+return;
+
+# ........................................................................................
+exited:
+
+	oneSpeed = (2.5 - ((GetDifficulty()) * 0.25));				#was * .2
+	zeroSpeed = (7.0 - ((GetDifficulty()) * 0.25));				#was * .2 AND initial number was 5
+	CenterSpeed = (10.0 - ((GetDifficulty()) * 0.25));			#was * .2
+
+
+	if (sliding == 1)
+		return;
+
+	if (GetSourceRef() == player)
+	{
+		if (GetSenderId() == 5) 
+		{
+			Sleep(1.0);
+			RotateToPYR(center, '0.0 0.0 0.0', centerSpeed);
+            Sleep(0.25);
+
+		   	if (teeterTrack == -1)
+				teeterTrack = PlaySoundThing(teeterSnd, center, 1, -1.0, -1.0, 0x801);
+		}	
+	}
+
+	return;
+
+# ........................................................................................
+pulse:
+	if (GetMoveStatus(player) == 47)
+	{
+		sliding = 1;
+	}
+	return;
+
+arrived:
+	if (GetSenderRef() == center)
+	{
+		if (teeterTrack != -1)
+		{
+			StopSound(teeterTrack, 0.5);
+			teeterTrack = -1;
+		}
+	}
+	return;
+
+# ........................................................................................
+end
+

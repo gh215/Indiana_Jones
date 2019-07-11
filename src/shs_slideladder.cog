@@ -1,0 +1,145 @@
+# Jones 3D Cog Script
+#
+# SHS_slideladder.cog      Make the clock tower ladders slide in/out.  
+#
+# [JWC, RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message	startup
+message activated
+
+sound   slidestart=shs_platform_start.wav	local 
+sound   slide=shs_platform_move.wav			local  
+sound   slidestop=shs_platform_stop.wav		local 
+
+thing	ladder0				nolink			# critical path  
+thing   ladder1         	         		# treasure 
+thing   button 
+thing	player				local
+thing	Cam1
+thing	c1_t1
+thing	c1_t2
+
+int  	locked=0 			local
+int		slideloop			local
+int		ladderpos=0			local
+int		curcam				local
+
+cog		NoWorkTalkcog
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+	# throw some light on the ladders
+	SetThingLight(ladder0, '0.30 0.30 0.25', 0.01, 0.01);
+	SetThingLight(ladder1, '0.30 0.30 0.25', 0.01, 0.01);
+	return;
+
+activated:
+	
+    if (GetSenderRef() != button) return;
+    Print("activated");
+	
+	#Prep
+	player= GetLocalPlayerThing();
+	
+	SetActorFlags(player, 0x200000);
+	StartCutscene(0);
+	StopThing(player);
+    DeselectWeapon(player);
+    DeselectWeaponWait(player);
+	   
+    # Cut to Indy 
+	curCam = GetCurrentCamera();   
+	SetCameraLookInterp(2, 0); # no pan & tilt
+	SetCameraPosInterp(2, 0); # no dolly
+	SetCameraFocus(2, Cam1);
+	SetCameraSecondaryFocus(2, c1_t1);
+	Sleep(0.01);
+	SetCurrentCamera(2);
+	SetCameraFOV(70, 0, 0);
+  
+    
+	# Indy push button animation
+	PlayMode(player, 60, 0);
+    
+	# synch with button
+	Sleep(.3);
+       	   	        
+	MoveToFrame(button, 1, 2);
+	WaitForStop(button);
+
+	if (global3 == 0) 
+	{
+        #Call NoWorkTalkCog
+        Sleep(.3);
+		SendMessageEx(NoWorkTalkCog, user1, 0, 0, 0, 0);
+	    global15 = 0; # per Randy
+		while (global15 == 0)
+			{
+				Sleep(0.01); # wait for line to finish
+			}
+	}
+    
+	if ((locked == 0) && (global3 == 1))
+	{
+        locked=1;
+        
+        # Pan to ladder
+		SetCameraLookInterp(2, 1); # pan & tilt
+		SetCameraInterpSpeed(2, 3.0);
+		Sleep(0.01);
+		SetCameraSecondaryFocus(2, c1_t2);
+		SetCurrentCamera(2);
+		SetCameraFOV(60, 1, 3.0);
+        sleep(2);
+		PlaySoundLocal(slidestart, 1.0, 0.0, 0x0, 0);
+		
+		ladderpos=1-ladderpos;
+		if (ladderpos == 1) 
+		{
+			# Move ladders out  	
+			MoveToFrame(ladder0, 1, 1);		# timed ladders moves out
+			MoveToFrame(ladder1, 1, 1);
+		}
+		else
+		{
+		    MoveToFrame(ladder0, 0, 1); 	# timed ladder retracts
+			MoveToFrame(ladder1, 0, 1);
+        	ladderpos=0;
+		}
+		# play sound
+		slideloop=PlaySoundLocal(slide, 1.0, 0.0, 0x1, 0);
+		WaitForStop(ladder0);
+        StopSound(slideloop, 0.0);
+		PlaySoundLocal(slidestop, 1.0, 0.0, 0x0, 0);
+		
+		sleep(.5); #beat
+    }
+	MoveToFrame(button, 0, 2);
+	locked = 0;                         # allows button to be pushed again
+	
+	# Cleanup
+	SetCameraPosition(1, GetThingPos(Cam1)); # prep to swing back to follow-cam
+	SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	sleep(.01);
+	ResetCameraFOV(0, 0.0);
+	SetCurrentCamera(curCam);  
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();	
+	return;
+    
+
+end
+

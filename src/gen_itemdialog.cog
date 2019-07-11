@@ -1,0 +1,59 @@
+# Jones 3D Cog Script
+#
+# gen_ItemDialog.cog
+#
+# Generic item pickup dialog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     activated
+    
+    thing       player      local
+    thing       thingie
+    thing       interpCam
+    
+    sound       snd_Thingie=
+    
+    int         gotIt=0     local
+    
+end
+
+# ========================================================================================
+
+code
+
+activated:
+
+    player = GetLocalPlayerThing();
+    
+    if((GetSenderRef() == thingie) && (gotIt == 0))
+    {
+        #Print("activated");
+        gotIt = 1;
+        
+        # disable the player
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        
+        # offset camera
+        SetExtCamOffsetToThing(interpCam);
+        Sleep(1.0);
+        
+        PlayVoice(player, snd_Thingie, 1.0, 1);
+        
+        Sleep(1.0);
+        ClearActorFlags(player, 0x200000);
+        RestoreExtCam();
+    }
+        
+    return;
+
+# ========================================================================================
+
+end
+

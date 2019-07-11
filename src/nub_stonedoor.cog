@@ -1,0 +1,185 @@
+# Jones 3D Cog Script
+#
+# nub_StoneDoor.cog
+#
+# [RKD] [TL] [RT] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+message		startup
+message		activated	
+message		arrived		
+message		entered
+message		crossed
+
+thing		door0
+thing		lever
+thing		player							local
+thing		indy							nolink
+thing		camera
+thing		camera2
+thing		newCam
+thing		newTarg
+thing		treasure
+thing		windspot
+
+keyframe	in_pull=in_pull_lever_down.key	local
+keyframe	lever_down=gen_lever.key		local
+sound		startdoor
+sound		movedoor
+sound		stopdoor
+sound		leversound
+sound		leversound2
+sound		lockedwav
+sound		ahawav=inxj147.wav				local
+sound		openwav
+sound		windSnd=gen_wind08.wav			local		#wind10.wav			local
+
+sector		entersector
+
+int			open=0							local
+int			move0channel					local
+int			move1channel					local
+int			begun=0							local
+int			revealdone=0					local
+int			lockeddone=0					local
+
+flex		moveSpeed=1.0
+vector		v_targetpos						local
+vector		v_pull							local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+Sleep(0.01);
+v_pull=GetThingLVec(indy);
+player = GetLocalPlayerThing();
+SetThingLight(treasure, VectorSet(1.0, 1.0, 0.75), 0.01, 0.5);
+PlaySoundThing(windSnd, windSpot, 1.0, 20.0, 25.0, 0x1);
+
+return;
+
+#........................................................................................
+activated:
+
+if (begun == 1)	return;
+if (lockeddone == 1) return;
+
+if (GetSenderRef() == door0)
+{
+	DeselectWeaponWait(player);
+	lockeddone = 1;
+	PlayMode(player, 60, 0);
+	PlayVoice(player, lockedwav, 1.0, 1);
+}
+lockeddone = 0;
+
+if (GetSenderRef() == lever)
+{
+    begun = 1;
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutscene(1);
+    SetThingFlags(player, 0x80000);
+    
+	SetCameraFocus(2, newCam);
+	SetCameraSecondaryFocus(2, newTarg);
+    SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0);
+    
+	CopyPlayerHolsters(player, indy);
+	ClearThingFlags(indy, 0x80000);
+	PlayKey(lever, lever_down, 4, 0x12, 0);
+	PlayKey(indy, in_pull, 4, 0x12, 0);
+	Sleep(1.2);   
+	PlaySoundLocal(leversound, 1.0, 0, 0x0000, 0);
+	Sleep(1.4);
+	PlaySoundLocal(leversound2, 1.0, 0, 0x0000, 0);
+	Sleep(0.3);
+	if (open == 0)
+	{
+		PlaySoundLocal(startdoor, 1.0, 0, 0x0000, 0);
+		move0channel = PlaySoundLocal(movedoor, 1.0, 0, 0x0001, 0);
+
+		MoveToFrame(door0, 1, moveSpeed);
+
+        Sleep(1.0);
+        AISetLookThing(indy, camera2);
+        PlayVoice(indy, openwav, 1.0, 0);
+		Sleep(1.0);
+        
+		CopyOrientAndPos(indy, player);
+		SetThingFlags(indy, 0x80000);
+		SetThingLook(indy, v_pull);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+        # revert cam
+		v_targetpos = VectorAdd(VectorTransformToOrient(Player, '-0.05 0.2 0.0'), GetThingPos(player));	
+		SetCameraPosition(1, v_targetpos);
+		
+		SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0.0);
+        EndCutscene();
+		begun = 0;
+	}
+	else
+	{
+		PlaySoundLocal(startdoor, 1.0, 0, 0x0000, 0);
+		move1channel = PlaySoundLocal(movedoor, 1.0, 0, 0x0001, 0);
+
+		MoveToFrame(door0, 0, moveSpeed);
+
+		Sleep(2.5);
+        
+		# revert cam
+		v_targetpos = VectorAdd(VectorTransformToOrient(Player, '0.2 -0.05 0.0'), GetThingPos(player));	
+		SetCameraPosition(1, v_targetpos);
+		SetCurrentCamera(1);
+        
+		SetCameraFOV(90, 0, 0.0);
+		SetThingFlags(indy, 0x80000);
+        SetThingLook(indy, v_pull);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+        EndCutscene();
+		begun = 0;
+	}
+}
+
+return;
+
+# ........................................................................................
+arrived:
+
+if (GetSenderRef() != door0) return;
+
+StopSound(move0channel, 0.0);
+StopSound(move1channel, 0.0);
+PlaySoundLocal(stopdoor, 1.0, 0, 0x0000, 0);
+open = 1 - open;
+
+return;
+
+# ........................................................................................
+
+entered:
+
+if (revealdone == 1) return;
+
+if (GetSenderRef() == entersector)
+{
+	PlayVoice(player, ahawav, 1.0, 0);
+	revealdone = 1;
+}
+
+return;
+
+# ........................................................................................
+end
+

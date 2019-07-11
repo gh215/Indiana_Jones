@@ -1,0 +1,360 @@
+# Jones 3D Cog Script
+#
+# weap_Whip.cog
+#
+# This COG controls Indy's whip.
+#
+# [RandyT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		aim
+message		activated
+message		deactivated
+message		selected
+message		deselected
+message		callback
+message		user0
+
+model		handleHand=weap_whip.3do	local	# Autoloaded
+
+sound		snap=gen_whip_fire.wav		local	# Autoloaded
+sound		pull=gen_whip_pull.wav		local	# Autoloaded
+sound		put=gen_whip_put.wav		local	# Autoloaded
+sound		unroll=gen_whip_unravel.wav	local	# Autoloaded
+sound		roll=gen_whip_ravel.wav		local	# Autoloaded
+sound		zap							local
+
+template	leather=+whip				local	# Autoloaded
+template	electric=+whip_electric		local	# Aetherium only
+template	whip=+whip_actor			local	# Autoloaded
+
+thing		whipThing=-1				local
+thing		indy						local
+
+flex		fireWait=1.25				local	# Fire is 37 frames at 30fps
+
+int			handMesh					local
+int			whipMesh					local
+int			joint						local
+int			weaponNum=2					local
+int			swapRef=-1					local
+int			callNum						local
+int			sender						local
+
+int			bActivated=0				local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	indy = GetLocalPlayerThing();
+
+	handMesh = GetMeshByName(indy, "inrhand");
+	whipMesh = GetMeshByName(indy, "inwhip");
+
+	# Indy is wearing the whip by default
+	LoadHolsterModel(weaponNum, "weap_whip_hip.3do");
+	SetHolsterModel(indy, weaponNum, whipMesh);
+
+	# Electro whip sound -- Atherium only
+	if ((IsLevelName("15_aet.cnd")) || (IsLevelName("15_aet.ndy")))
+	{
+		zap = LoadSound("aet_whip_crack.wav");
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+fire:
+
+	# If the message is from the weapons system, play the animation
+	if (GetParam(0) != -1)
+	{
+		SetFireWait(indy, fireWait);
+		CaptureThing(indy);
+
+#		PlayMode(indy, 65, 0);
+#		PlayMode(whipThing, 65, 0);
+		while (PlayMode(indy, 65, 0) == -99)
+		{
+			Sleep(0.01);
+		}
+		while (PlayMode(whipThing, 65, 0) == -99)
+		{
+			Sleep(0.01);
+		}
+
+		return;
+	}
+
+	# Actual firing takes place when we get the callback...
+	if (BitTest(GetActorFlags(indy), 0x40000000)) # Electric whip
+	{
+		FireProjectile(indy, electric, zap, -1, GetThingPos(indy), '0 0 0', 1.0, 0x0, 0.0, 0.0);
+
+		ChangeInv(indy, weaponNum, -1.0); # Decrease bin by 1...
+
+		if (GetInv(indy, weaponNum) < 1) # Turn it off if it's outta juice...
+		{
+			Sleep(0.5);
+			SetWhipElectric(0);
+
+			SetInv(indy, weaponNum, 1.0); # Reset the bin to 1...
+			SetInvAvailable(indy, weaponNum, 1);
+		}
+	}
+	else
+		FireProjectile(indy, leather, snap, -1, GetThingPos(indy), '0 0 0', 1.0, 0x0, 0.0, 0.0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+aim:
+
+	if (GetParam(0))
+	{
+		if (!IsAiming(indy) && !bActivated)
+		{
+            PlayMode(indy, 63, 0);
+#			while ((PlayMode(indy, 63, 0) == -99) && (!bActivated))
+#			{
+#				Sleep(0.01);
+#			}
+		}
+	}
+	else if (IsModePlaying(indy, 63) && !bActivated)
+	{
+		SetAimWait(indy, 0.2);
+		StopMode(indy, 63, 0.2);
+	}
+
+	return;	
+
+# -------------------------------------------------------------------
+
+activated:
+
+	# See if this is a whip swing or climb
+	if (GetSenderRef() == -99)
+	{
+		# if (pThing->moveStatus == SITHPLAYERMOVE_WHIPSWINGING) 
+		if (GetMoveStatus(indy) == 10)
+		{
+			StopMode(indy, 63, 0.0);
+			EnableInterface(0);
+		}
+
+		return;
+	}
+
+	bActivated = 1;
+	SetAimWait(indy, 1.5);
+
+	# Disable indy controls
+	SetActorFlags(indy, 0x40000);
+	EnableInterface(0);
+
+	if (!IsAiming(indy))
+	{   
+		PlayMode(indy, 63, 0);
+#		while (PlayMode(indy, 63, 0) == -99)
+#		{
+#			Sleep(0.01);
+#		}
+	}
+
+	Sleep(0.2); # 6 Frames
+	PlayMode(indy, 67, 0);
+
+	if (whipThing == -1)
+	{
+		whipThing = AttachThingToThingMesh(indy, whip, handMesh);
+		SetThingFlags(whipThing, 0x10);
+		swapRef = SetThingMesh(indy, handMesh, handleHand, 0);
+	}
+
+	PlayMode(whipThing, 67, 0);
+	Sleep(0.01);
+	ClearThingFlags(whipThing, 0x10);
+	ActivateWeapon(indy, 1.1);
+
+	PlaySoundThing(unroll, indy, 1, -1, -1, 0x880);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deactivated:
+
+	# See if this is a whip swing or climb
+	if (GetSenderRef() == -99)
+	{
+		# If we're not in a cutscene, restore interface
+		if(!GetCutsceneMode())
+		{
+			EnableInterface(1);
+		}
+		return;
+	}
+
+	bActivated = 0;
+
+	# Deactivate the weapon
+	DeactivateWeapon(indy);
+
+	# Stop unravels
+	StopMode(indy, 67, 0);
+	if (whipThing != -1)
+		StopMode(whipThing, 67, 0);
+
+	if (!IsAiming(indy))
+	{
+		SetAimWait(indy, 1.33); # 6 aim + 34 ravel = 40 frames
+		StopMode(indy, 63, 0.2);
+	}
+	else
+	{
+		SetAimWait(indy, 1.13);
+	}
+
+	# Start wind-ups
+	CaptureThing(indy);
+	PlayMode(indy, 68, 0);
+
+	if (whipThing != -1)
+	{
+		CaptureThing(whipThing);
+		PlayMode(whipThing, 68, 0);
+	}
+
+	PlaySoundThing(roll, indy, 1, -1, -1, 0x880);
+
+	return;
+
+# -------------------------------------------------------------------
+
+selected:
+
+	SetMountWait(indy, 1.0);
+
+	SetArmedMode(indy, 1);
+	SetCurWeapon(indy, weaponNum);
+	SetThingFireOffset(indy, '0.0 0.0 0.0'); 
+
+	CaptureThing(indy);
+	PlayMode(indy, 62, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deselected:
+
+	# Restore camera in case we're on a whip launch surface...
+	RestoreExtCam();
+
+	if (IsAiming(indy))
+	{
+		SetAimWait(indy, 0.2);
+		StopMode(indy, 63, 0.2);
+	}
+
+	SetMountWait(indy, 1.5);
+
+	StopMode(indy, 62, 0);
+
+	CaptureThing(indy);
+	PlayMode(indy, 64, 0);
+
+	SetArmedMode(indy, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+callback:
+
+	sender = GetSenderRef();
+	callNum = GetParam(1);
+
+	if (sender == indy)
+	{
+		ReleaseThing(indy);
+
+		if (callNum == 28)
+		{
+			PlaySoundThing(pull, indy, 1, -1, -1, 0x880);
+			ResetHolsterModel(indy, 1);
+			SetWeaponModel(indy, weaponNum);
+		}
+		else if (callNum == 29)
+		{
+			PlaySoundThing(put, indy, 1, -1, -1, 0x880);
+			SetHolsterModel(indy, weaponNum, whipMesh);
+			ResetWeaponModel(indy);
+		}
+		else if (callNum == 30)
+		{
+			if(!GetCutsceneMode())
+			{
+				EnableInterface(1);
+			}
+            ClearActorFlags(indy, 0x40000);
+		}
+	}
+	else if (sender == whipThing)
+	{
+		if (callNum == 28)
+		{
+			for (joint = 12; joint > 4; joint = joint - 1)
+			{
+				AmputateJoint(whipThing, joint);
+			}
+		}
+		else if (callNum == 29)
+		{
+			AmputateJoint(whipThing, 4);
+		}
+		else if (callNum == 30)
+		{
+			AmputateJoint(whipThing, 3);
+		}
+		else if (callNum == 31)
+		{
+			ReleaseThing(whipThing);
+			AmputateJoint(whipThing, 2);
+
+			if (whipThing != -1)
+			{
+				DetachThingMesh(whipThing);
+				SetWeaponModel(indy, weaponNum); 
+			}
+			whipThing = -1;
+		}
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+user0:
+
+# This message indicates that a whipswing has started
+
+	whipThing = GetSenderRef();
+	return;
+
+end

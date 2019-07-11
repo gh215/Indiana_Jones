@@ -1,0 +1,77 @@
+# Jones 3D Cog Script
+#
+# SHS_BT_NoSee.cog   Isolate Bell Tower sectors for framerate.
+# 
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+
+symbols
+	
+    message	startup
+    message crossed
+    
+   	surface FromRoofOn	    linkid=1	    
+    surface ToRoofOff	    linkid=2
+    surface FromBigNaveOn   linkid=1
+    surface ToBigNaveOff    linkid=2    
+    
+    sector  WindowSec0
+    sector  GateSec0
+    sector  GateSec1
+	sector	ToArena
+    
+    int 	player		local
+
+    
+end
+
+code
+
+startup:
+	
+	player=GetLocalPlayerThing();
+	SetSectorAdjoins(WindowSec0, 0);
+    SetSectorAdjoins(GateSec0, 0);
+	SetSectorAdjoins(GateSec1, 0);
+    SetSectorAdjoins(ToArena, 0);
+    
+    
+    return;
+
+crossed:
+	
+
+	# make sure Indy player is sending message
+	If (GetSourceRef() != player) return;
+
+	# draw sector
+	If (GetSenderId() == 1 )
+    {
+        Print("draw sector");
+        SetSectorAdjoins(WindowSec0, 1);
+        SetSectorAdjoins(GateSec0, 1);
+	    SetSectorAdjoins(GateSec1, 1);
+        SetSectorAdjoins(ToArena, 1);
+	}    
+    
+	# don't draw sector 
+	If ((GetSenderId() == 2))
+    {
+        Print("draw off");
+		SetSectorAdjoins(WindowSec0, 0);
+	    SetSectorAdjoins(GateSec0, 0);
+	    SetSectorAdjoins(GateSec1, 0);
+        SetSectorAdjoins(ToArena, 0);
+		
+	}
+    return;
+	
+
+
+end
+
+	
+
+

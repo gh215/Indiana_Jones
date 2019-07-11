@@ -1,0 +1,720 @@
+# Jones 3D Cog Script
+#
+# nub_ElevGear.cog
+#
+# [TL] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		activated
+message		startup
+message		entered
+message		exited
+message		arrived
+message		taken
+message		damaged
+
+thing		player									local
+thing		weight
+thing		elev
+thing		gear
+thing		block
+thing		turtle
+thing		eyebutton0
+thing		eyebutton1
+thing		eyebutton2
+thing		charger			mask=0x8
+thing		part4
+thing		bridge
+thing		trapdoor
+thing		cam0	
+thing		cam1
+thing		strut
+thing		button			mask=0x8
+thing		swingCam
+thing		swingGhost
+thing		fallCam
+thing		fallGhost
+thing		buttonCam
+thing		bridgeCam
+thing		elevCam
+thing		buttonActor
+thing		weightActor
+thing		gearActor
+thing		gearCam
+thing		gearTarg
+thing		elevtarg
+thing		fallActor								local
+thing		openingGhost
+
+cog			hint
+
+sector		gateSect
+sector		topsector		mask=0x084
+sector		blockoffSector	mask=0x084
+sector		weightSector
+
+template    actortpl=indy_sh_actor					local
+keyframe	fallKey=in_die_fall.key					local
+keyframe	unlock=in_activate_medium.key			local
+keyframe	kneel=0in_stand6.key			   		local
+keyframe	kneelDown=0in_stand1_bd_6.key	   	   	local
+keyframe	standUp=0in_stand6_bd_1.key		   		local
+
+material	animmat=rigear.mat						local
+material	eyemat=nub_button_frontb.mat			local
+flex		fps=8.0									local
+
+sound		gearplaced=nub_anubisarm_place_c.wav	local
+sound		need=INXJ060.WAV						local	#I don't think that's the right answer
+sound		fits=INXJ109.WAV						local	#It fits!
+#Below line removed per Hal 7/27
+#sound		concealed=INXJ124.WAV					local	#I bet they used a concealed weight to power that thing.
+sound		stuck=INXJ098.WAV						local	#It won't budge.
+sound		missing=INXJ093.WAV						local	#Good idea, but not good enough.
+sound		charging=nub_aethlight_on_c.wav			local
+sound		fallSnd=inxj015.wav						local	#Aaaaaaaah....  (falling)
+sound		partSnd=nb06j02.wav						local	#INXJ200.wav
+sound		partMus=mus_gen_machinepart.wav			local
+sound		swingAMus=mus_gen_indy_B_motif1.wav		local
+sound		swingBMus=mus_gen_awechord1.wav			local
+sound		powered=pr09j04.wav						local	#There!  Now I've got power to spare
+sound		nope0=INXJ092.wav						local	#Hmmm.  That didn't quite work.
+sound		nope1=INXJ088.wav						local	#Nope.
+sound		nope2=inxj269.wav						local	#Hmmm.
+sound		bridgeSlideSnd=bab_door_metal_slide_c.wav	local
+sound		bridgeStopSnd=bab_door_metal_stop.wav	local
+sound		chargedSnd=vol_elevator_move.wav		local
+sound		grateSnd=nub_trapdoor_fall_c.wav		local
+sound		buttonSnd=shs_gear_clunk2.wav			local
+
+surface		elevface								mask=0x480
+surface		elevfacebott							mask=0x080
+
+vector		v_targetpos								local
+
+int			placed=0								local
+int			tracknum0								local
+int			tracknum1								local
+int			tracknum2								local
+int			tracknum3								local
+int			tracknum4								local
+int			tracknum5								local
+int			tracknum6								local
+int			tracknum7								local
+int			block0=0								local
+int			charged=0								local
+int			going0=0								local
+int			done0=0									local
+int			done1=0									local
+int			block1=0								local
+int			needplayed=0							local
+int			stuckplayed=0							local
+int			budgeplayed=0							local
+int			powerplayed=0							local
+int			trapopen=0								local
+int			curcam									local
+int			blockPos=0								local
+int			blockColl								local
+int			jumping=0								local
+int			kneeltrack								local
+int			bridgemoving=0							local
+
+#sound		blocked0=nub_weight_stop_c.wav			local
+#thing		trapcharger
+#keyframe 	crawl
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+blockColl = GetCollideType(block);
+
+AttachThingToThing(gear, turtle);
+AttachThingToThing(turtle, elev);
+MoveToFrame(weight, 1, 10.0);
+blockPos=1;
+MoveToFrame(elev, 1, 10.0);
+
+ClearAdjoinFlags(elevface, 2);
+SetThingFlags(gear, 0x80000);
+SetCollideType(elev, 0);
+ClearPhysicsFlags(part4, 0x1);			#prevent it from falling through tower when tower collision removed
+
+return;
+
+# ........................................................................................
+activated:
+if (GetSenderRef() == charger)
+{
+    PlayVoice(player, nope0[randbetween(0, 2)], 1.0, 1);
+	return;
+}
+
+# if player activates turtle WITHOUT gear in hand
+if ((GetSenderRef() == turtle) && (GetCurItem(player) != 67))
+	{
+	if (needplayed == 1) return;
+	if (placed == 1) return;
+	needplayed = 1;
+	PlayMode(player, 60, 1);
+	PlayVoice(player, need, 1.0, 1);
+	needplayed = 0;
+	}
+# if player activates turtle WITH gear in hand
+if ((GetSenderRef() == turtle) && (GetCurItem(player) == 67))
+	{
+		if (placed == 1) return;
+		placed = 1;
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(1);
+		CopyPlayerHolsters(player, gearActor);
+		
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+        Sleep(0.01);
+        
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(gearActor, 0x80000);
+		AISetCutsceneMode(gearActor);
+		ResetThing(player);
+        
+		SetCameraFocus(2, gearCam);
+		SetCameraSecondaryFocus(2, gearTarg);
+		SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0.0);
+		PlayKey(gearActor, kneelDown, 2, 0x12, 1);
+		
+		kneelTrack = PlayKey(gearActor, kneel, 2, 0x14, 0);
+		
+		Sleep(0.5);
+		
+		ClearThingFlags(gear, 0x80000);
+		PlaySoundLocal(gearplaced, 1.0, 0, 0x0000, 1);
+		ChangeInv(player, 67, -1);
+		PlayVoice(gearActor, fits, 1.0, 0);
+		StopKey(gearActor, kneelTrack, 0.0);			# no longer kneeling
+		PlayKey(gearActor, standUp, 2, 0x12, 1);		# indy stands up
+		
+        CopyOrientandPos(gearActor, player);
+		SetThingFlags(gearActor, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		
+		SetCameraPosition(1, GetThingPos(gearCam));
+		SetCurrentCamera(1);
+		EndCutscene();
+	}
+# elevator button code for going up and down
+if ((GetSenderRef() == eyebutton1) && (charged == 0))
+{
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutscene(1);
+	CopyPlayerHolsters(player, buttonactor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(buttonActor, 0x80000);
+	ResetThing(player);
+    CopyOrientandPos(buttonActor, player);
+	
+	SetCameraFocus(2, elevCam);
+	SetCameraSecondaryFocus(2, elevTarg);
+	SetCurrentCamera(2);
+	PlayKey(buttonActor, unlock, 4, 0x12, 0);
+    Sleep(0.5);
+	PlayVoice(buttonActor, stuck, 1.0, 0);
+	
+	Sleep(0.5);
+	ClearActorFlags(player, 0x200000);
+	SetThingFlags(buttonActor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+    
+	SetCameraPosition(1, GetThingPos(elevCam));
+	SetCurrentCamera(1);
+	EndCutscene();
+    
+}
+if ((GetSenderRef() == eyebutton0) && (charged == 0))
+	{
+    PlayVoice(player, nope0[randbetween(0, 2)], 1.0, 1);
+	PlayMode(player, 60, 0);
+	}
+if ((GetSenderRef() == eyebutton0) && (charged == 1) && (trapopen == 1))
+{
+    if (going0 == 1) return;
+    SetCollideType(block, 0);
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutscene(1);
+	PlaySoundThing(buttonSnd, eyebutton0, 1.0, -1, -1, 0);
+	PlayMode(player, 60, 1);
+    MoveToFrame(weight, 2, 2.8);
+	blockPos = 1;
+	MoveToFrame(elev, 2, 3.0);
+	tracknum5=MaterialAnim(animmat, fps, 1);
+	going0 = 1;
+}
+if ((GetSenderRef() == eyebutton1) && (charged == 1))
+{
+	if (going0 == 1) return;
+    SetCollideType(block, 0);
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutscene(1);
+    PlaySoundThing(buttonSnd, eyebutton0, 1.0, -1, -1, 0);
+    PlayMode(player, 60, 1);
+	MoveToFrame(weight, 0, 4.5);
+	blockPos = 0;
+	MoveToFrame(elev, 0, 3.0);
+	tracknum6=MaterialAnim(animmat, fps, 1);
+	going0 = 1;
+}
+if ((GetSenderRef() == eyebutton2) && (charged == 1))
+{
+	if (going0 == 1) return;
+	SetCollideType(block, 0);
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutscene(1);
+    PlaySoundThing(buttonSnd, eyebutton0, 1.0, -1, -1, 0);
+	PlayMode(player, 60, 1);
+	MoveToFrame(weight, 1, 0.9);
+	blockPos = 1;
+	MoveToFrame(elev, 1, 3.0);
+	tracknum7=MaterialAnim(animmat, fps, 1);
+	going0 = 1;
+}
+
+return;
+
+# ........................................................................................
+entered:
+Print("entered");
+Print("GetSenderRef is");
+Printint(GetSenderRef());
+Print("elevfacebott is");
+PrintInt(elevfacebott);
+
+
+Print("GetSourceRef is");
+Printint(GetSourceRef());
+Print("Block is");
+PrintInt(block);
+Print("player is");
+PrintInt(player);
+
+
+if ((GetSenderRef() == elev) && (jumping == 1) && (charged == 0))
+{
+	PlayVoice(player, stuck, 1.0, 0);
+}
+if (GetSenderRef() == GateSect)
+{
+	jumping = 0;
+}
+
+# if player lands on weight WITH block placed AND gear placed
+if ((GetSourceRef() == player) && (GetSenderRef() == weight) && (placed == 1) && (block0 == 1))
+{
+	#Sleep(2.0);
+	SetCollideType(block, 0);
+	AttachThingToThing(block, elev);
+	MoveToFrame(weight, 1, 7.5);
+	blockPos = 1;
+	MoveToFrame(elev, 1, 5.0);
+	tracknum0=MaterialAnim(animmat, fps, 1);
+}
+# if block is pushed onto elevator and gear is NOT placed
+if ((GetSourceRef() == block) && (GetSenderRef() == elevface) && (placed == 0))
+	{
+	PlayVoice(player, stuck, 1.0, 1);
+	PlayVoice(player, missing, 1.0, 1);
+	}
+
+# if player steps on elevator WITH gear placed
+if ((GetSourceRef() == player) && (GetSenderRef() == elevface) && (placed == 1))
+	{
+	#print("It needs more weight...");
+	}
+# if block is pushed onto elevator WITH gear placed
+if ((GetSourceRef() == block) && (GetSenderRef() == elevface) && (placed == 1))
+{
+    block0 = 1;
+	SetAdjoinFlags(elevface, 2);
+	SetCollideType(elev, 3);
+	SetCollideType(block, 0);
+	AttachThingToThing(block, elev);
+	MoveToFrame(weight, 0, 7.5);
+	blockPos = 0;
+	MoveToFrame(elev, 0, 5.0);
+	
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	CopyPlayerHolsters(player, weightActor);
+    StartCutscene(1);
+
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+
+    Sleep(1.5);
+	SendMessage(hint, user5);
+
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(weightActor, 0x80000);
+	ResetThing(player);
+    
+    SetCameraFocus(2, cam0);
+	SetCameraSecondaryFocus(2, openingGhost);
+    SetCurrentCamera(2);
+	return;
+}
+if ((GetSenderRef() == topSector) && (GetSourceRef() == weight) && (placed == 1) && (done0 == 0))
+{
+    SetCameraSecondaryFocus(2, weight);
+	    
+	Sleep(0.5);
+
+	AIEnableHeadTracking(weightActor, weight);
+    AISetLookThing(weightActor, weight);
+    CopyOrientandPos(weightActor, player);
+    
+	#Would be nice to have him say "Aha!"
+    
+	Sleep(2.5);
+    
+    # revert cam  (pos x is from right, neg x is from left)
+	v_targetpos = VectorAdd(VectorTransformToOrient(player, '-0.2 -0.05 0.0'), GetThingPos(player));	
+	SetCameraPosition(1, v_targetpos);
+
+	SetCurrentCamera(1);
+    ResetCameraFOV(0, 0.0);
+	ClearThingFlags(player, 0x80000);
+	SetThingFlags(weightActor, 0x80000);
+	ClearActorFlags(player, 0x200000);
+
+	EndCutScene();
+	tracknum2=MaterialAnim(animmat, fps, 1);
+	done0 = 1;
+	return;
+}
+# if block is pulled OFF of elevator at the bottom
+if (((GetSenderRef() == elevfacebott) || (GetSenderRef() == blockOffSector)) && (GetSourceRef() == block))
+{
+	SendMessage(hint, user7);
+	if (charged == 1) return;
+	if (block1 == 1) return;
+	SetCollideType(elev, 0);
+	print("Taking the block off raised the elevator...");
+	block1 = 1;
+	Sleep(0.75);
+	MoveToFrame(weight, 1, 7.5);
+	blockPos = 1;
+	MoveToFrame(elev, 1, 5.0);
+	Sleep(1.5);
+
+	StartCutscene(1);
+	curcam = GetCurrentCamera();
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	PlayMode(player, 1, 0);
+	
+	SetCurrentCamera(2);
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, weight);
+	Sleep(7.0);
+
+	SetCurrentCamera(curcam);
+	SetCameraFocus(curcam, player);
+	SetCameraFOV(90, 0, 0.0);
+	ClearActorFlags(player, 0x200000);
+	EndCutScene();
+	tracknum3=MaterialAnim(animmat, fps, 1);
+	return;
+}
+
+return;
+
+# ........................................................................................
+exited:
+Print("exited");
+Print("cur frame of weight =");
+PrintInt(GetCurframe(weight));
+
+Print("sourceRef =");
+PrintInt(getsourceref());
+Print("player =");
+PrintInt(player);
+
+
+Print("senderRef =");
+PrintInt(getsenderref());
+Print("weightsector = ");
+PrintInt(weightsector);
+
+
+if ((GetSenderRef() == elev) && (block0 == 1))
+{
+	jumping = 1;
+}
+
+#if (block0 == 0) return;
+#if (block1 == 1) return;
+
+# if player jumps OFF of weight when at BOTTOM AND gear placed
+if ((GetSourceRef() == player) && (GetSenderRef() == weightSector) && (GetCurFrame(weight) == 1))
+{
+    PlaySoundThing(gearplaced, weight, 1.0, -1, -1, 0);
+	Sleep(0.5);
+	SetCollideType(block, 0);
+	AttachThingToThing(block, elev);
+	MoveToFrame(weight, 0, 7.5);
+	blockPos = 0;
+	MoveToFrame(elev, 0, 5.0);
+	tracknum1=MaterialAnim(animmat, fps, 1);
+}
+
+return;
+
+# ........................................................................................
+arrived:
+PRINT("arrived");	
+if (GetSenderRef() == bridge)
+{
+    PlaySoundThing(bridgeStopSnd, bridge, 1.0, 20, 50, 0);
+	Sleep(1.0);
+	bridgemoving = 0;
+	return;
+}
+
+if ((GetSenderRef() == weight) && (block0 == 1))
+{
+	Print("at bottom");
+	#ResetThing(player);
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	return;
+}
+if (GetSenderRef() == elev)
+{
+    SetCollideType(block, blockColl);
+	StopAnim(tracknum0);
+	StopAnim(tracknum1);
+	StopAnim(tracknum2);
+	StopAnim(tracknum3);
+	StopAnim(tracknum4);
+	StopAnim(tracknum5);
+	StopAnim(tracknum6);
+	StopAnim(tracknum7);
+	going0 = 0;
+	if ((GetCurFrame(elev) == 0) && (block0 == 1) && (charged == 0))
+	{
+		SetCollideType(block, 3); 						#blockcoll);			
+		DetachThing(block);
+	}
+	if (charged == 1)
+	{
+		ClearActorFlags(player);
+		EndCutscene();
+	}
+}
+
+return;
+
+# ........................................................................................
+taken:
+
+if (GetSenderRef() == part4)
+{
+	StartCutscene(1);
+	SetActorFlags(player, 0x200000);
+	StopThing(player);
+	
+    #Bring the camera around
+#	SetExtCamLookOffset('0.0 0.04 0.014');
+#	SetExtCamOffset('0.15 0.08 0.09');
+
+	#SetExtCamOffset('-0.1 0.05 0.07');
+	PlaySoundLocal(partMus, 1.0, 0.0, 0x0, 0);
+	PlayVoice(player, partSnd, 1.0, 0);
+	Sleep(4.5);
+#	RestoreExtCam();
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+}
+
+return;
+
+# ........................................................................................
+damaged:
+Print("damaged");
+
+# if player activates charger WITH IMP #4 and elevator is up
+if ((GetSenderRef() == charger) && (GetCurFrame(elev) == 1) && (GetParam(1) == 0x4000))
+	{
+	Print("charging elevator");
+	if (charged == 1) return;
+	charged = 1;
+	SetCollideType(elev, 3);
+	//PlayMode(player, 60, 1);
+	PlaySoundThing(charging, eyebutton0, 1.0, -1, -1, 0);
+	SetMaterialCel(eyemat, 1);
+	MoveToFrame(weight, 0, 7.5);
+	blockPos = 0;
+    MoveToFrame(elev, 0, 5.0);
+	tracknum4=MaterialAnim(animmat, fps, 1);
+	SetThingLight(eyebutton0, '0.5 0.5 0.5', 0.5, 1.0);
+	SetThingLight(eyebutton1, '0.5 0.5 0.5', 0.5, 1.0);
+	SetThingLight(eyebutton2, '0.5 0.5 0.5', 0.5, 1.0);
+
+	Sleep(1.0);
+	StartCutscene(1);
+	curcam = GetCurrentCamera();
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	PlayMode(player, 1, 0);
+	
+	SetCurrentCamera(2);
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, trapdoor);
+	SetCollideType(trapdoor, 0);
+	Rotate(trapdoor, -90, 0, 1.0);
+    PlaySoundThing(grateSnd, trapdoor, 1.0, -1, -1, 0x80);
+	trapopen = 1;
+    PlayVoice(player, powered, 1.0, 0);
+	PlaySoundThing(chargedSnd, charger, 0.5, -1, -1, 0x81);
+	Sleep(3.0);
+	
+	SetCurrentCamera(curcam);
+	SetCameraFocus(curcam, player);
+	SetCameraFOV(90, 0, 0.0);
+	ClearActorFlags(player, 0x200000);
+	EndCutScene();
+	#Print("That seems to have powered the elevator...!");
+	SetCollideType(trapdoor, 3);
+	}
+# if player activates the charger WITH IMP #4 if elevator is down
+if ((GetSenderRef() == charger) && (GetCurFrame(elev) == 0) && (GetParam(1) == 0x4000))
+	{
+	if (charged == 1) return;
+	charged = 1;
+	SetCollideType(elev, 3);
+	//PlayMode(player, 60, 1);
+	PlaySoundThing(charging, eyebutton0, 1.0, -1, -1, 0);
+	SetMaterialCel(eyemat, 1);
+	SetThingLight(eyebutton0, '0.5 0.5 0.5', 0.5, 1.0);
+	SetThingLight(eyebutton1, '0.5 0.5 0.5', 0.5, 1.0);
+	SetThingLight(eyebutton2, '0.5 0.5 0.5', 0.5, 1.0);
+
+	Sleep(1.0);
+	StartCutscene(1);
+	curcam = GetCurrentCamera();
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	PlayMode(player, 1, 0);
+	
+	SetCurrentCamera(2);
+	SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, trapdoor);
+	SetCollideType(trapdoor, 0);
+	Rotate(trapdoor, -90, 0, 1.0);
+    PlaySoundThing(grateSnd, trapdoor, 1.0, -1, -1, 0x80);
+	trapopen = 1;
+    PlayVoice(player, powered, 1.0, 0);
+    PlaySoundThing(chargedSnd, charger, 0.5, -1, -1, 0x81);
+	Sleep(3.0);
+	
+	SetCurrentCamera(curcam);
+	SetCameraFocus(curcam, player);
+	SetCameraFOV(90, 0, 0.0);
+	ClearActorFlags(player, 0x200000);
+	EndCutScene();
+	Print("That seems to have powered the elevator...!");
+	SetCollideType(trapdoor, 3);
+	}
+
+#Bridge moves out if button activated with charger
+if ((GetSenderRef() == button) && (GetParam(1) == 0x4000) && (bridgeMoving == 0))
+	{
+        bridgeMoving = 1;
+		StopThing(player);
+		StartCutscene(1);
+		curCam = GetCurrentCamera();
+        SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, buttonCam);
+		SetCameraSecondaryFocus(2, button);
+		SetCurrentCamera(2);
+		Sleep(1.5);
+        SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 2.0);
+		SetCameraFocus(2, bridgeCam);
+		SetCameraSecondaryFocus(2, bridge);
+		SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0.0);
+        SetCameraFOV(60, 1, 2.0);
+		MoveToFrame(bridge, (1 - (GetCurFrame(bridge))), 1.0);
+		PlaySoundThing(bridgeSlideSnd, bridge, 1.0, 20, 50, 0);
+        Sleep(3.5);
+		SetCurrentCamera(curCam);
+		ResetCameraFOV(0, 0.0);
+		EndCutscene();
+    }
+
+	
+#If the player tries to swing when the block isn't in place.
+if (getSenderRef() == strut)
+{
+	if (blockPos == 0) 
+	{
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        PlaySoundLocal(swingAMus, 1.0, 0, 0x0000, 0);
+		Sleep(6.0);
+        PlaySoundLocal(swingBMus, 1.0, 0, 0x0000, 0);
+		#Go to entered message on block
+
+		return;
+	}
+
+	if (blockPos == 1)
+	{
+		StartCutscene(0);
+		curCam = GetCurrentCamera();
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		ResetCameraFOV(0, 0.0);
+		SetCameraFocus(2, swingCam);
+		SetCameraSecondaryFocus(2, swingGhost);
+		SetCurrentCamera(2);
+		SetCameraFOV(120, 0, 0.0);
+		SetCameraFOV(90, 1, 3.0);
+		Sleep(3.0);
+		SetThingFlags(player, 0x10);
+		Sleep(0.5);
+		fallActor = CreateThing(actorTPL, fallGhost);
+		SetCollideType(fallActor, 0);
+		ClearThingFlags(fallActor, 0x80000);
+		PlayKey(fallActor, fallKey, 4, 0x1, 0);
+		SetCameraFocus(2, fallCam);
+		SetCameraSecondaryFocus(2, trapdoor);
+		SetCurrentCamera(2);
+		Sleep(0.5);
+		PlaySoundThing(fallSnd, fallActor, 1.0, -1, -1, 0);
+		Sleep(5.0);
+		DamageThing(player, 1000, 0x80, weight);
+		EndCutscene();
+	}
+
+}
+
+return;
+
+# ........................................................................................
+end

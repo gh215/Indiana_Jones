@@ -1,0 +1,143 @@
+
+# Jones 3D Cog Script
+#
+# nub_JewelActivate.cog
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		startup
+message		damaged
+message		exited
+message		entered
+message		arrived
+
+thing		charger		mask=0x8
+thing		blastdoor
+thing		jewel
+thing		jewelTarg
+thing		plasma
+thing		player		local
+thing		cam1spot	nolink # ghost anywhere in a level
+thing		cam1look	nolink # ghost anywhere in a level
+
+surface		pad
+sector		topsector
+
+flex		jewelStatus
+flex		viewangle			local
+
+int			positioned = 0		local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+Sleep(0.01);
+StartCutscene(1);
+EndCutscene();
+SetCollideType(blastDoor, 0);
+SetThingLight(blastDoor, '0.2 0.2 0.2', 0.01, 1.0);
+player = GetLocalPlayerThing();
+
+return;
+
+# ........................................................................................
+damaged:
+if ((GetSenderRef() == charger) && (GetParam(1) == 0x4000))
+{
+		
+	StartCutscene(1);
+	SetThingFlags(player, 0x200000);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0); 			# force snap if not sure already the case
+	SetCameraPosInterp(2, 0); 			# force snap if not sure already the case
+	SetCameraFocus(2, cam1spot); 		# cam 2 takes over here
+	SetCameraSecondaryFocus(2, cam1look); # looking same place
+	viewangle = GetCameraFOV(); 		# it pays to be careful
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 1.2);       
+	Sleep(0.01); 						# let engine work briefly
+	#SetCameraFocus(2, offsetcam); 		# slide out to new spot
+	SetCameraSecondaryFocus(2, jewelTarg); # slide over to new target
+	SetCameraFOV(60, 1, 1.2); 	# start here anyway
+
+	Sleep(1.0);
+	MoveToFrame(blastDoor, 1 - GetCurFrame(blastDoor), 1.0);
+	Sleep(1.5);
+
+	SetCameraInterpSpeed(2, 1.0); # quicker going back, please
+    Sleep(0.01); 						# let engine work briefly
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCameraFOV(viewangle, 1, 1.0); # transition back to follow-cam FOV
+	Sleep(1.0);
+	SetCameraLookInterp(2, 0); # exit in snap mode
+	SetCameraPosInterp(2, 0); # exit in snap mode
+	
+	
+	SetCurrentCamera(1);
+	ClearThingFlags(player, 0x200000);
+	EndCutscene();
+}
+
+return;
+# ........................................................................................
+arrived:
+if (GetSenderRef() == blastDoor)
+{
+    call jewelStatus;
+	return;
+}
+# ........................................................................................
+entered:
+if ((GetSenderRef() == pad) && (GetSourceRef() == player))
+{
+    positioned = 1;
+    call jewelStatus;
+}
+if (GetSenderRef() == topSector)
+{
+	positioned = 1;
+	call jewelStatus;
+}
+
+return;
+# ........................................................................................
+exited:
+if ((GetSenderRef() == pad) && (GetSourceRef() == player)) 
+{
+	positioned = 0;
+    call jewelStatus;
+}
+
+if (GetSenderRef() == topSector)
+{
+	positioned = 0;
+	call jewelStatus;
+}
+return;
+# ........................................................................................
+jewelStatus:
+if ((GetCurFrame(blastDoor) == 1) && (positioned == 1))
+{
+	JewelFlyingStatus(1, plasma);
+}
+else if ((GetCurFrame(blastDoor) == 0) || (positioned == 0))
+
+{
+    JewelFlyingStatus(0, plasma);
+}
+return;
+# ........................................................................................
+
+end
+

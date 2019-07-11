@@ -1,0 +1,653 @@
+# Jones 3D Cog Script
+#
+# aet_ArmMove.cog
+#
+# [TL & revised by HB] [Whip by RT :)]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+message		startup
+#### message		entered #### REMOVE BEFORE FLIGHT ####
+message		arrived
+message		damaged
+message		callback
+
+
+keyframe 	in_whipit=in_whip_outprobe.key	local
+keyframe	wh_whipit=wh_whip_outprobe.key 	local
+
+keyframe	in_handsONhips=0in_stand4.key	local
+keyframe	in_handsTOhips=0in_stand1_bd_4.key	   	local
+
+
+model		whipHand=weap_whip.3do			local
+
+sound		charge=aet_mr_chargeup.wav		local
+sound		success_cue=mus_shs_womanappears.wav	local
+sound		cagestart=gen_cage_descend.wav			local		# Start of cage drop.
+sound		whip=gen_whip_fire.wav			local
+sound		roll=gen_whip_ravel.wav			local
+
+thing		player							local
+thing		arm0									# Large bridge/arms
+thing		gear0									# Gear attached to arms
+thing		arm1
+thing		gear1
+thing		arm2
+thing		gear2
+thing		probe0									# Probe that is whipped to retract bridge							
+thing		probe1							                          
+thing		probe2                          
+thing		probeA									# Probe that is cross faded to show charge						
+thing		probeB                          
+thing		probeC                          
+
+thing		cage									# Sophia's cage
+thing		indy0									# Indy actor 1
+thing		indy1									# Indy actor 2
+thing		indy2									# Indy actor 3
+
+thing		cam0									# Camera 1
+thing		cam1									# Camera 2
+thing		cam2									# Camera 3
+thing		cam0_target								# Camera 1 target
+thing		cam1_target								# Camera 2 target
+thing		cam2_target								# Camera 3 target
+thing		tel_target0								# Player teleport spot 1
+thing		tel_target1								# Player teleport spot 1
+thing		tel_target2								# Player teleport spot 1
+            
+thing		secondary_target
+
+thing		cg_mk_1									# Cage target
+thing		indy1_mk_1						nolink	# Mark for Indy2 to watch cage
+thing		in_mk_final						nolink	# where player ends up
+
+thing		whipThing						local
+
+thing		indyvar							local	# indy actor var
+thing		armvar							local	# bridge arm var
+thing		camvar							local	# camera var
+thing		targetvar						local	# cam target var
+thing		armspotvar						local	# bridge mark var
+thing		darkprobevar					local	# unlit
+thing		litprobevar						local	# lit
+thing		spritespotvar					local
+thing		spritespot0
+thing		spritespot1
+thing		spritespot2
+
+thing		spritepulse0a
+thing		spritepulse0b
+thing		spritepulse0c
+thing		spritepulse1a
+thing		spritepulse1b
+thing		spritepulse1c
+thing		spritepulse2a
+thing		spritepulse2b
+thing		spritepulse2c
+
+thing		sender							local
+
+cog			cagecog									# aet_RotateCage.cog (Mophia intro)
+cog			miniSophCut								# aet_MiniSophCut.cog (Mini Soph Cutscene)
+cog			doortalk
+cog			marduk2									# Cog that controls second Marduk...
+cog			door2									# Cog that controls the door that closes behind player.
+
+template	whipTpl=+whip_actor				local
+template	sparks0=mophiaSparksLg			local
+template	chargesprite=+tower_glow		local
+
+vector		v_camspot						local
+
+flex		indy1move						local	# Handler for calling Indy1 to move
+flex		wrongwhip						local
+flex		tryagain						local
+
+int			done0=0							local	# Flag for when an arm is done retracting
+int			done1=0							local
+int			done2=0							local
+int			curcam							local	# camera *before* cutscene begins
+
+int			curSound						local
+int			indyAnim						local
+int			whipAnim						local
+int			whip_done0=0					local
+int			whip_done1=0					local
+int			whip_done2=0					local
+int			in_keytrack1					local
+int			lastarm=0						local
+int			silverwhip=0					local
+int			sprite0							local
+
+int			callNum							local
+int			damageType						local
+
+#### REMOVE BEFORE FLIGHT!
+
+int			whicharm=0						local
+int			didarm0=0						local
+int			didarm1=0						local
+int			didarm2=0						local
+int			whipactive=0					local
+
+####
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player = GetLocalPlayerThing();
+	AttachThingToThing(gear0, arm0);
+	AttachThingToThing(gear1, arm1);
+	AttachThingToThing(gear2, arm2);
+
+	SetThingLight(arm0, '0.3 0.3 0.3', 0.01, 0.1);
+	SetThingLight(arm1, '0.3 0.3 0.3', 0.01, 0.1);
+	SetThingLight(arm2, '0.3 0.3 0.3', 0.01, 0.1);
+	SetThingLight(gear0, '0.3 0.3 0.3', 0.01, 0.1);
+	SetThingLight(gear1, '0.3 0.3 0.3', 0.01, 0.1);
+	SetThingLight(gear2, '0.3 0.3 0.3', 0.01, 0.1);
+
+	AttachThingToThingEx(indy1_mk_1, arm1, 0x0C); # Attach Indy1 mark to arm1. 	 
+	AttachThingToThingEx(spritepulse0a, arm0, 0x0C);  	 
+	AttachThingToThingEx(spritepulse0b, arm0, 0x0C);  	 
+	AttachThingToThingEx(spritepulse0c, arm0, 0x0C);  	 
+	AttachThingToThingEx(spritepulse1a, arm1, 0x0C);  	 
+	AttachThingToThingEx(spritepulse1b, arm1, 0x0C);  	 
+	AttachThingToThingEx(spritepulse1c, arm1, 0x0C);  	 
+	AttachThingToThingEx(spritepulse2a, arm2, 0x0C);  	 
+	AttachThingToThingEx(spritepulse2b, arm2, 0x0C);  	 
+	AttachThingToThingEx(spritepulse2c, arm2, 0x0C);  	 
+
+	# Fade charged probe out.
+	SetThingAlpha(probeA, 0.0);
+	SetCollideType(probeA, 0);
+	SetThingAlpha(probeB, 0.0);
+	SetCollideType(probeB, 0);
+	SetThingAlpha(probeC, 0.0);
+	SetCollideType(probeC, 0);
+
+	return;
+
+# ..............................................................................
+
+#### REMOVE BEFORE FLIGHT!
+#### entered: 
+
+	//sender = GetSenderRef();
+
+	//if ((sender == arm0) && (didarm0 == 0))
+	//{
+	//	whicharm = 0;
+	//	didarm0 = 1;
+	//	goto damaged;
+	//}
+
+	//if ((sender == arm1) && (didarm1 == 0))
+	//{
+	//	whicharm = 1;
+	//	didarm1 = 1;
+	//	goto damaged;
+	//}
+
+	//if ((sender == arm2) && (didarm2 == 0))
+	//{
+	//	whicharm = 2;
+	//	didarm2 = 1;
+	//	goto damaged;
+	//}
+
+	//return;
+####
+
+# ..............................................................................
+
+damaged:
+
+	sender = GetSenderRef();
+
+	if ((sender != probe0) && (sender != probe1) && (sender != probe2))
+	#### if ((sender != arm0) && (sender != arm1) && (sender != arm2))
+	{
+		return;
+	}
+
+	if (whipactive != 0)
+	{
+		return;
+	}
+
+	whipactive = 1;
+	silverwhip = 0;
+
+    damageType = GetParam(1);
+	if ((damageType != 0x10) && (damageType != 0x800))
+		return;
+
+	if ((damageType == 0x800) || (global6 == 1)) # RT: Global6 means you've charged whip at least once
+	{
+		if (sender == probe2)
+		{
+			# Indy whips this probe 1st...
+	
+			# Destroy plate for miniSophCut...
+			SendMessage(miniSophCut, user2);		
+			# Send a message to Steve's Marduk 2 cog.
+			SendMessageEx(marduk2, user0, 1, 0, 0, 0);
+			indyvar = indy2;
+			armvar = arm2;	
+			camvar = cam2;
+			targetvar = cam2_target;
+			darkprobevar = probe2;
+			litprobevar = probeC;
+			spritespotvar = spritespot2;
+			silverwhip = 1;
+		}
+		else if (sender == probe0)
+		{
+			# Indy whips this probe 2nd...
+			SendMessage(miniSophCut, user0);
+			# Send a message to Steve's Marduk 2 cog.
+			SendMessageEx(marduk2, user0, 2, 0, 0, 0);
+			indyvar = indy0;
+			armvar = arm0;
+			camvar = cam0;
+			targetvar = cam0_target;
+			darkprobevar = probe0;
+			litprobevar = probeA;
+			spritespotvar = spritespot0;
+			silverwhip = 1;
+		}
+		else if (sender == probe1)
+		{
+			# Indy whips this probe 3rd...
+			SendMessage(miniSophCut, user1);
+	
+			# Send a message to Steve's Marduk 2 cog.
+			SendMessageEx(marduk2, user0, 3, 0, 0, 0);
+			indyvar = indy1;
+			armvar = arm1;	
+			camvar = cam1;
+			targetvar = cam1_target;
+			darkprobevar = probe1;
+			litprobevar = probeB;
+			spritespotvar = spritespot1;
+			silverwhip = 1;
+	
+			# Play music...
+			PlaySoundLocal(success_cue, 1.0, 0, 0x0, 0);
+		}
+	}
+
+	if (silverwhip != 0)
+	{
+		# Prep...
+		curcam = GetCurrentCamera();
+		ResetCameraFOV(0, 0.0);
+		MakeMeStop();
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+
+		SetCurrentCamera(2);
+		SetCameraFocus(2, camvar);
+		SetCameraSecondaryFocus(2, targetvar);
+		SetCameraFOV(60, 0, 0);
+		Sleep(0.01);
+		SetCameraFOV(50, 1, 3.5);
+
+		# Prep indy... 
+		CopyPlayerHolsters(player, indyvar);
+		ClearThingFlags(indyvar, 0x80000);
+		SetThingFlags(player, 0x80000);
+
+		StartCutScene(1);
+
+        # Prep whip...
+		whipThing = AttachThingToThingMesh(indyvar, whipTpl, 15);
+		SetThingMesh(indyvar, 15, whipHand, 0);
+
+		# Do that whip swing thang...
+		indyAnim = PlayKey(indyvar, in_whipit, 5, 0x14, 0); # Indy anim...
+		CaptureThing(whipThing); # Make sure we get the callback message...
+		whipAnim = PlayKey(whipThing, wh_whipit, 5, 0x14, 0); # Whip anim...
+		
+		Sleep(1.5);
+
+		if (damageType == 0x10)
+		{
+			SetWhipElectric(1);
+			ChangeInv(player, 2, 4); # Add 4 shots to the whip bin...already has 1.
+		}
+		else
+		{
+            ChangeInv(player, 2, -1.0); # Decrease bin by 1...
+		}
+
+		PlaySoundLocal(charge, 1, 0, 0x0, 0);
+
+		CreateThing(sparks0, litprobevar);
+		CreateThing(sparks0, litprobevar);
+		sprite0 = CreateThing(chargesprite, spritespotvar);
+		
+		AnimateSpriteSize(sprite0, '0.25 0.25 1.0', '0.35 0.35 0.0', 1.0);
+		
+		ThingFadeAnim(darkprobevar, 1.0, 0.0, 2.0, 0);
+		ThingFadeAnim(litprobevar, 0.0, 1.0, 2.0, 0);
+	}
+	else
+	{
+		# Code for whipping probe without electric whip...
+		if ((GetParam(1) == 0x10) && (sender == probe0))
+		{
+			if (whip_done0 == 1) return;
+			whip_done0 = 1;
+			indyvar = indy0;
+			camvar = cam0;
+			targetvar = cam0_target;
+		}
+
+		if ((GetParam(1) == 0x10) && (sender == probe1))
+		{
+			if (whip_done1 == 1) return;
+			whip_done1 = 1;
+			indyvar = indy1;
+			camvar = cam1;
+			targetvar = cam1_target;
+		}
+
+		if ((GetParam(1) == 0x10) && (sender == probe2))
+		{
+			if (whip_done2 == 1) return;
+			whip_done2 = 1;
+			indyvar = indy2;
+			camvar = cam2;
+			targetvar = cam2_target;
+		}
+
+		SetActorFlags(player, 0x200000);
+		
+		# Prep...
+		curcam = GetCurrentCamera();
+		ResetCameraFOV(0, 0.0);
+		MakeMeStop();
+
+		# Cut to power ball...
+		SetCameraFocus(2, camvar);
+		SetCameraSecondaryFocus(2, targetvar);
+		SetCameraLookInterp(2, 0);
+		Sleep(0.01);
+		SetCurrentCamera(2);
+		SetCameraFOV(100, 0, 0);
+		Sleep(0.01);
+		SetCameraFOV(90, 1, 2.0);
+
+		# Prep indy...
+		CopyPlayerHolsters(player, indyvar); # Make sure actor has matching props.
+		ClearThingFlags(indyvar, 0x80000);
+		SetThingFlags(player, 0x80000); 
+
+		StartCutScene(1);
+
+		# Prep whip...
+		whipThing = AttachThingToThingMesh(indyvar, whipTpl, 15);
+		SetThingMesh(indyvar, 15, whipHand, 0);
+
+		# Do the whip swing fake animation...
+		indyAnim = PlayKey(indyvar, in_whipit, 5, 0x14, 0); # Indy anim...
+		CaptureThing(whipThing); # Make sure we get the callback message...
+		whipAnim = PlayKey(whipThing, wh_whipit, 5, 0x14, 0); # Whip anim...
+		
+        Sleep(1.5);
+
+        PlaySoundLocal(whip, 1.0, 0.0, 0x0, 0);
+		
+		# Wait for action...
+		Sleep(2.5);
+	}
+
+	return;
+
+# ..............................................................................
+
+callback:
+
+	sender = GetSenderRef();
+	callNum = GetParam(1);
+
+	if (sender == indyvar)
+	{
+        if (callNum != 24) return;
+            
+		# Stop animations...
+		StopKey(indyvar, indyAnim, 0);
+		StopKey(whipThing, whipAnim, 0);
+
+        DetachThingMesh(whipThing);
+		SetWeaponModel(indyvar, 2);
+
+        if (silverwhip) # Electric whip
+		{
+			if (GetInv(player, 2) < 1) # Turn it off if it's outta juice...
+			{
+				SetWhipElectric(0);
+
+				SetInv(player, 2, 1.0); # Reset the bin to 1...
+				SetInvAvailable(player, 2, 1);
+
+                silverwhip = 0;
+			}
+		}
+
+		# If callback is from regular whip...
+		if (whip_done0 == 1)
+		{
+			call wrongwhip;
+			whip_done0 = 0;
+			return;
+		}
+		if (whip_done1 == 1)
+		{
+			call wrongwhip;
+			whip_done1 = 0;
+			return;
+		}
+		if (whip_done2 == 1)
+		{
+			call wrongwhip;
+			whip_done2 = 0;
+			return;
+		}
+
+		# Cue music...
+		//PlaySoundLocal(success_cue, 1.0, 0, 0x0, 1);
+		
+		MoveToFrame(armvar, 1, 1.0);
+
+		# Start Indy1 moving...
+		if (indyvar == indy1)
+		{
+			Sleep(0.1);	
+			call indy1move;
+		}
+		else
+		{
+			AISetLookThingEyeLevel(indyvar, cage);
+		}
+	}
+
+	return;
+
+# ..............................................................................
+
+arrived:
+
+	sender = GetSenderRef();
+	
+	if ((sender != arm0) && (sender != arm1) && (sender != arm2))
+	{
+		return;
+	}
+	
+	if (sender == arm1)
+	{
+		# When this arm--always last!--retracts, drop Sophia's cage to dais
+		# and start the Marduk/Sophia merger cutscene...
+		
+		lastarm = 1;
+		
+		# Turn on interp code...
+		SetCameraInterpSpeed(2, 2.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		Sleep(0.01);
+		
+		# Pan over to cage as it goes down and zoom...
+		SetCameraSecondaryFocus(2, secondary_target);
+		SetCameraFOV(30, 1, 2.0);
+		Sleep(2.0);
+
+        PlaySoundLocal(cagestart, 1, 0, 0x0, 0);	
+		
+		AISetMoveSpeed(cage, 1.0);
+		AISetMoveThing(cage, cg_mk_1, 0);
+
+		# Sleep before sending message to cutscene cog...
+		Sleep(2.0);
+		
+		# Prep for return to play...
+		StopKey(indy1, in_keytrack1, 0.0);
+		TeleportThing(indy1, in_mk_final);
+		TeleportThing(player, in_mk_final); 
+		
+		# End cutscene (formality only:  next scene plays immediately!)...
+		SetThingFlags(indy1, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		
+		# TRIGGER MERGE CUTSCENE RIGHT HERE...
+		SendMessage(cagecog, user0); 
+		
+		return;
+    }
+
+	if (sender == arm0)
+	{
+		armspotvar = tel_target0;
+		indyvar = indy0;
+		lastarm = 0;
+	}
+
+	if (sender == arm2)
+	{
+        global11 = 0;
+		SendMessage(door2, user0);
+
+tryagain:
+
+		Sleep(0.01);
+	    if (global11 == 0)
+		{
+			#Wait for small cutscene to finish...
+			//Sleep(0.01);
+			goto tryagain;
+		}
+		armspotvar = tel_target2;
+		indyvar = indy2;
+		lastarm = 0;
+	}
+
+	if (lastarm == 0)
+	{
+		# Return to play...
+		TeleportThing(player, armspotvar);
+
+		v_camspot = VectorAdd(VectorTransformToOrient(player, '0.2 -0.02 0.05'), GetThingPos(player));	
+		SetCameraPosition(1, v_camspot);
+
+		SetCurrentCamera(1);
+		ResetCameraFOV(0, 0.0);
+		SetThingFlags(indyvar, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		
+		EndCutScene();
+		ClearActorFlags(player, 0x200000);
+		whipactive = 0;
+
+		Sleep(1.0);
+        # Play music...
+		PlaySoundLocal(success_cue, 1.0, 0, 0x0, 0);
+	}
+
+	return;
+
+# ..............................................................................
+
+indy1move:
+
+	# Move Actor Indy1 to mark1...
+	AISetCutSceneMode(indy1);
+	AISetMoveSpeed(indy1, 1.0);
+	AISetLookThing(indy1, indy1_mk_1);
+	AIWaitForStop(indy1);
+	TeleportThing(player, indy1);
+	SetThingFlags(indy1, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	DeselectWeaponWait(player);
+	CopyPlayerHolsters(player, indy1);
+	SetThingFlags(player, 0x80000);
+	CLearThingFlags(indy1, 0x80000);
+	AISetMoveThing(indy1, indy1_mk_1, 0);
+
+	Sleep(4.0);
+	StopThing(indy1);
+	in_keytrack1 = PlayKey(indy1, in_handsONhips, 2, 0x10, 0);
+	PlayKey(indy1, in_handsTOhips, 4, 0x12, 0);
+
+	return;
+
+# ..............................................................................
+
+wrongwhip:
+
+	# When wrong whip is used...
+
+	global15 = 0;
+	## SendMessageEx(doortalk, user3, indyvar, 0, 0, 0);
+	## while (global15 == 0)
+	## {
+		# Wait for line to finish...
+	##	Sleep(0.01);
+	## }
+
+	# Back to play...
+	TeleportThing(player, indyvar);
+
+	v_camspot = VectorAdd(VectorTransformToOrient(player, '0.2 -0.02 0.05'), GetThingPos(player));	
+	SetCameraPosition(1, v_camspot);
+
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	SetThingFlags(indyvar, 0x80000);
+	ClearThingFlags(player, 0x80000);
+
+	done1 = 0;
+
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+    whipactive = 0;
+
+	return;
+
+end
+

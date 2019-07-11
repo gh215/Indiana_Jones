@@ -1,0 +1,453 @@
+# Jones 3D Cog Script
+#
+#	olv_head1.cog
+#
+# Cog to roll head 1.
+#
+# [DS & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+Symbols
+
+	message		startup
+   	message		entered
+	message		exited
+	message		touched
+	message		blocked
+	message		timer
+	message		pulse
+
+	thing		player									local 
+
+	thing		head1a
+	thing		head1b
+	thing		pushblock
+	thing		crumble0								nolink
+	thing		crumble1								nolink
+	thing		crumble2								nolink
+	thing		crumble3								nolink
+	thing		campos									nolink
+	thing		campos2									nolink
+	thing		head1_cam								nolink
+	thing		head1_ct_1								nolink
+	thing		head1_ct_2								nolink
+
+	thing		cam1spot								local
+	thing		cam1look								local
+
+	template	tpl_ghost=ghost							local
+
+	sector		fallsector 
+	sector		safeslot
+
+	surface		oops0									mask=0x080
+	surface		tube0
+	surface		past_safeslot
+
+	vector		lookvec
+
+	keyframe	in_1to4=0in_stand1_bd_4.key				local
+	keyframe	in_stand4=0in_stand4.key				local
+	keyframe	smashed=in_die_fall.key					local
+	keyframe	fall=in_jump_land_hard.key				local
+	keyframe	rolling=olv_rock_head.key				local
+
+	sound		plyersnd=ov03j01.wav					local # "Monumental Olmec head..."
+	sound		ungh=inxj011.wav						local
+	sound		Death=tem_temspikes_up_kill_c.wav		local
+	sound		release=olv_presswitch_c.wav			local
+	sound		headroll=olv_rockhead_roll_c.wav		local
+	sound		headland=olv_rockhead_hitearth_c.wav	local
+	sound		fallfloor=olv_fallfloor_c.wav			local
+	sound		closecall=inxj007a.wav					local
+
+	vector		vec1									local
+	vector		vec2									local
+	vector		vec3									local
+	vector		vec4									local
+	vector		pushim									local
+	int			track									local
+	int			rolled=0 								local
+	int			curcam									local
+	int			tutch=0									local
+	int			vibe									local
+	int			shake									local
+	int			doshake=0								local
+	int			camexists=0								local
+
+	flex			headsize								local
+	cog			hints									# send message when complete 
+
+# --------------falling debris--------------------------------------------------
+
+	thing		debrispos
+	thing		rocks									local
+	int			i										local
+	int			numDebris=17							local
+	int			numpulz=0								local
+	template	debris0=stoneshrapa_nc					local
+	template	debris1=stoneshrapb_nc					local
+	template	debris2=stoneshrapc_nc					local
+
+	int		rel					local
+	int		talk				local
+	int		rollin				local
+	int		rollhead			local
+	thing	victim				local
+	flex	camera_end			local
+	vector	posoffset			local
+	vector	angoffset			local		
+
+	end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player=GetLocalPlayerThing(); 
+	SetThingFlags(head1b, 0x80000);
+	vec1 = VectorSet(19.35, 9.18382, -0.35);
+	vec2 = VectorSet(16.176, 9.12669, -1.3);
+	vec3 = VectorSet(15.3381, 9.11226, -2.2);
+	vec4 = VectorSet(15.1381, 9.11226, -2.2);
+	pushim = VectorSet(0.0, 0.0, -1.0);
+	SetThingLight(pushblock, '0.5 0.5 0.4', 0.01, 0.01);
+	return;
+
+# ..............................................................................
+
+entered:
+	if ((getsenderRef() == past_safeslot) && (rolled == 0))
+	{
+		StopThing(player);
+		return;
+	}
+	if ((rolled == 0) && (getsenderref() == oops0) && (getsourceref() == pushblock))
+	{
+		SetActorFlags(player, 0x200000);
+		MakeMeStop();
+		StartCutscene(1);
+		PlaySoundLocal(fallfloor, 1.0, 0.0, 0x0, 0);
+		shake = 1; # mild shake
+		doshake = 1; # on pulse, do cam shake
+		SetPulse(0.1);
+		Sleep(1.0); # shake for 1 sec
+		SetPulse(0.0);
+		doshake = 0;
+		DestroyThing(crumble0);
+		DestroyThing(crumble1);
+		DestroyThing(crumble2);
+		DestroyThing(crumble3);
+		setpulse(0.2);
+		DetachThing(player);
+		sleep(0.1);
+		SetSectorThrust(fallsector, pushim, 100.0);
+		PlayKey(player, fall, 4, 0x12, 1);
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+
+		# Clear now unecessary thrust.
+		SetSectorThrust(fallsector, pushim, 0.0);
+
+		return;
+	}
+	if ((getsenderref() == tube0) && (rolled == 0))
+	{
+		SendMessageEx(hints, user0, 1, 0, 0, 0);    #param0=1; standing on pad.
+		MakeMeStop();
+		StartCutscene(1);
+
+		if (camexists == 0)
+		{
+			cam1spot = CreateThing(tpl_ghost, player);
+			CaptureThing(cam1spot);
+			cam1look = CreateThing(tpl_ghost, player);
+			CaptureThing(cam1look);
+			camexists = 1;
+		}
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		MakeCamera2LikeCamera1(cam1spot, cam1look);
+		SetCameraFocus(2, cam1spot);
+		SetCameraSecondaryFocus(2, cam1look);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 0.8);
+		Sleep(0.01);
+		SetCameraFocus(2, head1_cam);
+		SetCameraSecondaryFocus(2, head1_ct_1);
+
+		rel = PlaySoundThing(release, head1a, 1, 20, 25, 0);
+		SetThingLook(player, lookvec);
+		track = PlayKey(player, in_Stand4, 2, 0x0, 0);
+		PlayKey(player, in_1to4, 4, 0x12, 1);
+		waitforsound(rel);
+		sleep(0.4);
+		talk = PlayVoice(player, plyersnd, 1.0, 1);
+		waitforsound(talk);
+		StopKey(player, track, 0.5);
+		Sleep(0.5);
+
+		SetCameraPosition(1, GetThingPos(head1_cam));
+		SetCurrentCamera(1);
+
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+
+		return;
+	}
+
+	if ((getsenderRef() == safeslot) && (rolled == 1))
+	{
+		rolled=2;
+		curcam = GetCurrentCamera();
+		SetThingFlags(player, 0x80000);
+		SetActorFlags(player, 0x200000);
+		MakeMeStop();
+		StartCutscene(1);
+		SetCollideType(head1a, 0);
+		SetCameraLookInterp(2, 0);			#snap camera in place.
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, campos2);
+		SetCameraSecondaryFocus(2, head1a);
+		SetCurrentCamera(2);
+		setTimer(2.5); # was 1.5
+
+		return;
+	}
+
+	return;
+
+# ..............................................................................
+
+touched:
+
+	if ((rolled == 0) || (rolled == 3))
+	{
+		return;
+	}
+
+	if ((GetSenderRef() == head1a) && (GetSourceRef() == player))
+	{
+		ClearActorFlags(player, 0x8);
+		DamageThing(player, 1000.0, 0x1, victim);
+		SetCollideType(head1a, 0);
+		PlaySoundLocal(Death, 1.0, 0.0, 0x0, 0);
+		PlayKey(player, smashed, 10, 0x14, 0);
+		tutch=1;
+	}
+
+	return;
+
+# ..............................................................................
+
+exited:
+
+	if ((getsenderref() == tube0) && (rolled == 0))
+	{
+		rolled=1;
+		rel = PlaySoundThing(release, head1a, 1, 20, 25, 0);
+		waitforsound(rel);
+		PlayVoice(player, ungh, 1.0, 0);
+		rollin = PlaySoundThing(headroll, head1a, 1, 20, 55, 0x0081);
+		MoveThingToPos(head1a, vec1, 0.2);
+		rollhead = PlayKey(head1a, rolling, 4, 0x10, 0);
+		SetThingMoveSize(head1a, 0.1);
+		sleep(0.2);
+
+		if (tutch == 0)
+		{	
+			SetCollideType(head1a, 3);
+		}
+
+		MoveThingToPos(head1a, vec2, 5.8);
+		sleep(5.8);
+		MoveThingToPos(head1a, vec3, 1.0);
+		sleep(1.0);
+		StopKey(head1a, rollhead, 0.5);
+		StopSound(rollin, 0);
+		PlaySoundThing(headland, head1a, 1, 20, 55, 0);
+		DestroyThing(head1a);
+		ClearThingFlags(head1b, 0x80000);
+		MoveThingToPos(head1b, vec4, 1.0);
+		rollhead = PlayKey(head1b, rolling, 4, 0x14, 0);
+		StopKey(head1b, rollhead, 1.0);
+		sleep(1.0);
+
+		if (rolled == 2)
+		{
+			sleep(1.5);
+			call camera_end;
+		}
+
+		rolled=3;
+		SendMessageEx(hints, user0, 2, 0, 0, 0);    #param0=2; rock head on valley floor.
+	}
+
+	return;
+
+# ..............................................................................
+
+timer:
+
+	if (rolled == 3)
+	{	
+		return;
+	}
+
+	SetCameraFocus(2, campos);
+	AttachThingToThingEx(head1_ct_2, head1a, 0x0C);
+	SetCameraSecondaryFocus(2, head1_ct_2);
+	SetCameraFOV(50, 0, 0.0);
+	Sleep(0.01);
+	SetCameraFOV(90, 1, 5.0);
+
+	return;
+
+# ..............................................................................
+
+blocked:
+#	Print("head is blocked");
+#	headsize=GetThingMoveSize(head1a);
+	SetThingMoveSize(head1a, 0.1);
+	return;
+
+# ..............................................................................
+
+pulse:
+
+	if (doshake != 0)
+	{
+		vibe = RandBetween(1, 4);
+		if (vibe == 1)
+		{
+			if (shake == 1)
+			{
+				posOffset = '-0.005 0.00 -0.001'; #1 was .005x
+				angOffset = '0.00 -0.001 0.001';
+			}
+			if (shake == 2)
+			{
+				posOffset = '0.01 -0.01 0.005'; #2
+				angOffset = '0.005 0.00 -0.005';
+			}
+			if (shake == 3)
+			{
+				posOffset = '0.01 0.02 -0.02'; #3
+				angOffset = '-0.01 0.01 -0.01';
+			}
+		}
+		if (vibe == 2)
+		{
+			if (shake == 1)
+			{
+				posOffset = '0.005 -0.002 0.001'; #2 was .005x
+				angOffset = '0.001 0.00 -0.001';
+			}
+			if (shake == 2)
+			{
+				posOffset = '0.005 0.01 -0.01'; #3
+				angOffset = '-0.005 0.005 -0.00';
+			}
+			if (shake == 3)
+			{
+				posOffset = '-0.02 0.00 0.02'; #4 was .01x
+				angOffset = '0.00 0.00 0.01';
+			}
+		}
+		if (vibe == 3)
+		{
+			if (shake == 1)
+			{
+				posOffset = '0.002 0.002 -0.002'; #3 was .002x
+				angOffset = '-0.001 0.002 -0.002';
+			}
+			if (shake == 2)
+			{
+				posOffset = '-0.015 0.00 0.01'; #4 was .01x
+				angOffset = '0.00 0.00 0.01';
+			}
+			if (shake == 3)
+			{
+				posOffset = '-0.025 0.00 -0.01'; #1 was .02x
+				angOffset = '0.00 -0.01 0.01';
+			}
+		}
+		if (vibe == 4)
+		{
+			if (shake == 1)
+			{
+				posOffset = '-0.001 0.00 0.002'; #4
+				angOffset = '0.00 0.00 0.001';
+			}
+			if (shake == 2)
+			{
+				posOffset = '-0.01 0.00 -0.005'; #1
+				angOffset = '0.00 -0.005 0.005';
+			}
+			if (shake == 3)
+			{
+				posOffset = '0.02 -0.02 0.01'; #2
+				angOffset = '0.01 0.00 -0.01';
+			}
+		}
+
+		vibe = RandBetween(1, 3);
+		if (vibe == 1)
+		{
+			SetPulse(0.05);
+		}
+		if (vibe == 2)
+		{
+			SetPulse(0.1);
+		}
+		if (vibe == 3)
+		{
+			SetPulse(0.15);
+		}
+
+		SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+
+		return;
+	}
+	else
+	{	
+		if (numpulz >= 8)
+		{
+			setpulse(0);
+			return;
+		}
+
+		for (i=0; i<numDebris; i=i+1)                                                        	            
+		{
+			rocks = CreateThing(debris0[RandBetween(0, 2)], debrispos);
+			SetThingVel(rocks, VectorScale(VectorAdd(RandVec(), '-0.2 0.0 -0.2'), 2));
+			SetThingRotVel(rocks, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 900.0));
+		}
+		numpulz = (numpulz)+1; 
+
+		return;
+	}
+
+# ..............................................................................
+
+camera_end:
+
+	SetCurrentCamera(curCam);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	PlayVoice(player, closecall, 1.0, 0);
+
+	return;
+
+end

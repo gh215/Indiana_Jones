@@ -1,0 +1,106 @@
+# Jones 3D Cog Script
+#
+# gen_Slashvine_talk.cog
+#
+# Damage the face with Machete to allow move through. 
+# Added Indy sayline for bumping into.[SXC & DS]
+#
+# [TRM & SXC & DS]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		damaged
+	message		touched
+
+	sound		touchvines=inxj003.wav		local
+
+	surface		vines				mask=0x408
+	surface		vinesback			mask=0x408
+
+	template	leafTpl=slashLeaves	local
+	template	vineGhost=ghost		local
+
+	thing		player				local
+	thing		leaf				local
+	thing		leafpos				local
+
+	int			tutch=0				local
+	int			direction=0			local
+	int			facedir=0			desc=0-north,1-south,2-east,3-west
+	int			leafNum=0			local
+	int			numLeaves=2			local
+
+	flex		playery=0			local
+	flex		playerx=0			local
+
+	vector		playervec			local
+
+end
+
+# ========================================================================================
+
+code
+
+damaged:
+
+	# See if damage is from machete -- RT
+	if (GetParam(1) == 0x20)
+	{
+		SetWallCel(vines, 1);
+		SetWallCel(vinesback, 1);
+		ClearAdjoinFlags(vines, 0x10);
+		SetAdjoinFlags(vinesback, 0x2);
+
+		# Make leaves...
+        leafpos = CreateThingAtPos(vineGhost, GetSurfaceSector(vines), GetSurfaceCenter(vines), '0 0 0');
+		
+		for(leafNum = 0; leafNum < numLeaves; leafNum = leafNum + 1)
+		{
+			leaf = CreateThing(leafTpl, leafpos);
+			SetThingVel(leaf, VectorScale('0.0 0.0 -0.1', 0.7));
+		}
+
+		tutch=1;
+	}
+	return;
+
+# ========================================================================================
+
+touched:
+
+	if (tutch == 1) return;
+
+    player = GetLocalPlayerThing();
+
+	playervec = GetThingLVec(player);
+	playery = VectorY(playervec);
+	playerx = VectorX(playervec);
+
+	if ((playery > 0) && ((playerx > -0.7) && (playerx < 0.7)))
+	{
+		direction = 0;	# North
+	}
+	else if ((playery < 0) && ((playerx > -0.7) && (playerx < 0.7)))
+	{
+		direction = 1;	# South
+	}
+	else if ((playerx > 0) && ((playery > -0.7) && (playery < 0.7)))
+	{
+		direction = 2;	# East
+	}
+	else if ((playerx < 0) && ((playery > -0.7) && (playery < 0.7)))
+	{
+		direction = 3;	# West
+	}
+
+	if (direction == facedir)
+	{
+		PlayVoice(player, touchvines, 1.0, 0);
+		tutch=1;
+	}
+	return;
+
+end

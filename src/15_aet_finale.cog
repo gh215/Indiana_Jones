@@ -1,0 +1,643 @@
+# Jones 3D Cog Script
+#
+# 15_AET_Finale.cog
+#
+# Indy, Sophia & Volodnikov stroll off into a sunrise
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		entered
+	message		crossed
+	message		callback
+	
+# .................................. KEYFRAMES .................................
+	
+	keyframe	in_handsONhips=0in_stand4.key			local
+	keyframe	in_handsTOhips=0in_stand1_bd_4.key	   	local
+	keyframe	in_rtarmup=0in_armsout_1_1.key			local # 60x
+	keyframe	in_botharmsup=0in_armsup_1_1.key		local
+	keyframe	in_gesture=0in_overshoulder_4_1.key		local
+	keyframe	in_pullup=0in_pulledup_1_1.key			local
+
+	keyframe	so_sideTOhips=0so_stand2_bd_1.key		local
+	keyframe	so_hipsTOside=0so_stand1_bd_2.key		local
+	keyframe	so_handsONhips=0so_stand1.key			local
+	keyframe	so_pullup=0so_pulledup_2_2.key			local		
+	
+	keyframe	vo_armsATback=vo_stand2_arms_back.key	local
+	keyframe	vo_sideTOback=vo_stand3_bd_2.key		local
+	keyframe	vo_backTOside=vo_stand2_bd_3.key		local # 21x
+	keyframe	vo_cleanglasses=0vo_glasses_2_2.key		local # marked x61&x180/cb16	
+	keyframe	vo_leftup3=0vo_leftup_3_3.key			local
+	keyframe	vo_bothup=0vo_bothup_3_3.key			local # 52x
+	keyframe	vo_pullup=0vo_pullup_3_3.key			local
+	
+	keyframe	invo_pullup=0invo_pullup.key			local
+	
+# .................................. MODELS ....................................
+		
+	model		mod_in_barehead=head_in_goodhair.3do	local
+	model		mod_in_handhat=hand_in_hat.3do 			local
+
+	model  		mod_vo_head=head_vo_noglasses.3do		local
+	model  		mod_vo_glasses=hand_vo_glasses.3do		local
+			
+# .................................. SOUNDS ....................................
+
+	sound		in_wellreds=Inxj067.wav					local
+	sound		vo_findgod=At06v01.wav					local
+	sound		in_hopenot=At06j02.wav					local
+	sound		vo_relief=At06v03.wav					local
+	sound		so_expectwin=At06s04.wav				local
+	sound		vo_struggle=At06v05.wav					local
+	sound		in_vodka=At06j06.wav					local
+	sound		mus_finale=mus_aet_finalcutscene.wav	local
+	sound		mus_finaleB=mus_aet_finalcutscene_B.wav	local
+
+# ............................... ACTOR THINGS .................................
+
+	thing		player									local
+	thing		indy	    							linkid=0
+	thing		sophia									nolink
+	thing		volod
+	thing		in_vo									
+# .............................. OBJECT THINGS .................................
+
+	thing		fadeplate								nolink
+	thing		logo									nolink
+	thing		ruin_1									nolink
+
+# .............................. CAMERA THINGS .................................
+
+	thing		cam_1									nolink
+	thing		cam_2									nolink
+	thing		cam_3									nolink
+	thing		cam_4									nolink
+	thing		cam_5									nolink
+	thing		cam_6									nolink
+	thing		cam_7									nolink
+
+	thing		ct_1									nolink
+	thing		ct_2									nolink
+	thing		ct_3 									nolink
+	thing		ct_4									nolink
+	thing		ct_5									nolink
+	thing		ct_6									nolink
+	thing		ct_7									nolink
+
+# .............................. TARGET THINGS .................................
+
+	thing		in_mk_1									nolink
+	thing		in_mk_2									nolink
+	thing		in_mk_3									nolink
+	thing		in_mk_4									nolink
+	thing		in_mk_5									nolink
+	thing		in_mk_6									nolink
+
+	thing		har_in_mk_lk							nolink
+	thing		har_vo_mk_lk							nolink
+
+	thing		so_mk_1									nolink
+	thing		so_mk_2									nolink
+	thing		so_mk_3									nolink
+	thing		so_mk_4									nolink
+	thing		so_mk_5									nolink
+	thing		so_mk_6									nolink
+
+	thing		vo_mk_1									nolink
+	thing		vo_mk_2									nolink
+	thing		vo_mk_3									nolink
+	thing		vo_mk_4									nolink
+
+# ............................... VAR THINGS ...................................
+
+	thing		indycamtarget							local # created on fly
+	thing		sender									local
+
+# ........................ OTHER ENGINE REFERENCES .............................
+			
+	sector		startsector_1
+	sector		startsector_2
+	sector		targetsector							local # var
+	
+	surface		startface
+
+	template    ghost_tpl=ghost							local
+	
+# ............................... VARIABLES ....................................
+	
+	vector		v_modvec								local
+	vector		v_targetpos								local
+	
+	flex		f_XDist									local
+	flex		f_YDist									local
+	flex		f_ZDist									local
+
+	flex		in_rotrate								local
+	flex		so_rotrate								local
+	flex		vo_rotrate								local
+
+	flex		in_headrate								local
+	flex		so_headrate								local
+	flex		vo_headrate								local
+
+	int			cutSceneState=0							local # overall state var
+
+	int			in_colltype								local
+	int			so_colltype								local
+	int			vo_colltype								local
+	int			iv_colltype								local
+	
+	int			in_keytrack1							local
+	int			in_keytrack2							local
+	int			so_keytrack1							local
+	int			vo_keytrack1							local
+
+	int			in_swapitem1							local
+	int			in_swapitem2							local
+	int			in_swapitem3							local
+
+	int			vo_swapitem1							local
+	int			vo_swapitem2							local
+	int			swapevent=0								local
+			
+	int			cursound								local
+	int			curcam									local
+	int			finale									local
+	int			finaleB									local
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+
+	# Prep actors...
+	curcam = GetCurrentCamera();
+	SetThingFlags(indy, 0x80000);
+	SetThingFlags(sophia, 0x80000);
+	SetThingFlags(volod, 0x80000);
+	AISetCutSceneMode(indy);
+	AISetCutSceneMode(sophia);
+	AISetCutSceneMode(volod);
+	in_rotrate = GetThingMaxRotVel(indy);
+	in_headrate = GetThingMaxHeadVel(indy);
+	in_colltype = GetCollideType(indy);
+	so_rotrate = GetThingMaxRotVel(sophia);
+	so_headrate = GetThingMaxHeadVel(sophia);
+	so_colltype = GetCollideType(sophia);
+	vo_rotrate = GetThingMaxRotVel(volod);
+	vo_headrate = GetThingMaxHeadVel(volod);
+	vo_colltype = GetCollideType(volod);
+	iv_colltype = GetCollideType(in_vo);
+
+
+	SetCollideType(in_vo, 0);
+	SetThingFlags(in_vo, 0x80000);
+	return;
+
+# ..............................................................................
+
+entered:
+
+	sender = GetSenderRef();
+	if (sender != startsector_1 && sender != startsector_2 || cutSceneState != 0)
+	{
+		return;
+	}
+
+	cutSceneState = 1;
+
+	# Ready Sophia...
+	ClearThingFlags(sophia, 0x80000);
+	AISetMoveSpeed(sophia, 1.0);
+	AISetLookThing(sophia, so_mk_1);
+	AISetMoveThing(sophia, so_mk_1, 0);
+	AIWaitForStop(sophia);
+	AIEnableBodyTracking(sophia, player);
+
+	# Prep title to prevent visual pops...
+	ClearThingFlags(fadeplate, 0x80000);
+	SetThingAlpha(fadeplate, 0.0);
+	SetThingFlags(fadeplate, 0x80000);
+	ClearThingFlags(logo, 0x80000);
+	SetThingAlpha(logo, 0.0);
+	SetThingFlags(logo, 0x80000);
+
+	finale = PlaySoundLocal(mus_finale, 0.0, 0.0, 0x01, 0);
+	finaleB = PlaySoundLocal(mus_finaleB, 0.0, 0.0, 0x01, 0);
+
+	return;
+
+# ..............................................................................
+
+crossed:
+
+	if (GetSenderRef() != startface || cutSceneState > 1)
+	{
+		return;
+	}
+
+	# Prep...
+	SetActorFlags(player, 0x200000);
+	StartCutscene(1);
+	curcam = GetCurrentCamera();
+	cutSceneState = 2; # do scene once only
+	ClearThingFlags(volod, 0x80000);
+	ClearThingFlags(indy, 0x80000); # summon actor
+	SetThingFlags(indy, 0x10); # but keep him invisible
+	TeleportThing(indy, in_mk_1); 
+	SetThingMaxHeadVel(indy, 100.0);
+	SetThingMaxRotVel(indy, 200.0);
+	SetThingMaxHeadVel(sophia, 100.0);
+	SetThingMaxRotVel(sophia, 200.0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	
+	# Establish a target near Indy...
+	v_targetpos =
+		VectorAdd(VectorTransformToOrient(player, '0.01 0.07 0.045'), GetThingPos(player));	
+	targetsector = FindNewSectorFromThing(player, v_targetpos);
+	indycamtarget = 
+		CreateThingAtPos(ghost_tpl, targetsector, v_targetpos, '0 0 0');
+	CaptureThing(indycamtarget);
+	AttachThingToThing(indycamtarget, player);
+
+    SetFog(0, '0 0 0', 0, 0);
+
+	# Cut to Indy standing up...
+	SetCameraFocus(2, cam_1);
+	SetCameraSecondaryFocus(2, indycamtarget);
+	SetCurrentCamera(2);
+	SetCameraFOV(30, 0, 0.0);
+	Sleep(0.01);
+	SetCameraFOV(55, 1, 2.0);
+
+    # Play music...
+	StopSound(finale, 0.0);
+	finale = PlaySoundLocal(mus_finale, 1.0, 0.0, 0x0, 0);
+
+	# Wait until he's all the way up...
+	Sleep(0.8);
+
+	# Switch actor Indy for player...
+	StopThing(player); # right now
+	PlayMode(player, 1, 0); # get him into a nice stand
+	CopyPlayerHolsters(player, indy); # match props	
+	Sleep(0.01);
+	TeleportThing(indy, player);
+	SetThingFlags(player, 0x80000); # hide player
+	ClearThingFlags(indy, 0x10); # now show actor
+	AIEnableBodyTracking(sophia, indy);
+
+	# Walk Indy forward...
+	AttachThingToThing(indycamtarget, indy);
+	AISetMoveSpeed(indy, 1.0);
+	AIEnableHeadTracking(indy, sophia);
+	AISetLookThingEyeLevel(indy, in_mk_2);
+	AISetMoveThing(indy, in_mk_1, 0);
+	Sleep(1.0);
+	SetThingMaxHeadVel(sophia, 200.0);
+	SetThingMaxRotVel(sophia, 400.0);
+	AISetLookThing(sophia, volod);
+	AIEnableBodyTracking(sophia, volod);	
+	AIEnableHeadTracking(indy, volod);
+	Sleep(0.3); # was 0.5
+	AIDisableHeadTracking(indy);
+	AIEnableBodyTracking(indy, volod);
+	AIWaitForStop(indy);
+	in_keytrack1 = PlayKey(indy, in_handsONhips, 2, 0x10, 0);
+
+	# Prep Dr. V...
+	AttachThingToThing(ct_2, volod);
+	AISetMoveSpeed(volod, 0.9);
+	AISetLookThing(volod, indy);
+	AIEnableBodyTracking(sophia, volod);
+
+	# Indy: "Well well, reds again."
+	cursound = PlayVoice(indy, in_wellreds, 1.0, 0);
+	PlayKey(indy, in_handsTOhips, 4, 0x12, 1);
+	WaitForSound(cursound);
+
+	# Dr. V leads camera back to pit...
+	AISetMoveThing(volod, vo_mk_1, 0);
+
+	# Cut to Volodnikov approaching...
+	SetCameraFocus(2, cam_2);
+	SetCameraSecondaryFocus(2, ct_2);
+	SetCameraFOV(25, 0, 0.0); # was 30
+	DestroyThing(indycamtarget);
+	Sleep(2.0); # walks go quicker in engine
+
+	# Dolly back...
+	SetCameraInterpSpeed(2, 2.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.01);
+	AIEnableHeadTracking(volod, indy);
+	SetCameraFocus(2, cam_3);
+	SetCameraSecondaryFocus(2, ct_3);
+	SetCameraFOV(79, 1, 2.0);
+	AIWaitForStop(volod);
+
+	# Volodnikov: "Did you find God, Dr. Jones?"
+	cursound = PlayVoice(volod, vo_findgod, 1.0, 0);
+	PLayKey(volod, vo_bothup, 4, 0x12, 0);
+	WaitForSound(cursound);
+
+	# Indy: "I hope not.  Whoever...not very forgiving."
+	cursound = PlayVoice(indy, in_hopenot, 1.0, 0);
+	Sleep(1.5);
+	StopKey(indy, in_keytrack1, 0.0);
+	AIDisableBodyTracking(indy);
+	AISetLookThingEyeLevel(indy, in_mk_3);
+	PlayKey(indy, in_gesture, 4, 0x12, 0);
+	Sleep(1.0);
+	AISetLookThingEyeLevel(indy, volod);
+	vo_keytrack1 = PlayKey(volod, vo_armsATback, 2, 0x10, 0);
+	PlayKey(volod, vo_sideTOback, 4, 0x12, 0);
+	WaitForSound(cursound);
+
+	# Volodnikov: "That's a relief...socialist theory disavows supernatural powers."
+	cursound = PlayVoice(volod, vo_relief, 1.0, 0);
+	swapevent = 1; # see callback
+	PlayKey(volod, vo_cleanglasses, 4, 0x12, 0);
+	Sleep(2.0);
+	AIDisableBodyTracking(sophia);
+	Sleep(0.5);
+	AIEnableHeadTracking(sophia, indy);
+	AIEnableHeadTracking(indy, sophia);
+	Sleep(1.0);
+	swapevent = 2; # see callback
+	Sleep(0.5);
+	AIEnableHeadTracking(sophia, volod);
+	AIEnableHeadTracking(indy, volod);
+	AISetMoveThing(sophia, so_mk_2, 0);
+	WaitForSound(cursound);
+	AIWaitForStop(sophia);
+
+	# Sophia: "And you expect to win the cold war?"
+	cursound = PlayVoice(sophia, so_expectwin, 1.0, 0);
+	so_keytrack1 = PlayKey(sophia, so_handsONhips, 2, 0x10, 0);
+	PlayKey(sophia, so_sideTOhips, 4, 0x12, 0);
+	Sleep(0.5);
+	AIEnableHeadTracking(volod, sophia);
+	WaitForSound(cursound);
+
+	# Volodnikov: "I expect a long struggle."
+	cursound = PlayVoice(volod, vo_struggle, 1.0, 0);
+	StopKey(volod, vo_keytrack1, 0.0);
+	PlayKey(volod, vo_backTOside, 4, 0x12, 1);
+	PlayKey(volod, vo_leftup3, 4, 0x12, 0);
+	StopKey(sophia, so_keytrack1, 0.0);
+	PlayKey(sophia, so_hipsTOside, 4, 0x12, 1);
+	WaitForSound(cursound);
+
+	# Prep Indy pullup...
+	SetThingFlags(in_vo, 0x10);
+	ClearThingFlags(in_vo, 0x80000);
+
+	# Volod helps Sophia out of pit...
+	SetThingMaxRotVel(volod, 120.0);
+	AISetLookThing(volod, sophia);
+	AIDisableHeadTracking(sophia);
+	AISetLookThingEyeLevel(sophia, so_mk_4); # was volod
+	Sleep(0.3);
+	PlayKey(volod, vo_pullup, 4, 0x12, 0);
+	PlayKey(sophia, so_pullup, 4, 0x12, 1);
+    TeleportThing(sophia, so_mk_3);
+ 	Sleep(0.1);
+	AISetLookThingEyeLevel(sophia, so_mk_4);
+	AIDIsableHeadTracking(volod);
+	SetThingMaxRotVel(volod, vo_rotrate);
+    AISetMoveThing(sophia, so_mk_4, 0);
+	Sleep(0.5);
+	
+	# Volodnikov helps Indy out of pit...
+	AIEnableBodyTracking(volod, indy);
+	AISetMoveThing(volod, vo_mk_2, 0);
+    AISetLookThing(volod, har_vo_mk_lk);
+	SetCameraInterpSpeed(2, 2.0);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_4);
+	SetCameraSecondaryFocus(2, ct_4);
+	SetCameraFOV(60, 1, 2.0);
+
+	AIDisableHeadTracking(indy);
+    AISetLookThing(indy, har_in_mk_lk);
+  	AISetMoveThing(indy, in_mk_2, 0);
+ 	Sleep(0.25);
+	
+	# Here begin the changes Harley made...
+	
+	SetCameraInterpSpeed(2, 1.7);
+    Sleep(0.01);
+	SetCameraSecondaryFocus(2, ct_7);
+	Sleep(1.0);
+
+	# Show Indy volodnikov thing, make other guys invisible,  
+	ClearThingFlags(in_vo, 0x10);
+    SetThingFlags(indy, 0x80000);
+	SetThingFlags(volod, 0x80000);
+	
+	# and play pullup key...
+	PlayKey(in_vo, invo_pullup, 4, 0x12, 1);
+	
+	# Hide Indy volodnikov thing, make other guys visible...  
+	SetThingFlags(in_vo, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+	ClearThingFlags(volod, 0x80000);
+
+	# Here end the changes Harley Made...
+
+	# Cut to Indy close-up...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_5);
+	SetCameraSecondaryFocus(2, ct_5);
+	SetCameraFOV(38, 0, 0.0);
+	SetThingFlags(volod, 0x10);
+	TeleportThing(indy, in_mk_3);
+	StopKey(indy, in_keytrack1, 0.0);
+	AISetLookThingEyeLevel(indy, in_mk_6);
+	Sleep(1.0);
+
+	# Clean up looks...
+	AIDisableHeadTracking(indy);
+	AIDisableBodyTracking(indy);
+	AIDisableHeadTracking(sophia);
+	AIDisableBodyTracking(sophia);
+	AISetLookThing(sophia, indy);
+	AIDisableHeadTracking(volod);
+	AIDisableBodyTracking(volod);
+	StopKey(volod, vo_keytrack1, 0.0);
+
+	# Indy: "Listen, Gennadi...socialist vodka...I'm thirsty."
+	cursound = PlayVoice(indy, in_vodka, 1.0, 0); # 5.4 sec
+
+	PlayKey(indy, in_rtarmup, 4, 0x12, 1); # 2 sec
+	Sleep(2.2);
+	in_keytrack2 = PlayKey(indy, in_botharmsup, 4, 0x12, 0);
+	
+	# Stop first music cue and begin last one.
+	StopSound(finale, 1.0);
+	StopSound(finaleB, 0.0);
+	finaleB = PlaySoundLocal(mus_finaleB, 1.0, 0.0, 0x0, 0);
+		
+	Sleep(1.5);
+	
+	StopKey(indy, in_keytrack2, 0.5);
+	WaitForSound(cursound);
+
+	# Start Indy exit...
+	AttachThingToThing(ct_6, indy);
+	AISetMoveSpeed(indy, 0.85);
+	AISetLookThingEyeLevel(indy, in_mk_4);
+	AISetMoveThing(indy, in_mk_4, 0);
+	Sleep(1.0);
+
+	# All three hike out of the dig site...
+	AISetLookThingEyeLevel(sophia, so_mk_5);
+	AISetMoveThing(sophia, so_mk_5, 0);
+	AISetMoveSpeed(sophia, 1.2);
+	ClearThingFlags(volod, 0x10);
+	AISetMoveSpeed(volod, 1.15);
+	AISetLookThingEyeLevel(volod, vo_mk_3);
+	AISetMoveThing(volod, vo_mk_3, 0);
+	
+	# Cut to long shot of the trio...
+	SetCameraFocus(2, cam_6);
+	SetCameraSecondaryFocus(2, ct_6);
+	SetCameraFOV(90, 0, 0.0);
+	SetCameraInterpSpeed(2, 12.0);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_7);
+	SetCameraFOV(45, 1, 12.0);
+	Sleep(1.5);
+
+	# Redirect Indy...
+	AISetLookThingEyeLevel(indy, in_mk_5);
+	AISetMoveThing(indy, in_mk_5, 0);
+	Sleep(0.5);
+
+	# Redirect Sophia and Volodnikov off into a sunrise...
+	AISetLookThingEyeLevel(sophia, so_mk_6);
+	AISetMoveThing(sophia, so_mk_6, 0);
+	AISetLookThingEyeLevel(volod, vo_mk_4);
+	AISetMoveThing(volod, vo_mk_4, 0);
+	Sleep(1.0);
+	AISetMoveSpeed(sophia, 1.0);
+	AISetMoveSpeed(volod, 1.0);
+	Sleep(1.5);
+	AIEnableHeadtracking(volod, indy);
+	AIEnableHeadTracking(indy, volod);
+	Sleep(2.0);
+	AISetMoveSpeed(indy, 1.0);
+	AIEnableHeadTracking(volod, vo_mk_4);
+	AIEnableHeadTracking(sophia, indy);
+	AIEnableHeadTracking(indy, sophia);
+	Sleep(2.0);
+	AIEnableHeadTracking(indy, in_mk_5);
+	AIEnableHeadTracking(sophia, so_mk_6);
+	Sleep(3.5);
+
+	# Settle on nice frame...
+	DetachThing(ct_6);
+	Sleep(3.0);
+
+	# Fade out vista and play main title...
+	ClearThingFlags(fadeplate, 0x80000);
+	ThingFadeAnim(fadeplate, 0.0, 1.0, 1.0, 0);
+	ThingFadeAnim(ruin_1, 1.0, 0.0, 1.3, 0);
+	Sleep(1.0);
+	ClearThingFlags(logo, 0x80000);
+	ThingFadeAnim(logo, 0.0, 1.0, 0.3, 0);
+	Sleep(8.5);
+	ThingFadeAnim(logo, 1.0, 0.0, 1.0, 0);
+	Sleep(3.0);
+    
+	# Clean up & restore control (TEMP!!!)...
+	DestroyThing(indy);
+	DestroyThing(sophia);
+	DestroyThing(volod);
+	## ClearThingFlags(player, 0x80000);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	## SetCurrentCamera(curcam);
+	## ResetCameraFOV(0, 0.0);
+	## ClearActorFlags(player, 0x200000);
+	
+	EndCutScene();
+	SetSwimmingInventory(player, 1);
+    JonesEndLevel();
+
+	return;
+
+# ..............................................................................
+
+callback:
+
+	if (swapevent == 1)
+	{		
+		# Volodnikov removes his glasses...
+		vo_swapitem1 = SetThingMesh(volod, 2, mod_vo_head, 0); # no glasses head
+		vo_swapitem2 = SetThingMesh(volod, 8, mod_vo_glasses, 0); # hand with glasses
+
+        # RT: Set up alternate heads
+		SetThingVoiceHeads(volod, "vohead", "head_vo_noglasses.3do", "head_vo_nospecs_asound.3do", "head_vo_nospecs_amsound.3do", "head_vo_nospecs_osound.3do");
+		
+		swapevent = 0; # reset
+	}
+	
+	if (swapevent == 2)
+	{
+		# Volodnikov replaces his glasses...
+		RestoreThingMesh(volod, vo_swapitem1);
+		RestoreThingMesh(volod, vo_swapitem2);
+        
+		# RT: Restore default heads
+		SetThingVoiceHeads(volod, "vohead", "head_vo_msound.3do", "head_vo_asound.3do", "head_vo_amsound.3do", "head_vo_osound.3do");
+        
+		swapevent = 0; # reset
+	}
+
+	if (swapevent == 3)
+	{
+		in_swapitem1 = SetThingMesh(indy, 8, mod_in_barehead, 0);
+		in_swapitem2 = SetThingMesh(indy, 9, mod_in_barehead, 1);
+		in_swapitem3 = SetThingMesh(indy, 15, mod_in_handhat, 0);
+
+		# RT: Set up no-hat heads...
+		SetThingVoiceHeads(indy, "inhead", "head_in_goodhair.3do", "head_in_asound_gh.3do", "head_in_amsound_gh.3do", "head_in_osound_gh.3do");
+	}
+
+	if (swapevent == 4)
+	{
+		RestoreThingMesh(indy, in_swapitem1);
+		RestoreThingMesh(indy, in_swapitem2);
+		RestoreThingMesh(indy, in_swapitem3);
+
+		# RT: Restore default heads...
+		SetThingVoiceHeads(indy, "inhead", "", "head_in_asound.3do", "head_in_amsound.3do", "head_in_osound.3do");
+	}
+	
+	return;
+
+end

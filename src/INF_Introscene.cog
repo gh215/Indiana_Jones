@@ -1,0 +1,177 @@
+# Jones 3D Cog Script
+#
+# INF_introsceme.cog
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     entered
+   
+    thing       player                              local
+    thing       indyactor
+    thing       block
+    
+    thing       actor_sight0
+    thing       actor_sight1
+    thing       actor_mark0
+    thing       spinpos
+    thing       finalcampos
+    
+    thing       cam0
+    thing       cam0_tgt0
+    thing       cam1
+    thing       cam1_tgt0
+    
+    thing       fadeplane
+    thing       liftstone
+    
+    keyframe    inStand1=0in_stand4.key             local
+    keyframe    in_stand4=0in_stand4.key            local
+    keyframe    in_SideToHips=0in_stand1_bd_4.key   local
+    keyframe    in_HipsToSide=0in_stand4_bd_1.key   local
+    keyframe    in_thinking=0in_thinking_4_4.key    local
+    
+    sound       indyline0=im01j01.wav               local
+    sound       indyline1=im01j02.wav               local
+    sound       theme=mus_inf_intro.WAV             local
+    
+    int         checkit=0                           local
+    int         themechan=0                         local
+    int         in_track0                           local
+    int         scenechek=0                         local
+
+	int			bSeen=0								local
+    
+end
+
+code
+
+# ========================================================================================
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	# Start on black...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam0);
+    SetCameraSecondaryFocus(2, cam0_tgt0);
+    SetCurrentCamera(2);
+    SetCameraFOV(80, 0, 0);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+    player = GetLocalPlayerThing();
+
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam0);
+    SetCameraSecondaryFocus(2, cam0_tgt0);
+    SetCurrentCamera(2);
+    SetCameraFOV(80, 0, 0);
+
+    //timesaver check
+    AttachThingtoThing(block, liftstone);
+    SetCollideType(block, 0);
+    sleep(0.001);
+    StartCutscene(1);
+    
+    //fadein
+	AttachThingToThing(fadeplane, cam0);
+    ThingFadeAnim(fadeplane, 1, 0, 1, 0);
+    
+    //start the scene
+    themechan=PlaySoundLocal(theme, 1, 0, 0x0, 0);
+    CopyPlayerHolsters(player, indyactor);
+    SetActorFlags(player, 0x200000);
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indyactor, 0x80000);
+    
+    //move lift stone down and walk actor in and move to first mark
+    MoveToFrame(liftstone, 1, 1);
+    WaitForStop(liftstone);
+    Sleep(0.75);
+    AISetCutsceneMode(indyactor);
+    AISetMoveSpeed(indyactor, 0.9);
+    AISetLookThing(indyactor, actor_sight0);
+    AISetMoveFrame(indyactor, 1);
+    AISetLookThing(indyactor, actor_sight1);
+    
+    //start to move Camera in
+    SetCameraLookInterp(2, 1);
+    SetCameraPosInterp(2, 1);
+    SetCameraInterpSpeed(2, 3);
+    Sleep(0.01);
+    SetCameraFocus(2, cam1);
+    SetCameraSecondaryFocus(2, cam1_tgt0);
+    SetCameraFOV(60, 1, 2);
+    AIWaitForStop(indyactor);
+    
+    //play keys and voice files
+    SetCameraFocus(2, finalcampos);
+    SetCameraFOV(90, 1, 3);
+    in_track0 = PlayKey(indyactor, in_stand4, 2, 0x00, 0);
+    PlayKey(indyactor, in_SideToHips, 4, 0x12, 1);
+    Sleep(1);
+    PlayVoice(indyactor, indyline0, 1, 1);
+    PlayVoice(indyactor, indyline1, 1, 0);
+    PlayKey(indyactor, in_thinking, 4, 0x12, 1);
+    StopKey(indyactor, in_track0, 0.25);
+    Sleep(0.5);
+    
+    //Restore Everything
+    CopyOrientAndPos(indyactor, player);
+    SetCameraLookInterp(2, 0);
+    SetCameraPosInterp(2, 0);
+    SetCameraInterpSpeed(2, 0);
+    Sleep(0.01);
+    SetCameraPosition(1, GetThingPos(finalcampos));
+    ClearThingFlags(player, 0x80000);
+    SetThingFlags(indyactor, 0x80000);
+
+    ResetCameraFOV(0, 0.0);
+    SetCurrentCamera(1);
+    EndCutscene();
+    ClearActorFlags(player, 0x200000);
+    scenechek=1;
+    SetCollideType(block, 3);
+
+for (bin= 0; bin < 200; bin = bin + 1) 
+{
+   SetInv(player, bin, GetInvMax(player, bin));                     
+   SetInvAvailable(player, bin, 1);
+}
+
+        
+return;
+        
+#----------------------------------------------------------------------------------------
+entered:
+
+    if (scenechek == 1)
+    {
+        scenechek = 2;
+        MoveToFrame(liftstone, 2, 2);
+    }
+    
+return;
+
+#----------------------------------------------------------------------------------------
+
+end

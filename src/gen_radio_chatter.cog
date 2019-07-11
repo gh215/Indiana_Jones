@@ -1,0 +1,142 @@
+# Jones 3D Cog Script
+#
+# gen_radio_chatter.cog
+#
+# Generic Door Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+
+	#..................MESSAGES................
+    message		startup	
+    message		crossed	
+    message		pulse	
+    
+	#..................PROPS................
+	thing		soundobj
+
+	#..................ACTORS................
+	thing		player          						local
+    
+        
+	#..................TRIGGERS................
+    surface		startsurf0								linkID=2     
+    surface		startsurf1								linkID=2     
+
+    surface		endsurf0								linkID=3     
+    surface		endsurf1								linkID=3     
+
+
+	#..................VARIABLES................
+    int			inrange=0      						    local
+	int			minDist
+	int			maxDist
+	int			vol=1									local
+	int			snd										local
+	int			chattertime								local		# int for holding Rand value
+	int			i										local		# int for for loops
+        
+    
+	#..................SOUND................
+    sound       chatter0=riv_radio_chatter_a1.wav		local
+    sound       chatter1=riv_radio_chatter_a2.wav		local
+    sound       chatter2=riv_radio_chatter_a3.wav		local
+    sound       chatter3=riv_radio_chatter_a4.wav		local
+    sound       chatter4=riv_radio_chatter_a5.wav		local
+    
+end
+
+# ========================================================================================
+
+code
+
+# ........................................................................................
+startup:
+
+    player = GetLocalPlayerThing();
+return;
+
+# ........................................................................................
+crossed:
+
+if (getSourceRef() != player) return;
+
+
+if (GetSenderID() == 2)	# start the sounds
+
+{
+    If (inrange != 1)
+		{
+		inrange = 1;
+		}
+	chattertime=RandBetween(6, 12);
+	SetPulse(chattertime);
+	#print("radio timer set");
+}
+
+if (GetSenderID() == 3)	# stop the sounds
+
+{
+    If (inrange != 0)
+		{
+		inrange = 0;
+		}
+	SetPulse(0);
+    #print("radio timer cut");
+}
+    
+return;        
+#========================================================
+pulse:
+
+#print("pulse hit");
+
+i=RandBetween(0,4);	# choose a sound
+
+If (i == 0)
+	{
+    PlaySoundThing(chatter0, soundobj, vol, minDist, maxDist, 0x0);
+	}
+
+If (i == 1)
+	{
+    PlaySoundThing(chatter1, soundobj, vol, minDist, maxDist, 0x0);
+	}
+
+If (i == 2)
+	{
+    PlaySoundThing(chatter2, soundobj, vol, minDist, maxDist, 0x0);
+	}
+
+If (i == 3)
+	{
+    PlaySoundThing(chatter3, soundobj, vol, minDist, maxDist, 0x0);
+	}
+
+If (i == 4)
+	{
+    PlaySoundThing(chatter4, soundobj, vol, minDist, maxDist, 0x0);
+	}
+
+
+If (inrange == 1)
+	{
+    chattertime=RandBetween(6, 12);
+	SetPulse(chattertime);
+	}
+
+return;
+
+#========================================================
+
+
+
+
+
+end
+

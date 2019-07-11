@@ -1,0 +1,222 @@
+# Jones 3D Cog Script
+#
+# SOL_CtrlRmDoor.cog
+#
+# Indy enters the control room for the first time and checks out Horner's operation.
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols		
+	
+    message     activate
+
+    thing       player          local
+    
+    thing		door
+    thing       indy            # actor indy
+    thing       cam1
+    thing       walkTarg1       # Walk to this when door opens
+    thing       lookTarg1       # look at this while walking into room
+    thing       lookTarg2       # Look at this and turn towards it
+    thing       walkTarg2       # take a step towards the ctrl panel
+    
+    thing       camTarg
+        
+    sound       inSay1=Inxj146.wav      local       # hmmm...
+    sound       inSay2=Sl02j01.wav      local       # horner's little...
+    sound       inSay3=Sl02j03.wav      local       # I'll bet...
+    sound       inSay4=Sl02j02.wav      local       # But without...
+    sound       in_Nope=Inxj088.wav     local       # nope
+    
+    template    tplActor=indy_sh_actor              local
+    
+    keyframe    inStand1=0in_stand4.key                 local
+    keyframe    inThinking=0in_thinking_4_4.key         local
+    keyframe	inStand2=0in_stand1_bd_4.key	        local
+    keyframe    inLeft=in_activate_medium_left.key      local
+    
+    cog         hintCog
+    
+    int         open=0      local
+    int         inTrack     local
+    int         tempCam     local
+    int         pauseSnd    local
+    int         curCam      local
+    int         playing=0   local
+    
+    # ** Subroutines **
+    flex        playcut     local
+
+end
+
+# ========================================================================================
+
+code
+
+activate:
+
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+    
+    if((GetSenderRef() == door) && (GetCurItem(player) > 0) && (open == 0) && (playing == 0))
+    {
+        playing = 1;
+        
+        # do cutscene stuff
+        MakeMeStop();
+        StartCutscene(0);
+        
+        # nudge the door
+        PlayMode(player, 60, 0);
+        Sleep(0.3);
+            
+        PlayVoice(player, in_Nope, 1.0, 1);
+        
+        # Return control to player
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        
+        playing = 0;
+    }
+
+    else if((GetSenderRef() == door) && (open == 0))
+    {    
+        # if player has lighter out
+        if(GetCurWeapon(player) == 13)
+        {
+            open = 1;
+            
+            # do cutscene stuff
+            MakeMeStop();
+            StartCutscene(1);
+            
+            # nudge the door with left hand
+            PlayKey(player, inLeft, 4, 0x12, 1);
+            Sleep(0.5);
+            
+            # put away the lighter
+            DeselectWeapon(player);
+            DeselectWeaponWait(player);
+            
+            Call playcut;
+        }
+        
+        # normal activation
+        else if(GetCurWeapon(player) == 0)
+        {
+            open = 1;
+            
+            # wait for weapon to be put away
+            DeselectWeaponWait(player);
+            
+            # do cutscene stuff
+            MakeMeStop();
+            StartCutscene(1);
+            
+            # nudge the door
+            PlayMode(player, 60, 0);
+            Sleep(0.5);
+            
+            Call playcut;
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+playcut:
+
+    Sleep(0.5);
+    
+    # solve hint1
+    SendMessage(hintCog, user0);
+    
+    # switch to camera inside room
+    SetCameraFocus(2, Cam1);
+    SetCameraSecondaryFocus(2, camTarg);
+    SetCurrentCamera(2);
+    
+    # outfit Indy actor
+    CopyPlayerHolsters(player, indy);
+    
+    # hide player show actor
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(indy, 0x80000);
+    
+    # open the door
+    Rotate(door, -90, 1, 2.0);
+    WaitForStop(door);
+    
+    # walk actor to the levers
+    AISetMoveSpeed(indy, 1.0);
+    AISetLookThing(indy, lookTarg1);
+    AISetMoveThing(indy, walkTarg1, 0);
+    Sleep(1.5);
+    
+    MoveToFrame(cam1, 1, 0.45);
+    MoveToFrame(camTarg, 1, 1.9);
+    AIWaitForStop(indy);
+    Sleep(0.5);
+    
+    MoveToFrame(cam1, 2, 0.5);
+    
+    # indy speaks as the camera moves around him
+    inTrack = PlayKey(indy, inStand1, 2, 0x0, 0);
+    PlayKey(indy, inStand2, 4, 0x12, 1);
+    #PlaySoundLocal(inSay1, 1.0, 0.0, 0x0, 1);
+    PlayVoice(indy, inSay1, 1.0, 1);
+    #PlaySoundLocal(inSay2, 1.0, 0.0, 0x0, 0);
+    PlayVoice(indy, inSay2, 1.0, 1);
+    PlayKey(indy, inThinking, 4, 0x12, 0);
+    pauseSnd = GetSoundLen(inSay2);
+    Sleep(pauseSnd+0.5);
+    #PlaySoundLocal(inSay3, 1.0, 0.0, 0x0, 1);
+    PlayVoice(indy, inSay3, 1.0, 1);
+    StopKey(indy, inTrack, 0.5);
+    Sleep(0.6);
+    
+    #MoveToFrame(camTarg, 2, 1.1);
+    
+    # actor turns towards the panel and takes a step
+    SetThingMaxRotVel(indy, 150.0);
+    AISetLookThing(indy, lookTarg2);
+    Sleep(1.2);
+    
+    #SetCameraFOV(70, 1, 1.2);
+    
+    AISetMoveThing(indy, walkTarg2, 0);
+    PlayVoice(indy, inSay4, 1.0, 1);
+    #PlaySoundLocal(inSay4, 1.0, 0.0, 0x0, 1);
+    
+    Sleep(1.0);
+    
+    # Get the player into position
+    CopyOrientAndPos(indy, player);
+    
+    # stop any unfinished animations
+    ResetThing(player);
+    
+    # hide actor show player
+    SetThingFlags(indy, 0x80000);
+    ClearThingFlags(player, 0x80000);
+    
+    # Return control to player
+    ClearActorFlags(player, 0x200000);
+    
+    # return camera to player
+    SetCameraPosition(curcam, GetThingPos(cam1));
+    #SetCameraFOV(90, 0, 0.0);
+    SetCurrentCamera(curCam);
+    
+    EndCutscene();   
+
+    return;
+
+# ========================================================================================
+    
+end
+

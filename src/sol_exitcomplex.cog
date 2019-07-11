@@ -1,0 +1,1225 @@
+# Jones 3D Cog Script
+#
+# SOL_ExitComplex.cog
+#
+# pyramid key = 84
+# gema = 95, gemb = 96,gemc = 97
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+    message     startup
+    message     entered
+    message     exited
+    message     activated
+    message     pulse
+	message		timer
+    
+    # ** misc local things **
+    thing       indy            local        # actor Indy
+    thing       player          local
+    thing       lever2          local
+    thing       horusKey        local
+    
+    # ** column **
+    thing       pyramid
+    thing       column
+    thing       lever
+    
+    # ** ghosts **
+    thing       ghostKey
+    thing       ghost_Indy1     # top lever actor     
+    thing       lever_Indy2     # bottom lever actor
+    thing       ghost_Lever
+    
+    # ** placed gems **
+    thing       gem_Red
+    thing       gem_Green
+    thing       gem_Blue
+    
+    # ** ledges **
+    thing       gem1Ledge 
+    thing       gem2Ledge
+    thing       gem3Ledge
+    
+    # ** cameras **
+    thing       columnCam
+    thing       leverCam
+    thing       jewelCam
+    
+    thing       pyramidCam  # player puts key in pyramid
+    thing       gem1Cam     # player puts in gem1
+    thing       gem2Cam     # player puts in gem2
+    thing       gem3Cam
+    
+    thing       camTargPos1     # gem1 target
+    thing       camTargPos2     # gem3 target
+    thing       jewelTargPos
+    
+    # misc local junk
+    thing       gem1MoveTarg        local
+    thing       gem2MoveTarg        local
+    thing       gem3MoveTarg        local
+    thing       plasma              local
+    thing       pushed              local
+    thing       pulled              local
+    thing       lever_Indy1         local
+    
+    # ** misc **
+    thing       king
+    thing       targ1
+    thing       rim
+    thing       ghostPlasma
+    
+    # ** hint things **
+    thing       hint29
+    thing       hint30
+    thing       hint31
+    thing       hint32
+    thing       hint33
+    
+    surface     JOHSpot
+    
+    thing       t_DropIt0           linkID=2
+    thing       t_DropIt1           linkID=2
+    thing       t_DropIt2           linkID=2
+    thing       t_DropIt3           linkID=2
+    thing       t_DropIt4           linkID=2
+    
+    surface     surf_Floor0         linkID=2
+    surface     surf_Floor1         linkID=2
+    surface     surf_Floor2         linkID=2
+    surface     surf_Floor3         linkID=2
+    surface     surf_Floor4         linkID=2
+    surface     surf_Floor5         linkID=2
+    surface     surf_Floor6         linkID=2
+    surface     surf_Floor7         linkID=2
+    surface     surf_Floor8         linkID=2
+    surface     surf_Floor9         linkID=2
+    surface     surf_Floor10        linkID=2
+    surface     surf_Floor11        linkID=2
+    surface     surf_Floor12        linkID=2
+    surface     surf_Floor13        linkID=2
+    surface     surf_Floor14        linkID=2
+    surface     surf_Floor15        linkID=2
+    surface     surf_Floor16        linkID=2
+    surface     surf_Floor17        linkID=2
+    surface     surf_Floor18        linkID=2
+    surface     surf_Floor19        linkID=2
+    surface     surf_Floor20        linkID=2
+    surface     surf_Floor21        linkID=2
+    surface     surf_Floor22        linkID=2
+    surface     surf_Floor23        linkID=2
+    surface     surf_Floor24        linkID=2
+    surface     surf_Floor25        linkID=2
+    surface     surf_Floor26        linkID=2
+    surface     surf_Floor27        linkID=2
+    surface     surf_Floor28        linkID=2
+    surface     surf_Floor29        linkID=2
+    surface     surf_Floor30        linkID=2
+    
+    material    mat0=gen_4aplasma_jewel.mat     local       # animating plasma texture
+    
+    # ** templates **
+    template    tplGem1=gemamove                local       # green
+    template    tplGem2=gembmove                local       # blue
+    template    tplGem3=gemcmove                local       # red
+    template    tplIndy=indy_sh_actor           local
+    template    tplKey=pyramidkeymove           local
+    template	ghostTpl=ghost					local
+    template    tplPlasma=plasmaj               local       # JOH effect
+    template    tplLevPull=pulleverbr           local
+    template    tplLevPush=pushleverbr          local
+    
+    keyframe    leverPull=gen_lever_pull.key        local
+    keyframe    leverPush=gen_lever_push.key        local
+    keyframe    indyPull=in_pull_lever.key          local
+    keyframe    indyPush=in_push_lever.key          local
+    
+    keyframe    inWobble=in_wobble.key              local
+    keyframe    kingArm=sol_statue_king.key         local
+    
+    # ** sound fx **
+    sound       snd_KingMove=nub_2mstep_move_c.wav      local
+    sound       snd_KingStop=nub_sarc_jewel_turn_c.wav  local
+    sound       sndLever=gen_lever_pull.wav             local
+    sound       snd_GemPlace=aet_gem_place.wav          local   # click for placing gem
+    
+    # ** success lines **
+    sound	    in_Success1=Inxj108.wav			local   # There!
+	sound	    in_Success2=Inxj109.wav			local   # It fits!
+	sound		in_Success3=Inxj112.wav			local   # That ought to do it!
+    
+    # ** examination lines (whichline = 0)**
+    sound		in_ExamLine0=Inxj232.wav		local   # Well...look at this...
+	sound		in_ExamLine1=Inxj233.wav		local   # Hmm, this might be important.
+    
+    # ** won't work lines (whichline = 1)**
+    sound       in_WrongLine0=Inxj086.wav       local   # if there's a key, that's the wrong one
+    sound       in_WrongLine1=Inxj089.wav       local   # that didn't work
+    sound       in_WrongLine2=Inxj088.wav       local   # nope
+    
+    # ** near miss lines (whichline = 2) **
+	sound	    in_MissLine0=Inxj093.wav		local   # Good idea but not good enough
+	sound	    in_MissLine1=Inxj095.wav		local   # Must be a different way
+	sound	    in_MissLine2=Inxj092.wav		local   # Hmm, didn't quite work
+    
+    # ** misc voice lines **
+    sound       in_Whoa=Inxj007.wav             local   # whoa!
+    sound       in_Unlocked=Inxj107.wav         local   # hey, it's unlocked
+    
+    # ** music ** 
+    sound       mus_Arm=mus_pyr_jackalgem2.wav  local
+    sound       mus_Exit=mus_aet_pocket_pyr.wav local
+    
+    vector      jewelColor      local
+    vector      red             local
+    vector      green           local
+    vector      blue            local
+    vector      gem1CamTarg     local
+    vector      gem2CamTarg     local
+    vector      gem3CamTarg     local    
+    vector      playerVec       local
+    
+    vector      posOffset       local
+    vector      angOffset       local
+    
+    int         up=0            local
+    int         onGem1=0        local   
+    int         onGem2=0        local
+    int         onGem3=0        local
+    int         gem1Done=0      local
+    int         gem2Done=0      local
+    int         gem3Done=0      local
+    int         down=0          local
+    int         JOHReady=0      local
+    int         playing=0       local
+    int         visit1=0        local
+    int         visit2=0        local
+    
+    int         newComment      local
+    int         oldComment      local
+    int         newExam         local
+    int         oldExam         local
+    int         whichLine=0     local
+    int         curCam          local
+    int         animId          local
+    int         vibe            local
+    int         curItem         local
+    int         inTrack         local
+    
+    int         pyrCam=0        local
+    int         redCam=0        local
+    int         greenCam=0      local
+    int         blueCam=0       local
+
+    int			maxColumnFrame=-1	local
+    int         bColumnMovingTo=-1	local
+    int         lever_Ready=1       local
+    int         resetMe=1           local
+
+	flex		resetTime		local
+    
+    float       playerY=0       local
+    float       playerX=0       local
+    
+    # ** subroutines **
+    flex        speak           local
+    flex        pullLever       local
+    flex        pushLever       local
+    flex        blueGem         local
+    flex        greenGem        local
+    flex        redGem          local
+    flex        raisePyr        local
+    flex        resetColumn		local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    pushed = CreateThing(tplLevPull, lever);
+    CaptureThing(pushed);
+    
+    # hide the gems
+    SetThingFlags(gem_Red, 0x10);
+    SetThingFlags(gem_Green, 0x10);
+    SetThingFlags(gem_Blue, 0x10);
+    
+    green = VectorSet(0.2, 1.0, 0.2);
+    red = VectorSet(1.0, 0.2, 0.2);
+    blue = VectorSet(0.2, 0.2, 1.0);
+    
+    SetThingLight(gem1Ledge, red, 2.0, 0.1);
+    SetThingLight(gem2Ledge, green, 2.0, 0.1);
+    SetThingLight(gem3Ledge, blue, 2.0, 0.1);
+    
+    SetThingLight(column, '0.4 0.4 0.0', 0.001, 0.1);     # was 0.5
+    SetThingLight(pyramid, '0.4 0.4 0.0', 0.001, 0.1);
+    SetThingLight(rim, '0.4 0.4 0.0', 0.001, 0.1);
+    
+    # hide plasma column
+    SetThingFlags(ghostPlasma, 0x80000);
+    
+	resetTime = 40 + (4.5 * (6 - GetDifficulty()));
+
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    
+    if(GetSenderRef() == gem1Ledge) onGem1 = 1;
+        
+    if(GetSenderRef() == gem2Ledge) onGem2 = 1;
+        
+    if(GetSenderRef() == gem3Ledge) onGem3 = 1;
+    
+    # enable IMP3
+    if((GetSenderRef() == JOHSpot) || (GetSenderRef() == gem3Ledge))
+    {
+        if(JOHReady == 1) JewelFlyingStatus(1, ghostPlasma);
+    }
+
+	if (GetSenderID() == 2)
+	{
+		JewelFlyingStatus(0, ghostPlasma);
+        
+        if (bColumnMovingTo == 0)
+			return;		// Column is already being reset.
+
+		if ((!JOHReady) && GetCurFrame(column))
+		{
+			Sleep(0.5);
+			call resetColumn;
+		}
+		return;
+	}
+
+	if((GetSenderRef() == column) && (resetMe == 1))
+	{
+		if (bColumnMovingTo == maxColumnFrame)
+			return;		// Column is already returning to top position
+
+        if ((maxColumnFrame != -1) && (GetCurFrame(column) != maxColumnFrame))
+		{
+			bColumnMovingTo = maxColumnFrame;
+			Sleep(0.5);
+			MakeMeStop();
+			StartCutscene(2);
+
+			MoveToFrame(column, maxColumnFrame, maxColumnFrame);
+			MoveToFrame(pyramid, maxColumnFrame, maxColumnFrame);
+			MoveToFrame(horusKey, maxColumnFrame, maxColumnFrame);
+			MoveToFrame(pushed, maxColumnFrame, maxColumnFrame);
+
+			WaitForStop(pyramid);
+			bColumnMovingTo = -1;
+
+			ClearActorFlags(player, 0x200000);
+			EndCutscene();
+		}
+		SetTimer(0);
+		return;
+	}
+
+    return;
+
+# ========================================================================================
+
+exited:
+
+    player = GetLocalPlayerThing();
+    
+    if (GetSourceRef() == player)
+    {
+        if(GetSenderRef() == gem1Ledge) onGem1 = 0;
+        
+        if(GetSenderRef() == gem2Ledge) onGem2 = 0;
+            
+        if(GetSenderRef() == gem3Ledge) onGem3 = 0;
+        
+		if((GetSenderRef() == column) && (resetMe == 1))
+		{
+			SetTimer(resetTime);
+		}
+    }
+        
+    return;
+    
+# ========================================================================================
+
+activated:
+
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+    curItem = GetCurItem(player);
+    
+    playerVec = GetThingLVec(player);
+    playerY = VectorY(playerVec);
+    playerX = VectorX(playerVec);
+    
+# ****************
+# ** pyramidkey **
+# ****************
+    if((GetSenderRef() == pyramid) && (up == 0) && (playing == 0))
+    {
+        if((playerX > 0) && ((playerY > -0.7) && (playerY < 0.7)))
+        {
+            # player correctly uses pyramid key
+            if(curItem == 84)
+            {
+                up = 1;
+                Call raisePyr;
+            }
+            
+            # player doesn't have or is not using the pyramidkey
+            else if(curItem == 0)
+            {
+                whichLine = 0;
+                pyrCam = 1;
+                Call speak;
+                pyrCam = 0;
+            }
+                
+            # player is using the wrong item
+            else
+            {
+                whichLine = 1;
+                pyrCam = 1;
+                Call speak;
+                pyrCam = 0;
+            }
+        }
+        
+        # player is activating the wrong side
+        else
+        {
+            whichLine = 2;
+            pyrCam = 1;
+            Call speak;
+            pyrCam = 0;
+        }
+    }
+    
+# *************
+# ** red gem **
+# *************
+    if((GetSenderRef() == gem_Red) && (onGem1 == 1) && (gem1Done == 0) && (playing == 0))
+    {
+        # player correctly uses the red gem
+        if(curItem == 97)
+        {
+            gem1Done = 1;
+            Call redGem;
+        }
+        
+        # player doesn't have or is not using the gem
+        else if(curItem == 0)
+        {
+            whichLine = 0;
+            redCam = 1;
+            Call speak;
+            redCam = 0;
+        }
+            
+        # player is using the wrong item
+        else
+        {
+            whichLine = 1;
+            redCam = 1;
+            Call speak;
+            redCam = 0;
+        }
+    }
+
+# ***************
+# ** green gem **
+# ***************
+    if((GetSenderRef() == gem_Green) && (onGem2 == 1) && (gem2Done == 0) && (playing == 0))
+    {
+        # player correctly uses green gem
+        if(curItem == 95)
+        {
+            gem2Done = 1;
+            Call greenGem;
+        }
+        
+        # player doesn't have or is not using the gem
+        else if(curItem == 0)
+        {
+            whichLine = 0;
+            greenCam = 1;
+            Call speak;
+            greenCam = 0;
+        }
+        
+        # player is using the wrong item
+        else
+        {
+            whichLine = 1;
+            greenCam = 1;
+            Call speak;
+            greenCam = 0;
+        }
+    }
+        
+# **************
+# ** blue gem **
+# **************
+    if((GetSenderRef() == gem_Blue) && (onGem3 == 1) && (gem3Done == 0) && (playing == 0))
+    {
+        # player correctly uses blue gem
+        if(curItem == 96)
+        {
+            gem3Done = 1;
+            Call blueGem;
+        }
+            
+        # player doesn't have or is not using the gem
+        else if(curItem == 0)
+        {
+            whichLine = 0;
+            blueCam = 1;
+            Call speak;
+            blueCam = 0;
+        }
+            
+        # player is using the wrong item
+        else
+        {
+            whichLine = 1;
+            blueCam = 1;
+            Call speak;
+            blueCam = 0;
+        }
+    }
+        
+# ***********
+# ** lever **
+# ***********
+    
+    # lower the column
+    if((GetSenderRef() == pushed) && (lever_Ready == 1))
+    {
+        if((playerx < 0) && ((playery > -0.7) && (playery < 0.7)))
+        {
+            lever_Ready = 0;
+            Call pullLever;
+        }
+    }
+    
+    # raise the column
+    if((GetSenderRef() == pulled) && (lever_Ready == 1))
+    {
+        if((playerx < 0) && ((playery > -0.7) && (playery < 0.7)))
+        {
+            lever_Ready = 0;
+            Call pushLever;
+        }
+    }
+    
+    return;
+
+# ========================================================================================
+
+raisePyr:
+
+	SetTimer(0);
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # orient player to thing
+    CopyOrient(leverCam, player);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    #Sleep(0.5);
+    
+    # offset camera
+    SetExtCamLookOffsetToThing(player);
+    #SetExtCamOffsetToThing(pyramidCam);
+    
+    SetCameraFocus(2, pyramidCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    
+    # remove pyramid key from inventory
+    ChangeInv(player, 84, -1);
+                
+    # rest while camera offsets
+    #Sleep(0.6); # was 0.8
+    
+    # put the horus key in pyramid
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    horusKey = CreateThing(tplKey, ghostKey);
+    CaptureThing(horusKey);
+    SetThingLight(horusKey, '0.5 0.5 0.5', 0.001, 0.01);
+    PlaySoundLocal(snd_GemPlace, 1.0, 0.0, 0x0, 1);
+    
+    # switch to pyramidCam
+    SetCameraFocus(2, pyramidCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # move pyramidCam away to show column raise
+    Sleep(0.5);
+    MoveToFrame(pyramidCam, 1, 2.0);
+    #WaitForStop(pyramidCam);
+    Sleep(1.5);
+
+    # say "hey, it's unlocked"
+    PlayVoice(player, in_Unlocked, 1.0, 0);
+    
+    # raise everything first time
+    MoveToFrame(column, 1, 1.0);
+    MoveToFrame(pyramid, 1, 1.0);
+    MoveToFrame(horusKey, 1, 1.0);
+    MoveToFrame(pushed, 1, 1.0);
+    WaitForStop(pyramid);
+
+	maxColumnFrame = 1;
+
+    Sleep(0.5);
+    SetCameraPosition(curCam, GetThingPos(pyramidCam));
+    SetCurrentCamera(curCam);
+    
+    # restore ext cam and controls
+    ClearActorFlags(player, 0x200000);
+    RestoreExtCam();
+    SetCurrentCamera(1);
+    
+    EndCutscene();
+    
+    # solve hint29
+    SetHintSolved(hint29);
+    
+    return;
+
+# ========================================================================================
+
+redGem:
+
+	SetTimer(resetTime);
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # orient player to thing
+    CopyOrient(gem1Ledge, player);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # offset camera
+    SetExtCamLookOffsetToThing(player);
+    #SetExtCamOffsetToThing(gem1Cam);
+    
+    SetCameraFocus(2, gem1Cam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    
+    ChangeInv(player, 97, -1);
+            
+    # create target at player position
+    gem1CamTarg = VectorAdd(VectorTransformToOrient(player, '0.0 0.0 0.0'), GetThingPos(player));
+    gem1MoveTarg = CreateThingAtPos(ghostTpl, GetThingSector(player), gem1CamTarg, '0 0 0');
+    CaptureThing(gem1MoveTarg);
+    
+    #Sleep(0.5); # was 1.0
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # show gem_Red and add light
+    ClearThingFlags(gem_Red, 0x10);
+    SetThingLight(gem_Red, red, 2.0, 0.1);
+    PlaySoundLocal(snd_GemPlace, 1.0, 0.0, 0x0, 1);
+    
+    # say "it fits"
+    PlayVoice(player, in_Success2, 1.0, 0);
+    
+    Sleep(0.35);
+    
+    # switch to gem1Cam
+    SetCameraFocus(2, gem1Cam);
+    SetCameraSecondaryFocus(2, gem1MoveTarg);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # move camera focus to pyramid
+    Sleep(0.5);
+    animId = MoveThingToPos(gem1MoveTarg, GetThingPos(camTargPos1), 3.0);
+    Sleep(2.0); # raise column before focus completely stops
+    #WaitForAnimStop(animId);
+    #Sleep(0.5);
+    
+    # raise everything second time
+    MoveToFrame(column, 2, 1.0);
+    MoveToFrame(pyramid, 2, 1.0);
+    MoveToFrame(horusKey, 2, 1.0);
+    MoveToFrame(pushed, 2, 1.0);
+    WaitForStop(pyramid);
+    
+	maxColumnFrame = 2;
+
+    # move camera focus back to player
+    Sleep(0.5);
+    animId = MoveThingToPos(gem1MoveTarg, GetThingPos(player), 1.5);
+    WaitForAnimStop(animId);
+    
+    SetCameraPosition(curCam, GetThingPos(gem1Cam));
+    SetCurrentCamera(curCam);
+    RestoreExtCam();
+    
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    # solve hint30
+    SetHintSolved(hint30);
+    
+    return;
+
+# ========================================================================================
+
+greenGem:
+
+	maxColumnFrame = -1;
+	SetTimer(0);
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # orient player to thing
+    CopyOrient(gem2Ledge, player);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # offset camera
+    SetExtCamLookOffsetToThing(player);
+    #SetExtCamOffsetToThing(gem2Cam);
+    
+    SetCameraFocus(2, gem2Cam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    
+    ChangeInv(player, 95, -1);
+            
+    # create target at player position
+    gem2CamTarg = VectorAdd(VectorTransformToOrient(player, '0.0 0.0 0.0'), GetThingPos(player));
+    gem2MoveTarg = CreateThingAtPos(ghostTpl, GetThingSector(player), gem2CamTarg, '0 0 0');
+    CaptureThing(gem2MoveTarg);
+    
+    Sleep(0.5); # was 1.0
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # show gem_Green and light it
+    ClearThingFlags(gem_Green, 0x10);
+    SetThingLight(gem_Green, green, 2.0, 0.1);
+    PlaySoundLocal(snd_GemPlace, 1.0, 0.0, 0x0, 1);
+    
+    # say "there"
+    PlayVoice(player, in_Success1, 1.0, 0);
+    
+    Sleep(0.35);
+    
+    # switch to gem2Cam with focus on gem2MoveTarg
+    SetCameraFocus(2, gem2Cam);
+    SetCameraSecondaryFocus(2, gem2MoveTarg);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # move camera focus to pyramid
+    Sleep(0.5);
+    
+    # play music cue
+    PlaySoundLocal(mus_Arm, 1.0, 0.0, 0x0, 0);
+    
+    MoveToFrame(gem2Cam, 1, 3.0);
+    animId = MoveThingToPos(gem2MoveTarg, GetThingPos(jewelTargPos), 3.0);
+    #WaitForAnimStop(animId);
+    WaitForStop(gem2Cam);
+    
+    Sleep(0.5);
+    
+    # play JOH keyframe anim
+    PlayKey(king, kingArm, 4, 0x14, 0);
+    SetThingLight(king, '0.5 0.5 0.8', 4.0, 1.0);
+    
+    # play king sfx
+    PlaySoundLocal(snd_KingStop, 1.0, 0.0, 0x0, 0);
+    Sleep(0.4);
+    PlaySoundLocal(snd_KingMove, 1.0, 0.0, 0x0, 1);
+    
+    Sleep(0.5);
+    
+    # move camera focus back to player
+    MoveToFrame(gem2Cam, 2, 3.0);
+    animId = MoveThingToPos(gem2MoveTarg, GetThingPos(player), 1.5);
+    WaitForAnimStop(animId);
+    
+    SetCameraPosition(curCam, GetThingPos(gem2Cam));
+    SetCurrentCamera(curCam);
+    RestoreExtCam();
+    
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    JOHReady = 1;
+    
+    # solve hint31
+    SetHintSolved(hint31);
+
+    return;
+
+# ========================================================================================
+
+blueGem:
+
+	resetMe = 0;
+    maxColumnFrame = -1;
+	SetTimer(0);
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # orient player to thing
+    CopyOrient(gem3Ledge, player);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # offset camera
+    SetExtCamLookOffsetToThing(player);
+    #SetExtCamOffsetToThing(gem3Cam);
+    
+    SetCameraFocus(2, gem3Cam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    
+    ChangeInv(player, 96, -1);
+            
+    # create target at player position
+    gem3CamTarg = VectorAdd(VectorTransformToOrient(player, '0.0 0.0 0.0'), GetThingPos(player));
+    gem3MoveTarg = CreateThingAtPos(ghostTpl, GetThingSector(player), gem3CamTarg, '0 0 0');
+    CaptureThing(gem3MoveTarg);
+    
+    Sleep(0.5); # was 1.0
+    
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    # show gem_Blue and light it
+    ClearThingFlags(gem_Blue, 0x10);
+    SetThingLight(gem_Blue, blue, 2.0, 0.1);
+    PlaySoundLocal(snd_GemPlace, 1.0, 0.0, 0x0, 1);
+    
+    # say "That ought to do it"
+    PlayVoice(player, in_Success3, 1.0, 0);
+    
+    Sleep(0.35);
+    
+    # switch to gem3Cam with focus on gem3MoveTarg
+    SetCameraFocus(2, gem3Cam);
+    SetCameraSecondaryFocus(2, gem3MoveTarg);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # move camera focus to column
+    Sleep(0.5);
+    MoveToFrame(gem3Cam, 1, 1.1);
+    animId = MoveThingToPos(gem3MoveTarg, GetThingPos(camTargPos2), 3.0);
+    Sleep(2.0); # raise column before focus completely stops
+    #WaitForAnimStop(animId);
+    #Sleep(0.5);
+    
+    # move everything up third time
+    MoveToFrame(column, 3, 1.0);
+    MoveToFrame(pyramid, 3, 1.0);
+    MoveToFrame(horusKey, 3, 1.0);
+    MoveToFrame(pushed, 3, 1.0);
+    WaitForStop(pushed);
+
+    # move camera focus back to player
+    Sleep(0.5);
+    MoveToFrame(gem3Cam, 0, 1.8);
+    animId = MoveThingToPos(gem3MoveTarg, GetThingPos(player), 1.5);
+    #WaitForAnimStop(animId);
+    WaitForStop(gem3Cam);
+    
+    # restore cam and controls
+    SetCameraPosition(curCam, GetThingPos(gem3Cam));
+    SetCurrentCamera(curCam);
+    RestoreExtCam();
+    
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    # solve hint32
+    SetHintSolved(hint32);
+
+    return;
+
+# ========================================================================================
+
+pullLever:
+
+	maxColumnFrame = -1;
+	SetTimer(0.0);
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # switch to leverCam
+    SetCameraFocus(2, leverCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    lever_Indy1 = CreateThing(tplIndy, ghost_Indy1);
+    CaptureThing(lever_Indy1);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, lever_Indy1);
+    
+    # hide player show actor
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(lever_Indy1, 0x80000);
+    
+    # pull the lever
+    PlayKey(pushed, leverPull, 4, 0x12, 0);
+    PlayKey(lever_Indy1, indyPull, 4, 0x12, 0);
+    Sleep(0.75);
+    PlaySoundLocal(sndLever, 1.0, 0.0, 0x0, 1);
+    
+    Sleep(0.5);
+    
+    # Destroy old lever and create a new one
+    DestroyThing(pushed);
+    pulled = CreateThing(tplLevPush, ghost_Lever);
+    CaptureThing(pulled);
+    Sleep(0.1);
+    
+    # Get the player into position
+	CopyOrientAndPos(lever_Indy1, player);
+    
+    # show player, hide actor
+    ClearThingFlags(player, 0x80000);
+    SetThingFlags(lever_Indy1, 0x80000);
+    
+    # rock the player
+    SetPulse(0.1);
+    #inTrack = PlayKey(player, inWobble, 4, 0x12, 0);
+    #PlayVoice(player, in_Whoa, 1.0, 0);
+    
+    # lower everything into pit
+    MoveToFrame(leverCam, 1, 2.0);
+    MoveToFrame(pulled, 1, 2.0);
+    SkipToFrame(column, 0, 2.0);
+    SkipToFrame(pyramid, 0, 2.0);
+    SkipToFrame(horusKey, 0, 2.0);
+    WaitForStop(pyramid);
+
+    #StopKey(player, inTrack, 0.5);
+    SetPulse(0.0);
+    Sleep(1.0);
+    
+    # create indy actor
+    indy = CreateThing(tplIndy, player);
+    CaptureThing(indy);
+    
+    # hide player show actor
+    ClearThingFlags(indy, 0x80000);
+    SetThingFlags(player, 0x80000);
+    
+    # play music cue
+    PlaySoundLocal(mus_Exit, 1.0, 0.0, 0x0, 0);
+    
+    # walk indy out of elevator
+    AISetLookThing(indy, targ1);
+    AISetMoveThing(indy, targ1, 1);
+    
+    Sleep(0.5);
+    
+    # show player, hide actor
+    ClearThingFlags(player, 0x80000);
+    SetThingFlags(indy, 0x80000);
+    
+    # move player into position
+    CopyOrientAndPos(indy, player);
+    
+    # restore camera
+    SetCameraPosition(1, GetThingPos(leverCam));
+    SetCurrentCamera(1);
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    lever_Ready = 1;
+    
+    # solve hint33
+    SetHintSolved(hint33);
+        
+    return;
+    
+# ========================================================================================
+
+pushLever:
+
+	maxColumnFrame = -1;
+	SetTimer(0.0);
+
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # switch to leverCam
+    SetCameraFocus(2, leverCam);
+    SetCameraSecondaryFocus(2, player);
+    SetCurrentCamera(2);
+    SetCameraFOV(90, 0, 0.0);
+    
+    # outfit indy actor
+    CopyPlayerHolsters(player, lever_Indy2);
+    
+    # hide player show actor
+    SetThingFlags(player, 0x80000);
+    ClearThingFlags(lever_Indy2, 0x80000);
+    
+    # pull the lever
+    PlayKey(pulled, leverPush, 4, 0x12, 0);
+    PlayKey(lever_Indy2, indyPush, 4, 0x12, 0);
+    Sleep(0.75);
+    PlaySoundLocal(sndLever, 1.0, 0.0, 0x0, 1);
+    
+    Sleep(0.5);
+    
+    # Destroy old lever and create a new one
+    DestroyThing(pulled);
+    pushed = CreateThing(tplLevPull, lever);
+    CaptureThing(pushed);
+    Sleep(0.1);
+    
+    # Get the player into position
+	CopyOrientAndPos(lever_Indy2, player);
+    
+    # show player, hide actor
+    ClearThingFlags(player, 0x80000);
+    SetThingFlags(lever_Indy2, 0x80000);
+    
+    # rock the player
+    SetPulse(0.1);
+    #inTrack = PlayKey(player, inWobble, 4, 0x12, 0);
+    #PlayVoice(player, in_Whoa, 1.0, 0);
+    
+    # raise everything back up
+    MoveToFrame(leverCam, 0, 2.0);
+    #MoveToFrame(pushed, 3, 2.0);
+    SkipToFrame(pushed, 3, 2.0);
+    SkipToFrame(column, 3, 2.0);
+    SkipToFrame(pyramid, 3, 2.0);
+    SkipToFrame(horusKey, 3, 2.0);
+    WaitForStop(pyramid);
+    
+    #StopKey(player, inTrack, 0.5);
+    SetPulse(0.0);
+    
+    Sleep(0.5);
+    
+    # restore camera
+    SetCameraPosition(1, GetThingPos(leverCam));
+    SetCurrentCamera(1);
+    
+    # restore controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    lever_Ready = 1;
+        
+    return;
+    
+# ========================================================================================
+
+speak:
+
+    playing = 1;
+    
+    # do cutscene stuff
+    MakeMeStop();
+    StartCutscene(2);
+    
+    # put away any weapon
+    DeselectWeaponWait(player);
+    
+    # offset camera
+    if((pyrCam == 1) && (whichline != 2))
+    {
+        CopyOrient(leverCam, player);
+        SetCameraFocus(2, pyramidCam);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+    }
+    
+    else if(redCam == 1)
+    {
+        CopyOrient(gem1Ledge, player);
+        SetCameraFocus(2, gem1Cam);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+    }
+    
+    else if(greenCam == 1)
+    {
+        CopyOrient(gem2Ledge, player);
+        SetCameraFocus(2, gem2Cam);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+    }
+
+    else if(blueCam == 1)
+    {
+        CopyOrient(gem3Ledge, player);
+        SetCameraFocus(2, gem3Cam);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+    }
+    
+    # activate the thing
+    PlayMode(player, 60, 0);
+    Sleep(0.3);
+    
+    if(whichLine == 0)
+    {
+        while (newExam == oldExam) 
+        {
+            newExam = RandBetween(0, 1);
+        }
+        
+        oldExam = newExam;
+    
+        PlayVoice(player, in_ExamLine0[newExam], 1.0, 1);
+    }
+    
+    else if(whichLine == 1)
+    {
+        while (newComment == oldComment) 
+        {
+            newComment = RandBetween(0, 2);
+        }
+        
+        oldComment = newComment;
+    
+        PlayVoice(player, in_WrongLine0[newComment], 1.0, 1);
+    }
+    
+    else if(whichLine == 2)
+    {
+        while (newComment == oldComment) 
+        {
+            newComment = RandBetween(0, 2);
+        }
+        
+        oldComment = newComment;
+        
+        PlayVoice(player, in_MissLine0[newComment], 1.0, 1);
+    }
+    
+    # return camera to player
+    #SetCameraPosition(1, GetThingPos(cam1));
+    SetCurrentCamera(1);
+    
+    # restore ext cam and controls
+    ClearActorFlags(player, 0x200000);
+    EndCutscene();
+    
+    playing = 0;
+    
+    return;
+    
+# ========================================================================================
+
+pulse:
+    
+    # shake the camera
+	vibe = RandBetween(1, 4);
+	if (vibe == 1)
+	{
+		posOffset = '-0.005 0.00 -0.002';
+		angOffset = '0.00 -0.002 0.002';
+	}
+	if (vibe == 2)
+	{
+		posOffset = '0.005 -0.005 0.002';
+		angOffset = '0.002 0.00 -0.002';
+	}
+	if (vibe == 3)
+	{
+		posOffset = '0.002 0.005 -0.005';
+		angOffset = '-0.002 0.002 -0.002';
+	}
+	if (vibe == 4)
+	{
+		posOffset = '-0.002 0.00 0.005';
+		angOffset = '0.00 0.00 0.002';
+	}
+
+	SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+    
+    return;
+
+# ========================================================================================
+
+resetColumn:
+	
+	if (GetCurFrame(column))
+	{
+		MoveToFrame(column, 0, maxColumnFrame);
+		MoveToFrame(pyramid, 0, maxColumnFrame);
+		MoveToFrame(horusKey, 0, maxColumnFrame);
+		MoveToFrame(pushed, 0, maxColumnFrame);
+
+		bColumnMovingTo = 0;
+		WaitForStop(pyramid);
+		bColumnMovingTo = -1;
+	}
+	return;
+
+# ========================================================================================
+
+timer:
+	if (GetCurFrame(column))
+		call resetColumn;
+	return;
+
+# ========================================================================================
+
+end
+

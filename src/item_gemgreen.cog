@@ -1,0 +1,86 @@
+# Jones 3D Cog Script
+#
+# item_GemGreen.cog
+#
+# [RT]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	activated
+message	touched
+message	taken
+
+cog		talkCog					local
+
+thing	player					local
+
+int		treasureBin=36			local
+int		gemBin=28				local
+int		value=20				local
+
+end
+
+# ===================================================================
+
+code
+
+activated:
+
+	player = GetSourceRef();
+
+	StartCutscene(0);
+
+	if (!BitTest(GetThingFlags(player), 0x02000000))
+	{
+		talkCog = GetCogByIndex(0);
+		SendMessage(talkCog, 27);
+	}
+
+	if (Rand() < 0.5)
+	{
+		SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+		SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 -0.01');
+
+	return;
+
+# -------------------------------------------------------------------
+
+touched:
+
+	player = GetSourceRef();
+
+	if (GetInv(player, treasureBin) < GetInvMax(player, treasureBin))
+	{
+		TakeItem(GetSenderRef(), player);
+	}
+    else
+	{
+		EndCutscene();
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+taken:
+
+	player = GetSourceRef();
+
+	ChangeInv(player, treasureBin, value);
+	SetInvAvailable(player, treasureBin, 1);
+	JonesInvItemChanged(gemBin);
+
+	EndCutscene();
+
+	return;
+
+end

@@ -1,0 +1,89 @@
+# Jones 3D Cog Script
+#
+# olv_temple_trees.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message	startup
+	message	entered
+
+	thing		tree0
+	thing		tree1
+	thing		tree2
+	thing		tree3
+	thing		tree4
+	thing		tree5
+	thing		tree6
+	thing		tree7
+	thing		tree8
+	thing		tree9
+	thing		tree10
+	thing		tree11
+	thing		tree12
+	thing		tree13
+	thing		tree14
+	thing		tree15
+	thing		tree16
+	thing		tree17
+	thing		tree18
+	thing		tree19
+	thing		tree20
+	thing		tree21
+	thing		tree22
+	thing		tree23
+	thing		tree24
+	thing		tree25
+
+	sector	trees_off
+	sector	trees_on
+	surface	drawface
+	thing		player			local
+	int		num=0				local
+end
+
+#-------------------------------------------------------------------------------
+
+code
+
+startup:
+	player=GetLocalPlayerThing();
+
+		for (num = 0; num<=25; num=num+1)
+		{
+		SetThingFlags(tree0[num], 0x80000);
+		}
+
+	return;
+
+entered:
+	if(GetSenderRef() == trees_on)
+	{
+		for (num = 0; num<=25; num=num+1)
+		{
+		SetAdjoinFlags(drawface, 0x1);
+		ClearSurfaceFlags(drawface, 0x200);
+		SetFaceGeoMode(drawface, 0);
+		ClearThingFlags(tree0[num], 0x80000);
+		}
+	return;
+	}
+	if(GetSenderRef() == trees_off)
+	{
+		for (num = 0; num<=25; num=num+1)
+		{
+		ClearAdjoinFlags(drawface, 0x1);
+		SetSurfaceFlags(drawface, 0x200);
+		SetFaceGeoMode(drawface, 4);
+		SetThingFlags(tree0[num], 0x80000);
+		}
+	return;
+	}
+	return;
+end
+

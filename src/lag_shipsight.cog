@@ -1,0 +1,122 @@
+# Jones 3D Cog Script
+#
+# lag_shipsight.cog
+#
+#
+# [DS & revised by HB]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+    
+	message     startup
+	message     entered
+
+	keyframe	in_ltarmup=0in_leftarm_1_1.key	local
+    
+	sound		indyline=lg02j01.wav			local
+	sound		music0=mus_lag_japanship.wav	local
+
+	thing		player							local
+	thing		indyactor
+	thing		walkpos0
+	thing		walkpos1
+	thing		campos
+	thing		shippos
+	
+	sector		looksec
+
+	vector		playervec						local
+	vector		v_camspot						local
+
+	float		playery =0						local
+	float		playerx =0						local
+
+	int			direction=0						local
+	int			targdir=1						local		desc=0-north,1-south,2-east,3-west.
+	int			curcam							local
+	int			beenhere=0						local
+	int			cursound						local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+
+entered:
+
+	if (beenhere == 1) return;
+	if(getsenderref() == looksec)
+	{
+		curcam = GetCurrentCamera();
+
+		MakeMeStop();
+		StartCutscene(1);
+		DeselectWeaponWait(player);
+		CopyPlayerHolsters(player, indyactor);
+		Sleep(0.01);
+			
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indyactor, 0x80000);
+
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, campos);
+		SetCameraSecondaryFocus(2, indyactor);
+		SetCurrentCamera(2);
+		SetCameraFOV(30, 0, 0);
+		Sleep(0.01);
+		SetCameraFOV(90, 1, 5);
+		PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+
+		AISetMoveSpeed(indyactor, 1.1);
+		SetThingMaxHeadVel(indyactor, 35.0);
+		SetThingMaxRotVel(indyactor, 25.0);
+		AISetLookThing(indyactor, walkpos0);
+		AISetMoveThing(indyactor, walkpos0, 0);
+		Sleep(2.2);
+		AISetMoveSpeed(indyactor, 1.0);
+		AISetLookThing(indyactor, walkpos1);
+		AISetMoveThing(indyactor, walkpos1, 0);
+		Sleep(1.2);
+		MoveToFrame(campos, 1, 0.85);
+		Sleep(2.3);
+
+		SetThingMaxHeadVel(indyactor, 80.0);
+		SetThingMaxRotVel(indyactor, 60.0);
+		AIEnableHeadTracking(indyactor, shippos);
+		Sleep(0.7);
+		AISetLookThing(indyactor, shippos);
+		AIWaitForStop(indyactor);
+		AIDisableHeadTracking(indyactor);
+		CopyOrientAndPos(indyactor, player);
+		cursound = PlayVoice(player, indyline, 1.0, 0);
+		Sleep(3.5);
+		PlayKey(indyactor, in_ltarmup, 4, 0x12, 0);
+		WaitForSound(cursound);
+		Sleep(0.5);
+		ResetCameraFOV(0, 0.0);
+		SetThingFlags(indyactor, 0x80000);
+		ClearThingFlags(player, 0x80000);
+
+		## v_camspot = VectorAdd(VectorTransformToOrient(player, '-0.3 0.1 0.03'), GetThingPos(player));
+		## SetCameraPosition(1, v_camspot);
+		SetCameraPosition(1, GetThingPos(campos));
+		SetCurrentCamera(curcam);
+		ResetCameraFOV(0, 0.0);
+		beenhere=1;
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+	}
+
+	return;
+
+end
+

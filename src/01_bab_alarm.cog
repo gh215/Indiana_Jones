@@ -1,0 +1,217 @@
+# Jones 3D Cog Script
+#
+# 01_BAB_Alarm.cog
+#
+# Guard warns Volodnikov about intruder in Babylon dig site
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		user4	# upon receipt, this cog revs up	
+	
+# .................................. KEYFRAMES .................................
+	
+	keyframe	vo_armsATback=vo_stand2_arms_back.key	local
+	keyframe	vo_backTOside=vo_stand2_bd_3.key		local
+    keyframe	vo_glassesL=0vo_glassesL_3_3.key		local
+	keyframe	vo_rightup=0vo_rightup_3_3.key			local
+	keyframe	vo_bothup=0vo_bothup_3_3.key			local
+
+# .................................. SOUNDS ....................................
+
+	sound		gd_fugitivesite=Bb08p01.wav				local
+	sound		vo_capturehim=Bb08v02.wav				local
+	sound		gd_yessir=Bb08p03.wav					local
+
+	sound		music0=mus_gen_russremin2.wav			local
+	
+# ............................... ACTOR THINGS .................................
+
+	thing		alarm_guard								nolink
+	thing		alarm_volod								nolink
+ 	
+# .............................. OBJECT THINGS .................................
+
+	thing		alarm_crate								nolink
+	thing		alarm_statue							nolink
+
+# .............................. CAMERA THINGS .................................
+
+	thing		alarm_cam_1								nolink
+	thing		alarm_cam_2								nolink
+		
+	thing		alarm_ct_1								nolink
+	thing		alarm_ct_2								nolink
+
+# .............................. TARGET THINGS .................................
+
+	thing		alarm_mk_1								nolink
+	thing		alarm_mk_2								nolink
+
+# ........................ OTHER ENGINE REFERENCES .............................
+
+	cog			generatorcog	
+	
+	template    ghost_tpl=ghost							local
+	
+# ............................... VARIABLES ....................................
+	
+	flex		gd_rotRate								local
+	flex		gd_headRate								local
+	flex		vo_rotRate								local
+	flex		vo_headRate								local
+
+	int			cutSceneState=0							local
+
+	int			gd_keyTrack1							local
+	int			vo_keyTrack1							local
+	int			vo_keyTrack2							local
+
+	int			cursound								local
+	int			curcam									local
+
+	int			gd_colltype								local
+	int			vo_colltype								local
+	
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	# Prepare for much later...
+	SetThingFlags(alarm_guard, 0x80000);
+	SetThingFlags(alarm_volod, 0x80000);
+	SetThingFlags(alarm_crate, 0x80000);
+	SetThingFlags(alarm_statue, 0x80000);
+	cutSceneState = 0;
+
+	return;
+
+# ..............................................................................
+
+user4:
+
+	# Message from the generator cog triggers the alarm cutscene...
+
+	if (cutSceneState != 0)
+	{
+		# Only run cutscene once...
+		return;
+	}
+
+	# Prep engine...
+	cutSceneState = 1;
+	
+	# Prep...
+	ClearThingFlags(alarm_volod, 0x80000);
+	ClearThingFlags(alarm_guard, 0x80000);
+	ClearThingFlags(alarm_crate, 0x80000);
+	ClearThingFlags(alarm_statue, 0x80000);
+	gd_colltype = GetCollideType(alarm_guard);
+	gd_rotRate = GetThingMaxRotVel(alarm_guard);
+	gd_headRate = GetThingMaxHeadVel(alarm_guard);
+	vo_rotRate = GetThingMaxRotVel(alarm_volod);
+	vo_headRate = GetThingMaxHeadVel(alarm_volod);
+	AISetCutSceneMode(alarm_volod);
+	AISetCutSceneMode(alarm_guard);
+	SetWeaponModel(alarm_guard, 4);
+
+	# Prep Volodnikov...
+	vo_keyTrack1 = PlayKey(alarm_volod, vo_armsATback, 2, 0x10, 0);
+
+	# Cut to shot of Volodnikov...
+	curcam = GetCurrentCamera();
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, alarm_cam_1);
+	SetCameraSecondaryFocus(2, alarm_ct_1);
+	SetCurrentCamera(2);
+	SetCameraFOV(60, 0, 0.0);
+	
+	# Maybe a touch of melodramatic music...
+	# PlaySoundLocal(music0, 0.8, 0.0, 0x0, 0);	
+	
+	# Volodnikov fidgets...
+	StopKey(alarm_volod, vo_keyTrack1, 0.0);
+	PlayKey(alarm_volod, vo_backTOside, 4, 0x12, 1);
+	PlayKey(alarm_volod, vo_glassesL, 4, 0x12, 0);
+
+	# A guard appears outside room...
+	SetCollideType(alarm_guard, 0);
+	SetCollideType(alarm_volod, 0);
+	AISetMoveSpeed(alarm_guard, 0.9);
+	AISetLookThingEyeLevel(alarm_guard, alarm_mk_1);
+	AISetMoveThing(alarm_guard, alarm_mk_1, 0);
+	AISetLookThingEyeLevel(alarm_guard, alarm_volod);
+	Sleep(0.8); # was 0.2
+		
+	# Guard: "Comrade Doctor V...fugitive in the site!"
+	cursound = PlayVoice(alarm_guard, gd_fugitivesite, 1.0, 0);
+
+	# Volodnikov turns to face sailor...
+	SetThingMaxHeadVel(alarm_volod, 180.0);
+	SetThingMaxRotVel(alarm_volod, 120.0);
+	AIEnableBodyTracking(alarm_volod, alarm_guard);
+
+	# Re-frame toward doorway...
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 2.0);
+	Sleep(0.01);
+	SetCameraFocus(2, alarm_cam_2);
+	SetCameraSecondaryFocus(2, alarm_ct_2);
+	SetCameraFOV(45, 1, 2.0);
+
+	AIWaitForStop(alarm_guard);
+	WaitForSound(cursound);
+	Sleep(0.1);
+
+	# Volodnikov: "Capture him if possible!  Otherwise shoot the dog!"
+	AIDisableBodyTracking(alarm_volod);
+	cursound = PlayVoice(alarm_volod, vo_capturehim, 1.0, 0);
+	PlayKey(alarm_volod, vo_rightup, 4, 0x12, 1);
+	Sleep(1.3);
+	PlayKey(alarm_volod, vo_bothup, 4, 0x12, 0);
+	WaitForSound(cursound);
+
+	# Guard: "Yes, sir!"
+	cursound = PlayVoice(alarm_guard, gd_yessir, 1.0, 0);
+
+	# Guard exits...
+	AISetLookThingEyeLevel(alarm_guard, alarm_mk_2);
+	Sleep(0.5);
+	AISetMoveThing(alarm_guard, alarm_mk_2, 0);
+
+	# Volodnikov turns back to statue...
+	AISetLookThing(alarm_volod, alarm_statue);
+	Sleep(2.0);
+
+	# Clean up...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	
+	# Return control to the generator cog...
+	SendMessage(generatorcog, user4);
+	Sleep(0.1);
+
+	DestroyThing(alarm_guard);
+	DestroyThing(alarm_volod);
+	DestroyThing(alarm_crate);
+	DestroyThing(alarm_statue);
+
+	return;
+
+end

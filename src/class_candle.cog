@@ -1,0 +1,32 @@
+# Jones 3D Cog Script
+#
+# class_Candle.cog
+#
+# Continuous global animation of gen_torchflame4_01.mat material
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+message		sighted
+
+material	flame=ziflame4_01.mat	local
+
+flex		fps=8.0					local
+
+end
+
+# ........................................................................................
+
+code
+
+sighted:
+
+	MaterialAnim(flame, fps, 0x1);
+	return;
+
+end
+

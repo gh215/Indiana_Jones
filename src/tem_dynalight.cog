@@ -1,0 +1,47 @@
+# Jones 3D Cog Script
+#
+# TEM_DynaLight.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+
+    thing       dynalight0
+    thing       dynalight1
+    thing       dynalight2
+    thing       dynalight3
+    thing       dynalight4
+    thing       dynalight5
+
+    flex        rVal=0.3
+    flex        gVal=0.3
+    flex        bVal=0.2
+
+    int         numLights=6     local
+    int         i               local
+             
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    for (i=0; i<numLights; i=i+1)
+        {
+            SetThingLight(dynalight0[i], 'rVal, gVal, bVal', 0.001, 0.1);
+        }
+    
+    return;
+           
+# ========================================================================================
+
+end
+

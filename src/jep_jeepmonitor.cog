@@ -1,0 +1,49 @@
+# Jones 3D Cog Script
+#
+#	jep_bridge2.cog
+#
+# Set a global variable when jeep is entered/exited
+#
+# [RD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+message	startup
+message	boarded
+message	unboarded
+
+thing		jeep
+thing		player			local
+sound		tryjeep=jp01j02a.wav	local	#A jeep.  Let's see if this thing still runs.
+int		used=0			local
+
+
+end
+# ===================================================================
+code
+startup:
+	sleep(0.1);
+	Player=GetLocalPlayerThing();
+	global2 = 0;
+	return;
+
+boarded:
+	if(used == 0)
+	{
+	used=1;
+	PlayVoice(player, tryjeep, 1.0, 0);
+	} 
+	if (GetSenderRef() != jeep) return;
+	global2 = 1;
+	return;
+
+unboarded:
+	if (GetSenderRef() != jeep) return;
+	global2 = 0;
+	return;
+
+end
+

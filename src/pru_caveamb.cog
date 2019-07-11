@@ -1,0 +1,103 @@
+# Jones 3D Cog Script
+#
+# PRU_CaveAmb.cog
+#
+# Produces random ambient cave sounds when attatched to a ghost object.
+# Based on code from TEO_Drops.cog by SXC.
+#
+# [TRM & SXC] [GGJ] [RKD]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     crossed
+    message     pulse
+
+	thing		ghost0
+	thing		ghost1
+	thing		ghost2
+	thing		ghost3
+	thing       ghost4
+	
+	surface		SoundOn1		linkID=1
+    surface		SoundOn2		linkID=1
+	surface		SoundOff1		linkID=0
+	surface		SoundOff2		linkID=0
+    surface		SoundOff3		linkID=0
+        
+    sound       sndCave0=teo_drops1_c.wav    local
+    sound       sndCave1=teo_drops2_c.wav    local
+    sound       sndCave2=teo_drops3_c.wav    local
+    sound       sndCave3=teo_drops4_c.wav    local
+
+    float       caveFreq        local
+    
+    flex        pulseTime=3.0
+    flex        vol=1.0
+    flex        minDist=-1
+    flex        maxDist=-1
+    
+end
+
+# ========================================================================================
+
+code
+
+crossed:
+if (GetSenderID() == 1)
+{
+    SetPulse(pulseTime);
+}
+if (GetSenderID() == 0)
+{
+    SetPulse(0.0);
+}
+
+    
+    return;
+    
+# ========================================================================================
+
+pulse:
+
+#if (!GetSectorFlags(GetThingSector(GetLocalPlayerThing())) & 0x2)
+
+if (GetThingFlags(GetLocalPlayerThing()) & 0x2000000)
+{
+	Print("swimming");
+    return;
+}
+
+
+	
+    caveFreq = Rand();
+
+    if (caveFreq < 0.16)
+        {
+            PlaySoundThing(sndCave0, ghost0[randbetween(0, 4)], vol, minDist, maxDist, 0x0);
+        }
+        
+    if ((caveFreq > 0.16) && (caveFreq < 0.32))
+        {
+            PlaySoundThing(sndCave1, ghost0[randbetween(0, 4)], vol, minDist, maxDist, 0x0);
+        }
+        
+    if ((caveFreq > 0.32) && (caveFreq < 0.48))
+        {
+            PlaySoundThing(sndCave2, ghost0[randbetween(0, 4)], vol, minDist, maxDist, 0x0);
+        }
+    
+    if ((caveFreq > 0.48) && (caveFreq < 0.64))
+        {
+            PlaySoundThing(sndCave3, ghost0[randbetween(0, 4)], vol, minDist, maxDist, 0x0);
+        }
+    
+    return;
+    
+# ========================================================================================
+        
+end
+
+

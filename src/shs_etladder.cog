@@ -1,0 +1,171 @@
+# Jones 3D Cog Script
+#
+# SHS_ETladder.cog      Make the entry tower ladder open/close.  
+#
+# [JWC, SXC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message activated
+message	startup
+
+surface	climable	  				# set to climable in marcus
+
+sector  doorsector0
+sector 	doorsector1
+
+sound	laddermove=shs_ladder_creak_c.wav		local
+sound	ladderstop=shs_ladderroll_stop.wav		local
+sound	ladderfall=shs_ladder_moving.wav		local
+
+thing	ladder	   	   
+thing   button       
+thing	player			local
+thing	interpcam
+
+int  	filter=0 		local		# prevent multiple activates	
+int		position=0		local		# ladder position
+int		counter=0		local		# track first time        
+
+cog		NoWorkTalkcog
+
+end
+
+# ========================================================================================
+
+code
+
+
+startup:
+   
+    # turn off sector
+    SetSectorAdjoins(doorsector0, 0);
+	SetSectorAdjoins(doorsector1, 0);
+
+    player= GetLocalPlayerThing();
+	return;
+
+activated:
+   
+	if (GetCurItem(player) != 0) return; # prevents activating with chalk
+
+    if ((GetSenderRef() == button) && (filter == 0))
+	{
+		
+        filter=1;
+        StartCutscene(0);
+		SetActorFlags(player, 0x200000);
+		StopThing(player);
+		DeselectWeapon(player);
+		DeselectWeaponWait(player);
+		
+		SetExtCamOffsetToThing(interpCam);
+		
+		# allow cam to set
+		Sleep (.5);
+		PlayMode(player, 60, 0);
+	    
+		# synch with button
+		Sleep(.3);
+           	        
+	    # button goes in
+		MoveToFrame(button, 1, 1);
+	    WaitForStop(button);
+		   
+		# check if powered
+		if (global3 == 1)
+		{
+			
+			# ladder position
+			position = 1 - position;	# weird but it works
+
+			call laddermove;
+		}
+		else
+		{
+			# first time thru
+			if (counter == 0)
+			{
+				# draw 
+				SetSectorAdjoins(doorsector0, 1);
+				SetSectorAdjoins(doorsector1, 1);
+				
+				Rotate(ladder, 90, 2, .75);    # opens ladder quickly
+				PlaySoundLocal(ladderfall, 1.0, 0, 0x0000, 0);
+				WaitForStop(ladder);
+				
+                # make adjoin no move and therefore climable 
+				ClearAdjoinFlags(climable, 0x2);
+
+				counter=1;
+				position=1;	#sets ladder to open
+			}
+			else
+			{
+                # Call NoWorkTalkCog
+				Sleep(.3);
+				SendMessageEx(NoWorkTalkCog, user1, 0, 0, 0, 0);
+				global15 = 0; # per Randy
+				while (global15 == 0)
+				{
+					Sleep(0.01); # wait for line to finish
+				}
+			}
+		}
+        # button comes out
+		MoveToFrame(button, 0, 1);
+		WaitForStop(button);
+	
+		RestoreExtCam();
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+		filter=0;
+    }
+    return;
+    
+laddermove:
+
+    # open and close ladder
+    
+	if (position == 1)	# closed
+	{
+		# draw 
+		SetSectorAdjoins(doorsector0, 1);
+		SetSectorAdjoins(doorsector1, 1);
+		
+		# open ladder
+		rotate(ladder, 90, 2, 1.5);
+        PlaySoundLocal(laddermove, 1.0, 0, 0x0000, 0);
+        WaitForStop(ladder);
+		PlaySoundLocal(ladderstop, 1.0, 0, 0x0000, 0);
+
+		# make adjoin no move 
+		ClearAdjoinFlags(climable, 0x2);
+	}
+        
+    If (position == 0)	 # open
+	{
+		# close ladder
+		rotate(ladder, -90, 2, 1.5);
+        PlaySoundLocal(laddermove, 1.0, 0, 0x0000, 0);
+        WaitForStop(ladder);
+		PlaySoundLocal(ladderstop, 1.0, 0, 0x0000, 0);
+
+        # make move and therefore not climable
+		SetAdjoinFlags(climable, 0x2);
+		
+		# no draw
+		SetSectorAdjoins(doorsector0, 0);
+		SetSectorAdjoins(doorsector1, 0);
+    }
+    
+    return;
+
+
+
+end
+

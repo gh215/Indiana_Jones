@@ -1,0 +1,73 @@
+# Jones 3D Cog Script
+#
+# shw_river_thaw.cog
+#
+# River Thawing Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+		
+	#	MESSAGES
+	message	user0
+
+	#	COGS
+	cog	icedamcog
+	
+	#	SOUND THINGS
+	thing	soundobj0
+	thing	soundobj1
+	thing	soundobj2
+	thing	soundobj3
+	thing	soundobj4
+	thing	soundobj5
+	thing	soundobj6
+	
+	#	VARIABLES
+	int		snd0		local
+	int		snd1		local
+	int		snd2		local
+	int		snd3		local
+	int		snd4		local
+	int		snd5		local
+	int		snd6		local
+
+	#	SOUNDS
+	sound	fallloop=riv_h20_rapid_a.wav	local
+
+	#	VECTORS
+	vector	down
+
+	# SECTORS
+	sector	fall0
+    
+end
+
+# ========================================================================================
+
+code
+# ........................................................................................
+
+user0:
+	If (GetSenderRef() == icedamcog)
+	{
+    snd0 = PlaySoundThing(fallloop, soundobj0, 0.25, 5, 15, 0x1);
+	snd1 = PlaySoundThing(fallloop, soundobj1, 0.25, 5, 15, 0x1);
+	snd2 = PlaySoundThing(fallloop, soundobj2, 0.5, 5, 20, 0x1);
+	snd3 = PlaySoundThing(fallloop, soundobj3, 0.5, 5, 20, 0x1);
+	snd4 = PlaySoundThing(fallloop, soundobj4, 0.75, 8, 30, 0x1);
+	snd5 = PlaySoundThing(fallloop, soundobj5, 1, 8, 30, 0x1);
+	snd6 = PlaySoundThing(fallloop, soundobj6, 1, 8, 30, 0x1);
+    
+    Setsectorthrust(fall0, down, 4);
+    }
+
+return;        
+
+# ........................................................................................
+
+end
+

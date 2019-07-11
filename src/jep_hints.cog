@@ -1,0 +1,338 @@
+# Jones 3D Cog Script
+#
+# jep_hints.cog
+#
+# level hints    
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    
+	message		startup
+	message		entered
+	message		removed
+	message		boarded
+	message		user0			#bridge2 cog
+        
+	thing			player		local
+	thing			hint1
+	thing			hint2
+	thing			hint3
+	thing			hint4
+	thing			hint5
+	thing			hint6
+	thing			hint7
+	thing			hint8
+	thing			hint9
+	thing			hint10
+	thing			hint11
+	thing			hint12
+	thing			hint13
+	thing			hint14
+	thing			hint15
+	thing			hint16
+	thing			hint17
+	thing			hint18
+	thing			hint19
+	thing			hint20
+	thing			hint21
+	thing			hint22
+	thing			hint23
+	thing			hint24
+	thing			hint25
+	thing			hint26
+	thing			hint27
+	thing			hint28
+	thing			hint29
+	thing			hint30
+	thing			hint31
+
+	thing		jeep
+	thing		plank
+	sector	camp_cave
+	sector	explode
+	sector	bridge_1
+	sector	truck_gone
+	sector	ramp
+	sector	chasm
+	sector	commies
+	sector	bridge_2
+	sector	climb_path
+	sector	corkscrew
+	sector	corkscrew_exit
+	sector	maze_cave
+	sector	truck_view
+	sector	start_maze
+	sector	maze_1
+	sector	maze_2
+	sector	maze_3
+	sector	maze_4
+	sector	maze_5
+	sector	maze_6
+	sector	maze_7
+	sector	maze_8
+	sector	maze_9
+	sector	maze_10
+	sector	maze_11
+	sector	maze_12
+	sector	maze_13
+	sector	exit_maze
+	int		i				local
+	int		s				local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+entered:
+	if(getsenderref() == camp_cave)
+	{
+	SetHintSolved(hint2);
+	return;
+	}
+	if(getsenderref() == explode)
+	{
+	SetHintSolved(hint3);
+	return;
+	}
+	if(getsenderref() == bridge_1)
+	{
+	SetHintSolved(hint4);
+	return;
+	}
+	if(getsenderref() == truck_gone)
+	{
+	SetHintSolved(hint5);
+	return;
+	}
+	if(getsenderref() == ramp)
+	{
+	SetHintSolved(hint6);
+	return;
+	}
+	if(getsenderref() == chasm)
+	{
+	SetHintSolved(hint7);
+	return;
+	}
+	if(getsenderref() == commies)
+	{
+	SetHintSolved(hint8);
+	return;
+	}
+	if(getsenderref() == bridge_2)
+	{
+	SetHintSolved(hint11);
+	return;
+	}
+	if(getsenderref() == climb_path)
+	{
+	SetHintSolved(hint12);
+	return;
+	}
+	if(getsenderref() == corkscrew)
+	{
+	SetHintSolved(hint13);
+	return;
+	}
+	if(getsenderref() == corkscrew_exit)
+	{
+	SetHintSolved(hint14);
+	return;
+	}
+	if(getsenderref() == maze_cave)
+	{
+	SetHintSolved(hint15);
+	return;
+	}
+#================ Maze Area 1 =================
+	if(getsenderref() == truck_view)
+	{
+	SetHintSolved(hint16);
+		for (i=0; i<=13; i=i+1)
+		{
+		SetHintUnsolved(hint17[i]);
+		}
+	return;
+	}
+	if(getsenderref() == Start_maze)
+	{
+	SetHintSolved(hint17);
+		for (i=0; i<=12; i=i+1)
+		{
+		SetHintUnsolved(hint18[i]);
+		}
+	return;
+	}
+	if(getsenderref() == maze_1)
+	{
+	SetHintSolved(hint18);
+		for (i=0; i<=11; i=i+1)
+		{
+		SetHintUnsolved(hint19[i]);
+		}
+	return;
+	}
+	if(getsenderref() == maze_2)
+	{
+	SetHintSolved(hint19);
+		for (i=0; i<=10; i=i+1)
+		{
+		SetHintUnsolved(hint20[i]);
+		}
+	return;
+	}
+	if(getsenderref() == maze_3)
+	{
+	SetHintSolved(hint20);
+		for (i=0; i<=9; i=i+1)
+		{
+		SetHintUnsolved(hint21[i]);
+		}
+	return;
+	}
+	if(getsenderref() == maze_4)
+	{
+	SetHintSolved(hint21);
+		for (i=0; i<=8; i=i+1)
+		{
+		SetHintUnsolved(hint22[i]);
+		}
+	return;
+	}
+	if(getsenderref() == maze_5)
+	{
+	SetHintSolved(hint22);
+		for (i=0; i<=7; i=i+1)
+		{
+		SetHintUnsolved(hint23[i]);
+		}
+	return;
+	}
+
+
+	if(getsenderref() == maze_6)
+	{
+		for (s=0; s<=6; s=s+1)			#hint23 through hint29 solved.
+		{
+		SetHintSolved(hint23[s]);
+		}
+		SetHintUnsolved(hint30);
+	return;
+	}
+#================ Maze Area 2 =================
+	if(getsenderref() == maze_8)
+	{
+		for (s=0; s<=8; s=s+1)
+		{
+		SetHintSolved(hint16[s]);		#16-24 Solved.
+		}
+		for (i=0; i<=5; i=i+1)
+		{
+		SetHintUnsolved(hint25[i]);
+		}
+	return;
+	}
+	if(getsenderref() == maze_9)
+	{
+		for (s=0; s<=9; s=s+1)
+		{
+		SetHintSolved(hint16[s]);		#16-25 Solved.
+		}
+		for (i=0; i<=4; i=i+1)
+		{
+		SetHintUnsolved(hint26[i]);
+		}
+	return;
+	}
+	if(getsenderref() == maze_10)
+	{
+		for (s=0; s<=10; s=s+1)
+		{
+		SetHintSolved(hint16[s]);		#16-26 Solved.
+		}
+		for (i=0; i<=3; i=i+1)
+		{
+		SetHintUnsolved(hint27[i]);
+		}
+	return;
+	}
+	if(getsenderref() == maze_11)
+	{
+		for (s=0; s<=11; s=s+1)
+		{
+		SetHintSolved(hint16[s]);		#16-27 Solved.
+		}
+		for (i=0; i<=2; i=i+1)
+		{
+		SetHintUnsolved(hint28[i]);
+		}
+	return;
+	}
+	if(getsenderref() == maze_12)
+	{
+		for (s=0; s<=12; s=s+1)
+		{
+		SetHintSolved(hint16[s]);		#16-28 Solved.
+		}
+		for (i=0; i<=1; i=i+1)
+		{
+		SetHintUnsolved(hint29[i]);
+		}
+	return;
+	}
+	if(getsenderref() == maze_13)
+	{
+		for (s=0; s<=9; s=s+1)
+		{
+		SetHintSolved(hint16[s]);		#16-29 Solved.
+		}
+		SetHintUnsolved(hint30);
+	return;
+	}
+
+
+#================ Exit Maze Area ==============
+	if(getsenderref() == maze_7)
+	{
+		for (s=0; s<=14; s=s+1)			#hint16 through hint30 solved. entire maze.
+		{
+		SetHintSolved(hint16[s]);
+		}
+	return;
+	}
+	if(getsenderref() == exit_maze)
+	{
+	SetHintSolved(hint31);
+	}
+	return;                           
+
+removed:
+	if(getsenderref() == plank)
+	{
+	SetHintSolved(hint9);
+	}
+	return;
+
+boarded:
+	if(getsenderref() == jeep)
+	{
+	SetHintSolved(hint1);
+	}
+	return;
+
+user0:
+	SetHintSolved(hint10);
+	return;
+
+end
+

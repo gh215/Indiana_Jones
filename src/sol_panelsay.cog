@@ -1,0 +1,85 @@
+# Jones 3D Cog Script
+#
+# SOL_PanelSay.cog
+#
+# Indy notices that there is another car on the tracks after he replaces
+# the fuse and then walks around the control panel and looks at it.
+# Handles south and west facing directions.
+#
+# [TRM & SXC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     user0
+    message     user1
+    message     entered
+    
+    Thing       player      local
+    
+    surface     theSpot1
+    surface     theSpot2
+    
+    sound       inSay1=Sl02j05.wav      local       # Hey! There's another...
+    
+	vector      playervec       local
+    
+    float       playery=0		local
+	float       playerx=0		local
+    
+    int         set=0           local
+    int         done=0          local
+
+end
+
+# ========================================================================================
+
+code
+
+user0:
+    
+    set = 1;
+    return;
+    
+# ========================================================================================
+
+user1:
+
+    # received from comFalls.cog
+    done = 1;
+    return;
+
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    playervec = GetThingLVec(player);
+    playery = VectorY(playervec);
+    playerx = VectorX(playervec);
+            
+    if((set == 1) && (done == 0))
+    {
+        if((GetSenderRef() == theSpot1) || (GetSenderRef() == theSpot2))
+        {
+            done = 1;
+            if((playery < 0) && ((playerx > -0.7) && (playerx < 0.7)))
+            {
+                PlayVoice(player, inSay1, 1.0, 0);
+            }
+                
+            else if((playerx < 0) && ((playery > -0.7) && (playery < 0.7)))
+            {
+                PlayVoice(player, inSay1, 1.0, 0);    
+            }
+        }
+    }
+   
+   return;
+
+# ========================================================================================    
+
+end
+

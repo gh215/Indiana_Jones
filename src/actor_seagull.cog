@@ -1,0 +1,57 @@
+# Jones 3D Cog Script
+#
+# actor_Seagull.cog
+#
+# [RT] [MDR]
+#
+# Data setup and special flap anim for seagulls.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		created
+	message		sighted
+    message		timer
+
+end
+
+# ========================================================================================
+code
+
+# .................................................................................	
+created:
+
+	AISetSubMode(GetSenderRef(), 0x20000);			# Set SUBMODE_CONTINUOUSMOTION
+
+	return;
+
+
+# .................................................................................	
+sighted:
+
+	SetThingTimer(GetSenderRef(), 5);
+    return;
+
+# .................................................................................	
+timer:
+
+	if ( IsModePlaying(GetSenderRef(), 61) > 0 )	# Seagull uses SITH_PUPPETADDIN_ACTIVATEHIGH for flapping
+	{
+		StopMode(GetSenderRef(), 61, 0.0);
+	}
+	else
+	{
+		if (Rand() < 0.5)
+		{
+			PlayMode(GetSenderRef(), 61, 0);
+		}
+	}
+	
+	SetThingTimer(GetSenderRef(), RandBetween(3, 6));
+    return;
+
+end
+

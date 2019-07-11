@@ -1,0 +1,65 @@
+# Jones 3D Cog Script
+#
+# mp_ThrustSlave.cog
+#
+# 
+# Slave to WindSector.cog, this cog turns on and off SectorThrust.
+#
+#
+# (PAZ)
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+        message user0 
+        message user1   
+		
+	vector	vec0		desc=thrust_direction
+	float   speed=2.0       desc=thrust_speed
+       	float   speed0=0.0      desc=thrust_stop
+
+	sector	sector0		nolink
+	sector	sector1 	nolink
+	sector	sector2		nolink
+	sector	sector3		nolink
+	sector	sector4		nolink
+	sector	sector5		nolink
+	sector	sector6		nolink
+	sector	sector7		nolink                      
+end
+
+#========================================================================================
+
+code
+
+# ........................................................................
+
+user0:
+	if (sector0 >= 0) SetSectorThrust(sector0, vec0, speed);
+	if (sector1 >= 0) SetSectorThrust(sector1, vec0, speed);
+	if (sector2 >= 0) SetSectorThrust(sector2, vec0, speed);
+	if (sector3 >= 0) SetSectorThrust(sector3, vec0, speed);
+	if (sector4 >= 0) SetSectorThrust(sector4, vec0, speed);
+	if (sector5 >= 0) SetSectorThrust(sector5, vec0, speed);
+	if (sector6 >= 0) SetSectorThrust(sector6, vec0, speed);
+	if (sector7 >= 0) SetSectorThrust(sector7, vec0, speed);
+	return;
+        
+#.........................................................................
+
+user1:
+        if (sector0 >= 0) SetSectorThrust(sector0, vec0, speed0);
+	if (sector1 >= 0) SetSectorThrust(sector1, vec0, speed0);
+	if (sector2 >= 0) SetSectorThrust(sector2, vec0, speed0);
+	if (sector3 >= 0) SetSectorThrust(sector3, vec0, speed0);
+	if (sector4 >= 0) SetSectorThrust(sector4, vec0, speed0);
+	if (sector5 >= 0) SetSectorThrust(sector5, vec0, speed0);
+	if (sector6 >= 0) SetSectorThrust(sector6, vec0, speed0);
+	if (sector7 >= 0) SetSectorThrust(sector7, vec0, speed0);
+	return;
+
+
+end
+
+

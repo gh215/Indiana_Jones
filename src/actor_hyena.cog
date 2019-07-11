@@ -1,0 +1,85 @@
+# Jones 3D Cog Script
+#
+# actor_Hyena.cog
+#
+# [MDR]
+#
+# Special behavior for the Hyena.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		created
+	message		damaged
+	message		timer
+   
+int			timerID						local
+thing		hyena						local
+
+int			TIMER_ID_WAKEUP_AND_DIE=0	local
+
+end
+
+# ========================================================================================
+code
+
+# .................................................................................	
+created:
+
+	AISetSubMode(GetSenderRef(), 0x100000);		# Set SUBMODE_USEMATCHVELOCITY
+	AISetSubMode(GetSenderRef(), 0x20000);		# Set SUBMODE_SEMICONTINUOUSMOTION
+
+	return;
+
+# .................................................................................	
+damaged:
+	// If not a fatal blow, then flee
+	if ( (GetParam(0) < GetHealth(GetSenderRef()))
+		 && (RandBetween(1, 100) < 50)
+		 )
+	{
+		AIFlee(GetSenderRef(), GetThingParent(GetSourceRef()));
+	}
+	# Jeep or MineCar hit us
+	else if (GetParam(1) == 0x02000000)
+	{
+		# If invulnerable or immobile, ignore -- avoids multiple collision problem
+		if (BitTest(GetActorFlags(GetSenderRef()), 0x40008))
+		{ 
+#			DebugPrint("Ignore damage, because invulnerable");
+			ReturnEx(0);
+			return;
+		}
+		else if (GetParam(0) >= GetThingHealth(GetSenderRef()))
+		{
+#			DebugPrint("Runover and kill");
+			// long enough to land
+			AIRunOver(GetSenderRef(), RandBetween(5, 6), TIMER_ID_WAKEUP_AND_DIE);
+			ReturnEx(0);
+			return;
+		}
+	}
+	return;
+
+# -------------------------------------------------------------------
+
+timer:
+	hyena = GetParam(0);
+	timerID = GetSenderId();
+#	DebugFlex(timerID, "timer ID");
+
+	if (timerID == TIMER_ID_WAKEUP_AND_DIE)
+	{
+		ClearActorFlags(hyena, 0x8); // make sure not invulnerable
+		DamageThing(hyena, GetThingMaxHealth(hyena), 0x1, GetLocalPlayerThing()); // using impact damage to avoid infinite loop
+	}
+
+	return;
+
+
+
+end
+

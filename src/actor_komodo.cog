@@ -1,0 +1,30 @@
+# Jones 3D Cog Script
+#
+# actor_komodo.cog
+#
+# [MDR]
+#
+# Special stuff for komodo dragons.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		created
+   
+end
+
+# ========================================================================================
+code
+
+# .................................................................................	
+created:
+
+	AISetMode(GetSenderRef(), 0x2000000);					# Set MODE_NOCHASING
+
+    return;
+
+end
+

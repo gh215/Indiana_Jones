@@ -1,0 +1,185 @@
+# Jones 3D Cog Script
+#
+# shw_whipthruwall.cog
+#
+# Generic Door Script
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+		
+	#	MESAGES	
+	message	startup		
+	message	touched		
+	message	damaged		
+	message	entered		
+		
+    
+	#	PROPS
+	thing		fakewall     									linkid=1
+	thing		strut        
+    
+	#	CAMERAS
+	thing		camera                  
+	thing		swingcamera                  
+	
+	#	ACTORS	
+	thing		player          								local                  
+    
+	#	EVENT POSITIONS
+	surface		dragoncue_surf                            
+	thing		blastpos                            
+    thing		wall0pos           
+	thing		wall1pos                   
+	thing		wall2pos                   
+    thing		fragment										local
+	thing		dustthing										local
+	
+	#	MATERIALS
+    material	dustmat=gen_a4sfx_dustcloud.mat					local
+	
+	#	SOUND FX
+	sound		explosion=sol_block_crash_c.wav					local
+	sound		dangercue=mus_gen_russbold_shrt1.wav			local
+	sound		dragon_cue=mus_shw_monkchant2.wav				local
+
+    
+	#	templates
+	template        blast
+    template        wall0
+    template        wall1
+    template        wall2
+    template        debris
+    template		dust=dustcloud4ever							local
+    
+	#	vars
+	int blasted=0       										local
+    int	curCam													local
+    int	camslide												local
+    int	blastcreate												local
+    int	section0												local
+    int	section1												local
+    int	section2												local
+    int	dragonplayed=0											local
+    
+    #	vectors
+    vector  vec0            
+    vector  vec1            
+    vector  vec2            
+    vector  forcevec        
+    vector  duststart											local        
+    vector  dustend												local        
+        
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	duststart	= VectorSet(0.2, 0.2, 0.5);
+	dustend	= VectorSet(1.2, 1.2, 0.0);
+        
+return;
+
+# ========================================================================================
+touched:
+        if (blasted == 1) return;
+        if(GetSenderRef() == fakewall)
+		{
+                
+           
+		PlaySoundLocal(explosion, 1, 0, 0x0, 0);
+		destroything(fakewall);
+           
+		# create the major wall chunks
+		section0=creatething(wall0, wall0pos);
+        section1=creatething(wall1, wall1pos);
+        section2=creatething(wall2, wall2pos);
+        
+        CaptureThing(wall0);
+        CaptureThing(wall1);
+        CaptureThing(wall2);
+
+        # cut to the inside camera
+        SetCameraFocus(2, camera);
+        SetCamerasecondaryFocus(2, player);
+        SetCameraFOV(90, 0, 0.0);
+		 	
+		for(i=0; i<20; i=i+1)                                                        	            
+		 	{
+		SetPOVShake('0.0 0.0 0.005', '0.0 0.0 0.0', 80.0, 0.80);
+		fragment = CreateThing(debris, blastpos);                                 
+		SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 1));
+		SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 200.0));
+		Sleep(0.025);
+		 	}
+
+        #	create and animate the dust sprite
+		SetMaterialCel(dustmat, 0);
+		MaterialAnim(dustmat, 8.0, 1);
+		dustthing = CreateThing(dust, blastpos);
+		AnimateSpriteSize(dustthing, duststart, dustend, 7.0);
+        
+        
+        # create a blast particle system
+		blastcreate=CreateThing(blast, blastpos);
+        
+        # blast the debris
+		ApplyForce(section0, VectorScale(vec0, 2.0));
+        ApplyForce(section1, VectorScale(vec1, 2.0));
+        ApplyForce(section2, VectorScale(vec2, 2.0));
+        ApplyForce(player, VectorScale(forcevec, 1.0));
+        sleep(1.25);
+        
+        # Return control and camera to player
+        camslide= GetThingPos(camera);
+        SetCameraPosition(curcam, camslide);
+        SetCurrentCamera(curCam);
+        SetCameraFocus(curCam, player);
+		EndCutscene();
+           
+		}
+                
+return;
+# ........................................................................................
+damaged:
+
+	if ((GetSenderRef() == strut) && (GetParam(1) == 0x10))
+	{
+        # Prep...
+		StartCutScene(1);
+		curCam = GetCurrentCamera();
+		SetCameraPosInterp(2, 0); # kill dolly
+		SetCameraLookInterp(2, 0); # kill pan & tilt
+        
+		# Cut to Indy as he swings...
+		SetCameraFocus(2, swingcamera);
+		SetCameraSecondaryFocus(2, player);
+		SetCurrentCamera(2);
+		SetCameraFOV(70, 0, 0.0);
+		Sleep(1.0);
+        PlaySoundLocal(dangercue, 1.0, 0.0, 0x0, 0);
+	}
+return;
+
+# ........................................................................................
+entered:
+
+	If ((GetSenderRef() == dragoncue_surf) && (dragonplayed == 0))
+	{
+		dragonplayed = 1;
+		Sleep(2.0);
+		PlaySoundLocal(dragon_cue, 1.0, 0.0, 0x0, 0);
+	}
+return;
+
+
+# ........................................................................................
+end
+

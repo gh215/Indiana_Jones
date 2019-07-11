@@ -1,0 +1,219 @@
+# Jones 3D Cog Script
+#
+# BAB_Bombfloor.cog
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+    message     crossed
+   
+    thing       player                                  local
+    thing       actorindy
+    thing       turnerdoor
+    thing       turnerkey                               local
+    thing       tkeypos
+    thing       camera0
+    thing       room_tgt
+    thing       ext_pos
+    thing       ext_pos2
+    thing       ext_tgt
+    thing       turnerdoorlock
+    thing       guard
+    thing       metaldoor
+    thing       extpos2
+
+    surface     fallsurface
+    surface     doorsurface
+    
+    keyframe    in_activate=in_reach_medium.key         local
+    template    keytemplate=bronzkeymove                local
+    
+    sound       gatesqueal=bab_door_metal_slide_c.wav   local
+    sound       gatestop=bab_door_metal_stop.wav        local
+           
+    sound       keyplace=tem_monkeykey_unlock_c.wav      local
+    sound       keyunlock=tem_tikikeymove_rotate_c.wav  local
+    
+    # door locked lines...
+	sound	    in_key0=Inxj076.wav			            local # This...locked-->in_sayline[18]
+	sound	    in_key1=Inxj077.wav				        local # It's locked.
+	sound	    in_key2=Inxj078.wav				        local # Locked.
+	sound	    in_key3=Inxj082.wav				        local # keyhole here...just need key.
+	sound	    in_key4=Inxj079.wav			            local # Locked again.
+	sound	    in_key5=Inxj080.wav			            local # Locked...luck never changes.
+	sound	    in_key6=Inxj081.wav		                local # Oh no...why...always locked?
+                                                        
+	# just won't open lines...                          
+	sound	    in_door0=Inxj096.wav				    local # I can't open it-->insayline[25]
+	sound	    in_door1=Inxj097.wav			        local # For some reason...won't open.
+	sound	    in_door2=Inxj098.wav				    local # It won't budge.
+	sound	    in_door3=Inxj099.wav			        local # Something is holding this door closed.
+	sound	    in_door4=Inxj102.wav				    local # must be way...don't know how.
+                                                        
+    sound       indyline4=BB03J04.wav                   local
+    
+    int         bdone=0                                 local
+    int         placechannel                            local
+    int         movekeychannel                          local
+    int         errorcheck=0                            local
+    int         gatechannel                             local
+    
+end
+
+code
+
+# ========================================================================================
+startup:
+
+    player = GetLocalPlayerThing();
+    SetThingFlags(actorindy, 0x80000);
+    ClearAdjoinFlags(doorsurface, 0x2);                 //nomove
+           
+return;
+
+
+#----------------------------------------------------------------------------------------
+crossed:
+
+    if (GetSenderRef() == fallsurface)
+    {
+        DestroyThing(guard);
+    }   
+    
+return;
+
+#----------------------------------------------------------------------------------------
+activate:
+
+    if ((GetSenderRef() == turnerdoorlock) && (GetCurItem(player) == 103) && (bdone == 0))
+    {
+        bdone=1;
+        StartCutscene(1);
+        StopThing(player);                      //stop player
+        SetActorFlags(player, 0x200000);        //take control away from keyboard
+        //DeselectWeaponWait(player);           //deselect weapon and wait for it to finish
+        SetThingFlags(player, 0x80000);         //take the player out of the world
+        ClearThingFlags(actorindy, 0x80000);    //bring in the stunt indy
+        CopyPlayerHolsters(player, actorindy);  //copy the players holsters
+        SetCameraFocus(2, camera0);
+        SetCameraSecondaryFocus(2, room_tgt);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0);
+        PlayKey(actorindy, in_activate, 4, 0x12, 0);
+        sleep(0.35);
+        turnerkey = CreateThing(keytemplate, tkeypos);
+        CaptureThing(turnerkey);
+        placechannel=PlaySoundThing(keyplace, turnerkey, 1, 5, 10, 0);
+        WaitForSound(placechannel);
+        PlaySoundThing(keyunlock, turnerkey, 1, 5, 10, 0);
+        Sleep(0.5);
+        gatechannel = PlaySoundThing(gatesqueal, turnerdoor, 1, 10, 20, 1);
+        SetCollideType(turnerdoor, 0);
+        MoveToFrame(turnerdoor, 1, 1);
+        AISetLookThing(actorindy, room_tgt);
+        WaitForStop(turnerdoor);
+        SetCollideType(turnerdoor, 3);
+        StopSound(gatechannel, 0);
+        PlaySoundThing(gatestop, turnerdoor, 1, 10, 20, 0);
+        Sleep(1);
+        ChangeInv(player, 103, -1);
+        CopyOrientAndPos(actorindy, player);    //copy the actor's pos and orientation onto the player
+        SetThingFlags(actorindy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        ClearActorFlags(player, 0x200000);
+        SetCurrentCamera(1);
+        EndCutscene();
+        SetAdjoinFlags(doorsurface, 0x2);
+        return;
+    }
+    
+    if ((GetSenderRef() == turnerdoor) && (GetCurItem(player) != 103) && (errorcheck == 0) && (bdone == 0))
+    {
+        StartCutscene(0);
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        DeselectWeaponWait(player);
+        errorcheck = 1;
+        SetExtCamOffset('0.0 -0.18 0.12');
+	    ##### SetExtCamOffsetToThing(ext_pos);
+        PlayVoice(player, in_door0[(RandBetween(0,4))], 1, 1);
+        ##### Sleep(1);
+        RestoreExtCam();
+        errorcheck = 0;
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        return;
+    }
+    
+    if ((GetSenderRef() == turnerdoorlock) && (GetCurItem(player) != 103) && (errorcheck == 0) && (bdone == 0))
+    {
+        StartCutscene(0);
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        DeselectWeaponWait(player);
+        errorcheck = 1;
+  		SetExtCamOffset('0.1 -0.15 0.12');
+	    #### SetExtCamOffsetToThing(ext_pos);
+        PlayVoice(player, in_key0[(RandBetween(0,6))], 1, 1);
+        #### Sleep(1);
+        RestoreExtCam();
+        errorcheck = 0;
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        return;
+    }
+    
+	if (GetSenderRef() == metaldoor && (VectorY(GetThingLVecPYR(metaldoor)) > 50))
+    #### if ((GetSenderRef() == metaldoor) && (GetCurFrame(metaldoor) == 0))
+    {
+        StartCutscene(0);
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        errorcheck = 1;
+        
+		SetExtCamOffset('0.0 -0.18 0.12');
+		if (VectorX(GetThingPos(player)) < 1.675)
+		{
+			if (RandBetween(0, 2) == 0)
+			{
+				PlayVoice(player, in_door1, 1, 1);
+			}
+			else
+			{
+				PlayVoice(player, indyline4, 1, 1);
+			}
+		}
+		else
+		{
+			if (RandBetween(0, 1))
+			{
+				PlayVoice(player, in_door1, 1, 1);
+			}
+			else
+			{
+				PlayVoice(player, in_door2, 1, 1);
+			}
+		}
+	
+		#### SetExtCamOffsetToThing(ext_pos2);
+        #### PlayVoice(player, indyline4, 1, 1);
+        #### Sleep(1.5);
+
+        RestoreExtCam();	
+		errorcheck = 0;
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        return;
+    }
+    
+return;
+        
+#----------------------------------------------------------------------------------------        
+
+end

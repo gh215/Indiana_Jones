@@ -1,0 +1,46 @@
+# Jones 3D Cog Script
+#
+# pyr_sectoradjoins.cog
+#
+# Turn sector adjoins on and off
+# Bottleneck is in the middle, bracketed by triggeron, then triggeroff sectors
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+message	startup
+message entered
+
+sector	triggeron	linkid=1
+sector	triggeron2	linkid=1
+sector	triggeron3	linkid=1
+sector	triggeron4	linkid=1
+
+sector	triggeroff	linkid=0
+sector	triggeroff2	linkid=0
+sector	triggeroff3	linkid=0
+sector	triggeroff4	linkid=0
+
+sector	bottleneck	linkid=2	
+end
+
+code
+startup:
+	SetSectorAdjoins(bottleneck, 0);
+	return;
+
+entered:
+	if (GetSenderRef() == bottleneck)
+	{
+		SetSectorAdjoins(bottleneck, 1);
+		return;
+	}
+
+	SetSectorAdjoins(bottleneck, GetSenderID());
+	return;
+
+end

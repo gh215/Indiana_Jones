@@ -1,0 +1,93 @@
+# Jones 3D Cog Script
+#
+# PRU_torchlight.cog
+#	An alternative to gen_torchlight if hardcoded values are preferable.
+#	Indy reach animation plays dependent on value of reach. Flame is present but invisible at startup 
+#
+# [SXC] [RKD] [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message     activated
+message     startup
+
+thing       torch            	//the thing you light
+thing       flame	nolink		//flame, hidden at startup
+thing		dynalite			//dynamic light (to control where light is cast)
+thing		otherthing			//item that gets highlighted
+thing		player		local
+
+keyframe	liteMed=in_light_stuff.key			local
+keyframe	liteHi=in_light_stuff_high.key		local
+
+sound       burning=gen_torch_burnin_c.wav  local
+sound		fwoosh=gen_torchlitet_c.wav		local
+sector		litSector
+
+vector      minlite		local
+vector      maxlite		local
+
+flex		minradius=0.3	local
+flex		maxradius=0.3	local
+flex		dynaradius=0.6
+			
+flex		reach=0						//0 for medium, 1 for high
+flex		islit=0			local		//set to 1 if torch lights at startup
+flex		flicker=1					//set to 0 to eliminate flicker
+end
+
+# ========================================================================================
+code
+
+startup:
+    player = GetLocalPlayerThing();
+	minlite = VectorSet(0.75, 0.60, 0.16);
+	maxlite = VectorSet(0.70, 0.65, 0.45);	
+	SetThingFlags(flame, 0x10);
+	SetThingLight(torch, VectorSet(0.0, 0.0, 0.0), 0.3, 0.1);
+    return;
+# ........................................................................................
+activated:
+	if (islit) return;
+	if ((GetCurWeapon(player) != 13) && (!InEditor())) return;
+	islit = 1;
+	
+	StartCutscene(1);	
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	if (reach == 0)
+	{
+		PlayKey(player, liteMed, 4, 0x12, 1);
+	}
+	else if (reach == 1)
+	{
+		PlayKey(player, litehi, 4, 0x12, 1);
+	}
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+
+	ClearThingFlags(flame, 0x10);
+    PlaySoundThing(fwoosh, torch, 0.4, 3, 10, 0);
+	SetThingLight(torch, minlite, 0.3, 0.5);                           
+	if (litSector)
+	{
+        SetSectorLight(litSector, '0.1 0.3 0.5', 2.0);
+	}
+	if (dynalite)
+	{
+		SetThingLight(dynalite, maxlite, dynaradius, 0.5);
+	}
+	if (otherthing)
+	{
+		Print("lighting other thing");
+		SetThingLight(otherthing, maxlite, 0.01, 0.5);
+	}
+	PlaySoundThing(burning, torch, 1, 5, 7, 1);
+	
+	if (flicker == 0) return;
+	ThingLightAnim(torch, minlite, minradius, maxlite, maxradius, 2);
+	return;
+end

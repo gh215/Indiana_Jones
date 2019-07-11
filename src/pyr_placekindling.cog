@@ -1,0 +1,122 @@
+# Jones 3D Cog Script
+#
+# pyr_placekindling.cog
+#	
+# Put kindling on the lightbox platform
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message startup
+message activated
+
+# world things
+thing	kindling	nolink
+thing	player		nolink	local
+thing	kindlingbox
+
+# indy's saylines
+sound	there=inxj108.wav	local
+sound	nothing=inxj218.wav	local
+
+# sfx
+sound	putwood=gen_machete_hit_wood.wav	local
+
+# subroutines
+flex	startscene=0.0		local
+flex	endscene=0.0		local
+flex	fixcams=0.0			local
+end
+
+code
+startup:
+	#make kindling invisible	
+	SetThingFlags(kindling, 0x10);
+	return;
+
+activated:
+# ---> kindlingbox (larger invisible standin for kindling)
+
+	if (GetSenderRef() != kindlingbox) return;
+	
+	player = GetLocalPlayerThing();
+	
+	if ((GetThingFlags(kindling) & 0x10) && (GetCurItem(player) != 92))
+	{
+		# prepare the player and play voicelines
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		StartCutscene(1);
+		
+		SetExtCamOffset('0.07 -0.13 0.13');
+		sleep(.5);
+
+		PlayVoice(player, nothing, 1, 1);
+
+		sleep(.5);
+		RestoreExtCam();
+		ClearActorFlags(player, 0x200000);
+		EndCutscene();
+
+		return;
+	}
+	
+	if (GetCurItem(player) == 92)
+	{
+		# prepare the player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		call startscene;
+		
+		#place kindling
+		PlayMode(player, 60, 0);
+		Sleep(.5);
+		
+		# make kindling visible
+		PlaySoundThing(putwood, kindling, 1, .1, 10, 0);
+		ClearThingFlags(kindling, 0x10);
+		ChangeInv(player, 92, -1);
+
+		PlayVoice(player, there, 1, 1);
+	
+		sleep(.5);
+		
+		call endscene;
+	}
+
+	return;
+
+
+startscene:
+	call fixcams;
+
+	StartCutscene(1);
+	SetActorFlags(player, 0x200000);
+			
+	SetExtCamOffset('0.07 -0.13 0.13');
+
+	return;
+				
+endscene:
+	call fixcams;
+	
+	ClearActorFlags(player, 0x200000);
+	
+	EndCutscene();
+	return;
+	
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	RestoreExtCam();
+	return;
+	
+
+end

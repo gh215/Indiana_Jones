@@ -1,0 +1,40 @@
+           # Jones 3D Cog Script
+#
+# gen_SectorDoor.cog
+#
+#
+# This door is activated by entering a sector.
+#
+#
+# (PAZ)
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+        message         entered
+        
+        thing           door
+        
+        sector          sector1
+                                                                                
+        float           speed=5.0
+        
+                
+end
+
+#=========================================================================================
+
+code
+
+entered:
+
+        
+        
+        MoveToFrame(door, 1, speed);
+               
+                
+        return;
+        
+end

@@ -1,0 +1,620 @@
+# Jones 3D Cog Script
+#
+# SHS_Clock.cog      Set the clock for the bellringer to come out.  
+#
+# [PKM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message		activated
+message		startup
+message		timer
+message		pulse
+message		arrived
+message		callback
+message		user0
+message		user1
+message		user2
+message		crossed
+
+surface		soundon
+surface		soundoff
+
+thing		hourHand
+thing		minuteHand
+thing		bellRinger
+thing		gearTick
+thing		spokeThing		// 12 o'clock
+thing		spokeThing1		// 1 o'clock
+thing		spokeThing2		// 2 o'clock
+thing		spokeThing3		// 3 o'clock
+thing		spokeThing4		// 4 o'clock
+thing		spokeThing5		// 5 o'clock
+thing		spokeThing6		// 6 o'clock
+thing		spokeThing7		// 7 o'clock
+thing		spokeThing8		// 8 o'clock
+thing		spokeThing9		// 9 o'clock
+thing		spokeThing10	// 10 o'clock
+thing		spokeThing11	// 11 o'clock
+thing		spokeSwitch
+thing		indy
+thing		indyMark											// Mark that Indy gets teleported to when throwing the switch
+thing		indyMark2											// Mark that Indy gets teleported to after throwing the switch
+thing		ClockGhost											// Ghost object to force clock hand orientation.
+thing		clockCamera									nolink	// Camera position for viewing the clock face
+thing		clockCameraTarget							nolink	// Moving target to track from Indy to the clock
+thing		bellRingerCamera							nolink	// Camera for viewing bellringer
+thing		bellRingerCamera2							nolink	// Camera for viewing bellringer
+thing		bellRingerCameraTarget						nolink	// Target for viewing bellringer
+thing		bellRingerCameraTarget2						nolink	// Target for viewing bellringer second time
+thing		player										local
+thing		currentCamera								local
+thing		indyTeleportGhost							local
+
+cog			hintCog											# Update Hint cog
+cog		    movieCog										// COG that controls the switch to start moving the bellringer.
+cog			NoWorkTalkcog									# clock not powered
+
+keyframe	indyPull=in_pull_lever_down.key				local
+keyframe	leverDown=gen_lever.key						local
+keyframe	bellRingerSpin=0ri_roll_fwd_nowheels.key	local
+keyframe	gear_tick_k
+
+
+sound		leverPull=nub_lever_pull_c.wav				local
+sound		leverBack=nub_lever_reset_c.wav				local
+sound 		minute_sound=shs_ticking.wav				local
+sound		hour_sound=shs_clockhand.wav				local		
+sound		bellringer_start=shs_bringer_start.wav 		local
+sound		bellringer_spin=shs_bringer_spin.wav		local
+sound		spoke_move=shs_clock_tab.wav				local
+sound 		music=mus_gen_magic1.wav					local
+sound		gearTicking=shs_gear_clunk2.wav				local
+
+
+vector		cameraPosition								local
+vector		minuteHandYaw								local	// Vector for computing new orientation of minute hand.
+vector		indyTeleportOffset							local	// Vector for offset of Indy's teleport position.
+vector		indyTeleportPos								local	// Vector for final position to teleport Indy to.
+vector		indyOrient									local
+vector		indyTeleportOrient							local
+
+template	ghostTemplate=ghost							local
+
+int			spokeIndex=-1								local
+int			minuteHandIndex						  		local	// Start position of the minute hand in minutes - must match placement of 3DO in world.
+int			hourHandIndex								local	// Start position of the hour hand in hours - must match placement of 3DO in the world.
+int			clockIsPowered								local	// This should be set to 1 after we receive the appropriate message.
+int			bellRingerSpinning							local	// Whether the bellringer is currently spinning.
+int			leverPullCount								local	// Whether the lever has been pulled yet.
+int			cutsceneGoing								local	// Whether ot not a cutscene is currently playing.
+int			spinTrack									local	// Keyframe track of the bellringer spinning.
+int			stopBellRingerOnCallback					local	// Indicates to the callback message that the bellringer needs to stop.
+int			waitForHourHand								local	// Set to 0 by the arrived message when the hour hand reaches its mark.
+int			minuteCountdown								local	// Number of seconds left in current spoke movement mini-cutscene
+int			bBellRingerShowing							local	// Whether camera is currently showing bellringer	
+int			spinLoop									local	// loop of spinning 
+int			gearLoop									local   // loop of ticking
+int			gearTick_track								local   // loop of anim
+int			canHear=0									local	// clock sounds in range	
+
+flex		minuteTime=1.0;								local	// One minute of real time equals this number of seconds.
+flex		minuteRotateTime=0.25;						local	// The minute hand takes this many of seconds to get to its next position.
+flex		hourRotateTime=0.5;							local	// The hour hand takes this many seconds to get to its next position.
+flex		spokeMoveSpeed=1.0;							local	// Spokes move this fast when going to their new positions.
+flex		bellRingerCameraMoveSpeed=0.3				local	// Speed at which the bell ringer camera moves.
+flex		bellRingerCameraTargetMoveSpeed=0.19		local	// Speed at which the bell ringer camera target moves.
+
+#SUBROUTINES
+
+flex		startbellringer								local
+flex		stopbellringer								local
+flex		pulllever									local
+flex	  	clockCutscene								local
+
+
+end
+
+# ========================================================================================
+
+code
+
+
+startup:
+	spokeIndex = -1;		// -1 means the spokes have never been moved.
+	minuteHandIndex = 10;	// This needs to be set one minute behind the actual placement of the 3DO
+	hourHandIndex = 10;		// Current position of the hour hand.  The hands are placed in the level at 10:00 and 2:00.
+	bellRingerSpinning = 0;
+	leverPullCount = 0;
+	cutsceneGoing = 0;
+	stopBellRingerOnCallback = 0;
+	waitForHourHand = 0;
+	bBellRingerShowing = 0;
+
+//	clockIsPowered = 1;
+//	SetPulse(minuteTime);	// This should actually happen after we get the clock powered message.
+
+	ClearThingFlags(bellringer, 0x80000); # reveal the bellringer
+	AISetMode(bellringer, 0x2000); # reveal the bellringer
+	SetThingMass(bellRinger, 0);
+
+	spinTrack = PlayKey(bellRinger, bellRingerSpin, 4, 0x10, 0);
+	PauseKey(bellRinger, spinTrack);
+    SetThingLight(gearTick, '0.2 0.2 0.2', 0.01, 0.01);
+	SetThingLight(bellRinger, '0.1 0.1 0.1', 0.01, 0.01);
+	
+    return;
+
+# ...................................................................
+
+activated:
+   	
+	# handles no power activation - JC
+	if ((clockIsPowered == 0) && (GetSenderRef() == spokeSwitch))
+	{
+		call pullLever;
+		SendMessageEx(NoWorkTalkCog, user1, 0, 0, 0, 0);
+		global15 = 0; # per Randy
+		while (global15 == 0)
+		{
+			Sleep(0.01); # wait for line to finish
+		}
+		# cleanup
+		cameraPosition = GetThingPos(clockCamera); 
+		SetCameraPosition(1, cameraPosition);			# prep to swing back to follow-cam
+
+		CopyOrientAndPos(indy, player);					# move player to actor's spot
+		SetThingFlags(indy, 0x80000);					# hide actor
+
+		ClearThingFlags(player, 0x80000);				# player visible
+		ClearActorFlags(player, 0x200000);				# player in control
+
+		SetCameraLookInterp(2, 0);						# kill pan & tilt mode
+		SetCameraPosInterp(2, 0);						# kill dolly mode
+
+		Sleep(0.01);
+        ResetCameraFOV(0, 0.0);							# reset camera 2 to default
+        SetCurrentCamera(1);
+		
+		EndCutscene();
+	}
+    
+
+	if (clockIsPowered && !cutsceneGoing && (GetSenderRef() == spokeSwitch))
+	{
+		currentCamera = GetCurrentCamera();							// Save off the current camera for later
+		if (leverPullCount > 0)
+		{
+			cutsceneGoing = 1;
+
+			call pullLever;											// Show Indy pulling the lever
+
+			SetCameraLookInterp(2, 0);								// Kill pan & tilt mode
+			SetCameraPosInterp(2, 0);								// Kill dolly mode
+			SetCameraFocus(2, clockCamera);
+			SetCameraSecondaryFocus(2, clockCameraTarget);			// Show the clock face while the spokes move.
+			SetCurrentCamera(2);
+			SetCameraFOV(55, 1, 0.01);
+			Sleep(0.01);
+
+			if (spokeIndex < 0)
+			{
+				spokeIndex = hourHandIndex;							// No spoke is currently out - synch it to the hour hand.
+			}
+			else
+			{
+				MoveToFrame(spokeThing[spokeIndex], 0, spokeMoveSpeed);	// Move current spoke back to former position.
+				spokeIndex = (spokeIndex + 1) % 12;						// Move the spoke one tick clockwise.
+			}
+
+			MoveToFrame(spokeThing[spokeIndex], 1, spokeMoveSpeed);	// Move new spoke out to new position.
+            PlaySoundLocal(spoke_move, 1.0, 0, 0x0000, 0);
+
+			minuteCountdown = 3;									// The minute hand decrements this variable.  When it reaches 0, stop the cutscene.
+			while (minuteCountdown)
+				Sleep(0.01);
+
+			if (spokeIndex == hourHandIndex)
+			{
+				// If the player has just moved the spoke onto the hour hand, show the bellringer - briefly.
+
+				# Prep camera & cut...
+				SetCameraLookInterp(2, 0);								# kill pan & tilt to lock on 2nd target
+				SetCameraPosInterp(2, 0);								# kill dolly mode too
+				SetCameraFocus(2, bellRingerCamera2);
+				SetCameraSecondaryFocus(2, bellRingerCameraTarget2);
+				SetCurrentCamera(2);
+				SetCameraFOV(50, 0, 0.0);
+				Sleep(0.001);
+				SetCameraFOV(45, 1, 3.0);
+				Sleep(3.0);
+			}
+		}
+		else
+		{
+			call clockCutscene;
+		}
+
+		// We're currently showing a cutscene, either of the clock face or of Indy, so get things back to normal.
+
+		cutsceneGoing = 0;
+
+		cameraPosition = GetThingPos(clockCamera); 
+		SetCameraPosition(1, cameraPosition);			# prep to swing back to follow-cam
+
+		CopyOrientAndPos(indy, player);					# move player to actor's spot
+		SetThingFlags(indy, 0x80000);					# hide actor
+
+		ClearThingFlags(player, 0x80000);				# player visible
+		ClearActorFlags(player, 0x200000);				# player in control
+
+		SetCameraLookInterp(2, 0);						# kill pan & tilt mode
+		SetCameraPosInterp(2, 0);						# kill dolly mode
+
+		Sleep(0.01);
+
+		if (leverPullCount)
+		{
+			TeleportThing(player, indyMark2);			// Get the player lined up with the switch better.
+		}
+		else
+		{
+			TeleportThing(player, indyTeleportGhost);	// Put the player over by the edge of the platform.
+			SetThingLVecPYR(player, indyTeleportOrient);
+		}
+
+		leverPullCount = 1;
+
+		SetCurrentCamera(currentCamera);
+		ResetCameraFOV(0, 0.0);
+
+		EndCutscene();
+
+		if (spokeIndex != hourHandIndex)
+		{
+			// The current spoke is not next to the hour hand - stop the bellringer.
+			if (bellRingerSpinning)
+				stopBellRingerOnCallback = 1;
+//			call stopBellRinger;
+		}
+	}
+    
+    return;
+
+# ...................................................................
+timer:
+	call pulse;
+	SetPulse(minuteTime);
+	return;
+
+pulse:
+	Rotate(minuteHand, 6, 1, minuteRotateTime);			// Advance minuteHand 6 degrees (which is one minute)
+	minuteHandIndex = (minuteHandIndex + 1) % 60;		// Keep track of minutes (0 to 59 inclusive).
+	
+	# Check whether cutscene is happening. Play minute sound.
+	if ((cutsceneGoing == 0) || (bBellRingerShowing == 1))
+	{
+		if (canHear == 1)
+			PlaySoundThing(minute_sound, minuteHand, 1, 5, 20, 0x80);
+	}
+	else
+		PlaySoundLocal(minute_sound, .5, 0, 0x0000, 0);
+
+	if (minuteCountdown > 0)
+		minuteCountdown = minuteCountdown - 1;
+
+	if (minuteHandIndex == 0)
+	{
+		if (spokeIndex == hourHandIndex)
+		{
+			if (bellRingerSpinning)
+				stopBellRingerOnCallback = 1;
+//			call stopBellRinger;		// The hour hand is about to move away from the correct spoke - stop the bellringer.
+		}
+
+		if (hourHandIndex == spokeIndex)
+		{
+			// We're about to move the hour hand off the spoke, so retract the spoke.
+			MoveToFrame(spokeThing[spokeIndex], 0, spokeMoveSpeed);
+			spokeIndex = -1;
+		}
+
+		Rotate(hourHand, 30, 1, hourRotateTime);		// Advance hour hand 30 degrees
+		hourHandIndex = (hourHandIndex + 1) % 12;		// Keep track of hours (0 to 11 inclusive).
+		
+		if ((cutsceneGoing == 0) || (bBellRingerShowing == 1))
+		{
+			if (canHear == 1)
+				PlaySoundThing(hour_sound, hourHand, 1, 5, 18, 0x80);
+		}
+		else
+			PlaySoundLocal(hour_sound, .5,  0, 0x0000, 0);
+        
+	}
+
+	return;
+
+# ...................................................................
+
+arrived:
+	if (cutsceneGoing == 2)		// If we're showing the big clock/bellringer cutscene, don't mess with the bellringer.
+	{
+		if (GetSenderRef() == hourHand)
+			waitForHourHand = 0;		// Make sure the cutscene knows the hour hand has arrived.
+		return;
+	}
+
+	if ((GetSenderRef() == hourHand) || (GetSenderRef() == spokeThing[spokeIndex]))
+	{
+		if (hourHandIndex == 0)
+			CopyOrient(ClockGhost, hourHand);
+
+		// The hour hand or a spoke has finished moving - check to see if we need to start the bellringer.
+
+		if (spokeIndex == hourHandIndex)
+		{
+			// The hour hand has just run into the correct spoke - start the bellringer.
+			call startBellRinger;
+		}
+	}
+	else
+	{
+		if (minuteHandIndex == 0)
+			CopyOrient(ClockGhost, minuteHand);
+	}
+
+	return;
+    
+# ...................................................................
+crossed:
+
+	if (GetSenderRef() == soundOn) 
+	{
+		canHear = 1;
+    }
+    if (GetSenderRef() == soundOff)
+	{
+		canHear = 0;
+	}
+
+	return;
+
+# ...................................................................
+clockCutscene:
+	// This is the first time the player has pulled the lever - let's do a fancy cutscene to demonstrate what the lever does.
+
+	cutsceneGoing = 2;
+
+	SetPulse(0);									// Temporarily halt our pulse messages while we tweak the clock a bit.
+
+	spokeIndex = (hourHandIndex + 1) % 12;			// Make the first spoke to move be just past the hour hand.
+
+	StopThing(minuteHand);							// If the minute hand is rotating, stop it.
+	minuteHandYaw = VectorSet(0.0, -24.0, 0.0);		// Yaw is in world coords.  0 degrees == 9 o'clock, -30 == 10 o'clock
+	RotateToPyr(minuteHand, minuteHandYaw, 0.01);	// Force the minute hand to the right position.
+	minuteHandIndex = 49;							// NOTE: Make sure this matches the orientation specified in minuteHandYaw!!!
+
+	SetPulse(minuteTime);							// Start the clock again.
+
+	call pullLever;									// Show the player pulling the lever.
+
+	indyTeleportOffset = VectorTransformToOrient(indy, '0.0 -0.2 0.0');
+	indyTeleportPos = VectorAdd(indyTeleportOffset, GetThingPos(indy));
+	indyOrient = GetThingLVecPYR(indy);
+	indyTeleportOrient = VectorSet(VectorX(indyOrient), (VectorY(indyOrient) + 180) % 360, VectorZ(indyOrient));
+
+	indyTeleportGhost = CreateThingAtPos(ghostTemplate,
+										 FindNewSectorFromThing(indy, indyTeleportPos),
+										 indyTeleportPos, '0 0 0');
+	SetThingMaxRotVel(indy, 50);
+	AISetLookThingEyeLevel(indy, indyTeleportGhost);
+
+    SetCameraLookInterp(2, 1);						# enable pan & tilt
+	Sleep(0.01);
+
+	SetCameraInterpSpeed(2, 5.0);					# magic numbers
+	SetCameraFocus(2, clockCamera);
+	SetCameraSecondaryFocus(2, clockCameraTarget);
+	SetCameraFOV(55, 1, 5.0);						# match duration of camera move
+
+	MoveToFrame(ClockCameraTarget, 1, 2.2);			# magic numbers
+
+    Sleep(4.5);										// Wait for camera interp & FOV change to finish
+
+	waitForHourHand = 1;							// We need to wait for the hour hand to get to the next tick before we proceed.
+
+	MoveToFrame(spokeThing[spokeIndex], 1, spokeMoveSpeed);	// Move new spoke out to new position.
+    PlaySoundLocal(spoke_move, 1.0, 0, 0x0000, 0);
+     
+	while (waitForHourHand == 1)					// The arrived message will tell us when the hour hand is in place.
+		Sleep(0.5);
+
+	call stopBellRinger;
+
+	// Now cut to the bellringer.
+
+	bBellRingerShowing = 1;
+
+	# Prep camera & cut...
+	SetCameraLookInterp(2, 0);								# kill pan & tilt to lock on 2nd target
+	SetCameraPosInterp(2, 0);								# kill dolly mode too
+	SetCameraFocus(2, bellRingerCamera);
+	SetCameraSecondaryFocus(2, bellRingerCameraTarget);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0);
+	Sleep(0.01);
+
+    # play music
+    PlaySoundLocal(music, 1.0, 0, 0x0000, 0);
+
+	MoveToFrame(bellRingerCamera, 1, bellRingerCameraMoveSpeed);	// Dolly us in a bit.
+	MoveToFrame(bellRingerCameraTarget, 1, bellRingerCameraTargetMoveSpeed);
+
+	SetCameraFOV(50, 0, 6.0);
+	Sleep(1.0);
+
+    PlaySoundLocal(bellringer_start, 1.0, 0, 0x0, 0);
+    ResumeKey(bellRinger, spinTrack);				// Start the bellringer spinning.
+    spinLoop=PlaySoundLocal(bellringer_spin, 1.0, 0, 0x0001, 0);
+
+	Sleep(6.0);										// Wait a bit while we dolly & zoom in.
+
+	// Time for some more trickery - we're going to pretend that a full minute has gone by and show the player what happens
+	// when the hour hand moves off the spoke.
+
+	stopBellRingerOnCallback = 1;					// Tell the endanim callback to stop the bell ringer.
+	while (stopBellRingerOnCallback == 1)			// Wait for the animation callback to tell us we're stopped.
+		Sleep(0.1);
+	Sleep(1.0);										// Allow the player time to contemplate the fact that he's stopped.
+
+	SetPulse(0);
+	StopThing(minuteHand);							// If the minute hand is rotating, stop it.
+	minuteHandYaw = VectorSet(0.0, -84.0, 0.0);		// Yaw is in world coords.  0 degrees == 9 o'clock, -30 == 10 o'clock.
+	RotateToPyr(minuteHand, minuteHandYaw, 0.001);	// Force the minute hand to the right position.
+	minuteHandIndex = 59;							// NOTE: Make sure this matches the orientation specified in minuteHandYaw!!!
+	Sleep(0.001);									// Give the minute hand time to get where it's going.
+	SetTimer(0.1);									// Start the clock again.
+
+    bBellRingerShowing = 0;
+	
+	SetCameraLookInterp(2, 0);						# kill pan & tilt to lock on 2nd target
+	SetCameraPosInterp(2, 0);						# kill dolly mode too
+	SetCameraFocus(2, clockCamera);
+	SetCameraSecondaryFocus(2, clockCameraTarget);
+	SetCurrentCamera(2);
+	SetCameraFOV(55, 0, 0.01);
+
+	minuteCountdown = 2;							// The minute hand decrements this variable.  When it reaches 0, stop the cutscene.
+	while (minuteCountdown)
+		Sleep(0.01);
+
+	return;
+
+
+startBellRinger:
+	stopBellRingerOnCallback = 0;
+	if (bellRingerSpinning == 0)
+	{
+		PlaySoundThing(bellringer_start, bellringer, 1, 3, 10, 0x80);
+        ResumeKey(bellRinger, spinTrack);			// Start the bellringer spinning.
+		spinLoop=PlaySoundThing(bellringer_spin, bellringer, 1, 3, 10, 0x81);
+		
+		bellRingerSpinning = 1;
+		SendMessage(movieCog, user1);					// Send the bell cog a user1 message to let it know we're spinning.
+	    SendMessage(hintCog, user1);					# Same as above, except to hint cog.
+	}
+
+	return;
+
+# ...................................................................
+
+stopBellRinger:
+	if (bellRingerSpinning == 1)
+	{
+		PauseKey(bellRinger, spinTrack);
+		StopSound(spinLoop, 0.0);
+		bellRingerSpinning = 0;
+		SendMessage(movieCog, user0);					// Send the bell cog a user0 message to let it know we've stopped.
+		SendMessage(hintCog, user0);					# same as above, except to hint cog
+		
+	}
+
+	return;
+
+pullLever:
+	player = GetLocalPlayerThing();
+
+	# Prep for cutscene...
+	StartCutscene(1);
+	currentCamera = GetCurrentCamera();
+	
+	# Disable and hide player...
+	StopThing(player);					# right now
+	PlayMode(player, 1, 0);				# get him into a nice stand
+	DeselectWeapon(player);				# stow any weapon or lighter
+	
+	CopyPlayerHolsters(player, indy);	# make sure our actor has matching props
+	Sleep(0.5);							# give him some time to do his stuff
+	
+	# Switch actor indy for player...
+	TeleportThing(indy, indyMark);
+	SetThingFlags(player, 0x80000);		# hide him
+	SetActorFlags(player, 0x200000);	# paralyze him
+	ClearThingFlags(indy, 0x80000);		# reveal our actor
+	
+	# Prep camera & cut...
+	SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+	SetCameraPosInterp(2, 0);			# kill dolly mode too
+	SetCameraFocus(2, clockCamera);
+	SetCameraSecondaryFocus(2, indyMark);
+	SetCurrentCamera(2);
+	SetCameraFOV(35, 0, 0.01); # was 50
+	Sleep(0.01);
+
+	PlayKey(spokeSwitch, leverDown, 4, 0x12, 0);
+	PlayKey(indy, indyPull, 4, 0x12, 0);
+	Sleep(1.2);
+	PlaySoundLocal(leverPull, 1.0, 0, 0x0000, 0);
+	Sleep(1.4);
+	PlaySoundLocal(leverBack, 1.0, 0, 0x0000, 0);
+	Sleep(0.3);
+
+	return;
+
+callback:
+	// We've reached the end of the bellringer spin animation.  Check to see if we need to stop him.
+	if (stopBellRingerOnCallback == 1)
+	{
+		StopThing(bellRingerCamera);			// Stop the camera.
+		StopThing(bellRingerCameraTarget);		// And the camera target.
+		PauseKey(bellRinger, spinTrack);		// Now stop the bellringer.
+		StopSound(spinLoop, 0.0);
+		stopBellRingerOnCallback = 0;
+		bellRingerSpinning = 0;
+	}
+	return;
+
+user0:
+	// We're being told that the clock is no longer powered.
+	clockIsPowered = 0;
+	SetPulse(0);
+	if (bellRingerSpinning)
+		stopBellRingerOnCallback = 1;
+//	call stopBellRinger;
+	StopKey(gearTick, gearTick_track, 0);
+	StopSound(gearLoop, 0.0);
+	
+	return;
+
+user1:
+	// We're being told that the clock is now powered, so start things up!
+	clockIsPowered = 1;
+	SetPulse(minuteTime);
+	if (spokeIndex == hourHandIndex)
+		call startBellRinger;
+	gearTick_track=PlayKey(gearTick, gear_tick_k, 4, 0x10, 0);
+	gearLoop=PlaySoundThing(gearTicking, gearTick, 1, 2, 8, 0x81);
+	
+	
+	return;
+
+user2:
+	// We're being told to stop the bellringer from spinning.
+	StopKey(bellRinger, spinTrack, 0);
+	spinTrack = PlayKey(bellRinger, bellRingerSpin, 4, 0x10, 0);
+	PauseKey(bellRinger, spinTrack);
+	StopSound(spinloop, 0.0);
+	bellRingerSpinning = 0;
+	stopBellRingerOnCallback = 0;
+	SendMessage(movieCog, user0);					// Send the bell cog a user0 message to let it know we've stopped.
+	SendMessage(hintCog, user0);					# same as above, except to hint cog
+	MoveToFrame(spokeThing[spokeIndex], 0, spokeMoveSpeed);
+	spokeIndex = -1;
+
+	return;
+
+end

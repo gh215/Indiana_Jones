@@ -1,0 +1,164 @@
+# Jones 3D Cog Script
+#
+# TEM_MeetWarrior.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    
+    thing       player          local
+    thing       indy            local
+    
+    thing       warrior
+    thing       cam_Meet
+    thing       meet_Targ       # cam_Meet focus
+    
+    thing       lookTarg1
+    thing       walkTarg1
+    
+    thing       lw_lookTarg1
+    thing       lw_walkTarg1
+    
+    sector      trig_Meet
+    sector      lookAtMe
+    
+    keyframe    warrior_Roar=lw_roar.key                local
+    keyframe    indy_Startled=0in_startled_1_1.key      local
+    keyframe    indy_Stand=in_stand.key                 local
+    
+    template    tpl_Indy=indy_sh_actor          local
+    
+    sound       say_RocksMove=tm02j01.wav           local   # Haaa!  The rocks move...
+    sound       snd_Roar=tem_warrior_roar_c.wav     local   # like, roar.
+    
+    ai			awake=lavawarrior.ai			local
+    
+    vector      curVel          local
+    
+    flex        speedO          local
+    
+    int         curCam          local
+    int         done=0          local
+    int         voiceLine       local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    return;
+
+# ========================================================================================
+
+entered:
+    
+    curCam = GetCurrentCamera();
+    
+    if((GetSenderRef() == trig_Meet) && (done == 0))
+    {
+        done = 1;
+        
+        # get player speed and translate to flex
+        #curVel = GetThingVel(player);
+        #speedO = VectorLen(curVel);
+    
+        # do cutscene stuff
+        MakeMeStop();
+        StartCutscene(2);
+
+        # switch to cam_Meet
+        SetCameraFocus(2, cam_Meet);
+        SetCameraSecondaryFocus(2, meet_Targ);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0.0);
+        
+        # create indy actor
+        indy = CreateThing(tpl_Indy, player);
+        CaptureThing(indy);
+        
+        # outfit indy actor
+        DeselectWeaponWait(player);
+        CopyPlayerHolsters(player, indy);
+        
+        # hide player show indy
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(indy, 0x80000);
+        
+        # wake up lava warrior
+		#AISetMode(warrior, 0x4);	# MODE = SEARCHING
+		AISetMode(warrior, 0x2);	# MODE = ATTACKING
+		
+        # walk indy closer to warrior
+        AISetMoveSpeed(indy, 1.0);
+        AISetLookThing(indy, lookTarg1);
+        AISetMoveThing(indy, walkTarg1, 0);
+        
+        # warrior looks towards indy
+        AISetLookThing(warrior, lw_lookTarg1);
+        
+        # play roar keyframe on warrior
+        PlaySoundThing(snd_Roar, warrior, 1.0, 15.0, 25.0, 0);
+        #AISetCutsceneMode(warrior);
+        PlayKey(warrior, warrior_Roar, 4, 0x12, 1);
+        #AIClearCutsceneMode(warrior);
+        
+        #AIWaitForStop(indy);
+        
+        # play startled animation
+        PlayKey(indy, indy_Startled, 4, 0x12, 0);
+        
+        # say voice line
+        voiceLine = PlayVoice(indy, say_RocksMove, 1.0, 0);
+        
+        Print("hi");
+        
+        # walk warrior closer to indy
+        AISetMoveSpeed(warrior, 0.6);   # 0.4
+        AISetMoveThing(warrior, lw_walkTarg1, 1);
+        
+        Print("hi2");
+        
+        WaitForSound(voiceLine);
+        
+        Print("hi3");
+        
+        Sleep(0.5);
+        
+        # Get the player into position
+        CopyOrientAndPos(indy, player);
+        
+        # stop any unfinished animations
+        ResetThing(player);
+        
+        # hide actor show player
+        SetThingFlags(indy, 0x80000);
+        ClearThingFlags(player, 0x80000);
+        
+        # return camera to player
+        SetCameraPosition(curcam, GetThingPos(cam_Meet));
+        SetCurrentCamera(curCam);
+        
+        # Return control to player
+        ClearActorFlags(player, 0x200000);
+        EndCutscene();
+        
+        # enable warrior ai
+        #AIClearCutsceneMode(warrior);
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

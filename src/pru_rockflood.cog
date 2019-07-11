@@ -1,0 +1,310 @@
+# Jones 3D Cog Script
+#
+# pru_rockflood.cog
+#
+# Push a rock 3DO to flood the "bottomless" pit.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ============================================================================
+symbols
+
+message	startup
+message	arrived
+message	entered
+message	exited
+
+cog			hint
+
+thing		rock
+thing		ghostpoint		nolink		#ghost 'cause water's too big
+thing		camera0			nolink
+thing		target0
+thing		rotateThing0	nolink
+thing		splashGhost0	nolink
+thing		watersurface
+thing		splash0			local
+thing		splash1			local
+thing		bigX			nolink
+thing		root			nolink
+thing		player			local
+thing		sender			local
+thing		source			local
+
+sector		teeter			mask=0x480
+sector		teeter2			nolink
+
+sector		watersector0	mask=0x100
+sector		watersector1	mask=0x100
+sector		watersector2	mask=0x100
+sector		watersector3	mask=0x100
+sector		watersector4	mask=0x100
+sector		watersector5	mask=0x100
+sector		watersector6	mask=0x100
+sector		watersector7	mask=0x100
+
+sector		othersector0	nolink
+sector		othersector1	nolink
+sector		othersector2	nolink
+sector		crack			nolink
+sector		treasuresector	nolink
+
+surface		top0			nolink
+surface		top1			nolink
+surface		bottomsurface0	nolink
+surface		bottomsurface1	nolink
+surface		bottomsurface2	nolink
+surface		bottomsurface3	nolink
+
+surface		whirlsurf0		nolink
+surface		whirlsurf1		nolink
+surface		whirlsurf2		nolink
+surface		whirlsurf3		nolink
+surface		whirlsurf4		nolink
+surface		whirlsurf5		nolink
+surface		whirlsurf6		nolink
+surface		whirlsurf7		nolink
+surface		whirlsurf8		nolink
+surface		whirlsurf9		nolink
+surface		whirlsurf10		nolink
+surface		whirlsurf11		nolink
+surface		whirlsurf12		nolink
+surface		whirlsurf13		nolink
+surface		whirlsurf14		nolink
+surface		whirlsurf15		nolink
+surface		whirlsurf16		nolink
+surface		whirlsurf17		nolink
+surface		whirlsurf18		nolink
+surface		whirlsurf19		nolink
+surface		whirlsurf20		nolink
+surface		whirlsurf21		nolink
+surface		whirlsurf22		nolink
+surface		whirlsurf23		nolink
+surface		whirlsurf24		nolink
+surface		whirlsurf25		nolink
+
+surface		moveSurf 
+surface		bldrPlatform	nolink
+surface		readytoPush
+
+int			curCam			local
+int			index=0			local
+int			surfIndex=0		local
+int			numSurfs=26		local
+int			rise0			local
+int			rise1			local
+
+vector		veclight		local
+
+material	splashmat=gen_a4sfx_splash.MAT		local
+material	spraymat=gen_a4sprite_wfspray.mat	local
+
+template	splashTpl=splshblck					local
+template	splashSprTpl0=bigrocksplash			local
+
+sound		gurgle=gen_underwater_a.wav			local
+sound		splashSnd=lag_torp_splash_c.wav		local
+sound		risingSnd0=nub_bull_move2_c.wav		local
+sound		risingSnd1=nub_bull_move1_c.wav		local
+sound		streamSnd=olv_stream_a.wav			local
+sound		floodMus=mus_lag_swimship.wav		local
+
+end
+
+# ============================================================================
+code
+startup:
+
+player = GetLocalPlayerThing();
+veclight = VectorSet(0, 0.2, 0.8);
+
+#turn "off" the surface of the water at the top of the pit
+SetFaceGeoMode(top0,0);
+SetFaceGeoMode(top1,0);
+
+ThingFadeAnim(watersurface, 1, 0, 1, 0);
+AttachThingToThing(bigX, rock);
+
+SetCollideType(watersurface, 0);
+
+return;
+
+#............................................................................
+arrived:
+
+sender = GetSenderRef();
+
+if (sender == rock)
+{
+	if (GetCurFrame(rock) != 2) return;
+
+	#Rock blocks opening, water begins to flood the pit.
+	Sleep(0.5);
+	#Print("block arrived at frame 2");
+	ThingFadeAnim(watersurface, 0, 1, 1, 0);
+	#Print("making watersurface visible");
+
+	AttachThingToThing(ghostpoint, watersurface);
+	MoveToFrame(watersurface, 1, 1.5);
+	#Print("moving watersurface");
+
+	rise0=PlaySoundThing(risingSnd0, watersurface, 1, -1,-1, 1);
+	#Print("Playing sound on watersurface");
+
+	#"Water surface" at lower stream is turned off
+	SetFaceGeoMode(bottomsurface0, 0);
+	SetFaceGeoMode(bottomsurface1, 0);
+	SetFaceGeoMode(bottomsurface2, 0);
+	SetFaceGeoMode(bottomsurface3, 0);
+
+	for (surfIndex = 0; surfIndex < numSurfs; surfIndex = surfIndex + 1)
+	{
+		SetFaceGeoMode(whirlSurf0[surfIndex], 0);
+	}
+	#Print("turning off water adjoins at bottom");
+}
+else if (sender == watersurface)
+{
+	if (GetCurFrame(watersurface) == 2)
+	{
+		#"Water surface" at top of pit is turned on, rising water 3do is destroyed.
+		SetFaceGeoMode(top0,4);
+		SetFaceGeoMode(top1,4);
+		SetSectorLight(crack, veclight, 2);
+		SetSectorFlags(crack, 0x2);
+		SectorSound(crack, gurgle, 1);
+	}
+	else if (GetCurFrame(watersurface) == 1)
+	{
+		MoveToFrame(watersurface, 2, 2.0);
+		#Print("moving watersurface to 2nd frame");
+	}
+}
+else if (sender == target0)
+{
+	if (GetCurFrame(target0) != 1) return;
+
+	#Print("moving camera and targets");
+	Sleep(1.0);
+	MoveToFrame(camera0, 1, 0.75);
+	MoveToFrame(target0, 2, 1.7);
+	SetCameraFOV(90, 1, 3.0);
+}
+return;
+	
+#............................................................................
+entered:
+
+sender = GetSenderRef();
+source = GetSourceRef();
+
+if (sender == readyToPush)
+{
+	ClearAdjoinFlags(bldrPlatform, 0x2);
+}
+else if (sender == moveSurf) #Indy is pushing the rock.
+{
+	if (source != player) return;
+
+	StartCutscene(1);
+	curCam = GetCurrentCamera();
+	SetCameraFocus(2, camera0);
+	SetCameraSecondaryFocus(2, target0);
+	MoveToFrame(target0, 1, 0.4);
+	SetCurrentCamera(2);
+	SetCameraFOV(55, 1, 3.5);
+}
+else if (sender == teeter) # Rock crosses adjoin, gets shoved out over water, and falls into place.
+{
+	if (source != rock) return;
+
+	PlaySoundLocal(floodMus, 1.0, 0.0, 0x0, 0);
+
+	MoveToFrame(rock, 1, 3.0);
+	WaitForStop(rock);
+	AttachThingToThing(rock, rotateThing0);
+	Rotate(rotateThing0, 80.0, 0, 0.35);
+	WaitForStop(rotateThing0);
+	DetachThing(rock);
+
+	PlaySoundThing(splashSnd, rock, 1, -1,-1, 0x0);
+
+	splash0 = CreateThing(splashSprTpl0, splashGhost0);
+	AnimateSpriteSize(splash0, '0.05 0.05 1.0', '0.5 0.5 0.0', 1.0);
+	MaterialAnim(splashMat, 16, 0x0);
+
+	splash1 = CreateThing(splashTpl, splashGhost0);
+	MaterialAnim(spraymat, 16, 0x8);
+	SetLifeLeft(Splash0, 1.5);
+	SetLifeLeft(splash1, 0.5);
+
+	MoveToFrame(rock, 2, 3.0);
+	Sleep(0.5);
+}
+else if (source == ghostpoint)
+{
+	if (sender == watersector0)
+	{
+		SetSectorLight(teeter, veclight, 2);
+		SetSectorFlags(teeter, 0x2);
+		SectorSound(teeter, gurgle, 1);
+		SetSectorLight(teeter2, veclight, 2);
+		SetSectorFlags(teeter2, 0x2);
+		SectorSound(teeter2, gurgle, 1);
+		SetSectorLight(othersector0, veclight, 2);
+		SetSectorFlags(othersector0, 0x2);
+		SectorSound(othersector0, gurgle, 1);
+	}
+	else if (sender == watersector1)
+	{
+		StopSound(rise0, 0.5);
+		rise1 = PlaySoundThing(risingSnd1, watersurface, 1, -1,-1, 1);
+		SetSectorLight(othersector1, veclight, 2);
+		SetSectorFlags(othersector1, 0x2);
+		SectorSound(othersector1, gurgle, 1);
+		SetSectorLight(othersector2, veclight, 2);
+		SetSectorFlags(othersector2, 0x2);
+		SectorSound(othersector2, gurgle, 1);
+		SetThingFlags(player, 0x80000);
+		SetActorFlags(player, 0x200000);
+	}
+	else if (sender == watersector4)
+	{
+		SetSectorLight(treasureSector, veclight, 2);
+		SetSectorFlags(treasureSector, 0x2);
+		SectorSound(treasureSector, gurgle, 1);
+		SetCurrentCamera(curCam);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		SendMessage(hint, user2);
+		EndCutscene();
+	}
+	else if (sender == watersector7)
+	{
+		Sleep(3.0);
+		ThingFadeAnim(watersurface, 1.0, 0.0, 3.0, 0);
+		StopSound(rise1, 0.5);
+		Sleep(3.0);
+		PlaySoundThing(streamSnd, root, .75, -1,-1, 1);
+		DestroyThing(ghostpoint);
+		DestroyThing(watersurface);
+	}
+
+	SetSectorLight(watersector0[index], veclight, 2);
+	SetSectorFlags(watersector0[index], 0x2);
+	SectorSound(watersector0[index], gurgle, 1);
+	index =  index + 1;
+}
+return;
+#............................................................................
+exited:
+
+if (GetSenderRef() == ReadytoPush)
+{
+	SetAdjoinFlags(bldrPlatform, 0x2);
+}
+return;
+#............................................................................
+
+end

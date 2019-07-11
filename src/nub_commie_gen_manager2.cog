@@ -1,0 +1,62 @@
+
+
+# Jones 3D Cog Script
+#
+# NUB_Commie_Gen_manager.cog
+# 
+# Gather's commies created in nub_CommieGenMove.cog and sends them to the NUB_Commie_Grid.cog
+# This Cog and it's sister cog are both needed... please do not remove either of them 
+# 
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message     startup
+message     user0
+
+cog         NUB_Commie_Grid
+
+thing       Commie00       local
+thing       Commie01       local
+thing       Commie02       local
+
+int         counter        local
+
+int         COMMIES=3      local
+
+end
+#-------------------------------------------
+code
+#-------------------------------------------
+
+startup:
+
+    return;
+#-------------------------------------------
+user0:
+    
+    //Recieves 3 references to things that have been greated through cog and bounces them to the User0 message the grid cog
+    for(counter = 0; counter < COMMIES; counter = counter + 1)
+    {
+        Commie00[counter] = Getparam(counter);
+        CaptureThing(Commie00);
+    }
+        
+    SendMessageEx(NUB_Commie_Grid, User1, GetParam(0), GetParam(1), GetParam(2), 0);
+    
+    return;    
+
+#-------------------------------------------
+
+end                                            
+    
+
+
+
+
+
+
+

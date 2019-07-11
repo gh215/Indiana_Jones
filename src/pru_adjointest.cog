@@ -1,0 +1,33 @@
+# Jones 3D Cog Script
+#
+# PRU_adjointest.cog
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message     startup
+surface		surf0
+surface		surf1
+surface		surf2
+
+end
+
+# ========================================================================================
+code
+startup:
+
+ClearAdjoinFlags(surf0, 0x2);
+
+ClearAdjoinFlags(surf1, 0x10);
+
+
+ClearAdjoinFlags(surf2, 0x2);
+ClearAdjoinFlags(surf2, 0x10);
+
+end
+
+# ======================================================================================== 

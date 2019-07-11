@@ -1,0 +1,171 @@
+# Jones 3D Cog Script
+#
+# PRU_watersounds.cog    
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+message		startup
+message		user0					#0-4 are from PRU_adjoinSettingsOff.cog
+#message		user1
+#message		user2
+#message		user3
+#message		user4
+message		user5					#5 is from PRU_arrivalCS.cog
+message		user6					#6 also from PRU_arrivalCS.cog
+
+thing		pool0					#lapping sound - riv_h2o_lap_a.wav @ movie clearing
+
+thing		creek0					#pru_river_flowing_a.wav, water flowing into jungle
+
+thing		riverSl0				#stream sounds - olv_stream_a.wav
+thing		riverSl1				#also plays at lower volume in stream sectors
+
+thing		riverMd0				#waterfall sound plays at fall foams
+thing		riverMd1				#also plays inside waterfall sectors
+thing		riverMd2				#gen_waterfall_a.wav
+thing		riverMd3
+
+thing		riverLg0				#rapids sound linked to scary rocks
+thing		riverLg1				#also plays at lower volume in river sectors.
+thing		riverLg2				#riv_h20_rapid_a.wav
+thing		riverLg3
+thing		riverLg4
+thing		riverLg5
+thing		riverLg6				#ghost behind waterfall near river secret
+
+thing		rock
+
+sound		poolSnd=riv_h2o_lap_a.wav			local
+sound		streamSnd=olv_stream_a.wav 			local
+sound		rapidMdSnd=gen_waterfall_a.wav 		local
+sound		rapidLgSnd=riv_h20_rapid_a.wav 		local	
+sound		creeksnd=pru_river_flowing_a.wav	local
+
+int			MaxNumThings=7						local
+int			index=0								local
+int			rapidLGTrack0						local
+int			rapidLGTrack1						local
+int			rapidLGTrack2						local
+int			rapidLGTrack3						local
+int			rapidLGTrack4						local
+int			rapidLGTrack5						local
+int			rapidLGTrack6						local
+
+int			rapidMDTrack0						local
+int			rapidMDTrack1						local
+int			rapidMDTrack2						local
+int			rapidMDTrack3						local
+
+int			streamTrack0						local
+int			streamTrack1						local
+
+int			creekTrack0							local
+
+int			poolTrack0							local
+
+end
+# ========================================================================================
+code
+
+startup:
+SetCollideType(rock, 0);
+return;
+
+user5:
+
+for (index = 0; index < MaxNumThings; index = index + 1)
+{
+	Print("sound1");
+	PrintInt(index);
+	rapidLGTrack0[index] = PlaySoundThing(rapidLgSnd, riverLg0[index], 0.35, 4.5, 30.0, 0x81);
+	if (index < 4)
+	{
+		Print("sound2");
+		PrintInt(index);
+		rapidMDTrack0[index] = PlaySoundThing(rapidMdSnd, riverMd0[index], 0.35, 4.5, 30.0, 0x81);
+	}
+	if (index < 2)
+	{
+		Print("sound3");
+		PrintInt(index);
+		streamTrack0[index] = PlaySoundThing(streamSnd, riverSl0[index], 0.4, 5.0, 30.0, 0x81);
+	}																		
+    if (index < 1) 
+	{
+		Print("sound4");
+		PrintInt(index);
+		creekTrack0[index] = PlaySoundThing(creeksnd, creek0[index], 0.4, 5.0, 25.0, 0x81);
+    }
+	if (index < 1) 
+	{
+		Print("sound5");
+		PrintInt(index);
+		poolTrack0[index] = PlaySoundThing(poolSnd, pool0[index], 0.4, 5.0, 25.0, 0x81);
+    }
+}
+return;
+
+
+user0:
+for (index = 0; index < MaxNumThings; index = index + 1)
+{
+	
+	StopSound(rapidLGTrack0[index], 0.1);
+	if (index < 4)
+	{
+        StopSound(rapidMDTrack0[index], 0.1);
+	}
+	if (index < 2)
+	{
+        StopSound(streamTrack0[index], 0.1);
+	}																		
+    if (index < 1) 
+	{
+        StopSound(creekTrack0[index], 0.1);
+    }
+	if (index < 1) 
+	{
+        StopSound(poolTrack0[index], 0.1);
+    }
+}
+
+
+
+
+return;
+
+
+
+
+
+user6:
+for (index = 0; index < MaxNumThings; index = index + 1)
+{
+	#Print("sound1");
+	#PrintInt(index);
+	ChangeSoundVol(rapidLGTrack0[index], 1, 3.0);
+    
+	if (index < 4)
+	{
+        ChangeSoundVol(rapidMDTrack0[index], 1, 3.0);
+	}
+	if (index < 2)
+	{
+		ChangeSoundVol(streamTrack0[index], 1, 3.0);
+	}																		
+    if (index < 1) 
+	{
+		ChangeSoundVol(creekTrack0[index], 1, 3.0);
+    }
+	if (index < 1) 
+	{
+		ChangeSoundVol(poolTrack0[index], 1, 3.0);
+    }
+}
+return;
+
+end

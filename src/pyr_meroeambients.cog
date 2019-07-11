@@ -1,0 +1,101 @@
+# Jones 3D Cog Script
+#
+# pyr_MeroeAmbients.cog
+#
+# Plays a random sound at random intervals with random volume and panning
+# Adjusted from generic cog to account for being underground or overground
+#
+# [SXC]	+ [RKD]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	timer
+message	crossed
+
+# adjoins en route to underground
+surface	enter1	linkid=1
+surface	enter2	linkid=1
+surface	enter3	linkid=1
+surface	enter4	linkid=1
+surface	enter5	linkid=1
+surface	enter6	linkid=1
+
+# adjoins en route to exterior
+surface	exit1	linkid=0
+surface	exit2	linkid=0
+surface	exit3	linkid=0
+surface	exit4	linkid=0
+surface	exit5	linkid=0
+surface	exit6	linkid=0
+
+# exterior ambients
+sound	extamb0=fol_sp_hitearth.wav	local
+sound	extamb1=shw_amb1.wav		local
+sound	extamb2=fol_cb_walk1.wav	local
+sound	extamb3=tem_wind01_c.wav	local
+sound	extamb4=tem_wind02_c.wav	local
+sound	extamb5=tem_wind03_c.wav	local
+sound	extamb6=tem_wind04_c.wav	local
+sound	extamb7=tem_wind05_c.wav	local
+
+# interior ambients
+sound	intamb0=nub_ambient4_a.wav		local
+sound	intamb1=nub_ambient5_a.wav		local
+sound	intamb2=gen_amb_eerie_01.wav	local
+sound	intamb3=gen_amb_eerie_02.wav	local
+sound	intamb4=gen_amb_eerie_03.wav	local
+sound	intamb5=gen_amb_eerie_05.wav	local
+sound	intamb6=gen_amb_eerie_06.wav	local
+sound	intamb7=gen_amb_eerie_10.wav	local
+sound	intamb8=shw_amb2.wav			local
+sound	intamb9=shw_amb3.wav			local
+sound	intamb10=shw_amb5.wav			local
+sound	intamb12=teo_gen_a1.wav			local
+sound	intamb13=teo_gen_a4.wav			local
+sound	intamb14=teo_gen_a6.wav			local
+
+flex	minInterval=4		local
+flex	rangeInterval=10	local
+flex	minVolume=0.4		local
+flex	rangeVolume=1.2		local
+
+end
+
+code
+
+# ........................................................................................
+
+startup:
+	SetTimer(25);
+
+	# global11 = 0 when player is outside of pyramids
+	global11 = 0;
+	
+	return;
+
+# ........................................................................................
+
+crossed:
+	# Global11 set to 1 if player goes to pyramid interiors
+	global11 = GetSenderID();
+	return;
+
+# ........................................................................................
+
+timer:
+	if (global11 == 1)
+	{
+		PlaySoundLocal(intamb0[RandBetween(0, 14)], (minVolume + (rand() * rangeVolume)), ((rand() *2) - 1.0), 0x0, 0);
+	}
+	else
+	{
+		PlaySoundLocal(extamb0[RandBetween(0, 7)], (minVolume + (rand() * rangeVolume)), ((rand() *2) - 1.0), 0x0, 0);
+	}
+	
+	SetTimer(minInterval + (rand() * rangeInterval));
+	return;
+end
+

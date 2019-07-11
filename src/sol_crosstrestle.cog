@@ -1,0 +1,63 @@
+# Jones 3D Cog Script
+#
+# SOL_CrossTrestle.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    message     exited
+    
+    thing       player      local
+    thing       trest0
+    thing       trest1
+    
+    sector      sec_OnTop1  linkID=1
+    sector      sec_OnTop2  linkID=1
+    
+    int         onTop=0     local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    player = GetLocalPlayerThing();
+    
+    if(GetSenderID() == 1)
+    {
+        onTop = 1;
+        
+        SetCollideType(trest0, 0);
+        SetCollideType(trest1, 0);
+    }
+        
+    return;
+
+# ========================================================================================
+
+exited:
+
+    player = GetLocalPlayerThing();
+    
+    if((GetSenderID() == 1) && (GetSourceRef() == player))
+    {
+        onTop = 0;
+        
+        SetCollideType(trest0, 3);
+        SetCollideType(trest1, 3);
+    }
+
+    return;
+    
+# ========================================================================================
+
+end
+

@@ -1,0 +1,969 @@
+# Jones 3D Cog Script
+#
+# Vol_Sophia_Cuffed.cog
+#
+# Indy rescues Sophia from improvised Soviet gulag
+#
+# [CMG & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+# ................... MESSAGES ...................
+
+	message	startup		
+	message	activated
+	message arrived
+	message touched
+	message callback	
+	message timer	
+    message	entered		
+    message	exited
+	message user0		
+
+# ................. KEYFRAMES ....................
+
+	keyframe	in_pushHat=0in_figithat_4_4.key			local
+	keyframe	in_rtarmup=0in_armsout_1_1.key			local
+	keyframe	in_botharmsup=0in_armsup_1_1.key		local
+	keyframe	in_Think=0in_thinking_4_4.key			local
+	keyframe	in_ltarmup=0in_leftarm_1_1.key			local
+    
+	keyframe	in_handsSide=0in_stand1.key				local
+	keyframe	in_armsCrossed=0in_stand2.key			local
+	keyframe	in_handsONhips=0in_stand4.key			local
+	keyframe	in_crossArms=0in_stand1_bd_2.key	   	local
+	keyframe	in_handsTOhips=0in_stand1_bd_4.key	   	local
+	keyframe	in_handsTOside=0in_stand4_bd_1.key	   	local
+	keyframe	in_activate=in_activate_medium.key		local
+	keyframe	in_overThere=0in_overshoulder_4_1.key	local
+	
+	keyframe	in_free=in_reach_low.key				local
+	keyframe	in_getdown=0in_stand1_bd_6.key			local
+	keyframe	in_getup=0in_stand6_bd_1.key			local
+	keyframe	in_releasing=0in_stand6.key				local
+	keyframe	in_1stand=0in_stand1.key				local
+
+	keyframe	in_showkey=0in_key_pull_1_hold.key		local
+	keyframe	in_teasekey=0in_key_wave_hold_1.key		local
+
+	keyframe	so_standup=0so_getup.key				local
+	keyframe	so_lean=0so_getup_stand.key				local
+	keyframe	so_rtwave=0so_rightwave_2_2.key			local
+	keyframe	so_sitdown=0so_sitdown.key				local
+# .................. MODELS ......................
+		
+	model		mod_in_hand_key=hand_in_cuffkey.3do		local # wrong temp model!!!
+
+# ................. SAY LINES ....................
+
+	sound	in_line1=VL05J01.WAV				local	#  you ok?
+	sound	in_line2=VL05J03.WAV				local	#  like a fish in a net...
+	sound	in_line4=VL05J07.WAV				local	#  trust me
+	sound	in_line5=VL05J09.WAV				local	#  sorry, not yet
+	sound	in_line6=VL05J12.WAV				local	#  workin' on it...
+	sound	in_line7=VL05J14.WAV				local	#  ok sophia I found the key
+	sound	in_line8=VL05J16.WAV				local	#  be nice, or I won't use it
+	sound	in_line9=VL05J18.WAV				local	#  you're right... a gate up ahead...
+	sound	in_line10=VL05J20.WAV				local	#  wait!
+
+	sound	in_cantopen=Inxj096.wav				local # I can't open it.
+	sound	in_nobudge=Inxj098.wav				local # It won't budge.
+	sound	in_holdingdoor=Inxj099.wav			local # Something is holding this door closed.
+	sound	in_wrongside=Inxj102.wav			local # ...I can't seem to open it from this side.
+	
+	sound	in_maybe=VL05J05C.WAV				local	# maybe...sit tight...
+	
+	sound	so_line1=VL05S02.WAV				local	#  how do I look?
+	sound	so_line2=VL05S04A.WAV				local	#  find the key...
+	sound	so_line3=VL05S06.WAV				local	#  don't let me down jones...
+	sound	so_line4=VL05S08.WAV				local	#  got the key?
+	sound	so_line5=VL05S10.WAV				local	#  check the guards, knave!
+	sound	so_line6=VL05S11.WAV				local	#  the key?
+	sound	so_line7=VL05S13.WAV				local	#  work on the guards, ok?
+	sound	so_line8=VL05S15.WAV				local	#  took you long enough...
+	sound	so_line9=VL05S17.WAV				local	#  you better. you need my help
+	sound	so_line10=VL05S19.WAV				local	#  thanks...Now I'm gonna look around
+	sound	so_line11=VL05S21.WAV				local	#  see you soon...
+	
+
+	sound	free_cue=mus_vol_sophia1.wav		local	#  music cue
+
+# ............... SOUND EFFECTS ..................
+
+	sound	creak=shs_creaky_a2.wav				local
+	sound	unlatch=tem_monkeykey_unlock_c.wav	local
+
+# .................. OBJECTS .....................	
+
+	thing	door0		
+	thing	Light_All							nolink	
+	
+	thing	leftfence							nolink
+	thing	rightfence							nolink
+	thing	sophiacrate							nolink
+	thing	lock
+
+# .................. ACTORS ......................
+
+	thing	player								local		
+	thing	sophia		
+	thing	indy		
+    #thing	commie								
+	thing	talktarget
+	
+	surface	player_barrier
+
+# ............ ACTOR TARGET THINGS ...............
+
+	thing	in_mk_1								nolink
+	thing	in_mk_2								nolink
+	thing	in_mk_3								nolink
+	thing	in_mk_4								nolink
+
+	thing	so_exitmark_1						nolink		
+	thing	so_exitmark_2						nolink
+	thing	so_exitmark_3						nolink
+	thing	so_exitmark_4						nolink
+	thing	so_exitmark_5						nolink
+
+# .............. CAMERA THINGS ...................
+
+	thing	uncuffCam							nolink
+    thing	unlockCam							nolink	
+    thing	exitCam								nolink
+		
+	thing	indycam_1							nolink
+	thing	indycam_2							nolink
+
+	thing	sophiaCam_1							nolink
+	thing	sophiaCam_2							nolink
+
+	thing	poscam								nolink # use only to swing follow-cam
+
+# ........... CAMERA TARGET THINGS ...............
+	
+	thing	ct_1								nolink
+	thing	ct_2								nolink
+	thing	ct_3								nolink
+	thing	ct_4								nolink
+
+	thing	thingCamTarget						local # created on the fly
+
+# .................... COGS ......................
+
+	cog		bridgecog
+	cog		doortalkcog
+
+# ...... MISCELLANEOUS ENGINE WEIRDNESS ..........
+
+	sector	doorSector							local
+	sector	inside		   
+	sector	outside			
+	sector	sceneSect
+	
+	template	key								local
+    template	ghostTpl=ghost					local
+			
+# ................. ROUTINES ....................
+	flex	freedom								local
+	flex	randstucklines						local
+
+# ................. VARIABLES ....................
+
+	vector	v_campos							local
+	vector	v_targetpos							local # final target position
+	vector	v_closedoorPYR						local # door aim
+	vector	v_arrdoorPYR						local
+	vector	v_tchdoorPYR						local
+	vector	v_dpos								local # door position
+	vector	v_ipos								local # indy position
+	vector	v_idvec								local # indy-to-door vec
+	vector	v_drvec								local # door right vec
+
+	flex	f_arrdoorY							local # door yaw
+	flex	f_tchdoorY							local
+	flex	f_iposcheck							local # dot result indy relative to door	
+	flex	doortime=3.0						local # define
+	flex	sleepTime=1.0						local # define
+	flex	dooryaw								local
+	flex	timeratio							local
+	flex	reopentime							local
+	flex	sophiaStandTime						local
+	flex	in_rotRate							local
+	flex	in_minHeadPitch						local
+	flex	in_headRate							local
+	flex	so_rotRate							local 
+	flex	so_headRate							local 
+
+	int		curCam								local
+	int		curSound							local
+	
+	int		in_keyTrack1						local
+	int		so_keyTrack1						local	
+
+	int		openState=0							local
+	int		checked=0							local
+	int		freed=0								local
+	int		talkState=0							local
+	int		sophiastanding=0					local
+	int		newline=0							local
+	int		oldline=0							local
+	int		swapokay=0							local
+	int		alreadytouched=0					local
+	int		alreadyactivated=0					local
+	int		keygrumble=0						local
+
+	int		crateCollType						local
+	int		fenceCollType						local
+	int		indyCollType						local
+	int		lightCollType						local
+
+	int		timerID=1							local # define
+	int		russKey=110							local # item define
+	int		whichItem							local
+	int		swapRef								local
+	int		sender								local
+	int		source								local
+
+end
+
+# ========================================================================================
+
+code
+
+# ........................................................................................
+
+startup:
+	
+	# General prep...
+	player = GetLocalPlayerThing();
+	doorSector = GetThingSector(door0);
+	SetSectorAdjoins(doorSector, 0);
+	talkstate = 0; # superstition
+
+	# Prep actors...
+	in_rotRate = GetThingMaxRotVel(indy);
+	so_rotRate = GetThingMaxRotVel(sophia);
+	in_headRate = GetThingMaxHeadVel(indy);
+	so_headRate = GetThingMaxHeadVel(sophia);
+	in_minHeadPitch = GetThingMinHeadPitch(indy);
+	so_keyTrack1 = PlayKey(sophia, so_lean, 2, 0x10, 0); # she leans on crate
+	#SetThingFlags(commie, 0x80000);
+	ClearThingFlags(sophia, 0x80000);
+	# Need better way to make head tracking behave when thing is not looking at Indy	
+	AISetCutSceneMode(indy);
+	AISetCutSceneMode(sophia); 
+
+	# Prep set...
+	crateCollType = GetCollideType(sophiacrate);
+	fenceCollType = GetCollideType(leftfence);
+	indyCollType = GetCollideType(indy);
+	lightCollType = GetCollideType(Light_All);
+	v_closedoorPYR = GetThingLVecPYR(door0);
+	SetCollideType(rightfence, 0);
+	SetCollideType(leftfence, 0);
+	
+    return;
+
+# ........................................................................................
+
+activated:	
+	
+	sender = GetSenderRef();
+	source = GetSourceRef();
+
+	if ((sender != door0) && (sender != lock) && (sender != talktarget))
+	{
+		return;
+	}
+
+	if ((sender == door0) && (GetThingSector(source) == inside))
+    {
+		# Activate door from inside...
+
+		# NOTE:  door0 has 4 states...
+		# 1. closed		-->	openState == 0 (init state)
+		# 2. opening	--> openState == 1
+		# 3. open		-->	openState == 2
+		# 4. closing	--> openState == 3
+		
+		if (openState > 0)
+		{
+			return;
+		}
+  
+		openState = 1; # door is opening
+		alreadytouched = 0; # init every time door opens
+		SetSectorAdjoins(doorSector, 1); # start to see thru
+		Rotate(door0, 90, 1, doortime);
+
+		return;
+	}
+	else if ((sender == door0) && (GetThingSector(source) == outside))
+    {
+		# Or activate door from outside...
+		             
+ 		if (alreadyactivated > 0)
+		{
+			return;
+		}
+
+		if (openState > 0)
+		{
+			return;
+		}
+
+		alreadyactivated = 1; # defeat multiple activates	
+		curCam = GetCurrentCamera();
+		SetExtCamOffsetToThing(poscam);
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutScene(1);
+		
+		if (checked == 0)
+		{
+			# Trick randstucklines so Indy says...
+			# ..."won't open from this side" 1st time thru
+			newline = 4;
+			oldline = 0;
+			checked = 1;
+		}
+		call randstucklines;
+
+		RestoreExtCam();
+        ClearActorFlags(player, 0x200000);
+		EndCutScene();
+		alreadyactivated = 0;
+
+		return;
+	}
+		
+	if (sender == lock)
+	{	
+		# Check if inventory is being used...
+		whichItem = GetCurItem(player);
+		
+		# Prep for scene...
+        MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutScene(1);
+
+		KillTimerEx(timerID); # don't let sophia sit during chat
+		curCam = GetCurrentCamera();
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+
+		CopyPlayerHolsters(player, indy);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indy, 0x80000);
+
+		# Line Indy up...
+		CopyOrientAndPos(player, indy);
+		AISetLookThing(indy, in_mk_4);
+		AIWaitForStop(indy);
+
+		# Slew follow cam to observe scene
+		### SetExtCamLookOffsetToThing(lock); # new look offset per Matt R...buggy
+		SetExtCamOffsetToThing(unlockCam);
+		Sleep(0.5);
+	
+		if (whichItem == russKey)
+		{
+			ChangeInv(player, russKey, -1);
+			call freedom;
+
+			return;
+		}
+		else
+		{								
+			if (whichItem != 0)
+			{
+				# Take care of wrong keys and items...
+				global15 = 0;
+				SendMessageEx(doortalkcog, user0, indy, russKey, whichItem, 0);
+			}
+			else
+			{
+				if (keygrumble == 0)
+				{
+					# Note need for key 1st time thru...
+					global15 = 0;
+					SendMessageEx(doortalkcog, user4, indy, 1, 3, 0);
+					keygrumble = 1;
+				}
+				else
+				{
+					# General "door is locked" grumbling thereafter...
+					global15 = 0;
+					SendMessageEx(doortalkcog, user4, indy, 0, 0, 0);
+				}
+			}
+			
+			while (global15 == 0)
+			{
+				Sleep(0.01); # wait for line to finish
+			}
+			Sleep(0.3);
+			RestoreExtCam();
+			SetThingMaxRotVel(indy, in_rotRate);
+			SetThingMaxHeadVel(indy, in_headRate);
+			SetThingMinHeadPitch(indy, in_minHeadPitch);
+			ClearThingFlags(player, 0x80000);
+			SetThingFlags(indy, 0x80000);
+
+			EndCutScene();
+			ClearActorFlags(player, 0x200000);
+
+			return;
+		}
+
+		return;
+	}
+		
+	if (sender == talktarget)
+	{		
+		# player talks to imprisoned Sophia...
+
+		# Prep...
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutScene(1);
+		KillTimerEx(timerID); # don't let sophia sit down during chat
+		
+		# kill sophia's head tracking
+		AIDisableHeadTracking(sophia);
+
+		curCam = GetCurrentCamera();
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+
+		CopyPlayerHolsters(player, indy);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indy, 0x80000);
+
+		# Line Indy up...
+		TeleportThing(indy, player);
+		AISetLookThing(indy, ct_3);
+		AIWaitForStop(indy);
+
+		# Slew follow cam to observe scene...
+		### SetExtCamLookOffsetToThing(talktarget); # new look offset per Matt R buggy
+		SetExtCamOffsetToThing(uncuffCam);
+		Sleep(0.5);
+
+		# Conditionally stand Sophia up...
+		if (sophiastanding == 0)
+		{
+			StopKey(sophia, so_keyTrack1, 0.0);
+			PlayKey(sophia, so_standup, 4, 0x12, 1);
+			SetCollideType(sophiacrate, 0); # so she can turn to watch Indy
+			sophiastanding = 1; # take note
+		}
+
+		# She faces him...
+		AISetLookThing(sophia, indy);
+		AIWaitForStop(sophia);
+
+		# increment to next version of conversation...
+		if (talkState < 3)
+		{
+			talkState = talkState + 1;
+		}
+
+		if (talkState == 1)
+		{
+			# Indy: "You okay?"
+			PlayVoice(indy, in_line1, 2, 1);
+
+			# Sophia: "How do I look?"
+			PlayVoice(sophia, so_line1, 2, 1);
+
+			# Indy: "Like a fish in a net."
+			PlayVoice(indy, in_line2, 2, 1);
+
+			# Sophia: "Find the key..."
+			PlayVoice(sophia, so_line2, 2, 1);
+
+			# Cut to shot of Sophia...
+			SetCameraFocus(2, sophiaCam_1);
+			SetCameraSecondaryFocus(2, ct_1);
+			SetThingFlags(indy, 0x10); # look past Indy
+			SetCurrentCamera(2);
+			SetCameraFOV(25, 0, 0.0);
+			
+			# Place Indy on mark while offscreen...
+			TeleportThing(indy, in_mk_1);
+			Sleep(0.01);
+			AISetLookThing(indy, sophia);
+			AISetLookThing(sophia, indy);
+			AIWaitForStop(sophia);
+
+			# Sophia: "Don't let me down, Jones..."
+			curSound = PlayVoice(sophia, so_line3, 1.5, 0);
+			Sleep(2.0);
+
+			# Start Indy gestures...
+			in_keyTrack1 = PlayKey(indy, in_handsONhips, 2, 0x10, 0);
+			PlayKey(indy, in_handsTOhips, 4, 0x12, 0);
+			WaitForSound(curSound);
+        
+			# Cut to close-up of Indy...
+			ClearThingFlags(indy, 0x10); # see Indy again
+			SetThingFlags(sophia, 0x10); # don't see Sophia
+			SetThingFlags(leftfence, 0x10); # don't see fence	
+			SetCameraFocus(2, indycam_1);
+			SetCameraSecondaryFocus(2, ct_2);
+			SetCameraFOV(25, 0, 0.0);
+
+			# Indy: "Trust me."
+			PlayKey(indy, in_pushHat, 4, 0x12, 0);
+			Sleep(1.0);
+			curSound = PlayVoice(indy, in_line4, 1.5, 0);
+			WaitForSound(curSound);
+			Sleep(0.7);
+			StopKey(indy, in_keyTrack1, 0.5);
+			Sleep(0.5);
+			
+			# Back to follow-cam...
+			ClearThingFlags(sophia, 0x10); # restore visibility
+			ClearThingFlags(leftfence, 0x10);
+			SetCAmeraPosition(1, GetThingPos(uncuffcam));
+			SetCurrentCamera(curCam);
+			ResetCameraFOV(0, 0.0);		
+		}
+
+		if ((talkState == 2) && (GetInv(player, russKey) == 0))
+		{
+			# Sophia: "Got the key?"
+			PlayVoice(sophia, so_line4, 1.5, 1);
+			
+			# Indy: "Sorry, not yet."
+			PlayVoice(indy, in_line5, 1.5, 1);
+
+			# Sophia: "Check the guards..."
+			PlayVoice(sophia, so_line5, 1.5, 1);
+		}
+
+		if ((talkState == 3) && (GetInv(player, russKey) == 0))
+		{
+			# Sophia: "The key..."
+			PlayVoice(sophia, so_line6, 1.5, 1);
+
+			# Indy: "Working on it."
+			PlayVoice(indy, in_line6, 1.5, 1);
+
+			# Sophia: "Work on the guards, okay?"
+			PlayVoice(sophia, so_line7, 1.5, 1);
+		}
+
+		if ((talkState > 1) && (GetInv(player, russKey) == 1))
+		{
+			# Sophia: "The key...?"
+			PlayVoice(sophia, so_line6, 1.5, 1);
+			
+			# Indy: "Maybe. Sit tight."
+			PlayVoice(indy, in_maybe, 1.5, 1);
+		}
+	}
+
+	# Common clean-up...
+	ClearThingFlags(player, 0x80000);
+	SetThingFlags(indy, 0x80000);
+	RestoreExtCam();
+    EndCutScene();
+	ClearActorFlags(player, 0x200000);
+	
+	# After a while Sophia sits down again...
+	AIClearCutSceneMode(sophia);
+	AIClearCutSceneMode(indy);
+	sophiaStandTime = ((4.0 * Rand()) + 7.0);
+	SetTimerEx(sophiaStandTime, timerID, 0.0, 0.0); # get ready to relax sophia
+
+	return;
+
+# ........................................................................................
+
+freedom:
+
+    # Indy: "Okay, I got the key..."
+	curSound = PlayVoice(indy, in_line7, 2, 0);
+
+	# PLay Music
+    PlaySoundLocal(free_cue, 0.5, 0, 0x0, 0);
+
+	# Swap in hand with key...
+	swapokay = 1;
+	in_keyTrack1 = PlayKey(indy, in_showkey, 4, 0x14, 0); # this anim marked @ frm15
+
+	# Prep for action...
+	DestroyThing(talktarget);
+	DestroyThing(lock);
+	SetCollideType(sophiacrate, 0);
+	SetCollideType(rightfence, 0);
+	SetCollideType(leftfence, 0);
+	SetCollideType(indy, 0);
+	SetCollideType(Light_All, 0);
+
+	# Conditionally stand Sophia up...
+	if (sophiastanding == 0)
+	{
+		StopKey(sophia, so_keyTrack1, 0.0);
+		PlayKey(sophia, so_standup, 4, 0x12, 1);
+	}
+
+	# clear the no move flag off the player_barrier
+	SetAdjoinFlags(player_barrier, 2);
+	SetAdjoinFlags(GetSurfaceAdjoin(player_barrier), 2); 
+	
+	# She walks over to Indy...
+	AISetLookThingEyeLevel(sophia, so_exitmark_1);
+	AIEnableHeadTracking(sophia, indy);
+	
+	SetThingMaxRotVel(sophia, 300.0);
+	SetThingMaxHeadVel(sophia, 250.0);
+	AIWaitForStop(sophia);
+	AISetMoveSpeed(sophia, 1.0);
+	AISetMoveThing(sophia, so_exitmark_1, 0);
+	WaitForSound(curSound);
+
+	# Sophia: "Took you long enough."
+	curSound = PlayVoice(sophia, so_line8, 2, 0);
+	AIWaitForStop(sophia);
+	AIDisableHeadTracking(sophia);  // disable so you won't see her head move when indy gets warped to new mark below
+	
+	AISetLookThing(sophia, indy);
+	WaitForSound(curSound);
+	
+	# Indy: "Be nice, or I won't use it."
+	StopKey(indy, in_keyTrack1, 0.0);
+	in_keyTrack1 = PlayKey(indy, in_teasekey, 4, 0x14, 0);
+	PlayVoice(indy, in_line8, 2, 1);
+    
+    # Cut to single on Sophia...
+	AISetLookThingEyeLevel(sophia, in_mk_2); // focus sophia on spot indy is about to warp to
+	SetCameraFocus(2, sophiaCam_2);
+	SetCameraSecondaryFocus(2, ct_3);
+	SetThingFlags(indy, 0x10); # no Indy
+	SetCurrentCamera(2);
+	SetCameraFOV(25, 0, 0.0);
+	
+	# Place Indy on mark while offscreen...
+	StopKey(indy, in_keyTrack1, 0.0);
+	RestoreThingMesh(indy, swapRef); # swap key back out
+	swapokay = 0;
+	CopyOrientAndPos(in_mk_2, indy);
+	AISetLookThing(indy, sophia); // look at her from new position
+
+	# Sophia: "You better.  You need my help."
+	curSound = PlayVoice(sophia, so_line9, 2, 0);
+	Sleep(2.0);
+	in_keyTrack1 = PlayKey(indy, in_handsONhips, 2, 0x10, 0);
+	PlayKey(indy, in_handsTOhips, 4, 0x12, 0);
+	WaitForSound(curSound);
+
+	# Reverse on Indy...
+	ClearThingFlags(indy, 0x10); # see Indy
+	SetThingFlags(sophia, 0x10); # don't see Sophia
+	SetThingFlags(leftfence, 0x10); # don't see fence	
+	SetThingFlags(rightfence, 0x10);	
+	SetCameraFocus(2, indycam_2);
+	SetCameraSecondaryFocus(2, ct_4);
+	SetCameraFOV(35, 0, 0.0);
+	AISetLookThing(sophia, indy); // refocus on Indy's new position while offscreen
+
+	# Indy: "You're right about that...gate up ahead..."
+    curSound = PlayVoice(indy, in_line9, 2, 0);
+	Sleep(1.0);
+	StopKey(indy, in_keyTrack1, 0.0);
+	PlayKey(indy, in_overThere, 4, 0x12, 1);
+	PlayKey(indy, in_activate, 4, 0x12, 0);
+	Sleep(0.5);
+
+ 	# Cut to wider view of scene as Indy unlocks the fence door...
+    ClearThingFlags(sophia, 0x10); # Sophia back
+	ClearThingFlags(leftfence, 0x10); # fence back	
+	ClearThingFlags(rightfence, 0x10);
+	
+	# Make a target near Sophia...
+	v_targetpos =
+		VectorAdd(VectorTransformToOrient(sophia, '0.07 0.005 0.035'), GetThingPos(sophia)); 	
+	thingCamTarget = 
+		CreateThingAtPos(ghostTpl, GetThingSector(sophia), v_targetpos, '0 0 0');
+	CaptureThing(thingCamTarget);
+
+	AttachThingToThing(thingCamTarget, sophia); # track her move
+	SetCameraFocus(2, exitCam);	
+	SetCameraSecondaryFocus(2, thingCamTarget);
+	SetCameraFOV(70, 0, 0.0);
+
+	# Indy opens the makeshift cell...
+	Rotate(rightfence, -90, 1, 1.5);
+	PlaySoundLocal(unlatch, 1.0, 0, 0x0, 0);
+	Sleep(0.5);
+ 
+	# Sophia: "Thanks, Indy...I'm going to take a good look..."
+	PlayVoice(sophia, so_line10, 2, 0);
+	Sleep(0.5);
+	
+	# Sophia on the move...
+	AISetMoveSpeed(sophia, 1.2);
+	SetThingMaxRotVel(sophia, so_rotRate);// back to full speed
+	SetThingMaxHeadVel(sophia, so_headRate);
+	Sleep(0.01);
+	AISetLookThingEyeLevel(sophia, so_exitmark_2);
+	AISetMoveThing(sophia, so_exitmark_2, 0);
+    SetThingMaxHeadVel(indy, 120.0); // slower for watching sophia pass
+	AIEnableHeadTracking(indy, sophia);
+	Sleep(0.3);
+    
+	# Indy starts to turn body to keep sophia in sight
+	SetThingMaxRotVel(indy, 60.0); // slower for turning as sophia passes
+	# Because sophia "crashes" through indy, his head pitches down considerably
+	# Set min pitch to mostly flat to hide problem
+	SetThingMinHeadPitch(indy, -2.0);
+	AIEnableBodyTracking(indy, sophia);
+    
+	# Stay on Sophia as she moves out...
+	SetCameraFOV(50, 1, 3.0);
+   	AISetLookThing(sophia, so_exitmark_3);
+	AISetMoveThing(sophia, so_exitmark_3, 0);
+
+	# Indy starts to follow after aesthetic delay
+	# Head and body tracking of sophia by Indy still operational
+	Sleep(2.5); # delay move for a moment
+	AISetMoveSpeed(indy, 1.1);
+	AISetMoveThing(indy, in_mk_3, 0);
+	Sleep(1.6);
+
+	# Indy: "Wait..."
+	PlayVoice(indy, in_line10, 2, 0);
+ 
+	# Sophia stops & turns...
+	AIWaitForStop(sophia);
+	AISetLookThing(sophia, indy);
+	AIWaitForStop(sophia);
+	
+	# Sophia: "See you soon."
+	curSound = PlayVoice(sophia, so_line11, 2, 0);
+	PlayKey(sophia, so_rtwave, 4, 0x12, 0);
+
+	# Indy stops...
+	AIDisableBodyTracking(indy);
+	AISetLookThing(indy, sophia);
+	AISetMoveSpeed(indy, 0);
+	WaitForSound(curSound);
+				
+	# Sophia departs...
+	DetachThing(thingCamTarget); # hold camera frame
+	AISetMoveSpeed(sophia, 3.2); # she breaks into a run
+	AISetLookThing(sophia, so_exitmark_4);
+	AISetMoveThing(sophia, so_exitmark_4, 0);
+	AIWaitForStop(sophia);
+	AIDisableHeadTracking(indy);
+	
+	# Open the door...
+	openState = 1;
+	alreadytouched = 0;
+    SetSectorAdjoins(doorSector, 1); # see thru
+    Rotate(door0, 90, 1, doortime);
+	AISetMoveThing(sophia, so_exitmark_5, 0);
+    
+	# Clean up...
+	SetCollideType(sophiacrate, crateCollType);
+	SetCollideType(rightfence, fenceCollType);
+	SetCollideType(leftfence, fenceCollType);
+	SetCollideType(indy, indyCollType);
+	SetCollideType(Light_All, lightCollType);
+	CopyOrientAndPos(indy, player);
+	Sleep(3.0); # was 1.0
+
+	# Restore control...
+	v_campos = GetThingPOS(exitCam);
+	SetCameraPosition(1, v_campos); # prep to swing back to follow-cam
+	SetCurrentCamera(curCam);
+	ResetCameraFOV(0, 0.0);
+	RestoreExtCam();
+	SetThingMaxRotVel(indy, in_rotRate);
+	SetThingMinHeadPitch(indy, in_minHeadPitch);
+	ClearThingFlags(player, 0x80000);
+	SetThingFlags(indy, 0x80000);
+
+	AIClearCutSceneMode(sophia);
+	AIClearCutSceneMode(indy);
+
+	# When next we see our heroine, she'll be waiting on the bridge...
+	DestroyThing(sophia); # don't let Indy meet her by mistake
+	DestroyThing(thingCamTarget);
+	SendMessage(bridgecog, user0);
+
+	# Return control to player...
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+	
+	return;
+
+# ...................................................................
+
+callback:
+
+	if (GetSenderRef() == indy)
+	{
+        if (swapokay == 1)
+		{
+			# Swap key...
+			swapRef = SetThingMesh(indy, 15, mod_in_hand_key, 0);
+		}
+	}
+
+    return;
+
+# ...................................................................
+
+arrived:
+
+	if (GetSenderRef() == door0 && openState == 1)
+	{
+		openState = 2; # door is now open
+		Sleep(sleeptime);
+
+		# Close door...
+		Rotate(door0, -90, 1, doortime);
+		openState = 3; # door is closing
+		alreadytouched = 0; # Indy can stop it again
+	}
+
+	if (GetSenderRef() == door0 && openState == 3)
+	{
+		v_arrdoorPYR = GetThingLVecPYR(door0);
+		f_arrdoorY = Truncate(VectorY(v_arrdoorPYR)); # to lowest integer degree
+
+		if (f_arrdoorY == 0)
+		{
+		SetThingLVecPYR(door0, v_closedoorPYR); # slam it closed for sure
+		SetSectorAdjoins(doorSector, 0); # no see thru
+		openState = 0; # door is now closed
+		}
+	}
+
+	return;
+
+# ...................................................................
+
+touched:
+		
+	if ((GetSenderRef() == talktarget) && (talkState == 0))
+	{
+		# as if...
+		goto activated;
+	}
+
+	if (alreadytouched > 0 || openState != 3)
+	{
+		return;
+	}
+
+	if (GetSenderRef() == door0 && openState == 3)
+	{
+		alreadytouched = 1; # do once only
+	
+		# check if Indy is touching back side of door...
+		v_dpos = GetThingPos(door0); # door hinge
+		v_ipos = GetThingPos(player); # our hero
+ 		v_idvec = VectorNorm(VectorSub(v_dpos, v_ipos)); # direction between indy & door 
+		v_drvec = GetThingLVec(door0); # check 90 to door plane
+		f_iposcheck = VectorDot(v_idvec, v_drvec); # places indy in- or outside door
+	
+		if (f_iposcheck > 0)
+		{
+			# Don't re-open if Indy is touching back side...
+			return;
+		}	
+		
+		StopThing(door0);
+		Sleep(0.1); # let engine update
+		v_tchdoorPYR = GetThingLVecPYR(door0);
+		dooryaw = (90 - Abs(VectorY(v_tchdoorPYR))); # how far is door open?
+		timeratio = (dooryaw / 90); # what percentage?
+		reopentime = ( doortime * timeratio); # calculate time
+		Rotate(door0, dooryaw, 1, reopentime); # re-open 
+		openState = 1; # door is opening again
+	}
+
+	return;
+
+# ........................................................................................
+
+entered:
+
+	if (GetSenderRef() == sceneSect)
+	{
+		AIEnableHeadTracking(sophia, player);
+    }
+
+	return;
+		
+# ........................................................................................
+
+exited:
+
+	if (GetSenderRef() == sceneSect)
+	{
+		AIDisableHeadTracking(sophia);
+    }
+
+	return;
+
+# ........................................................................................
+
+timer:
+
+	AISetMode(sophia, 0x2000); # don't watch Indy from relaxed pose
+	StopKey(sophia, so_keyTrack1, 0.0);
+	AISetLookThing(sophia, in_mk_3); # orient correctly
+	AIWaitForStop(sophia);
+	so_keyTrack1 = PlayKey(sophia, so_lean, 2, 0x10, 0);
+	PlayKey(sophia, so_sitdown, 4, 0x12, 0); # should be return to lean
+	SetCollideType(sophiacrate, crateCollType);
+	sophiastanding = 0; # she's sitting again
+    
+	# re-establish sophia head tracking
+	AIEnableHeadTracking(sophia, player);
+
+	return;
+
+# ..............................................................................
+
+randstucklines:
+
+	while (newline == oldline)
+	{	
+		newline = RandBetween(1, 4); # pick new line
+	}
+	oldline = newline; # remember what got picked
+
+	if (newline == 1)
+	{
+		curSound = PlayVoice(player, in_cantopen, 1.0, 0);
+	}	
+	if (newline == 2)
+	{
+		curSound = PlayVoice(player, in_nobudge, 1.0, 0);
+	}
+	if (newline == 3)
+	{
+		curSound = PlayVoice(player, in_holdingdoor, 1.0, 0);
+	}
+	if (newline == 4)
+	{
+		curSound = PlayVoice(player, in_wrongside, 1.0, 0);
+	}
+	WaitForSound(curSound);
+	Sleep(0.5);
+
+	return;
+
+end
+

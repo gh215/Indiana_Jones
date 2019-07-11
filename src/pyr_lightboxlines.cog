@@ -1,0 +1,137 @@
+# Jones 3D Cog Script
+#
+# pyr_lightboxlines.cog
+#	
+# Saylines for placards near lightboxes
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	activated
+
+# cameras and camera looks
+thing	saycam		nolink
+thing	saycamlook	nolink
+
+# actors
+thing	player		nolink	local
+thing	indyactor	nolink
+
+# surfaces
+surface	hieratic
+
+# keyframes
+keyframe	in_PushHat=0in_figithat_4_4.key		local
+keyframe	in_handsToHips=0in_stand1_bd_4.key	local
+
+# saylines
+sound	writing=pr12j03.wav		local
+sound	knowledge1=pr12j04.wav	local
+sound	dime=pr12j05.wav		local
+sound	knowledge2=pr12j06.wav	local
+
+# variables
+int		curkey=0		local
+
+# subroutines
+flex	startscene=0.0	local
+flex	endscene=0.0	local
+flex	fixcams=0.0		local
+flex	changecam=0.0	local
+end
+
+code
+startup:
+	#global9 determines how many times the writing has been read
+	global9 = 0;
+
+	return;
+
+activated:
+# ---> heiratic wall
+
+	DeselectWeaponWait(GetLocalPlayerThing());
+
+	player = GetLocalPlayerThing();
+	call startscene;
+	call changecam;
+	
+	AISetLookPos(indyactor, GetSurfaceCenter(hieratic));
+	
+	sleep(.5);
+	
+	if (global9 == 0)
+	{
+		PlayVoice(indyactor, writing, 1, 1);
+		curkey = PlayKey(indyactor, in_handsToHips, 4, 0x14, 0); # 0.87 sec
+		sleep(.5);
+		PlayVoice(indyactor, knowledge1, 1, 1);
+		StopKey(indyactor, curkey, 0.1);
+		curkey = PlayKey(indyactor, in_PushHat, 6, 0x12, 0);
+		Sleep(.5);
+		PlayVoice(indyactor, dime, 1, 0);
+		Sleep(.5);
+		StopKey(indyactor, curkey, .5);
+		Sleep(.5);
+	}
+	else
+	{
+		PlayVoice(player, knowledge2, 1, 1);
+	}
+	
+	sleep(1.5);
+
+	global9 = global9 + 1;
+	
+	call endscene;
+	ResetThing(indyactor);
+	return;
+	
+changecam:
+	SetCameraFocus(2, saycam);
+	SetCameraSecondaryFocus(2, saycamlook);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0);
+		
+	return;
+	
+startscene:
+	call fixcams;
+	
+	StartCutscene(0);
+	CopyPlayerHolsters(player, indyactor);
+	ClearThingFlags(indyactor, 0x80000);
+	StopThing(player);
+	SetThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+		
+	return;
+			
+endscene:
+	CopyOrientAndPos(indyactor, player);
+	SetThingFlags(indyactor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	
+	SetCameraPosition(1, GetThingPos(saycam));
+	SetCurrentCamera(1);
+	EndCutscene();
+
+	return;
+
+fixcams:
+	# reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(1, 0);
+	SetCameraLookInterp(1, 0);
+	RestoreExtCam();
+	return;
+	
+end
+

@@ -1,0 +1,134 @@
+# Jones 3D Cog Script
+#
+# weap_Fists.cog
+#
+# [RandyT]
+#
+# Punch with the left fist, then the right fist.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message		startup
+message		fire
+message		activated
+message		deactivated
+message		selected
+message		deselected
+
+template	projectile=+fists	local			
+
+thing		player				local
+
+flex		fireWait			local
+
+int			nextFist=0			local
+int			pupMode				local
+
+vector		firePoint			local
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+
+	player = GetLocalPlayerThing();
+	return;
+
+# -------------------------------------------------------------------
+
+fire:
+
+	# If the message is from the weapons system, play the animation
+	if (GetParam(0) != -1)
+	{
+		# Select-o-punch
+		if (nextFist == 0)
+		{
+			if (Rand() < 0.5)
+			{
+				pupMode = 65;
+				fireWait = 0.57; 
+			
+			} else {
+				
+				pupMode = 66;
+				fireWait = 0.6; 
+			}
+
+		} else {
+
+			if (Rand() < 0.5)
+			{
+				pupMode = 67;
+
+			} else {
+				
+				pupMode = 68;
+			}
+			fireWait = 0.7; 
+		}
+
+		nextFist = 1 - nextFist;
+
+		SetFireWait(player, fireWait);
+
+		CaptureThing(player);
+		PlayMode(player, pupMode, 0);
+
+		return;
+	}
+
+	# Actual firing takes place when we get the callback...
+	firePoint = VectorAdd(GetThingPos(player), '0.0 0.0 0.05');
+	FireProjectile(player, projectile, -1, -1, firePoint, '0 0 0', 1.0, 0x0, 0.0, 0.0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+activated:
+
+	ActivateWeapon(player, 0.01);
+	return;
+
+# -------------------------------------------------------------------
+
+deactivated:
+
+	DeactivateWeapon(player);
+	return;
+
+# -------------------------------------------------------------------
+
+selected:
+
+	SetAimWait(player, 0);
+	SetMountWait(player, 0.5);
+
+	SetArmedMode(player, 0);
+	SetCurWeapon(player, 1);
+	SetThingFireOffset(player, '0.0 0.0 0.0');
+
+	PlayMode(player, 62, 0);
+
+	return;
+
+# -------------------------------------------------------------------
+
+deselected:
+
+	SetMountWait(player, 0.5);
+
+	StopMode(player, 62, 0);
+	PlayMode(player, 64, 0);
+
+	return;
+
+end

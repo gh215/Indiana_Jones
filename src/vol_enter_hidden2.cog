@@ -1,0 +1,106 @@
+# Jones 3D Cog Script
+#
+# VOL_enter_hidden2.cog
+#
+# This cog causes 2 spiders to attack upon an entered message. One skitters down a web
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message	startup
+message	entered
+
+
+#............ACTORS..........
+thing	player									local
+
+thing	spider0	
+thing	spider1										
+
+
+#............TRIGGERS..........
+sector	attack_sect
+
+
+#............AI MOVE TARGETS..........
+thing	spider0_mv0	
+thing	spider1_mv0	
+
+thing	spiderhang								local
+	
+#............TEMPLATES..........
+template	tpl_Spider=spider_wall				local
+
+#............VARIABLES..........
+int		attacked=0								local
+
+
+#............SOUNDS..........
+sound	attack_cue=mus_gen_danger2.wav			local
+
+
+end
+# ========================================================================================
+
+code
+
+startup:
+
+    GetThingClassCog(spider1);
+	
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+
+	# disable spiders
+	AISetCutSceneMode(spider0);
+	SetThingFlags(spider1, 0x80000);
+    
+return;
+
+# ========================================================================================
+entered:
+
+If ((GetSenderRef() == attack_sect) && (attacked == 0))
+	{
+	#print("spiders are attacking");
+	attacked = 1;
+    Sleep(0.5);
+	# danger cue
+	PlaySoundLocal(attack_cue, 0.5, 0.0, 0x0, 0);
+    
+	# spiders look at player
+	AISetLookThing(spider0, player);
+
+	# spiders move toward player
+	AISetMoveSpeed(spider0, 1.0);
+	AISetMoveThing(spider0, spider0_mv0, 1);
+
+    # spiders resume AI and attack
+	AIClearCutSceneMode(spider0);
+
+	Sleep(1.0);
+    
+    
+	# create the ceiling drop spider
+    spiderhang = CreateThing(tpl_Spider, spider1);
+	
+	#sends message to spider_wall's class cog, saying "user0" (27)
+    SendMessageEx(GetThingClassCog(spiderhang), user0, spiderhang, 0, 0, 0);
+
+    }
+
+
+return;
+
+
+
+# ========================================================================================
+end
+
+
+
+

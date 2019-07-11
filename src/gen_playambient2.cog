@@ -1,0 +1,98 @@
+# Jones 3D Cog Script
+#
+# gen_PlayAmbient2.cog
+#
+# Plays a sound at a one or more locations. The cog can be switched on and off by entering
+# various sectors.
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	entered
+
+	sector	turnon1		linkid=1   	// turn sound on
+	sector	turnon2		linkid=1
+	sector	turnon3		linkid=1
+
+	sector	turnoff1		linkid=2	// turn sound off
+	sector	turnoff2		linkid=2
+	sector	turnoff3		linkid=2
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+	thing		soundPos2		nolink
+	thing		soundPos3		nolink
+	thing		soundPos4		nolink
+	thing		soundPos5		nolink
+	thing		soundPos6		nolink
+	thing		soundPos7		nolink
+
+	sound		wav0
+
+	float		minDist=-1
+	float		maxDist=-1
+	float		vol=1.0
+
+	int		cnt=-1		local
+	int		soundnum0=0		local
+	int		soundnum1=0		local
+	int		soundnum2=0		local
+	int		soundnum3=0		local
+	int		soundnum4=0		local
+	int		soundnum5=0		local
+	int		soundnum6=0		local
+	int		soundnum7=0		local
+	int		soundon=0		local
+
+# subroutines
+flex	turnsoundon=0.0		local
+flex	turnsoundoff=0.0	local
+end
+
+code
+
+# ........................................................................................
+
+entered:
+	if (GetSenderID() == 1)
+	{
+		call turnsoundon;
+	} else {
+		call turnsoundoff;
+	}
+	return;
+
+# ........................................................................................
+
+turnsoundon:
+	if (soundon) return;
+	soundon = 1;
+	for (cnt = 0; cnt <= 7; cnt = cnt+1)
+	{
+		// flags indicate looping & ambient
+		if (soundPos0[cnt] >= 0)
+		{
+			soundnum0[cnt] = PlaySoundThing(wav0, soundPos0[cnt], vol, minDist, maxDist, 0x045);
+		}
+	}
+	return;
+
+# ........................................................................................
+
+turnsoundoff:
+	soundon = 0;
+	for (cnt = 0; cnt <= 7; cnt = cnt+1)
+	{
+		// flags indicate looping & ambient
+		if (soundPos0[cnt] >= 0)
+		{
+			StopSound(soundnum0[cnt], 0);
+		}
+	}
+	return;
+
+end
+

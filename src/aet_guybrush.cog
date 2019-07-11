@@ -1,0 +1,146 @@
+# Jones 3D Cog Script
+#
+# aet_GuyBrush.cog	
+#
+# Shhhhh...it's a secret...
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+
+message		startup
+message		entered
+message		arrived
+message		crossed
+
+sector		gosector
+
+surface		closetrigger
+surface		mustriggeron
+surface		mustriggeroff
+surface		guytriggeron
+surface		guytriggeroff
+
+thing		player							local
+
+thing		glowbugX
+thing		wall
+
+sound		guymusic=mus_aet_pocket_mky.wav	local
+sound		guyline=INXJ043.wav				local
+
+int			curframe=1						local
+int			linedone=0						local
+int			startdone=0						local	
+int			closedone=0						local
+int			musplayed=0						local
+int			looping							local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+
+AISetCutsceneMode(glowbugX);
+
+SetThingFlags(glowbugX, 0x80000);
+
+return;
+
+# ........................................................................................
+entered:
+	
+if ((GetSenderRef() == gosector) && (GetSourceRef() == player) && (startdone == 0))
+	{
+    startdone = 1;
+	ClearThingFlags(glowbugX, 0x80000);
+	Sleep(10.0);
+	AISetLookFrame(glowbugX, curframe);
+	AISetMoveFrame(glowbugX, curframe);
+	AISetMoveSpeed(glowbugX, 1.0);
+	printint(curframe);
+	}
+	
+return;
+	
+# ........................................................................................
+arrived:
+	
+if (GetThingHealth(glowbugX) <= 0)
+	{
+
+	return;
+
+	}
+if ((GetSenderRef() == glowbugX) && (curframe == 13))
+	{
+	DestroyThing(glowbugX);
+
+	return;
+    
+	}
+if ((GetSenderRef() == glowbugX) && (curframe == 10))
+	{
+	ThingFadeAnim(wall, 1.0, 0.5, 3.0, 0);
+	Sleep(3.0);
+	SetCollideType(wall, 0);
+    curframe = curframe + 1;
+    AISetLookFrame(glowbugX, curframe);
+	AISetMoveFrame(glowbugX, curframe);
+	AISetMoveSpeed(glowbugX, 1.0);
+	printint(curframe);
+	}
+if (GetSenderRef() == glowbugX)
+	{
+    curframe = curframe + 1;
+    AISetLookFrame(glowbugX, curframe);
+	AISetMoveFrame(glowbugX, curframe);
+	AISetMoveSpeed(glowbugX, 1.0);
+	printint(curframe);
+	}
+
+return;
+
+# ........................................................................................
+crossed:
+
+if ((GetSenderRef() == closetrigger) && (GetSourceRef() == player) && (closedone == 0))
+	{
+    closedone = 1;
+	ThingFadeAnim(wall, 0.5, 1.0, 3.0, 0);
+	Sleep(3.0);
+	SetCollideType(wall, 3);
+	}
+if ((GetSenderRef() == mustriggeron) && (GetSourceRef() == player) && (musplayed == 0))
+	{
+    looping = PlaySoundLocal(guymusic, 1.0, 0, 0x1, 0);
+	SetThingCurLightMode(player, 3);
+    }
+if ((GetSenderRef() == mustriggeroff) && (GetSourceRef() == player) && (musplayed == 0))
+	{
+	SetThingCurLightMode(player, 1);
+	StopSound(looping, 1.0);
+    }
+if ((GetSenderRef() == guytriggeron) && (GetSourceRef() == player))
+	{
+    MakeMeAPirate();
+	if (linedone = 0)
+		{
+        linedone = 1;
+		PlayVoice(player, guyline, 1.0, 0);
+		}
+	}
+if ((GetSenderRef() == guytriggeroff) && (GetSourceRef() == player))
+	{
+	MakeMeAPirate();
+	}
+
+return;
+
+# ........................................................................................
+
+end

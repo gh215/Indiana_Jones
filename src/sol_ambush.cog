@@ -1,0 +1,679 @@
+# Jones 3D Cog Script
+#
+# SOL_Ambush.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     entered
+    message     removed
+    message     pulse
+    
+    # ** local things **
+    thing       player          local
+    thing       car             local
+    thing		rocket1		local
+    thing       rocket2      local
+    
+    # ** explosion things **
+    thing       exp1
+    thing       exp2
+    #thing       exp3
+    
+    # ** cameras **
+    thing       s3_Cam1     # switch3 cam1
+    thing       ee_Cam1
+    thing       ee_Cam2
+    #thing       ee_Cam3
+    
+    # ** camera targets **
+    thing       ee_CamTarg1
+    thing       ee_CamTarg2
+    
+    # ** bazooka commies **
+    thing       bazooka_Com1
+    thing       bazooka_Com2
+    
+    # ** switch 3 commies **
+    thing       s3_Com1
+    thing       s3_Com2
+    
+    # ** commie targets **
+    thing       s3_comTarg1
+    thing       s3_comTarg2
+    
+    # ** fire targets **
+    thing       fireTarg1
+    thing       fireTarg2
+    
+    # ** misc things **
+    thing       mineCar_Pos     # move mine car back a bit
+    thing       ee_ZoomCam      # interp to this camera to watch ramp explode
+    thing       camTarg1_Pos
+    thing       com1_Baz
+    thing       com2_Baz
+    
+    # ** trigger surfaces **
+    surface     trig_GetItOn    # fire it up
+    surface     trig_GoTell     # s3_Com1 goes to...
+    surface     trig_Telling    # s3_Com2 goes to...
+    #surface     trig_Fire1      # set off first explosion
+    surface     trig_Fire2      # blow up track -- send message
+    surface     trig_Done       # return control to player
+    surface     trig_Ready
+    
+    # ** hole surfaces **
+    surface     hole0
+    surface     hole1
+    surface     hole2
+    surface     hole3
+    surface     hole4
+    surface     hole5
+    surface     hole6
+    surface     hole7
+    surface     hole8
+    surface     hole9
+    
+    # ** misc surfaces **
+    surface     switch3
+    
+    # Shotgun commies to replace bazooka commies
+    thing       s3_Com3			local
+    thing       s3_Com4			local
+
+    # ** Templates **
+    #template    tplExp=+gen_exp_stone	        local
+    template    tplExp=+bazooka_exp             local
+    template	projectile=+bazooka				local
+    template	exhaust=+bazooka_exhaust		local
+    template	smoke=+bazooka_smoke			local
+    #template	rocketFlame=+baz_spr_rocket		local
+    template    tpl_shotgun1=khaki_shotgun2     local
+    template    tpl_ShotGun2=khaki_shotgun5     local
+    
+    # ** Keyframes **
+    keyframe	shoot=02h_fire_bazooka.key		local
+    
+    # ** sounds **
+    sound       snd_Com1=Inxh1002.wav           local       # Hey, you there!
+    sound       snd_Com2=Inxh1006.wav           local       # you haven't got a chance
+    sound		bang=gen_bazooka_fire.wav		local
+    sound		woosh=gen_rocket.wav    		local
+    sound       say_whoa=Inxj007.wav            local       # whoa!
+    sound       landing=sol_minecar_landing_c.wav   local   # mine car landing sfx
+    
+    # ** music **
+    sound       mus_bazooka=mus_gen_russbold_shrt4.wav      local
+    
+    # ** materials **
+    material	matBaz=rckt_a4bzoka_fire.mat	    local
+    material	matRkt=gen_a4sfx_rokt_flame.mat	    local
+    
+    # ** cogs **
+    cog         ramp
+    cog         chaseLower
+    cog         hintCog
+    
+    # ** vectors **
+    vector		firePos			local
+    vector      firePYR         local
+    
+    # ** ints **
+    int         numHole=10      local
+    int         hole=0          local
+    int         curSound        local
+    int         done=0          local
+    int         secondLap=0     local
+    int			c1_handNode		local
+    int			c1_handMesh		local
+    int			c2_handNode		local
+    int			c2_handMesh		local
+    int			rocketSnd=-1 	local
+    #int		flameTrack=-1	local
+    int         r1=0            local
+    int         r2=0            local
+    int         blowIt=0        local
+    int         ready=0         local
+    
+    # ** flex **
+    flex		pulseTime=0.1	local
+    
+# ===========================WAYPOINTS================================================
+int			n_idx					local
+
+int			WAYPOINT_BASE=35		local
+int			NUM_WAYPOINTS=13		local
+thing		t_Waypoint00
+thing		t_Waypoint01
+thing		t_Waypoint02
+thing		t_Waypoint03
+thing		t_Waypoint04
+thing		t_Waypoint05
+thing		t_Waypoint06
+thing		t_Waypoint07
+thing		t_Waypoint08
+thing		t_Waypoint09
+thing		t_Waypoint10
+thing		t_Waypoint11
+thing		t_Waypoint12
+
+# ===========================SUBROUTINES================================================
+
+flex		ActivateWaypoints		local
+flex		fire1					local
+flex		fire2					local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    # hide switch 3 commies at start
+    SetThingFlags(s3_Com1, 0x80000);
+    SetThingFlags(s3_Com2, 0x80000);
+    
+    # hide bazooka commies
+    SetThingFlags(bazooka_Com1, 0x80000);
+    SetThingFlags(bazooka_Com2, 0x80000);
+    
+    # hide dropped bazookas
+    SetThingFlags(com1_Baz, 0x80000);
+    SetThingFlags(com2_Baz, 0x80000);
+    
+    # disable commie ai
+    AISetCutsceneMode(s3_Com1);
+    AISetCutsceneMode(s3_Com2);
+    AISetCutsceneMode(bazooka_Com1);
+    AISetCutsceneMode(bazooka_Com2);
+    
+    # do bazooka_Com1 mesh stuff
+    c1_handNode = GetNodeByName(bazooka_Com1, "inrhand");
+	c1_handMesh = GetMeshByName(bazooka_Com1, "inrhand");
+    
+    # do bazooka_Com2 mesh stuff
+    c2_handNode = GetNodeByName(bazooka_Com2, "inrhand");
+	c2_handMesh = GetMeshByName(bazooka_Com2, "inrhand");
+    
+    return;
+
+# ========================================================================================
+
+user0:
+
+    # receive message from sol_comfalls.cog
+    # or from sol_chaseBlowit.cog
+    if(secondLap == 0)
+    {
+        Print("Ambush: secondLap = 1");
+        secondLap = 1;
+    }
+
+    return;
+
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    car = GetSourceRef();
+    
+    if((BitTest(GetPhysicsFlags(car), 0x01000000)) && (GetWallCel(switch3) == 2) && (done == 0))
+    {
+        if(secondLap == 0)
+        {
+            if(GetSenderRef() == trig_GetItOn)
+            {
+                Print("Ambush: secondLap = 1");
+                secondLap = 1;
+            }
+        }
+        
+        else if((secondLap == 1) && (ready == 0))
+        {
+            if(GetSenderRef() == trig_Ready)
+            {
+                ready = 1;
+            }
+        }
+        
+        else if((secondLap == 1) && (ready == 1))
+        {
+            if(GetSenderRef() == trig_GetItOn)
+            {
+                #Print("entered: trig_GetItOn");
+                
+                # tell sol_chaselower.cog to wait till next lap
+                SendMessage(chaseLower, user3);
+                
+                # do cutscene stuff
+                StartCutscene(2);
+                SetActorFlags(player, 0x200000);
+                
+                # show s3_Com1 and disable his AI
+                ClearThingFlags(s3_Com1, 0x80000);
+                #AISetCutsceneMode(s3_Com1);
+                
+                # slow down the mine car
+                SetThingThrust(player, '0.0 3.0 0.0');
+                
+                # Cut to s3_Cam1 -- watch indy come through mine doors
+                SetCameraFocus(2, s3_Cam1);
+                SetCameraSecondaryFocus(2, player);
+                SetCurrentCamera(2);
+                SetCameraFOV(90, 0, 0.0);
+            }
+            
+            else if(GetSenderRef() == trig_GoTell)
+            {
+                #Print("entered: trig_GoTell");
+                
+                # send s3_com1 running towards east end
+                AISetMoveSpeed(s3_com1, 4.0);
+                AISetLookThing(s3_com1, s3_comTarg1);
+                AISetMoveThing(s3_com1, s3_comTarg1, 0);
+                
+                # s3_com1 shouts out...  Hey you there
+                PlayVoice(s3_com1, snd_Com1, 1.0, 0);
+            }
+            
+            else if(GetSenderRef() == trig_Telling)
+            {
+                # cut inside east end showing com1 reaching
+                # s3_Com1Targ as camera begins to zoom out
+                
+                # slow down the mine car
+                SetThingThrust(player, '0.0 2.0 0.0');
+                
+                # show s3_Com2 and disable his AI
+                ClearThingFlags(s3_Com2, 0x80000);
+                #AISetCutsceneMode(s3_Com2);
+                
+                # show bazooka_Com1 and disable his AI
+                ClearThingFlags(bazooka_Com1, 0x80000);
+                #AISetCutsceneMode(bazooka_Com1);
+                
+                # set bazooka_Com1 to look at fireTarg1
+                AISetLookThing(bazooka_Com1, fireTarg1);
+                #AISetFireTarget(bazooka_Com1, fireTarg1);
+                #SetActorHeadPYR(bazooka_Com1, GetThingPos(fireTarg1));
+                
+                # show bazooka_Com2 and disable his AI
+                ClearThingFlags(bazooka_Com2, 0x80000);
+                #AISetCutsceneMode(bazooka_Com2);
+                
+                # set bazooka_Com2 to look at fireTarg2
+                AISetLookThing(bazooka_Com2, fireTarg2);
+                AISetFireTarget(bazooka_Com2, fireTarg2);
+                
+                # hide s3_Com1
+                SetThingFlags(s3_Com1, 0x80000);
+                
+                # send s3_com2 running to s3_comTarg2
+                # where he will alert bazooka commies
+                AISetMoveSpeed(s3_com2, 4.0);
+                AISetLookThing(s3_com2, s3_comTarg2);
+                AISetMoveThing(s3_com2, s3_comTarg2, 0);
+                
+                # switch to ee_Cam1 from inside east end
+                SetCameraFocus(2, ee_Cam1);                 # east end cam1
+                SetCameraSecondaryFocus(2, ee_CamTarg1);    # east end cam1 targ
+                SetCurrentCamera(2);
+                SetCameraFOV(90, 0, 0.0);
+                
+                # make s3_com2 shout out warning that mine car is coming
+                curSound = PlayVoice(s3_com2, snd_Com2, 1.0, 0);
+                WaitForSound(curSound);
+                
+                # play music
+                PlaySoundLocal(mus_Bazooka, 1.0, 0.0, 0x0, 0);
+                
+                # zoom camera back to reveal bazooka_Com1
+                MoveToFrame(ee_Cam1, 1, 6.0);
+                
+                # return brain to s3_Com2
+                AIClearCutsceneMode(s3_Com2);
+                
+                MoveThingToPos(ee_CamTarg1, GetThingPos(camTarg1_Pos), 2.0);
+                
+                # wait for camera to reach frame1
+                WaitForStop(ee_Cam1);
+                
+                # send s3_com2 running away to s3_comTarg1
+                AISetMoveSpeed(s3_com2, 4.0);
+                AISetLookThing(s3_com2, s3_comTarg1);
+                AISetMoveThing(s3_com2, s3_comTarg1, 0);
+                
+                # rest for a bit before firing
+                Sleep(0.25);
+                
+                # bazooka_Com1 fires the first shot
+                Call fire1;
+            }
+                
+            # blow up the track
+            else if((GetSenderRef() == trig_Fire2) && (blowIt == 1))
+            {
+                Print("Entered: trig_Fire2");
+                
+                # tell ramp cog to blow up track
+                SendMessage(ramp, user0);
+                
+                # speed up the mine car
+                SetThingThrust(player, '0.0 4.0 0.0');
+            }
+                
+            else if(GetSenderRef() == trig_Done)
+            {
+                #Print("Entered: trig_Done");
+                
+                # play landing sfx on other side of hole
+                PlaySoundLocal(landing, 1.0, 0.0, 0x0, 0);
+                
+                # slow down the mine car
+                SetThingThrust(player, '0.0 1.5 0.0');
+                
+                Sleep(1.0);
+                
+                # return camera can control to player
+                SetCameraPosInterp(2, 0);
+                SetCameraPosition(1, GetThingPos(ee_Cam2));
+                SetCurrentCamera(1);
+                
+                PlayVoice(player, say_Whoa, 1.0, 0);
+                
+                # speed up the mine car
+                SetThingThrust(player, '0.0 3.0 0.0');
+                
+                #Sleep(1.0);
+                
+                # stop player
+                #StopThing(player);
+                
+                # ambush is complete
+                done = 1;
+                
+                # don't give control back right away.
+                Sleep(1.0);
+                
+                # return control to player
+                ClearActorFlags(player, 0x200000);
+                EndCutscene();
+                
+                # hide bazooka_Com1 and create shotgun com at his pos
+                SetThingFlags(bazooka_Com1, 0x80000);
+                s3_Com3 = CreateThing(tpl_shotgun1, bazooka_Com1);
+                DestroyThing(bazooka_Com1);
+                
+                # hide bazooka_Com2 and create shotgun com at his pos
+                SetThingFlags(bazooka_Com2, 0x80000);
+                s3_Com4 = CreateThing(tpl_shotgun2, bazooka_Com2);
+                DestroyThing(bazooka_Com2);
+                
+                # show dropped bazookas
+                ClearThingFlags(com1_Baz, 0x80000);
+                ClearThingFlags(com2_Baz, 0x80000);
+                
+                # turn on speedO cog
+                #SendMessage(speedO, user2);
+                
+                # tell hintCog that ambush was sprung
+                SendMessage(hintCog, user2);
+                SendMessage(hintCog, user0);    # in case
+
+				call ActivateWaypoints;
+            }
+        }
+    }
+
+    return;
+       
+# ========================================================================================
+
+removed:
+
+    if(GetSenderRef() == rocket1)
+	{
+		rocket1 = -1;
+        
+        if (rocketSnd != -1)
+		{
+			# Stop the projectile's sound
+			StopSound(rocketSnd, 0.0);
+			rocketSnd = -1;
+		}
+
+		# detach ee_Cam1 from rocket1
+        #DetachThing(ee_Cam1);
+        
+        # Stop the smoke trail
+		SetPulse(0.0);
+        pulseTime=0.1;
+
+        # create some extra explosions
+        CreateThing(tplExp, exp1);
+        Sleep(0.1);
+        CreateThing(tplExp, exp2);
+        
+        # open up the holes
+        for (hole=0; hole<numHole; hole=hole+1)
+        {
+            SetFaceGeoMode(hole0[hole], 0);     # no draw
+            SetAdjoinFlags(hole0[hole], 2);     # move
+        }
+        
+        Sleep(1.0);
+        
+        # move mine car back some
+        CopyOrientAndPos(mineCar_Pos, player);
+        SetThingThrust(player, '0.0 1.0 0.0');
+        blowIt = 1;
+        
+        # switch to ee_Cam2 behind bazooka_Com2
+        SetCameraFocus(2, ee_Cam2);                 # east end cam2
+        SetCameraSecondaryFocus(2, ee_CamTarg2);    # east end cam2 targ
+        SetCurrentCamera(2);
+        SetCameraFOV(110, 0, 0.0);
+        
+        # bazooka_Com1 fires a second time
+        #Call fire1;  # THIS IS BUGGY!!!
+        
+        # rest for a bit
+        Sleep(1.0);
+        
+        # bazooka_Com2 fires
+        Call fire2;
+	}
+    
+    else if(GetSenderRef() == rocket2)
+	{
+		rocket2 = -1;
+        if (rocketSnd != -1)
+		{
+			# Stop the projectile's sound
+			StopSound(rocketSnd, 0.0);
+			rocketSnd = -1;
+		}
+        
+        # Stop the smoke trail
+		SetPulse(0.0);
+        pulseTime=0.1;
+    }
+
+    return;
+    
+# ========================================================================================
+
+fire1:
+
+    r1 = 1;
+    r2 = 0;
+    
+    #Print("fire1");
+# ***************************
+# ** bazooka_Com1 Fire ******
+# ***************************
+    
+    PlayKey(bazooka_Com1, shoot, 6, 0x38, 0);
+    PlaySoundThing(bang, bazooka_Com1, 1.0, -1, -1, 0x0);
+
+    # Transform the offset to the end of the bazooka by his orientation
+    firePos = VectorTransformToOrient(bazooka_Com1, '-0.003 0.065 0.01');
+    
+    # Now add that to the position of his hand
+    firePos = VectorAdd(firePos, GetThingJointPos(bazooka_Com1, c1_handNode));
+    
+    # Calculate the trajectory
+    firePYR = GetThingLVecPYR(bazooka_Com1);
+    firePYR = VectorAdd(firePYR, '15.0 0.0 0.0'); # Adds 5 degress of pitch
+    
+    # Fire away...
+    rocket1 = CreateThingAtPos(projectile, GetThingSector(bazooka_Com1), firePos, GetThingLVecPYR(bazooka_Com1)); 
+    CaptureThing(rocket1);
+    Sleep(0.01);
+    SetThingMaxVel(rocket1, 0.01);
+    Sleep(0.01);
+    
+    # attach ee_Cam1 to rocket1
+    #AttachThingToThing(ee_Cam1, rocket1);
+
+    # Make some exhaust...
+    MaterialAnim(matBaz, 32, 0x8);
+    AttachThingToThingMesh(bazooka_Com1, exhaust, GetMeshByName(bazooka_Com1, "inrhand"));
+
+    # Add some flame to rocket1
+    #flame = AttachThingToThingMesh(rocket1, rocketFlame, 0);
+    #flameTrack = MaterialAnim(matRkt, 16, 0x1);
+
+    # Start the rocket's sound
+    rocketSnd = PlaySoundThing(woosh, rocket1, 1.0, -1, -1, 0x0);
+    
+    # Start the smoke trail
+    CreateThing(smoke, rocket1);
+    SetPulse(pulseTime);
+    
+# ***************************
+# ** End bazooka_Com1 fire **
+# ***************************
+    
+    return;
+
+# ========================================================================================
+
+fire2:
+
+    #Print("fire2");
+# ***********************
+# ** bazooka_Com2 Fire **
+# ***********************
+    
+    r2 = 1;
+    r1 = 0;
+    
+    SetCameraInterpSpeed(2, 2.0);
+    SetCameraPosInterp(2, 1);
+    Sleep(0.01);
+    
+    PlayKey(bazooka_Com2, shoot, 6, 0x38, 0);
+    PlaySoundThing(bang, bazooka_Com2, 1.0, -1, -1, 0x0);
+    
+    # Transform the offset to the end of the bazooka by his orientation
+    firePos = VectorTransformToOrient(bazooka_Com2, '-0.003 0.065 0.01');
+    
+    # Now add that to the position of his hand
+    firePos = VectorAdd(firePos, GetThingJointPos(bazooka_Com2, c2_handNode));
+    
+    # Fire away...
+    rocket2 = CreateThingAtPos(projectile, GetThingSector(bazooka_Com2), firePos, GetThingLVecPYR(bazooka_Com2)); 
+    CaptureThing(rocket2);
+    Sleep(0.01);
+    SetThingMaxVel(rocket1, 0.01);
+    Sleep(0.01);
+    
+    SetCameraFocus(2, ee_ZoomCam);
+    
+    # attach ee_Cam2 to rocket2
+    #AttachThingToThing(ee_Cam2, rocket2);
+    
+    # Make some exhaust...
+    MaterialAnim(matBaz, 32, 0x8);
+    AttachThingToThingMesh(bazooka_Com2, exhaust, GetMeshByName(bazooka_Com2, "inrhand"));
+    
+    # Add some flame to the rocket
+    #flame = AttachThingToThingMesh(rocket2, rocketFlame, 0);
+    #flameTrack = MaterialAnim(matRkt, 16, 0x1);
+    
+    # Start the rocket's sound
+    rocketSnd = PlaySoundThing(woosh, rocket2, 1.0, -1, -1, 0x0);
+    
+    # Start the smoke trail
+    CreateThing(smoke, rocket2);
+    SetPulse(pulseTime);
+    
+# ***************************
+# ** End bazooka_Com2 fire **
+# ***************************
+    
+    return;
+
+# ========================================================================================
+
+pulse:
+
+    if((r1 == 1) && (rocket1 != -1))
+    {
+        CreateThing(smoke, rocket1);
+    }
+    
+    else if((r2 == 1) && (rocket2 != -1))
+    {
+        CreateThing(smoke, rocket2);
+    }
+    
+	pulseTime = pulseTime + 0.008;
+	SetPulse(pulseTime);
+    return;   
+    
+# ========================================================================================
+
+ActivateWaypoints:
+
+	for ( n_idx = 0; n_idx < NUM_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx + WAYPOINT_BASE);
+	}
+
+	AIConnectWpnts(0 + WAYPOINT_BASE, 1 + WAYPOINT_BASE);
+	AIConnectWpnts(1 + WAYPOINT_BASE, 2 + WAYPOINT_BASE);
+	AIConnectWpnts(2 + WAYPOINT_BASE, 3 + WAYPOINT_BASE);
+	AIConnectWpnts(2 + WAYPOINT_BASE, 4 + WAYPOINT_BASE);
+	AIConnectWpnts(2 + WAYPOINT_BASE, 5 + WAYPOINT_BASE);
+	AIConnectWpnts(4 + WAYPOINT_BASE, 5 + WAYPOINT_BASE);
+	AIConnectWpnts(5 + WAYPOINT_BASE, 6 + WAYPOINT_BASE);
+	AIConnectWpnts(6 + WAYPOINT_BASE, 7 + WAYPOINT_BASE);
+	AIConnectWpnts(6 + WAYPOINT_BASE, 9 + WAYPOINT_BASE);
+	AIConnectWpnts(7 + WAYPOINT_BASE, 8 + WAYPOINT_BASE);
+	AIConnectWpnts(9 + WAYPOINT_BASE, 10 + WAYPOINT_BASE);
+	AIConnectWpnts(10 + WAYPOINT_BASE, 11 + WAYPOINT_BASE);
+	AIConnectWpnts(11 + WAYPOINT_BASE, 12 + WAYPOINT_BASE);
+
+	AISetInstinctWpntMode(s3_Com2);
+	AISetInstinctWpntMode(s3_Com3);
+	AISetInstinctWpntMode(s3_Com4);
+	AIEnableInstinct(s3_Com2, "roam", 1);
+	AIEnableInstinct(s3_Com3, "roam", 1);
+	AIEnableInstinct(s3_Com4, "roam", 1);
+
+	return;
+
+# ========================================================================================
+end
+

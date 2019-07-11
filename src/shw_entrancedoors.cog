@@ -1,0 +1,104 @@
+# Jones 3D Cog Script
+#
+# shw_entrance_doors.cog
+#
+# Main Waterworks Door Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup		
+	message	crossed	
+    message	blocked		
+
+	thing		door0		linkid=0
+	thing		door1		
+	surface		adjoin0         linkid=1        mask=0x4
+	surface		adjoin1         linkid=2        mask=0x4
+
+
+	float		doorspeed=4.0
+	float		sleepTime=2.0
+	int		open=0
+	float		lightValueR=0.5
+	float		lightValueG=0.5
+	float		lightValueB=0.5
+
+	vector	vecLightValue		local
+
+	sector	doorSector			local
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	doorSector = GetThingSector(door0);
+	SetSectorAdjoins(doorSector, 0);
+
+	vecLightValue = VectorSet(lightValueR, lightValueG, lightValueB);
+	SetSectorLight(doorSector, vecLightValue, 0.0);		// add some light to door sector
+	return;
+
+# ........................................................................................
+
+crossed:
+
+        if (getSenderID() == 1)
+        {
+            if (open == 1) return;
+	    if (IsThingMoving(door0)) return;
+            
+	    {
+                open = 1;
+                SetSectorAdjoins(doorSector, 1);
+                Rotate(door0, -90, 1, doorspeed);
+                Rotate(door1, 90, 1, doorspeed);
+                waitforstop(door0);
+                sleep(sleeptime);
+                Rotate(door0, 90, 1, doorspeed);
+                Rotate(door1, -90, 1, doorspeed);
+                waitforstop(door0);
+                SetSectorAdjoins(doorSector, 0);
+                open = 0;
+                return;
+            }
+        }
+    else
+        
+        if (GetSenderID() == 2)
+        {
+                
+                if (open == 1) return;
+                if (IsThingMoving(door0)) return;
+                
+            {
+                open = 1;
+		SetSectorAdjoins(doorSector, 1);
+                Rotate(door0, 90, 1, doorspeed);
+                Rotate(door1, -90, 1, doorspeed);
+                waitforstop(door0);
+                sleep(sleeptime);
+                Rotate(door0, -90, 1, doorspeed);
+                Rotate(door1, 90, 1, doorspeed);
+                waitforstop(door0);
+                SetSectorAdjoins(doorSector, 0);
+                open = 0;
+                return;
+            }
+        }
+        
+# ........................................................................................
+
+blocked:
+	rotatepivot(door0, 1, doorspeed);
+	return;
+
+# ........................................................................................
+
+end
+

@@ -1,0 +1,258 @@
+# Jones 3D Cog Script
+#
+# aet_MardukDais.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+symbols
+    
+message     startup
+message     crossed
+message		arrived
+message		damaged
+message		entered
+message		activated
+
+surface     adjoin0								# Start the cutscene adjoins.											
+surface     adjoin1							
+surface     adjoin2							
+surface		hotspot								# Used to activate the Marduk Key. (temp)
+
+sector		marduksector						# Central sector for killing Marduk. (temp)
+
+thing		player						local
+thing		wedge0								# Wedge door.
+thing		wedge1
+thing		wedge2
+
+thing		cam0								# Camera 								
+thing		ghost0								# For camera to focus on.
+
+thing		indy								# First actor Indy						
+thing		indy2						        # Second actor Indy
+thing		marduk						mask=0x9
+thing		probe								# Charging probe from ceiling.
+
+cog			mardukCog							# Link to AI cog
+
+sound		fade=nub_charged_pad_c.wav	local
+
+int			done0=0						local
+int			done1=0						local	# Done flag for second cutscene.
+int			curcam						local
+int			electric=1					local	# Done making whip electric
+int			enterdone=0					local	# Done flag for entering Marduk sector once. (temp)
+
+flex 		mardukescape				local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+
+player = GetLocalPlayerThing();
+AISetCutsceneMode(indy);
+AISetCutsceneMode(marduk);
+
+MoveToFrame(wedge0, 1, 1.0);					# Set wedge doors in correct starting pos.	
+MoveToFrame(wedge1, 1, 1.0);	
+MoveToFrame(wedge2, 1, 1.0);	
+
+SetThingFlags(marduk, 0x80000);					# Hide Marduk.
+
+return;
+
+# ........................................................................................
+crossed:
+
+if (done0 == 1)	return;
+if ((GetSenderRef() == adjoin0) || (GetSenderRef() == adjoin1) || (GetSenderRef() == adjoin2))
+	{
+	done0 = 1;
+	
+	Sleep(0.1);
+	
+	#Begin cutscene.
+	StartCutscene(1);
+	curcam = GetCurrentCamera();
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x80000);
+
+	#Focus on the actor Indy falling.
+	SetCurrentCamera(2);
+	SetCameraFocus(2, cam0);
+	ClearThingFlags(indy, 0x80000);
+    SetCameraSecondaryFocus(2, indy);
+	
+	Sleep(1.0);
+
+	#Watch doors close.
+	SetCameraSecondaryFocus(2, ghost0);
+	MoveToFrame(wedge0, 0, 1.0);    
+	MoveToFrame(wedge1, 0, 1.0);    
+	MoveToFrame(wedge2, 0, 1.0);    
+
+	Sleep(1.0);
+	
+	# Watch Marduk enter and probe descend.
+	ClearThingFlags(marduk, 0x80000);
+	SetCameraSecondaryFocus(2, marduk);
+	AISetLookFrame(marduk, 1);
+	AISetMoveFrame(marduk, 1);
+	AISetMoveSpeed(marduk, 2);
+	MoveToFrame(probe, 1, 1.0); 
+
+	Sleep(3.0);
+
+	# Return to normal.
+	CopyOrientandPos(indy, player);
+	SetCurrentCamera(curcam);
+	SetCameraFocus(curcam, player);
+	SetCameraFOV(90, 0, 0.0);
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+	SetThingFlags(indy, 0x80000);
+	AIClearCutsceneMode(marduk);
+	EndCutScene();
+
+    # Wake up ai cog.
+	SendMessageEx(mardukCog, 27, 0, 0, 0, 0);
+	}
+
+return;
+
+# ........................................................................................
+arrived:
+
+if ((GetSenderRef() == wedge0) && (GetCurFrame(wedge0) == 1)) 
+	{
+
+	}
+
+return;
+
+# ........................................................................................
+mardukescape:
+
+# Obtain Marduk's crown.
+ChangeInv(player, 111, 1.0);
+SetInvAvailable(player, 111, 1);
+JonesInvItemChanged(111);
+
+# Begin cutscene.
+StartCutscene(1);
+curcam = GetCurrentCamera();
+SetActorFlags(player, 0x200000);
+SetThingFlags(player, 0x80000);
+SetCurrentCamera(2);
+SetCameraFocus(2, cam0);
+ClearThingFlags(indy2, 0x80000);
+
+# Watch doors open.
+SetCameraSecondaryFocus(2, ghost0);
+MoveToFrame(wedge0, 1, 1.0);	
+MoveToFrame(wedge1, 1, 1.0);	
+MoveToFrame(wedge2, 1, 1.0);	
+MoveToFrame(probe, 0, 1.0);	
+
+Sleep(5.0);
+
+# Watch Marduk Flee.
+SetCameraSecondaryFocus(2, marduk);
+AISetLookFrame(marduk, 2);
+AISetMoveFrame(marduk, 2);
+AISetMoveSpeed(marduk, 2);
+
+Sleep(5.0);
+
+# Return to normal.
+CopyOrientandPos(indy2, player);
+SetCurrentCamera(curcam);
+SetCameraFocus(curcam, player);
+SetCameraFOV(90, 0, 0.0);
+ClearActorFlags(player, 0x200000);
+ClearThingFlags(player, 0x80000);
+SetThingFlags(indy2, 0x80000);
+EndCutScene();
+
+return;
+
+# ........................................................................................
+entered:
+
+# Start Marduk escape...soon to be user0.
+if ((GetSenderRef() == marduksector) && (enterdone == 0))
+	{
+	if (GetInv(player, 63))
+		{
+		enterdone = 1;
+		call mardukescape;
+		ChangeInv(player, 63, -1);
+		}
+	}
+
+return;
+
+# ........................................................................................
+activated:
+
+# Using Marduk's key to close room.
+if ((GetSenderRef() == hotspot) && (done1 == 0))
+	{
+	if (GetCurItem(player) == 111)
+		{
+		done1 = 1;
+		# Begin cutscene.
+		StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+		PlayMode(player, 61, 0);
+		
+		Sleep(0.5);
+		
+		# Take item from inventory.
+		ChangeInv(player, 111, -1);
+        curcam = GetCurrentCamera();
+        Sleep(1.0);
+		SetCurrentCamera(2);
+		SetCameraFocus(2, cam0);
+	
+		# Watch doors open.
+		SetCameraSecondaryFocus(2, ghost0);
+		MoveToFrame(wedge0, 0, 1.0);	
+		MoveToFrame(wedge1, 0, 1.0);	
+		MoveToFrame(wedge2, 0, 1.0);	
+		MoveToFrame(probe, 1, 1.0);	
+		electric = 0;
+
+		Sleep(5.0);
+		
+		# Return to normal.
+		SetCurrentCamera(curcam);
+		SetCameraFocus(curcam, player);
+		SetCameraFOV(90, 0, 0.0);
+		ClearActorFlags(player, 0x200000);
+		EndCutScene();
+		}
+	}
+
+return;
+
+# ........................................................................................
+damaged:
+
+# Charge whip here.
+if ((GetParam(1) == 0x10) && (GetSenderRef() == probe) && (electric == 0))
+	{
+	electric = 1;
+	SetWhipElectric(1); 
+	}
+
+return;
+
+# ........................................................................................
+end
+

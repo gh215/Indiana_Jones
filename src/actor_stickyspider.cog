@@ -1,0 +1,238 @@
+# Jones 3D Cog Script
+#
+# actor_StickySpider.cog
+#
+# [RT] [MDR]
+#
+# ### Notes ###
+# The sticky spider can be made to "drop on a web" manually if triggered by a USER0 message
+# from COG as follows:
+#
+#   SendMessageEx( GetThingClassCog(THINGREF spider), USER0, (THINGREF spider), 0, 0, 0 );
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+	message		created
+	message		aievent
+	message		killed
+	message		timer
+	message		user0
+
+# ************************** TEMPLATES *************************
+template	tpl_Spider=spider			local
+material	mat_web=gen_a4web.mat
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_StickySpider				local
+thing		t_NewSpider					local
+thing		t_web						local
+flex		f_maxWebAlpha=0.3			local
+int			FLAG_WEBDROP=1				local
+flex		f_userData					local
+
+int			bPaused=0					local
+vector		vec_look					local
+vector		vec_pyr						local
+sector		sec_atNewPos				local
+
+cog			cog_capture					local
+
+# ************************ SUBROUTINES *************************
+flex		WebDrop						local
+flex		MakeRealSpider				local
+flex		KillWeb						local
+
+end
+
+# =================================================================================
+code
+
+# .................................................................................	
+created:
+	
+	SetThingUserData(GetSenderRef(), 0);
+	return;
+
+
+# .................................................................................	
+aievent:
+
+	t_StickySpider = GetSenderRef();
+
+	if ( GetParam(0) == 0x100 )									#---- EVENT_MODECHANGED
+	{																# Switched to MODE_ATTACKING?
+		if ( BITTEST(GetParam(1), 0x02) && !BITTEST(GetParam(2), 0x02) )
+		{
+			f_userData	= GetThingUserData(t_StickySpider);
+
+			if ( (GetAttachFlags(t_StickySpider) > 0) && !BITTEST(f_userData, FLAG_WEBDROP) )
+			{
+				call WebDrop;
+			}
+		}
+	}
+
+	return;
+
+
+# .................................................................................	
+killed:
+
+	t_StickySpider = GetSenderRef();
+
+	SetThingTimer(t_StickySpider, 0);
+	SetPhysicsFlags(t_StickySpider, 0x1);
+
+	DetachThing(t_StickySpider);
+
+	vec_look	= GetThingLVecPYR(t_StickySpider);
+	vec_pyr		= VectorSet(0, VectorY(vec_look), VectorZ(vec_look));
+	SetThingLVecPYR(t_StickySpider, vec_pyr);
+
+	call KillWeb;
+
+	return;
+
+
+# .................................................................................	
+timer:
+	t_StickySpider = GetSenderRef();
+	bPaused = !BITTEST(GetPhysicsFlags(t_StickySpider), 0x1);
+
+	if (bPaused || VectorZ(GetThingVel(t_StickySpider)) < 0.0)
+	{
+		if (!bPaused)
+		{
+			StopThing(t_StickySpider);
+			ClearPhysicsFlags(t_StickySpider, 0x1);			# disable gravity
+			SetThingTimer(t_StickySpider, Rand() + 0.1);
+		}
+		else
+		{
+			SetPhysicsFlags(t_StickySpider, 0x1);			# enable gravity
+			SetThingTimer(t_StickySpider, Rand()/3 + 0.1);
+		}
+	}
+	else
+	{
+		call KillWeb;
+		call MakeRealSpider;
+
+#		CreateThing(tpl_Spider, t_StickySpider);			# Make a real spider
+#		DestroyThing(t_StickySpider);						# Get rid of the sticky spider
+	}
+
+	return;
+
+
+# .................................................................................	
+user0:
+
+	t_StickySpider	= GetParam(0);								# THINGREF for spider on wall
+	if ( GetThingType(t_StickySpider) == 2 )					# Its a SITH_THING_ACTOR?
+	{
+		call WebDrop;
+	}
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+# t_StickySpider must be initialized!
+# ...................................................................
+WebDrop:
+
+	DetachThing(t_StickySpider);
+	t_web = 0;													# initialize to 'not created'
+
+	// Spider only "stutter drops" if -180 < pitch < -90
+	if ((VectorDot(GetThingUVec(t_StickySpider), '0 0 -1') > 0) && (GetLocalPlayerThing() > -1))
+	{
+		ClearPhysicsFlags(t_StickySpider, 0x800);				# Prevent engine orientation changes
+		SetActorFlags(t_StickySpider, 0x40000);					# Prevent mid air AI motion
+
+		vec_pyr		= VectorSet(0, RandBetween(-30, 30), 0);
+
+		vec_look	= VectorSub(GetThingPos(GetLocalPlayerThing()), GetThingPos(t_StickySpider));
+		vec_look	= VectorSet(VectorX(vec_look), VectorY(vec_look), -4);
+		vec_look	= VectorRotate(vec_look, vec_pyr);
+
+		SetThingLook(t_StickySpider, vec_Look);					# Set a randomized look dir
+
+		# make a web starting at current pos
+		t_web = CreatePolylineThing(t_StickySpider, -1, GetThingPos(t_StickySpider), mat_web, 0.0015, 0.0015, 0);
+
+		if (t_web > -1)
+		{
+			# Move the web back a little towards its tail
+			vec_pyr		 = VectorTransformToOrient(t_StickySpider, '0 -0.026 -0.03');
+			vec_pyr		 = VectorAdd(vec_pyr, GetThingPos(t_StickySpider));
+			sec_atNewPos = FindNewSectorFromThing(t_StickySpider, vec_pyr);
+			if (sec_atNewPos > -1)
+			{
+				SetThingPosEX(t_web, vec_pyr, sec_atNewPos);
+			}
+			AttachThingToThingEx(t_web, t_StickySpider, 0x08);
+
+			SetThingAlpha(t_web, f_maxWebAlpha);
+			SetThingTimer(t_StickySpider, Rand()/3 + 0.1);		# start the dropping process
+		}
+
+		SetThingUserData(t_StickySpider, FLAG_WEBDROP);			# Mark as 'dropping'
+	}
+	else
+	{
+		call MakeRealSpider;									# Just make a real spider
+
+#		CreateThing(tpl_Spider, t_StickySpider);
+#		DestroyThing(t_StickySpider);							# Get rid of the sticky spider
+	}
+
+	return;
+
+
+# ...................................................................
+# t_StickySpider must be initialized!
+# ...................................................................
+KillWeb:
+
+	t_web = GetThingAttachedThing(t_StickySpider, 14);			# Get spider web handle (SITH_THING_POLYLINE)
+
+	if ( t_web > -1 )
+	{
+		DetachThing(t_web);
+		ThingFadeAnim(t_web, f_maxWebAlpha, 0, 2, 0);			# Fade web out over 2 sec
+		SetLifeLeft(t_web, 3);									# Destroy it in 3 sec
+	}
+
+	return;
+
+
+# ...................................................................
+# t_StickySpider must be initialized!
+# ...................................................................
+MakeRealSpider:
+
+	t_NewSpider = CreateThing(tpl_Spider, t_StickySpider);			# Just make a real spider
+
+	# If wall spider had a capture COG, pass on to the real one
+	cog_capture = GetThingCaptureCog(t_StickySpider);
+	if ( (t_NewSpider > -1) && (cog_capture > -1) )
+	{
+		SetThingCaptureCog(t_NewSpider, cog_capture);
+	}
+
+	DestroyThing(t_StickySpider);									# Get rid of the sticky spider
+
+	return;
+
+
+end
+

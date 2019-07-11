@@ -1,0 +1,281 @@
+# Jones 3D Cog Script
+#
+# VOL_sharkareaDoor.cog
+#
+# Generic Door Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	
+
+	#..................MESSAGES................
+	message		startup		
+	message		crossed	
+    message		blocked		
+    message		activated		
+
+	
+	#..................ACTORS................
+	thing		player          				local
+    thing		indy	    
+    
+
+	#..................CAMERAS................
+    thing       unlockCam          		
+	
+
+	#..................CAMERA TARGETS................
+	thing		outpathtarget
+    thing		indytarget						local
+
+	
+	#..................COGS................
+	cog			doortalkcog
+    
+    
+	#..................TRIGGERS................
+    surface		closeadjoin     
+    
+	
+	#..................PROPS................
+    thing		door0		
+	thing		door1		
+	thing		keybox
+	thing		slotkey
+	
+	
+	#..................TEMPLATES.................
+	template	ghostTpl=ghost							local
+
+
+	#..................VARIABLES................
+    int			open=0      						    local
+	int			keyed=0     						    local
+	int			checked=0   						    local
+	int			whichItem								local
+	int			in_left=0								local
+	int			curCam									local
+	int			keygrumble=0							local
+	int			keyPlace								local
+	int			animId									local
+	
+	flex		in_rotRate								local
+	flex		innerchamber							local
+    
+	float		doorspeed=3.0							local
+	float		sleepTime=2.0
+    float		lightValueR=0.5
+	float		lightValueG=0.5
+	float		lightValueB=0.5
+        
+    
+	#..................KEYFRAMES................
+    keyframe    inReach=in_activate_medium.key     		local
+        
+	#..................VECTORS................
+	vector	    vecLightValue							local
+	vector		indyTargPos								local
+	
+	#..................SOUND................
+    sound       placement=tem_tikikey_place_c.wav       local
+    sound		open_cue=mus_gen_awechord1.wav			local
+
+
+	sector	    doorSector								local
+
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    player = GetLocalPlayerThing();
+    in_rotRate = GetThingMaxRotVel(player);
+
+	doorSector = GetThingSector(door0);
+	SetSectorAdjoins(doorSector, 0);
+
+	vecLightValue = VectorSet(lightValueR, lightValueG, lightValueB);
+	SetSectorLight(doorSector, vecLightValue, 0.0);		// add some light to door sector
+	
+	# hide the key that will sit in the lock
+	SetThingFlags(slotkey, 0x80000);
+	return;
+
+# ........................................................................................
+
+crossed:
+
+if ((GetSenderRef() == closeadjoin)	&& (in_left == 0))
+
+{
+    Rotate(door0, 90, 1, 0.5);
+	Rotate(door1, -90, 1, 0.5);
+	waitforstop(door0);
+	SetSectorAdjoins(doorSector, 0);
+	in_left = 1;
+	open = 0;
+}
+    
+return;        
+#========================================================
+
+
+activated:
+
+If ((GetSenderRef() == door0) || (GetSenderRef() == door1))
+	
+	{
+	   	# General "door is locked" grmubling thereafter...
+	   	SetActorFlags(player, 0x200000);
+	   	SendMessageEx(doortalkcog, user5, player, 0, 0, 0);
+		PlayMode(player, 60, 1);
+	   	ClearActorFlags(player, 0x200000);
+	}
+
+		
+If ((GetSenderRef() == keybox) && (keyed == 0))
+        {	
+		# Check if inventory is being used...
+		whichItem = GetCurItem(player);
+		
+		# Prep for scene...
+		StartCutScene(1);
+        SetActorFlags(player, 0x200000);
+		curCam = GetCurrentCamera();
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		DeselectWeapon(player); # stow any weapon or lighter
+		Sleep(0.25); # wait a beat
+		CopyPlayerHolsters(player, indy); # make sure actor has matching props
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indy, 0x80000);
+
+		# Line Indy up...
+		CopyOrientAndPos(player, indy);
+		AISetLookThing(indy, keybox);
+		AIWaitForStop(indy);
+
+		# Slew follow camera to observe the scene from a known position
+		### SetExtCamLookOffsetToThing(keybox); # new look offset per Matt R...buggy
+		SetExtCamOffsetToThing(unlockCam);
+		
+		# create a target right above and in front of indy actor
+		indyTargPos = VectorAdd(VectorTransformToOrient(indy, '0.0 0.02 0.02'), GetThingPos(indy));
+		indytarget = CreateThingAtPos(ghostTpl, GetThingSector(indy), indyTargPos, '0 0 0');
+		CaptureThing(indytarget);
+		
+		
+		Sleep(0.5);
+
+		SetCameraFocus(2, unlockCam);
+		SetCameraSecondaryFocus(2, indytarget);
+		SetCameraLookInterp(2, 0);
+		SetCurrentCamera(2);
+	
+		if (whichItem == 116)
+		{
+			ChangeInv(player, 116, -1);
+			keyed = 1;
+			call innerchamber;
+			return;
+		}
+		else
+		{								
+			if (whichItem != 0)
+				{
+				# Take care of wrong keys and items...
+				SendMessageEx(doortalkcog, user0, indy, 116, whichItem, 0);
+				}
+		
+			else if (keygrumble == 0)
+				{
+				# Note need for key 1st time thru...
+				SendMessageEx(doortalkcog, user4, indy, 1, 3, 0);
+				}
+				
+		}
+			
+			while (global15 == 0)
+			{
+				Sleep(0.01); # wait for line to finish
+			}
+			Sleep(0.3);
+			SetCurrentCamera(curCam);
+			RestoreExtCam();
+			SetThingMaxRotVel(indy, in_rotRate);
+			ClearThingFlags(player, 0x80000);
+			SetThingFlags(indy, 0x80000);
+            ClearActorFlags(player, 0x200000);
+			EndCutScene();
+
+			return;
+		}
+	
+                      
+
+return;
+
+# ........................................................................................
+
+blocked:
+	#print("????");
+	return;
+
+# ........................................................................................
+innerchamber:
+
+
+# Play the animations - wait for Indy's
+PlayKey(indy, inReach, 4, 0x12, 0);
+Sleep(0.5);
+keyPlace = PlaySoundLocal(placement, 1.0, 0.0, 0x0, 0);
+Sleep(0.25);
+
+# show the slotkay and lock it to the keybox
+ClearThingFlags(slotkey, 0x80000);
+AttachThingToThingEx(slotkey, keybox, 0x000C);
+
+# lock box slides into wall
+MoveToFrame(keybox, 1, 0.25);
+Sleep(0.5);
+
+SetThingMaxRotVel(indy, 120);
+AISetLookThing(indy, outpathtarget);
+Sleep(0.5);
+# move camera focus object up to door
+animId = MoveThingToPos(indytarget, GetThingPos(outpathtarget), 2.0);
+
+
+SetSectorAdjoins(doorSector, 1);
+Rotate(door0, -90, 1, doorspeed);
+Rotate(door1, 90, 1, doorspeed);
+waitforstop(door0);
+
+# play music upon door opening completely
+PlaySoundLocal(open_cue, 1.0, 0.0, 0x0, 0);
+Sleep(0.5);
+
+# Return control and camera to player
+CopyOrientAndPos(indy, player);
+SetCurrentCamera(curCam);
+RestoreExtCam();
+SetThingMaxRotVel(indy, in_rotRate);
+ClearThingFlags(player, 0x80000);
+SetThingFlags(indy, 0x80000);
+ClearActorFlags(player, 0x200000);
+EndCutScene();
+
+return;
+
+
+	
+end
+

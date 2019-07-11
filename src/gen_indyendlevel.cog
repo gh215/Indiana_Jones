@@ -1,0 +1,41 @@
+# Jones 3D Cog Script
+#
+# gen_IndyEndLevel.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message	crossed
+
+surface	trigger
+
+end
+
+# ========================================================================================
+
+code
+
+crossed:
+
+	if ((GetSenderRef() == trigger) && (GetSourceRef() == GetLocalPlayerThing()))
+	{
+		JonesEndLevel();
+	}
+	return;
+
+# ........................................................................................
+
+
+end
+
+
+
+
+
+
+

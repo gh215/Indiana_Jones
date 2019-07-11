@@ -1,0 +1,180 @@
+# Jones 3D Cog Script
+#
+# olv_commie_intro.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		user0
+
+	sound		music0=mus_gen_russbold1.wav					local
+
+	thing		commiepos0								nolink
+	thing		commiepos1								nolink
+	thing		commiepos2								nolink
+	thing		commiepos3								nolink
+	thing		commiepos4								nolink
+	thing		movepos0								nolink
+	thing		movepos1								nolink
+	thing		movepos2								nolink
+	thing		movepos2_1								nolink
+	thing		movepos3								nolink
+	thing		movepos4								nolink
+
+	thing		campos0								nolink
+	thing		campos1								nolink
+	thing		bridge_targ0							nolink
+	thing		cam_targ0								nolink
+	thing		cam_targ1								nolink
+	thing		fader2								nolink
+
+	thing		player								local
+	thing		commie0								local 
+	thing		commie1								local
+	thing		commie2								local
+	thing		commie3								local
+	thing		commie4								local
+
+	template	commie_tpl0=khaki_tokarev					local
+	template	commie_tpl1=khaki_simonov					local
+	template	commie_tpl2=khaki_mauser					local
+	template	commie_tpl3=khaki_shotgun					local
+	template	commie_tpl4=khaki_submach					local
+	template    ghost_tpl=ghost							local
+	
+	int		curcam								local
+	int		done=0								local
+        
+        cog             OLV_Commie_Grid  #added by JM                                             
+	cog			jag2_cog									# to send flee to jag.
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+
+	player=GetLocalPlayerThing(); 
+	SetThingFlags(fader2, 0x80000);
+	return;
+
+user0:
+	if(done == 1) return;
+	done=1;
+	curcam = GetCurrentCamera();
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	StartCutscene(1);
+	SendMessage(jag2_cog, user1);
+
+	# Show Bridge Close...
+		SetCameraFocus(2, campos1);
+		SetCameraSecondaryFocus(2, player);
+		SetCurrentCamera(2);
+		SetCameraFOV(60, 0, 0.0);
+		SetCameraFOV(30, 1, 4.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 3.0);
+		sleep(0.01);
+		SetCameraSecondaryFocus(2, bridge_targ0);
+		sleep(4.5);
+
+	# Make commies...
+			 commie0 = CreateThing(commie_tpl0, commiepos0);
+		AISetCutsceneMode(commie0);
+		CaptureThing(commie0);
+		ClearThingFlags(commie0, 0x80000);
+			 commie1 = CreateThing(commie_tpl1, commiepos1);
+		AISetCutsceneMode(commie1);
+		CaptureThing(commie1);
+		ClearThingFlags(commie1, 0x80000);
+			commie2 = CreateThing(commie_tpl2, commiepos2);
+		AISetCutsceneMode(commie2);
+		CaptureThing(commie2);
+		ClearThingFlags(commie2, 0x80000);
+			commie3 = CreateThing(commie_tpl0, commiepos3);
+		AISetCutsceneMode(commie3);
+		CaptureThing(commie3);
+		ClearThingFlags(commie3, 0x80000);
+			commie4 = CreateThing(commie_tpl1, commiepos4);
+		AISetCutsceneMode(commie4);
+		CaptureThing(commie4);
+		ClearThingFlags(commie4, 0x80000);
+
+	# Cut to the Valley Entry...
+#		ClearThingFlags(fader2, 0x80000);
+#		SetThingAlpha(fader2, 1.0);
+		SetCameraLookInterp(2, 0);
+		SetCameraFocus(2, campos0);
+		SetCameraSecondaryFocus(2, cam_targ0);
+		SetCurrentCamera(2);
+		SetCameraFOV(60, 0, 0.0);
+		sleep(0.01);
+		SetCameraFOV(30, 1, 3.0);
+		PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);		
+#		ThingFadeAnim(fader2, 1.0, 0.0, 0.5, 0);
+
+	# Walk upper commies to position...
+		AISetMoveSpeed(commie0, 0.8);
+		AISetMoveSpeed(commie1, 1.0);
+		AISetLookThingEyeLevel(commie0, movepos0);
+		AISetLookThingEyeLevel(commie1, movepos1);
+		AISetMoveThing(commie0, movepos0, 0);
+		sleep(0.5);
+		AISetMoveThing(commie1, movepos1, 1);
+		sleep(0.5);
+
+	# Walk mid level commie to position...
+		AISetMoveSpeed(commie3, 1.0);
+		AISetLookThingEyeLevel(commie3, movepos3);
+		AISetMoveThing(commie3, movepos3, 0);
+
+	# Interp to valley floor...
+		SetCameraLookInterp(2, 1);
+		SetCameraInterpSpeed(2, 5.0);
+		sleep(0.01);
+		SetCameraSecondaryFocus(2, cam_targ1);
+
+	# Walk lower commies to position...
+		sleep(2.0);
+		AISetMoveSpeed(commie2, 2.5);
+		AISetMoveSpeed(commie4, 1.0);
+		AISetLookThingEyeLevel(commie2, movepos2);
+		AISetLookThingEyeLevel(commie4, movepos4);
+		sleep(1.0);
+		AISetMoveThing(commie4, movepos4, 0);
+		AISetMoveThing(commie2, movepos2, 0);
+		sleep(3.0);
+		AISetLookThingEyeLevel(commie2, movepos2_1);
+		AISetMoveThing(commie2, movepos2_1, 1);
+
+	# Return to Player control...
+		SetCameraInterpSpeed(2, 1.0);
+		SetCameraLookInterp(2, 0);
+		ResetCameraFOV(0, 0.0);
+		SetCurrentCamera(curcam);
+		SetThingFlags(fader2, 0x80000);
+		SetThingAlpha(player, 1.0);
+		ClearActorFlags(player, 0x200000);
+
+		AIClearCutsceneMode(commie0);                     
+		AIClearCutsceneMode(commie1);
+		AIClearCutsceneMode(commie2);
+		AIClearCutsceneMode(commie3);
+		AIClearCutsceneMode(commie4);           
+                
+		EndCutscene();
+                
+                SendMessageEx(OLV_Commie_Grid, 27, commie2, commie4, 1, 0);  //Added by JM
+
+		return;
+
+end
+

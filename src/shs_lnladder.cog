@@ -1,0 +1,87 @@
+# Jones 3D Cog Script
+#
+# SHS_LNladder.cog      Make the Lil Nave ladder open/close.  
+#
+# [JWC, SXC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message activated
+message	startup
+
+sound	laddermove=shs_ladder_creak_c.wav		local
+sound	ladderstop=shs_ladderroll_stop.wav		local
+
+thing	ladder	   	   
+thing   button       
+thing	player			local
+
+int  	filter=0 		local		# prevent multiple activates	
+int		position=0		local		# ladder position
+ 
+        
+
+end
+
+# ========================================================================================
+
+code
+
+
+startup:
+   
+        
+    player= GetLocalPlayerThing();
+    return;
+
+activated:
+   
+    If ((GetSenderRef() == button) && (filter == 0))
+	    {
+            #Print("activated");
+            filter=1;
+            StartCutscene(0);
+		    SetActorFlags(player, 0x200000);
+            StopThing(player);
+            DeselectWeaponWait(player);
+			PlayMode(player, 60, 0);
+		    
+		    # ladder position
+		    position = 1 - position;
+	   	        
+		    MoveToFrame(button, 1, 1);
+		    WaitForStop(button);
+		   	        
+		    
+		    # open and close ladder
+		    If	(position == 1)
+			{
+				rotate(ladder, 90, 2, 1.5);
+				PlaySoundLocal(laddermove, 1.0, 0, 0x0000, 0);
+				WaitForStop(ladder);
+                PlaySoundLocal(ladderstop, 1.0, 0, 0x0000, 0);
+			}
+            else
+			{
+				rotate(ladder, -90, 2, 1.5);
+				PlaySoundLocal(laddermove, 1.0, 0, 0x0000, 0);
+				WaitForStop(ladder);
+                PlaySoundLocal(ladderstop, 1.0, 0, 0x0000, 0);
+			}
+		       
+            MoveToFrame(button, 0, 1);
+			WaitForStop(button);
+			
+		    ClearActorFlags(player, 0x200000);
+		    EndCutscene();
+		    filter=0;
+        }
+    return;
+    
+end
+
+

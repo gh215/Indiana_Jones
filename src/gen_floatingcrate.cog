@@ -1,0 +1,99 @@
+# Jones 3D Cog Script
+#
+# gen_FloatingCrate.cog
+#
+# Place a crate so that about 1/2m of the top of the crate is above the water.
+# Then add a frame about 1/4m lower.
+# The cog sleeps for a random amount of time before starting so you can have a pool
+# full of floating crates and they will all "bob" differently. 
+#
+# Rotate axis: 0 = pitch, 1 = yaw, 2 = roll
+#
+# [TRM] [MDR]
+#
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     removed
+
+    thing       crate0
+    
+    # The following numbers work best with 10 degree angles (default)
+    # If you change the rotation angles, you'll have to readjust these numbers
+	flex		n_degrees=10	# How much to rotate on an axis
+    flex        bobSpeed=0.1    # How fast the crate goes up and down
+    flex        rotSpeed=4.0    # How fast the crate rotates
+    flex        pause=1.5       # Pause between movements
+    int         upAndDown=1     # crate will move up and down if set to 1
+    
+    float       randNum=20       
+
+# ********************** MISC LOCAL STUFF *******************
+	int			n_Removed=0		local
+	int			n_MoveDir=0		local
+	int			n_RotDir=0		local
+	vector		vec_PYR			local
+
+end
+
+# ========================================================================================
+
+code
+
+# ========================================================================================
+startup:
+    
+    Sleep(Rand()*randNum);
+
+	while ( !n_Removed )
+	{
+
+		if ( n_RotDir == 1 ) n_RotDir = -1;
+		else n_RotDir = 1;
+
+		vec_PYR = VectorSet(n_degrees * n_RotDir, n_degrees * n_RotDir, n_degrees * n_RotDir);
+
+		n_MoveDir	= 1 - n_MoveDir;
+		if((!n_Removed) && (upAndDown == 1)) MoveToFrame(crate0, n_MoveDir, bobSpeed);
+        Sleep(pause);
+
+		# Rotate to angles
+        if (!n_Removed) Rotate(crate0, VectorX(vec_PYR), 0, rotSpeed);
+        Sleep(pause);
+        if (!n_Removed) Rotate(crate0, VectorY(vec_PYR), 1, rotSpeed);
+		Sleep(pause);
+        if (!n_Removed) Rotate(crate0, VectorZ(vec_PYR), 2, rotSpeed);
+        Sleep(pause);
+
+		n_MoveDir	= 1 - n_MoveDir;
+		if((!n_Removed) && (upAndDown == 1)) MoveToFrame(crate0, n_MoveDir, bobSpeed);
+        Sleep(pause);
+
+		# Reset Rotations
+        if (!n_Removed) Rotate(crate0, -VectorX(vec_PYR), 0, rotSpeed);
+        Sleep(pause);
+        if (!n_Removed) Rotate(crate0, -VectorY(vec_PYR), 1, rotSpeed);
+        Sleep(pause);
+        if (!n_Removed) Rotate(crate0, -VectorZ(vec_PYR), 2, rotSpeed);
+        Sleep(pause);
+	}
+
+    return;
+
+# ========================================================================================
+removed:
+
+	n_Removed = 1;
+
+	return;
+
+
+# ========================================================================================
+
+end
+

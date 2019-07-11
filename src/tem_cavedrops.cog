@@ -1,0 +1,90 @@
+# Jones 3D Cog Script
+#
+# TEM_CaveAmb.cog
+#
+# Based on code from TEO_Drops.cog by SXC.
+#
+# [TRM & SXC]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    message     pulse
+    
+    thing       ghost
+    
+    sector      sec_On1     linkID=1
+    sector      sec_On2     linkID=1
+    sector      sec_Off1    linkID=0
+    sector      sec_Off2    linkID=0
+    
+    sound       sndCave0=teo_drops1_c.wav    local
+    sound       sndCave1=teo_drops2_c.wav    local
+    sound       sndCave2=teo_drops3_c.wav    local
+    sound       sndCave3=teo_drops4_c.wav    local
+
+    float       caveFreq        local
+    
+    flex        vol=1.0
+    flex        minDist=-1
+    flex        maxDist=-1
+    
+    int         playing=0       local
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    if((GetSenderID() == 1) && (playing == 0))
+    {
+        playing = 1;
+        SetPulse(2.0);
+    }
+    
+    if((GetSenderID() == 0) && (playing == 1))
+    {
+        playing = 0;
+        SetPulse(0.0);
+    }
+    
+    return;
+    
+# ========================================================================================
+
+pulse:
+    
+    caveFreq = Rand();
+
+    if (caveFreq < 0.16)
+    {
+        PlaySoundThing(sndCave0, ghost, vol, minDist, maxDist, 0x0);
+    }
+        
+    if ((caveFreq > 0.16) && (caveFreq < 0.32))
+    {
+        PlaySoundThing(sndCave1, ghost, vol, minDist, maxDist, 0x0);
+    }
+        
+    if ((caveFreq > 0.32) && (caveFreq < 0.48))
+    {
+        PlaySoundThing(sndCave2, ghost, vol, minDist, maxDist, 0x0);
+    }
+    
+    if ((caveFreq > 0.48) && (caveFreq < 0.64))
+    {
+        PlaySoundThing(sndCave3, ghost, vol, minDist, maxDist, 0x0);
+    }
+    
+    return;
+    
+# ========================================================================================
+        
+end
+

@@ -1,0 +1,315 @@
+# Jones 3D Cog Script
+#
+# PRU_snakehole.cog    Snake comes out of hole if Indy approaches.
+#
+# [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message entered
+message	startup
+message	aievent
+message sighted
+message	arrivedwpnt
+message timer
+message updatewpnts
+
+thing	jag
+thing	jagTarget
+thing	player		local
+sector	lookSector	
+sector	downRiverSector
+
+int		n_eventType		local
+int		n_CrntAIMode 	local
+int		n_OldAIMode 	local
+int		n_Waypoint		local
+int		b_HideOnEndFleeMode = 0 local
+int		n_Temp			local
+int		b_Temp			local
+flex	f_Temp			local
+int		n_TimerID		local 
+int		n_idx			local
+int		numAttacks=0	local
+
+flex	initwaypoints			local
+flex	rankWaypointsForFlee	local
+flex	ResetWaypointRanks		local
+
+
+
+vector	v_IndyPos		local
+vector	v_JagPos		local
+vector	v_JagToIndy		local
+vector	v_IndyLook		local
+
+flex	f_HideTime		local
+
+# ===========================FLEE WAYPOINTS================================================
+int			NUM_FLEE_WAYPOINTS=15			local
+int			FINAL_FLEE_WAYPOINT=14			local
+thing		t_Waypoint00
+thing		t_Waypoint01
+thing		t_Waypoint02
+thing		t_Waypoint03
+thing		t_Waypoint04
+thing		t_Waypoint05
+thing		t_Waypoint06
+thing		t_Waypoint07
+thing		t_Waypoint08
+thing		t_Waypoint09
+thing		t_Waypoint10
+thing		t_Waypoint11
+thing		t_Waypoint12
+thing		t_Waypoint13
+thing		t_Waypoint14
+
+# ===========================MISC CONSTANTS================================================
+
+flex	MIN_INITIAL_HIDE_TIME=5.0		local
+flex	VARIABLE_INITIAL_HIDE_TIME=5.0	local
+flex	RETRY_HIDE_TIME=5.0 			local
+
+int		TIMER_ID_WAKE_UP=0				local
+
+
+surface	triggerSurf
+
+int	jagJumpStarted=0			local
+int	jagJumpFinished=0			local
+
+end
+# ========================================================================================
+
+code
+startup:
+	#10000 causes ai to send event messages, 2000 is disabling, 40 is "don't look for cliff"
+	#AISetMode(jag, 0x12040);
+	AISetCutsceneMode(jag);
+	player=GetLocalPlayerThing();
+//	ClearThingFlags(jag, 0x100000);
+
+	AISetMode(jag, 0x40000);		# Add SITHAI_MODEINSTINCTUSEWPNTS to jaguar's AI mode 
+
+	call InitWaypoints;
+	return;
+
+# ========================================================================================
+entered:
+	if (GetSenderRef() == downRiverSector)
+	{
+		numAttacks = 5;
+		AISetMode(jag, 0x2000);
+		return;
+	}
+
+	if (!jagJumpStarted)
+	{
+		jagJumpStarted=1;
+		AISetLookThing(jag, jagTarget);
+		AISetMoveSpeed(jag, 1.0);
+		AISetMoveThing(jag, jagTarget, 1.9);
+	}
+	return;
+
+# ========================================================================================
+aievent:
+	n_eventType		= GetParam(0);
+	n_CrntAIMode	= GetParam(1);
+	n_OldAIMode		= GetParam(2);	// only valid for certain n_eventType values
+
+	if (n_eventType == 0x100)		// SITHAI_EVENTMODECHANGED
+	{
+		// if changing to flee mode
+		// turn on waypoints
+		if ( !BITTEST(n_OldAIMode, 0x800) && BITTEST(n_CrntAIMode, 0x800) )
+		{
+			AISetSubMode(jag, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+			call RankWaypointsForFlee;
+		}
+		// if exiting flee mode
+		// turn off waypoints
+		else if ( BITTEST(n_OldAIMode, 0x800) && !BITTEST(n_CrntAIMode, 0x800) )
+		{
+			if (b_HideOnEndFleeMode)
+			{
+				SetThingFlags(jag, 0x80000); // disable (i.e. hide)
+				f_HideTime = (MIN_INITIAL_HIDE_TIME + (Rand() * VARIABLE_INITIAL_HIDE_TIME));
+				SetTimerEx(f_HideTime , TIMER_ID_WAKE_UP, 0, 0 );
+				b_HideOnEndFleeMode = 0;
+			}
+			AIClearSubMode(jag, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+			call ResetWaypointRanks;
+		}
+	}
+	#check to see that the jag is approaching his target
+	else if (n_eventType == 0x2000)
+	{
+		if (!jagJumpFinished)
+		{
+			#AIClearMode(jag, 0x12040);
+			AIClearCutsceneMode(jag);
+			//		AISetFireTarget(jag, player);
+			#set ai to active and attacking
+			#AISetMode(jag, 0x202);
+			jagJumpFinished = 1;
+		}
+	}
+
+return;
+
+# ========================================================================================
+timer:
+	player = GetLocalPlayerThing();
+    
+	n_TimerID = GetSenderID();
+	if (n_TimerID == TIMER_ID_WAKE_UP)
+	{
+		
+		if (numAttacks > 4) return;								#Geoff added to prevent Jag from attacking forever.
+		numAttacks = numAttacks + 1;
+		
+		
+		v_IndyPos = GetThingPos(player);
+		v_JagPos = GetThingPos(jag);
+		v_JagToIndy = VectorNorm(VectorSub(v_IndyPos, v_JagPos));
+		v_IndyLook = GetThingLVec(player);
+
+		f_Temp = VectorDot(v_JagToIndy, v_IndyLook);
+
+		// If indy is facing the other way, then come out of hiding
+		if (f_Temp >= 0.0)
+		{
+			ClearThingFlags(jag, 0x80000); // enable
+//			ClearActorFlags(jag, 0x800); // turn off blindness
+			AIWpntHuntTarget(jag, 0.55, 0.0);
+		}
+		// Otherwise try again in a few seconds
+		else
+		{
+			SetTimerEx(RETRY_HIDE_TIME , TIMER_ID_WAKE_UP, 0, 0 );
+		}
+	}
+
+	return;
+
+
+# ========================================================================================
+sighted:
+	if (GetSenderRef() != lookSector) return;
+	
+	if (!jagJumpStarted)
+	{
+		jagJumpStarted = 1;
+		Sleep(RandBetween(2, 4));
+		AISetLookThing(jag, jagTarget);
+		AISetMoveSpeed(jag, 1.0);
+		AISetMoveThing(jag, jagTarget, 1.9);
+	}
+
+	return;
+
+
+# ========================================================================================
+arrivedwpnt:
+	n_Waypoint = GetParam(0);
+
+	// If arrived at final waypoint during flee, then go into hiding
+	if ( (n_Waypoint == FINAL_FLEE_WAYPOINT) && BITTEST(AIGetMode(jag), 0x800))
+	{	
+		// So flee will end 
+		// 	jag must not be able to see player
+		//	clear continuous bit will prevent flee from advancing
+//		SetActorFlags(jag, 0x800); // blind 
+//		AIClearSubMode(jag, 0x8000); // SITHAI_SUBMODECONTINUOUSWPNTMOTION
+		b_HideOnEndFleeMode = 1;
+		AIStopFlee(jag);
+		StopThing(jag);
+	}
+
+	return;
+
+updatewpnts:
+	return;
+
+# ========================================================================================
+InitWaypoints:
+
+
+	for ( n_idx = 0; n_idx < NUM_FLEE_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Waypoint00[n_idx], n_idx);
+	}
+
+	AIConnectWpnts(0, 1);
+	AIConnectWpnts(0, 2);
+	AIConnectWpnts(1, 2);
+	AIConnectWpnts(1, 3);
+	AIConnectWpnts(1, 4);
+	AIConnectWpnts(1, 5);
+	AIConnectWpnts(2, 4);
+	AIConnectWpnts(2, 5);
+	AIConnectWpnts(2, 6);
+	AIConnectWpnts(3, 4);
+	AIConnectWpnts(3, 7);
+	AIConnectWpnts(4, 5);
+	AIConnectWpnts(4, 7);
+	AIConnectWpnts(5, 6);
+	AIConnectWpnts(5, 8);
+	AIConnectWpnts(6, 10);
+	AIConnectWpnts(7, 8);
+	AIConnectWpnts(7, 9);
+	AIConnectWpnts(8, 10);
+	AIConnectWpnts(9, 10);
+	AIConnectWpnts(9, 11);
+	AIConnectWpnts(10, 12);
+	AIConnectWpnts(11, 12);
+	AIConnectWpnts(11, 13);
+	AIConnectWpnts(12, 13);
+	AIConnectWpnts(13, 14);
+
+	return;
+
+
+	
+RankWaypointsForFlee:
+	
+	AISetWpntRank(0, 0);
+
+	AISetWpntRank(1, 5);
+	AISetWpntRank(2, 5);
+
+	AISetWpntRank(3, 10);
+	AISetWpntRank(4, 10);
+	AISetWpntRank(5, 10);
+	AISetWpntRank(6, 10);
+
+	AISetWpntRank(7, 15);
+	AISetWpntRank(8, 15);
+
+	AISetWpntRank(9, 20);
+	AISetWpntRank(10, 20);
+
+	AISetWpntRank(11, 25);
+	AISetWpntRank(12, 25);
+
+	AISetWpntRank(13, 30);
+	AISetWpntRank(14, 35);
+
+	return;
+
+
+ResetWaypointRanks:
+
+	for ( n_idx = 0; n_idx < NUM_FLEE_WAYPOINTS; n_idx = n_idx + 1 )
+	{
+		AISetWpntRank(n_idx, 0);
+	}
+
+	return;
+
+end
+	   

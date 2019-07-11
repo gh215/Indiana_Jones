@@ -1,0 +1,234 @@
+# Jones 3D Cog Script
+#
+# PRU_adjoinSettings.cog    Permanently turns on and off adjoins as Indy passes by.
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+message crossed
+message	entered
+message startup
+message	user0				#from PRU_rollingboulder.cog
+
+#These sectors are turned off at level start:
+sector	sector0									#chunk of river around 1st corner
+sector	sector1									#chunk of river around 1st corner
+sector	sector2									#chunk of river around 1st corner
+sector	sector3									#chunk of river around 1st corner
+sector	sector4									#lagoon
+sector	sector5									#tunnel revealed by torch lighting
+sector	sector6									#top of stairpit
+sector	sector7									#connection from new idol to new boulder roll
+sector	sector8									#river to lagoon
+sector	sector9									#river to lagoon
+sector	sector10								#river to lagoon
+sector	sector11								#cavern
+sector	sector12								#tomb tunnel maze
+sector	sector13								#jungle Indy came through in movie
+sector	sector14								#jungle Indy came through in movie
+sector	sector15								#jungle Indy came through in movie
+sector	sector16								#jungle Indy came through in movie
+sector	sector17								#jungle Indy came through in movie
+sector	sector18								#whipclimb area at very end of level
+sector	sector19								#valley at level start
+sector	sector20								#water at level start
+sector	sector21								#lower leg of river, replaces surface "leftRiverSecret"
+
+#They get turned on when Indy passes these adjoins:
+surface inraft0				linkID=0			#starting down the river
+surface	riverEnd			linkID=1			#near end of river
+surface hiddentunnel		linkID=2			#tunnel under lagoon
+surface stairpitbottom		linkID=3			#entering the stairpit
+surface	stairpittop			linkID=4			#leaving the stairpit
+surface	leftriversecret		linkID=10			#just past river secret
+surface	whipRubbleLedge		linkID=12			#standing where you can whip the rubble
+surface	cavernPath			linkID=13			#tunnel to snake cavern, under 3rd trapdoor
+surface	tombTopBack			linkID=14			#back into tomb from column	
+surface	TombTunnelMazeF		linkID=14			#Forward into the maze
+surface	boulderSlide0		linkID=16			#sliding down with boulder chasing
+surface	levelEnd			linkID=17			#end of level (turned OFF first)
+surface	fallsClimbUp		linkID=19			#climbing back towards the river secret
+
+#And turned off again permanently when Indy passes these adjoins:
+surface	lastSharpLeft  		linkID=5			#last left turn in river
+surface underwaterfall		linkID=6			#waterfall into underwater maze
+surface bottomlesspit		linkID=7			#entrance to bottomless pit area
+surface	newidol				linkID=8			#into the new idol room
+surface	boulderslide		linkID=9			#down the slide
+surface	hiddentunnel2		linkID=11			#tunnel under lagoon, again
+surface	tombTopForward		linkID=15			#foward from tomb to column
+surface	TombTunnelMazeB		linkID=15			#back out of the tomb tunnel maze
+surface	riverSecretEnter	linkID=18			#entering slow water @ river secret (turned back ON later)
+surface	fallsClimbDown		linkID=20			#dropping back towards the lagoon
+
+surface	sec21Surf
+
+
+cog	waterSounds
+
+
+end
+# ========================================================================================
+code
+startup:
+	SectorAdjoins(sector0, 0);
+	SectorAdjoins(sector1, 0);
+	SectorAdjoins(sector2, 0);
+	SectorAdjoins(sector3, 0);
+	SectorAdjoins(sector4, 0);
+	SectorAdjoins(sector5, 0);
+	SectorAdjoins(sector6, 0);
+	SectorAdjoins(sector7, 0);
+	SectorAdjoins(sector8, 0);
+	SectorAdjoins(sector9, 0);
+	SectorAdjoins(sector10, 0);
+	SectorAdjoins(sector11, 0);
+	SectorAdjoins(sector12, 0);
+	SectorAdjoins(sector13, 0);
+	SectorAdjoins(sector14, 0);
+	SectorAdjoins(sector15, 0);
+	SectorAdjoins(sector16, 0);
+	SectorAdjoins(sector17, 0);
+	SectorAdjoins(sector18, 0);
+	
+	return;
+
+crossed:
+	if (GetSourceRef() != GetLocalPlayerThing()) return;
+	#turning on	
+	if ((GetSenderID() == 0)  || (GetSenderID() == 19))
+	{
+		SectorAdjoins(sector0, 1);
+		SectorAdjoins(sector1, 1);
+		SectorAdjoins(sector2, 1);
+		SectorAdjoins(sector3, 1);
+    }
+	if (GetSenderID() == 1) 
+	{
+		SectorAdjoins(sector13, 1);
+		SectorAdjoins(sector14, 1);
+		SectorAdjoins(sector15, 1);
+		SectorAdjoins(sector16, 1);
+		SectorAdjoins(sector17, 1);
+	}
+	
+	
+	if (GetSenderID() == 5) 
+	{
+		SectorAdjoins(sector4, 1);
+	}
+	if (GetSenderID() == 2) 
+	{
+		SectorAdjoins(sector5, 1);
+	}
+	if (GetSenderID() == 3) 
+	{
+		SectorAdjoins(sector6, 1);
+	}
+	if (GetSenderID() == 4) 
+	{
+		SectorAdjoins(sector7, 1);
+	}
+    if (GetSenderID() == 10)
+	{
+		PRINT("turning on troublesome adjoin");
+		SectorAdjoins(sector8, 1);
+		SectorAdjoins(sector9, 1);
+		SectorAdjoins(sector10, 1);
+	}
+	if (GetSenderID() == 12)
+	{
+        SectorAdjoins(sector11, 1);
+	}
+	if (GetSenderID() == 13) 
+	{
+		SectorAdjoins(sector11, 1);
+    }
+    if (GetSenderID() == 14)
+	{
+		SectorAdjoins(sector12, 1);
+    }
+	if (GetSenderID() == 16)
+	{
+		SectorAdjoins(sector18, 1);
+    }
+	if (GetSenderID() == 17)
+	{
+		SectorAdjoins(sector19, 1);
+		SectorAdjoins(sector20, 1);
+    }
+
+#turning back off again
+	if ((GetSenderID() == 5) || (GetSenderID() == 20))
+	{
+		SectorAdjoins(sector0, 0);
+		SectorAdjoins(sector1, 0);
+		SectorAdjoins(sector2, 0);
+		SectorAdjoins(sector3, 0);
+	}
+	if (GetSenderID() == 6) 
+	{
+		SectorAdjoins(sector4, 0);
+	}
+	if (GetSenderID() == 7) 
+	{
+		SectorAdjoins(sector5, 0);
+        SendMessage(waterSounds, user4);
+	}
+	if (GetSenderID() == 8) 
+	{
+		SectorAdjoins(sector6, 0);
+	}
+	if (GetSenderID() == 9) 
+	{
+		SectorAdjoins(sector7, 0);
+	}
+		if (GetSenderID() == 11) 
+	{
+        PRINT("turning OFF troublesome adjoin");
+		SectorAdjoins(sector8, 0);
+		SectorAdjoins(sector9, 0);
+		SectorAdjoins(sector10, 0);
+        SendMessage(waterSounds, user0);
+		SendMessage(waterSounds, user1);
+		SendMessage(waterSounds, user2);
+		SendMessage(waterSounds, user3);
+	}
+	
+    if (GetSenderID() == 15) 
+	{
+		SectorAdjoins(sector12, 0);
+    }
+    if (GetSenderID() == 18) 
+	{
+		SectorAdjoins(sector19, 0);
+		SectorAdjoins(sector20, 0);
+    }
+    return;
+
+user0:
+SectorAdjoins(sector19, 1);
+SectorAdjoins(sector20, 1);
+return;
+
+entered:
+if (GetSenderRef() == sector21)
+	{
+		PRINT("turning on troublesome adjoin");
+		SectorAdjoins(sector8, 1);
+		SectorAdjoins(sector9, 1);
+		SectorAdjoins(sector10, 1);
+	}
+if (GetSenderRef() == sec21Surf)
+	{
+		PRINT("turning on troublesome adjoin");
+		SectorAdjoins(sector8, 1);
+		SectorAdjoins(sector9, 1);
+		SectorAdjoins(sector10, 1);
+	}
+return;
+	
+end

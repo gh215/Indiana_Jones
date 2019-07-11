@@ -1,0 +1,51 @@
+# Jones 3D Cog Script
+#
+# PRU_keyPickup.cog    
+#
+# [GGJ]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+message entered
+message	startup
+message	taken
+
+sector	keySector
+surface	outerFace
+
+thing	keyGhost
+thing	keyCam
+thing	key
+
+int		curCam	local
+int		in=0	local
+
+end
+# ========================================================================================
+code
+startup:
+SetThingLight(key, '1.0 1.0 1.0', 0.01, 0.1);
+return;
+entered:
+if ((GetSenderRef() == keySector) && (in == 0))
+{
+    in = 1;
+	curCam = GetCurrentCamera();
+	SetCameraFocus(2, keyCam);
+	SetCameraSecondaryFocus(2, keyGhost);
+	SetCurrentCamera(2);
+	SetCameraFOV(110, 0, 0.0);
+}
+return;
+
+taken:
+if (GetSenderRef() == key)
+{
+	setCurrentCamera(curCam);
+}
+return;
+
+end
+

@@ -1,0 +1,345 @@
+# Jones 3D Cog Script
+#
+# CYN_Coptor_Arrival.cog
+#
+# the helicoptor with sophia arrives upon picking up the clay shard
+#
+# [CMG & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+    message		entered
+
+# .................................. KEYFRAMES .................................
+	           
+    keyframe	in_examine=0in_examobj_1_1.key		local # 117x   
+    keyframe	in_lookup=0in_stand7.key   			local
+    keyframe	in_takeit=in_activate_low.key   	local # 83x
+	keyframe	in_wheregoodstuff=0in_crownsofkings_1_1.key	local # 144x
+
+	keyframe	chopFly=cyn_chopr_fly.key			local
+
+# .................................. MODELS ....................................
+	
+	model		chop_blad=cyn_chopr_blade.3do		local
+	model		chop_rot=cyn_chopr_rotor.3do		local
+	model		shardhand=hand_in_potshard.3do		local
+	
+# .................................. SOUNDS ....................................
+
+	sound		in_funnyspot=Cn01j02.wav			local	# funny how I didn't spot this...
+	sound		in_ifprize=Cn01j03.wav				local	# if this is the prize...
+	sound		in_artifacts=Cn01j04.wav			local	# where are the...artifacts?
+	sound		in_goodnews=Cn01j05.wav				local	# Good news never travels...fast
+	
+	sound		helirun=helicopter_rev2.wav			local
+	sound		scene_start=mus_gen_awechord2.wav	local
+# ............................... ACTOR THINGS .................................
+
+    thing		player								local
+    thing		indyActor							nolink
+    thing		helicopter							nolink		
+    thing		bird1										
+    thing		bird2										
+    
+# .............................. OBJECT THINGS .................................
+
+    thing		shard								nolink        
+	thing		ruins								nolink
+	thing		rope_1								nolink
+	thing		rope_2								nolink
+    thing		campsite_helicopter					nolink
+
+# .............................. CAMERA THINGS .................................
+
+	thing		cam_11								nolink
+	thing		cam_12								nolink
+	thing		cam_13								nolink
+	thing		cam_14								nolink
+	thing		cam_15								nolink
+	thing		cam_16								nolink
+	thing		cam_17								nolink
+	
+	thing		ct_11								nolink
+	thing		ct_12								nolink
+	thing		ct_13								nolink
+	thing		ct_14								nolink
+	thing		ct_15								nolink
+
+# .............................. TARGET THINGS .................................
+
+	thing		in_mk_11							nolink
+	thing		in_mk_12							nolink
+	thing		in_mk_13							nolink
+		
+	thing		copt_LookTarget1					nolink
+	thing		copt_LookTarget2					nolink
+	thing		copt_LookTarget3					nolink
+	
+	thing		copt_Target1						nolink
+	thing		copt_Target2						nolink
+	
+# ........................ OTHER ENGINE REFERENCES .............................
+
+#	surface		shardsurf
+	surface		startsurf							linkID=2
+	surface		startsurf0							linkID=2
+	surface		startsurf1							linkID=2
+
+# ............................... VARIABLES ....................................
+
+	int			cutSceneState=0						local
+	
+	int			in_keyTrack							local
+	
+	int			copterSound							local
+	
+	int			in_swapref							local
+	
+	int			ru_colltype							local
+	int			r1_colltype							local
+	int			r2_colltype							local
+	
+	int			curcam								local
+	int			cursound							local
+
+end
+
+# ==============================================================================
+
+code
+
+#...............................................................................
+
+startup:
+
+    player = GetLocalPlayerThing();
+	SetThingFlags(helicopter, 0x80000);
+	ru_colltype = GetCollideType(ruins);
+	r1_colltype = GetCollideType(rope_1);
+	r2_colltype = GetCollideType(rope_2);
+
+    return;
+
+#...............................................................................              
+
+entered:
+
+	if (cutSceneState != 0) return;
+	
+	if (GetSenderID() != 2) return;
+
+    # Prep...
+	cutSceneState = 1;
+    curcam = GetCurrentCamera();
+
+	# Disable controls, stop player and put away weapon
+	if(MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+    StartCutscene(1); # fade
+    
+	# Set up actor
+	CopyPlayerHolsters(player, indyActor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyActor, 0x80000);
+	SetThingFlags(indyActor, 0x10); # present but invisible
+	TeleportThing(indyActor, in_mk_11);
+	AISetCutSceneMode(indyActor);
+	SetThingMaxRotVel(indyActor, 80.0);
+
+	# hide the birds (avoid copter / bird mayhem)
+	SetThingFlags(bird1, 0x10);
+	SetThingFlags(bird2, 0x10);
+
+	# Cut to down angle on Indy walking from pool to shard...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam_11);
+	SetCameraSecondaryFocus(2, ct_11);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0.0);
+	ClearThingFlags(indyActor, 0x10); # now see him
+	Sleep(0.01);
+	SetCameraInterpSpeed(2, 4.5);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_12);
+	SetCameraSecondaryfocus(2, ct_12);
+	SetCameraFOV(70, 1, 4.5);
+
+	# play the scene music
+	PlaySoundLocal(scene_start, 1.0, 0.0, 0x0, 0);
+
+
+    # Move Indy to the potsherd...
+    AISetMoveSpeed(indyActor, 0.8);
+	AISetLookThing(indyActor, in_mk_12);
+	AISetMoveThing(indyActor, in_mk_12, 0);
+	Sleep(2.0);
+	AIEnableHeadTracking(indyActor, shard);
+	AIWaitForStop(indyActor);
+
+	# Indy: "Funny how I didn't spot this before..."
+    PlayVoice(player, in_funnyspot, 2, 0);
+	PlayKey(indyActor, in_takeit, 4, 0x12, 0);
+	Sleep(0.9);
+	
+	# Get rid of the shard...
+    DestroyThing(shard);
+    in_swapref = SetThingMesh(indyActor, 15, shardhand, 0);
+	Sleep(1.0);
+	AIEnableHeadTracking(indyActor, in_mk_13);
+	Sleep(0.5);
+
+    # Indy: "If this is the prize, I'll lose my grant for sure."
+	cursound = PlayVoice(indyActor, in_ifprize, 2, 0);
+	PlayKey(indyActor, in_examine, 4, 0x12, 0); # 3.9 sec
+	WaitForSound(cursound);
+	Sleep(0.5);
+
+   	# Cut to shot of indy...
+	SetCameraInterpSpeed(2, 2.0);
+	SetCameraFocus(2, cam_13);
+	SetCameraSecondaryFocus(2, ct_13);
+	SetCameraFOV(60, 1, 2.0);
+	
+	# Indy: "where are the priceless artifacts...gilded idols...crowns of kings?"
+	PlayKey(indyActor, in_wheregoodstuff, 4, 0x12 ,0);
+	cursound = PlayVoice(indyActor, in_artifacts, 2, 0); # 4.83 sec
+	#WaitForSound(cursound);
+	Sleep(4.0);
+	copterSound = PlaySoundLocal(helirun, 0.0, 0.0, 0x1, 0);
+    
+	ChangeSoundVol(copterSound, 1.0, 4.0);
+	Sleep(1.0);
+    
+    # Reveal the helicopter offscreen...
+	ClearThingFlags(helicopter, 0x80000);
+	AISetCutSceneMode(helicopter);
+ 	PlayKey(helicopter, chopFly, 4, 0x10, 0);
+   
+	# The blades blur...
+	SetThingMesh(helicopter, 3, chop_blad, 0); # main rotor
+	SetThingMesh(helicopter, 1, chop_rot, 0); # tail rotor
+	
+	# Indy looks at the copter...
+	AISetLookThing(indyActor, helicopter);
+	AIEnableHeadTracking(indyActor, helicopter);
+	Sleep(0.5);
+    
+	# Pan up to the helicopter...
+	SetCollideType(ruins, 0); # camera should not bump anything
+	SetCollideType(rope_1, 0);
+	SetCollideType(rope_2, 0);
+	SetCameraInterpSpeed(2, 3.0);
+	SetCameraFocus(2, cam_14);
+    SetCameraSecondaryFocus(2, ct_14);
+	SetCameraFOV(45, 1, 3.0);
+
+    # Enter the helicopter...
+	SetThingMaxRotVel(helicopter, 20.0); # make it slow to turn (was 20.0)
+	AIEnableBodyTracking(helicopter, copt_LookTarget1);
+	AISetMoveSpeed(helicopter, 2.5);
+    AISetMoveThing(helicopter, copt_Target1, 0);
+	Sleep(1.5);
+	AISetMoveSpeed(helicopter, 1.5);
+	Sleep(1.0);
+	AISetMoveSpeed(helicopter, 1.0);
+	SetThingMaxRotVel(helicopter, 15.0); # was 15.0
+	Sleep(0.5);
+
+	# Wobble copter around...
+	AISetMoveSpeed(helicopter, 0.5);
+	SetThingMaxRotVel(helicopter, 10.0); # was 10.0
+	#Sleep(0.5);
+	AIEnableBodyTracking(helicopter, copt_LookTarget2);
+	Sleep(0.75);
+	
+	# Stabilize the camera...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);		
+ 	    
+	# Helicopter heads for campsite...
+	AIDisableBodyTracking(helicopter);
+	AISetLookThing(helicopter, copt_LookTarget3);
+	AttachThingToThing(ct_14, helicopter);
+	Sleep(0.5);
+	SetThingMaxRotVel(helicopter, 25.0); # was 25.0
+	AISetMoveSpeed(helicopter, 1.0);
+	AISetMoveThing(helicopter, copt_Target2, 0);
+	SetCameraFOV(65, 1, 3.0);
+	Sleep(0.5);
+	AISetMoveSpeed(helicopter, 1.5);
+	Sleep(1.0);
+	AISetMoveSpeed(helicopter, 2.0);
+	
+	# Aim Indy toward campsite offscreen...
+    RestoreThingMesh(indyActor, in_swapref); # drop that shard
+    AISetLookThing(indyActor, copt_Target2);
+	in_keyTrack = PlayKey(indyActor, in_lookup, 4, 0x14 ,0);
+	AIDisableHeadTracking(indyActor);
+	Sleep(3.0);
+
+    StopSound(copterSound, 5.0);
+    Sleep(2.0);
+
+    # pitch-shift the copterSound for doppler effect
+	ChangeSoundPitch(copterSound, 0.5, 4.0);
+	Sleep(1.0);
+
+	# Cut to down shot on Indy...
+	SetCameraFocus(2, cam_15);
+	SetCameraSecondaryFocus(2, ct_15);
+	SetCameraFOV(55, 0, 0.0);
+	Sleep(0.01);
+	SetCameraInterpSpeed(2, 3.1);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	Sleep(0.01);
+	SetCameraFocus(2, cam_16);
+	SetCameraFOV(45, 1, 3.1);
+
+	# restore the birds
+    ClearThingFlags(bird1, 0x10);
+    ClearThingFlags(bird2, 0x10);
+
+    # Indy: "Good news never travels that fast.  Better get up there."
+	cursound = PlayVoice(indyActor, in_goodnews, 2, 0); # 3.2 sec
+	Sleep(0.5);
+	StopKey(indyActor, in_keyTrack, 0.5);
+	WaitForSound(cursound);
+	Sleep(0.3);
+
+	# Clean up and restore player control...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	TeleportThing(player, indyactor);
+	SetThingFlags(indyActor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+
+	SetCameraPosition(1, GetThingPos(cam_17));
+	SetCurrentCamera(curcam);
+
+	SetThingAlpha(player, 1);
+
+	DestroyThing(helicopter);
+	SetCollideType(ruins, ru_colltype);
+ 	SetCollideType(rope_1, r1_colltype);
+	SetCollideType(rope_2, r2_colltype);
+
+	EndCutScene();
+	ClearActorFlags(player, 0x200000);
+
+	# Now the helicopter is up at the campsite...
+	ClearThingFlags(campsite_helicopter, 0x80000);
+
+	return;
+
+end

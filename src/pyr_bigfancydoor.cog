@@ -1,0 +1,183 @@
+# Jones 3D Cog Script
+#
+# pyr_bigfancydoor.cog
+#	
+# Opens the door to the minecar room in pyramid 1, triggered by messages from the monojackals
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	startup
+message	user1
+message	arrived
+message	activated
+
+# door parts
+thing	lock0		linkid=1
+thing	lock1		linkid=1
+thing	lock2		linkid=1
+thing	lock3		linkid=1
+thing	door		nolink
+thing	ghosthinge	nolink
+thing	sphinx		nolink
+
+# cams and camlooks
+thing	doorcam			nolink
+thing	doorlinecam		nolink
+thing	cam1spot		local
+thing	cam1look		local
+
+sector	adjoinsector	nolink
+
+thing	player		local
+
+sound	thesebars=pr02j01a.wav	local
+sound	dooropen=tem_ldoorr_ldoorl_open_c.wav	local
+sound	doorstop=tem_ldoorr_ldoorl_close_c.wav	local
+
+int		locknum=0		local
+int		dr_colltype		local
+
+# subroutines
+flex	startscene=0.0		local
+flex	endscene=0.0		local
+flex	fixcams=0.0			local
+end
+
+code
+startup:
+	sleep(.01);
+	SetSectorAdjoins(GetThingSector(door), 0);
+	SetThingLight(door, '100 87 75', .001, .01);
+	SetThingLight(lock0, '100 87 75', .001, .01);
+	SetThingLight(lock1, '100 87 75', .001, .01);
+	SetThingLight(lock2, '100 87 75', .001, .01);
+	SetThingLight(lock3, '100 87 75', .001, .01);
+	SetThingLight(sphinx, '100 100 100', .001, .01);
+	player = GetLocalPlayerThing();
+
+	return;
+
+activated:
+# ---> door bars
+
+    # prepare player
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+	
+	StartCutscene(0);
+	
+	# setup offset camera
+	cam1spot = CreateThing(GetThingTemplate(doorlinecam), doorlinecam);
+	cam1look = CreateThing(GetThingTemplate(doorlinecam), doorlinecam);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+	SetCameraFocus(2, doorlinecam);
+	SetCameraSecondaryFocus(2, door);
+
+	# indy takes note
+	PlayVoice(player, thesebars, 1, 1);
+	sleep(.5);
+
+	# restore camera and get rid of objects
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(doorlinecam));
+	SetCurrentCamera(1);
+	DestroyThing(cam1spot);
+	DestroyThing(cam1look);
+
+	# finish up
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+	return;
+
+user1:
+# ---> one of the monojackal cogs
+	
+	# force adjoins back on when cutscene starts
+	SetSectorAdjoins(adjoinsector, 1);	
+
+	# move one lock every time a message is sent
+	call startscene;
+
+	SetCameraSecondaryFocus(2, sphinx);
+	
+	MoveToFrame(lock0[locknum], 1, .5);
+	locknum = locknum + 1;
+
+	MoveToFrame(doorcam, locknum, .2);
+	return;
+
+arrived:
+# ---> doorlocks
+
+	if (GetSenderRef() == lock3)
+	{
+		# slide camera closer
+		MoveToFrame(doorcam, 5, .2);
+		Sleep(1);
+	
+		# opendoor
+		dr_colltype = GetCollideType(door);
+		SetCollideType(door, 0);
+		SetSectorAdjoins(GetThingSector(door), 1);
+		AttachThingToThing(door, ghosthinge);
+		Rotate(ghosthinge, 90, 1, 3);
+		PlaySoundThing(dooropen, door, 1, -1, -1, 0);
+		
+		WaitForStop(ghosthinge);
+		SetCollideType(door, dr_colltype);
+		PlaySoundThing(doorstop, door, 1, -1, -1, 0);
+		
+		sleep(1);
+	}
+	else
+	{
+		sleep(1);
+	}
+	
+	call endscene;
+	return;
+
+startscene:
+	call fixcams;
+
+	StartCutscene(1);
+	SetCameraFocus(2, doorcam);
+	SetCameraSecondaryFocus(2, sphinx);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0);
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	
+	return;
+	
+endscene:
+	ClearActorFlags(player, 0x200000);
+
+	SetCurrentCamera(1);
+	EndCutscene();
+	return;
+
+fixcams:
+	# reset camera settings
+	ResetCameraFOV(0, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+	RestoreExtCam();
+	return;
+
+end	

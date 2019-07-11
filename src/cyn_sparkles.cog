@@ -1,0 +1,84 @@
+# Jones 3D Cog Script
+#
+# CYN_sparkles.cog
+#
+# Make sparkles...
+#
+# [CRM]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message 	timer
+message		sighted
+message		entered
+
+material	mat=pyr_a4sfx_sparkle.mat	local
+
+surface		trigger1
+surface		trigger2
+
+sector		noflash1					nolink
+sector		noflash2					nolink
+sector		inSector					local
+
+thing		gem
+thing		sparkle						nolink
+
+int			sender						local
+int			matTrack					local
+
+end
+
+# ===================================================================
+
+code
+
+# -------------------------------------------------------------------
+
+entered:
+
+	sender = GetSenderRef();
+
+	if ((sender != trigger1) && (sender != trigger2)) return;
+
+	# Trigger faces will force sightings
+	ClearThingFlags(gem, 0x100000);
+	return;
+
+# -------------------------------------------------------------------
+
+sighted:
+
+	if (GetSenderRef() != gem) return;
+
+	# Prepare for next sighting
+	SetTimer(RandBetween(6, 15));
+
+	# If player is too close to it, don't flash
+    inSector = GetThingSector(GetLocalPlayerThing());
+    if ((inSector == noflash1) || (inSector == noflash2)) return;
+	
+	# Animate sprite up and down
+    matTrack = MaterialAnim(mat, 20, 0x1);
+	AnimateSpriteSize(sparkle, '0.01 0.01 0.0', '0.5 0.5 1.0', 0.25);
+	Sleep(0.25);
+	AnimateSpriteSize(sparkle, '0.5 0.5 1.0', '0.01 0.01 0.0', 0.25);
+	Sleep(0.25);
+	StopAnim(matTrack);
+
+	return;
+
+# -------------------------------------------------------------------
+
+timer:
+
+	If (gem == -1) return;
+	# Set thing to unseen
+	ClearThingFlags(gem, 0x100000);
+	return;
+
+end

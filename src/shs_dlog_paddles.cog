@@ -1,0 +1,87 @@
+# Jones 3D Cog Script
+#
+# shs_Dlog_paddles.cog   Say the line, Indy.  
+#
+# [JWC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message 	startup
+message 	touched
+                                                          
+sound		in_paddles=Ss04j05.wav		local
+
+thing	 	trigger			   
+thing		player			local
+thing  		cam1spot				nolink
+thing  	 	cam1look				nolink
+thing		offsetcam	  			nolink
+thing		offsettarg   			nolink
+
+flex		viewangle				local
+
+int			spoken=0		local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+	
+      	
+	player = GetLocalPlayerThing();
+    return;
+
+touched:
+	
+	if ((GetSenderRef() == trigger) && (spoken == 0)) 
+	{
+	    spoken=1;
+        print("activated");
+		MakeMeStop();
+        StartCutscene(1);
+	  	
+		# Camera stuff
+		MakeCamera2LikeCamera1(cam1spot, cam1look);
+        SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+      	SetCameraPosInterp(2, 0);			# kill dolly mode too
+    	SetCameraFocus(2, cam1spot);		# cam 2 takes over here
+        SetCameraSecondaryFocus(2, cam1look); #looking same place
+    	viewangle = GetCameraFOV(); # it pays to be careful
+    	SetCurrentCamera(2);
+    	SetCameraFOV(viewangle, 0, 0.0); # start here anyway
+    	SetCameraLookInterp(2, 1);			 
+    	SetCameraPosInterp(2, 1);
+    	SetCameraInterpSpeed(2, 0.7); # about right
+        Sleep(0.01);
+    	SetCameraFocus(2, offsetcam);  # slide out to new spot
+    	SetCameraSecondaryFocus(2, offsettarg);	# slide over to new target
+		
+
+		sleep(.5);
+			
+		# "Paddles, the monks..."
+		PlayVoice(player, in_paddles, 1.0, 1);
+        
+  		SetCameraLookInterp(2, 0); # kill pan & tilt mode
+		SetCameraPosInterp(2, 0); # kill dolly mode
+		SetCameraPosition(1, GetThingPos(offsetcam)); # prep to swing back to follow-cam
+		sleep(.01);
+		SetCurrentCamera(1);
+		
+		ClearActorFlags(player, 0x200000); # player in control
+        EndCutscene();
+    }
+	
+return;
+     
+  
+
+end
+

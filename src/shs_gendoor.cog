@@ -1,0 +1,106 @@
+# Jones 3D Cog Script
+#
+# SHS_GenDoor.cog      Make doors open/close.  
+#
+# [JWC, SXC]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message activated
+message	startup
+
+
+sector	doorsector
+
+thing	door    	   
+thing   button       
+thing	player			local
+thing	interpcam
+
+int  	filter=0 		local		# prevent multiple activates	
+int		position=0		local		# door position
+int     angle=90                    # which way door opens
+                                    # give choice of camera (l,c,r)
+         
+
+end
+
+# ========================================================================================
+
+code
+
+
+startup:
+
+	# turn off door sector
+    SetSectorAdjoins(doorsector, 0);
+   	SetThingLight(door, '0.2 0.2 0.2', 0.01, 0.01);
+    player= GetLocalPlayerThing();
+    return;
+
+activated:
+   
+    # TO DO: prevent activating with chalk
+    if (GetCurItem(player) != 0) return; # prevents activating with chalk
+
+	if ((GetSenderRef() == button) && (filter == 0))
+	{
+        #Prep...
+		SetActorFlags(player, 0x200000);
+		StartCutscene(0);
+		StopThing(player);
+		DeselectWeapon(player);
+		DeselectWeaponWait(player);
+		
+		# Camera stuff
+		SetExtCamOffsetToThing(interpCam);
+
+		filter=1;
+        
+		PlayMode(player, 60, 0);
+        Sleep(.3); # synch with button
+
+		# handle door
+		position = 1 - position;
+	   	      
+		MoveToFrame(button, 1, 1);
+		WaitForStop(button);
+		    	        
+        # open and close door
+		SetCollideType(door,0); 	# make no collision 
+		if (position == 1)			# open door
+		{
+			# turn on door sector
+			SetSectorAdjoins(doorsector, 1);
+			# move door
+			Rotate(door, angle, 1, 1);
+			WaitForStop(door);
+		}
+           
+		if (position == 0)	 		# close door
+		{
+            Rotate(door, -angle, 1, 1);
+			WaitForStop(door);
+            # turn off door sector
+			SetSectorAdjoins(doorsector, 0);
+		}
+        
+		SetCollideType(door,3);		# resets collision
+		MoveToFrame(button, 0, 1);
+		WaitForStop(button);
+        RestoreExtCam();
+		ClearActorFlags(player, 0x200000);
+        EndCutscene();
+		filter=0;
+	}
+    return;
+    
+end
+
+
+
+

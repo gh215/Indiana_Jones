@@ -1,0 +1,36 @@
+# Jones 3D Cog Script
+#
+# pyr_playmusic.cog
+#	
+# Play music upon entry into a sector
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+message	entered
+
+sector	trigger
+
+sound	musiccue
+
+int		locked=0	local
+end
+
+# ========================================================================================
+
+code
+entered:
+# ---> trigger sector
+
+	if (GetSenderRef() != trigger) return;
+
+	if (locked)	return;
+	locked = 1;
+
+	PlaySoundLocal(musiccue, 1, 0, 0, 0);
+	return;
+end
+

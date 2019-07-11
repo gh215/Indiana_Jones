@@ -1,0 +1,160 @@
+# Jones 3D Cog Script
+#
+# PYR_MineSafetyDoors.cog
+#
+# Mine safety doors at the end of the level. Global value informs next level if Indy has described the doors.
+#
+# [TRM] + [RKD]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+message	startup
+message	entered
+message	activated
+
+# world things
+thing	doorL
+thing	doorR
+thing	player		local
+
+# camera things and look things
+thing	doorcam
+thing	doorcamlook
+thing	cam1spot	local
+thing	cam1look	local
+
+# world surfaces
+surface	open	mask=0x404
+
+# sounds
+sound	sndOpen=sol_cardoor_open_c.wav		local
+sound	sndClose=sol_cardoor_close_c.wav	local
+
+# indy saylines
+sound	firesafety=pr15j01.wav	local
+sound	triggersit=pr15j02.wav	local
+end
+
+# ========================================================================================
+code
+
+startup:
+	sleep(.01);
+	player = GetLocalPlayerThing();
+
+	# light up doors and remove visibility
+	SectorAdjoins(GetThingSector(doorL), 0);
+    SetThingLight(doorL, '.2 .2 .25', .001, 0.01);
+    SetThingLight(doorR, '.2 .2 .25', .001, 0.01);
+	
+	# global12 = 0 when Indy hasn't commented on the fire doors yet
+	global12 = 0;
+
+    return;
+        					
+# ========================================================================================
+
+activated:
+# ---> DoorL, DoorR	
+
+	# stop player
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+	
+	# bring camera around, freeze Indy, say a few words
+	StartCutscene(0);
+	
+	# setup offset camera
+	cam1spot = CreateThing(GetThingTemplate(doorcam), doorcam);
+	cam1look = CreateThing(GetThingTemplate(doorcam), doorcam);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+	SetCameraFocus(2, doorcam);
+	SetCameraSecondaryFocus(2, doorcamlook);
+
+	Sleep(0.3);
+	
+	#if Indy hasn't tried the doors yet
+	if (global12 == 0)
+	{
+		PlayMode(player, 60, 0);
+		Sleep(1);
+		
+		PlayVoice(player, firesafety, 1, 1);
+		
+		#set global variable to indicate (and tell SOL) that first line was sprung
+		global12 = 1;
+	}
+	else
+	{
+	   	PlayVoice(player, triggersit, 1, 1);
+	}
+
+	Sleep(0.75);
+	
+	# restore camera and get rid of objects
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(doorcam));
+	SetCurrentCamera(1);
+	DestroyThing(cam1spot);
+	DestroyThing(cam1look);
+	
+	# restore control
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+    return;
+
+entered:
+# ---> open surface
+	if (GetSenderRef() != open) return;
+
+	if (!BitTest(GetPhysicsFlags(GetSourceRef()), 0x01000000)) return;
+	
+	# go into cutscene mode
+	StartCutscene(0);
+	StopThing(player);
+	SetActorFlags(player, 0x200000);
+	SetThingThrust(player, '0.0 2.0 0.0');
+		
+	# turn on adjoin, remove door collisions
+	SectorAdjoins(GetThingSector(doorL), 1);
+	SetCollideType(doorL, 0);
+	SetCollideType(doorR, 0);
+
+	# play door sounds
+	PlaySoundThing(sndOpen, doorL, 0.5, 10.0, 20.0, 0);
+	PlaySoundThing(sndOpen, doorR, 0.5, 10.0, 20.0, 0);
+
+	# open the doors
+	MoveToFrame(doorL, 1, 2.5);
+	MoveToFrame(doorR, 1, 2.5);
+	WaitForStop(doorL);
+	
+	# delay closing of the door
+	Sleep(3);
+	
+	#close the doors
+	MoveToFrame(doorL, 0, 2.5);
+	MoveToFrame(doorR, 0, 2.5);
+
+	#play door sounds
+	PlaySoundThing(sndClose, doorL, 0.5, 10.0, 20.0, 0);
+	PlaySoundThing(sndClose, doorR, 0.5, 10.0, 20.0, 0);
+
+	return;
+
+end
+

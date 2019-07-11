@@ -1,0 +1,113 @@
+# Jones 3D Cog Script
+#
+# TEM_AutoTorch2.cog
+#
+# Light two torches at the same time without any sound phasing
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    
+    thing       torch1
+    thing       torch2
+    thing       flame1
+    thing       flame2
+    
+    sector      liteSect
+    sector      sec_NoBurn
+    sector      sec_Burn
+    
+    sound       burning=gen_torch_burnin_c.wav      local
+    sound       lite=gen_torchlitet_c.wav           local
+    
+    flex        lituptime=0.5
+    flex        maxradius=0.35
+    
+    vector      normLight       local
+    vector      redLight        local
+    
+    int         lit=0           local
+    int         burn_Chnl1      local
+    int         burn_Chnl2      local
+    int         burn_On         local
+    int         red
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	normLight = VectorSet(0.87, 0.55, 0.06);
+    redLight = VectorSet(0.87, 0.05, 0.05);
+    SetThingFlags(flame1, 0x10);
+    SetThingFlags(flame2, 0x10);
+    return;
+
+# ========================================================================================
+
+entered:
+
+    if((GetSenderRef() == liteSect) && (lit == 0))
+	{
+        lit = 1;
+        
+        # show torches
+        ClearThingFlags(flame1, 0x10);
+        ClearThingFlags(flame2, 0x10);
+        
+        # play torch light sound locally
+        PlaySoundLocal(lite, 1.0, 0.0, 0x0, 1);
+        
+        if(red == 0)
+        {
+            SetThingLight(torch1, normLight, 0.001, lituptime);
+            SetThingLight(torch2, normLight, 0.001, lituptime);
+            SetThingLight(flame1, normLight, maxradius, lituptime);
+            SetThingLight(flame2, normLight, maxradius, lituptime);
+        }
+        
+        else
+        {
+            SetThingLight(torch1, redLight, 0.001, lituptime);
+            SetThingLight(torch2, redLight, 0.001, lituptime);
+            SetThingLight(flame1, redLight, maxradius, lituptime);
+            SetThingLight(flame2, redLight, maxradius, lituptime);
+        }
+        
+        # play torch burning sounds
+        burn_Chnl1 = PlaySoundThing(burning, torch1, 1.0, 10, 25, 0x0001);
+        Sleep(Rand() + 0.1);
+        burn_Chnl2 = PlaySoundThing(burning, torch2, 1.0, 10, 25, 0x0001);
+    }
+    
+    # turn OFF burn sfx
+    if((GetSenderRef() == sec_NoBurn) && (lit == 1) && (burn_On == 1))
+    {
+        burn_On = 0;
+        StopSound(burn_Chnl1, 0.5);
+        StopSound(burn_Chnl2, 0.5);
+    }
+    
+    # turn ON burn sfx
+    if((GetSenderRef() == sec_Burn) && (lit == 1) && (burn_On == 0))
+    {
+        burn_On = 1;
+        burn_Chnl1 = PlaySoundThing(burning, torch1, 1.0, 10, 25, 0x0001);
+        Sleep(Rand() + 0.1);
+        burn_Chnl2 = PlaySoundThing(burning, torch2, 1.0, 10, 25, 0x0001);
+    } 
+    
+	return;
+        
+# ========================================================================================
+        
+end

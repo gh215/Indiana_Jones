@@ -1,0 +1,55 @@
+# Jones 3D Cog Script
+#
+# SOL_SpiderDrop.cog
+#
+# [GGJ] && [TRM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+    message	    crossed
+    message     killed
+    
+    surface	    trig_Spider
+    
+    thing	    spiderGhost0
+    thing	    spider0	        local
+    
+    template	tpl_Spider=spider_wall		local
+    
+    int         population=0    local
+    
+end
+
+# ========================================================================================
+
+code
+
+crossed:
+
+    if(population >= 1) return;
+    
+    population = 1;
+
+    Sleep(RandBetween(0, 2));
+    
+    spider0 = CreateThing(tpl_Spider, spiderGhost0);
+    CaptureThing(spider0);
+    
+    #sends message to spider_wall's class cog, saying "user0" (27)
+    SendMessageEx(GetThingClassCog(spider0), 27, spider0, 0, 0, 0);
+    
+    return;
+
+# ========================================================================================
+
+killed:
+    
+    population = 0;
+    return;
+    
+# ========================================================================================
+end
+

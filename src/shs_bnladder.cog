@@ -1,0 +1,181 @@
+# Jones 3D Cog Script
+#
+# shs_BNladder.cog      Make the Big Nave ladder move.  
+#
+# [JWC, RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message activated
+message	startup
+
+sound	ladderstart=shs_ladderroll_start.wav		local
+sound	laddermove=shs_ladderroll_c.wav				local
+sound	ladderstop=shs_ladderroll_stop.wav			local
+
+surface	LowerClimb0			# set as no move due to ladder pos
+surface	LowerClimb1		  	 
+surface	UpperClimb0		 	# set as not climable in marcus
+surface	UpperClimb1
+
+thing	ladder0		    			  
+thing   door                   
+thing   button0                                                  
+thing	player				local
+thing	cam1
+thing	c1_t1
+thing	c1_t2
+
+int		curcam				local
+int     moving=0 			local	# prevents multiple activates
+int		ladderpos=0			local	# 0=down, 1=up	
+int		ladderloop			local
+
+#SUBROUTINES
+flex	ladderup			local
+flex	ladderdown			local
+flex	returncontrol		local
+
+end
+
+# ========================================================================================
+
+code
+startup:
+
+	player= GetLocalPlayerThing();
+	return;
+
+activated:
+                
+    if (GetCurItem(player) != 0) return; # prevents activating with chalk
+
+	if ((GetSenderRef() == button0) && (moving == 0))
+    {
+	        										
+		#Prep..
+		
+		SetActorFlags(player, 0x200000);
+		StartCutscene(0);
+        StopThing(player);
+        DeselectWeapon(player);
+        DeselectWeaponWait(player);
+	  	
+		# cut to indy
+		curCam = GetCurrentCamera();   
+		SetCameraLookInterp(2, 0); # no pan & tilt
+    	SetCameraPosInterp(2, 0); # no dolly
+    	SetCameraFocus(2, cam1);
+    	SetCameraSecondaryFocus(2, c1_t1);
+    	Sleep(0.01);
+		SetCurrentCamera(2);
+    	SetCameraFOV(70, 0, 0);
+         
+		moving=1;
+		PlayMode(player, 60, 0); # push button anim
+		Sleep(.3); # synch with button
+
+        MoveToFrame(button0, 1, 1);
+		WaitForStop(button0);
+			 
+		# cut to ladder
+		SetCameraLookInterp(2, 1); # pan & tilt
+        SetCameraInterpSpeed(2, 2.5);
+        Sleep(0.01);
+        SetCameraSecondaryFocus(2, c1_t2);
+		SetCameraFOV(50, 1, 2.5);
+		sleep(1);
+
+		if (ladderpos == 0)
+		{
+			Call ladderup;
+        }
+    	else	
+		{
+			Call ladderdown;
+        }
+        
+		MoveToFrame(button0, 0, 1);
+		WaitForStop(button0);
+        Sleep(.5);
+
+		Call returncontrol;
+
+		moving=0;
+	}
+    return;
+    
+   
+ladderup:
+
+	# set bits on upper/lower surfaces
+	ClearAdjoinFlags(UpperClimb0, 0x2);
+	ClearAdjoinFlags(UpperClimb1, 0x2);
+
+	SetSurfaceFlags(UpperClimb0, 0x2000);
+    SetSurfaceFlags(UpperClimb1, 0x2000);
+	
+	SetAdjoinFlags(LowerClimb0, 0x2);
+    SetAdjoinFlags(LowerClimb1, 0x2);
+    
+    # move ladder to upper
+	Print("ladder to roof");
+	PlaySoundLocal(ladderstart, 1.0, 0, 0x0000, 0);	
+	MoveToFrame(ladder0, 1, 2);    
+	ladderloop=PlaySoundLocal(laddermove, 1.0, 0, 0x1, 0);
+	WaitForStop(ladder0);
+	StopSound(ladderloop, 0.0);
+	PlaySoundLocal(ladderstop, 1.0, 0, 0x0000, 0);
+	Rotate(door,-90, 0, 1);
+	MoveToFrame(button0, 0, 1);
+	WaitForStop(button0);
+    ladderpos=1;
+    return;
+	
+	
+ladderdown:
+
+	# set bits on upper/lower surfaces
+	SetAdjoinFlags(UpperClimb0, 0x2);
+	SetAdjoinFlags(UpperClimb1, 0x2);
+	ClearSurfaceFlags(UpperClimb0, 0x2000);
+	ClearSurfaceFlags(UpperClimb1, 0x2000);
+    ClearAdjoinFlags(LowerClimb0, 0x2);
+    ClearAdjoinFlags(LowerClimb1, 0x2);
+	
+	# move ladder down
+	PlaySoundLocal(ladderstart, 1.0, 0, 0x0000, 0);	
+	Rotate(door, 90, 0, 1);
+	WaitForStop(door);
+	MoveToFrame(ladder0, 0, 2);    
+	ladderloop=PlaySoundLocal(laddermove, 1.0, 0, 0x1, 0);
+    WaitForStop(ladder0);
+	StopSound(ladderloop, 0.0);
+	PlaySoundLocal(ladderstop, 1.0, 0, 0x0000, 0);
+	MoveToFrame(button0, 0, 1);
+	WaitForStop(button0);
+    ladderpos=0;
+	
+ 	return;
+
+
+returncontrol:
+		
+	SetCameraPosition(1, GetThingPos(cam1)); # prep to swing back to follow-cam
+    SetCameraLookInterp(2, 0); # kill pan & tilt mode
+    SetCameraPosInterp(2, 0); # kill dolly mode
+    sleep(.01);
+	ResetCameraFOV(0, 0.0);
+	SetCurrentCamera(curCam);  
+	ClearActorFlags(player, 0x200000);
+    EndCutscene();
+	
+return;
+
+
+end
+

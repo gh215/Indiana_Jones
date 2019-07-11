@@ -1,0 +1,454 @@
+# Jones 3D Cog Script
+#
+# 10_SEA_Vol_Frets.cog
+#
+# Volodnikov frets about the wonders of Meroë
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+# .................................. MESSAGES ..................................
+
+	message		startup
+	message		entered
+	
+# .................................. KEYFRAMES .................................
+	
+	keyframe	vo_armsATside=vo_stand3_arms_side.key	local
+	keyframe	vo_armsATback=vo_stand2_arms_back.key	local
+	keyframe	vo_armsATfold=vo_stand1_arms_front.key	local
+	keyframe	vo_sideTOfold=0vo_stand3_bd_1.key		local
+	keyframe	vo_foldTOside=0vo_stand1_bd_3.key		local
+	keyframe	vo_sideTOback=vo_stand3_bd_2.key		local
+
+	keyframe	vo_rubHead=0vo_rubhead_1_2.key			local # 113x
+	keyframe	vo_gotjones=0vo_capturejones_2_3.key	local # 305x
+	keyframe	vo_glassesL=0vo_glassesL_3_3.key		local
+	keyframe	vo_handout=0vo_handoutR_2_3.key			local
+	keyframe	vo_bothup=0vo_bothup_3_3.key			local
+
+# .................................. SOUNDS ....................................
+    
+	sound		vo_meroway=Se04v01.wav					local
+	sound		vo_babsecret=Se04v02.wav				local
+	sound		vo_toodanger=Se04v03.wav				local
+	sound		vo_wonderthings=Se04v04a.wav			local # 5.6 sec
+	sound		vo_joneshistory=Se04v04b.wav			local # 11.4 sec
+
+	sound		dr_close=sea_doors_close_c.wav			local
+	
+# ............................... ACTOR THINGS .................................
+
+	thing		player									local
+	thing		indy	    							linkid=0
+	thing		volod
+	thing		helmsman
+ 	
+# .............................. OBJECT THINGS .................................
+
+	thing		bridgedoor								nolink
+	thing		bridgeswitch							nolink
+
+# .............................. CAMERA THINGS .................................
+
+	thing		cam_1									nolink
+	thing		cam_2									nolink
+	thing		cam_3									nolink
+#	thing		cam_4									nolink
+	thing		cam_5									nolink
+	
+	thing		ct_1a									nolink
+	thing		ct_1b									nolink
+	thing		ct_2									nolink
+	thing		ct_3 									nolink
+	thing		ct_4									nolink
+	thing		ct_5									nolink
+	thing		ct_6									nolink
+	
+# .............................. TARGET THINGS .................................
+
+	thing		in_mk_1									nolink
+	thing		in_mk_2									nolink
+	thing		in_mk_3									nolink
+	thing		in_mk_4									nolink
+	thing		in_mk_5									nolink
+
+	thing		vo_mk_1									nolink
+	thing		vo_mk_2									nolink
+	thing		vo_mk_3									nolink
+	thing		vo_mk_4									nolink
+
+# ........................ OTHER ENGINE REFERENCES .............................
+			
+	sector		startvolod
+	sector		startscene
+	sector		closedDoorSector						local
+
+	surface		hallthold1
+	surface		hallthold2
+	surface		hallthold3
+	surface		bridgethold1
+	surface		bridgethold2
+	surface		bridgethold3
+	
+# ............................... VARIABLES ....................................
+	
+	vector		v_closedDoorPYR							local
+	vector		v_closedDoorPosition					local
+
+	flex		in_rotRate								local
+	flex		vo_rotRate								local
+	flex		in_headRate								local
+	flex		vo_headRate								local
+
+	flex		duration=1.5							local
+
+	flex		opendoor								local
+	flex		closedoor								local
+
+	int			cutSceneState=0							local
+
+	int			vo_keyTrack1							local
+		
+	int			sender									local
+	int			curSound								local
+	int			curCam									local
+
+	int			in_collType								local
+
+	sound		music0=mus_sea_volodbridge.wav			local
+	sound		music1=mus_gen_awechord1.wav				local
+
+	
+        cog             SEA_Deck_AI     //added by JM
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	# Pointer to Player...
+	player = GetLocalPlayerThing();
+
+	# Prep actors...
+	SetThingFlags(indy, 0x80000);
+	SetThingFlags(volod, 0x80000);
+	in_rotRate = GetThingMaxRotVel(indy);
+	in_headRate = GetThingMaxHeadVel(indy);
+	vo_rotRate = GetThingMaxRotVel(volod);
+	vo_headRate = GetThingMaxHeadVel(volod);
+
+	v_closedDoorPYR = GetThingLVecPYR(bridgedoor);
+	v_closedDoorPosition = GetThingPos(bridgedoor);
+	closedDoorSector = GetThingSector(bridgedoor);
+
+	return;
+
+# ..............................................................................
+
+entered:
+	
+	if (cutSceneState > 0)
+	{
+		return;
+	}
+
+	sender = GetSenderRef();
+
+	if (sender == startvolod)
+	{
+		# Open the bridge door...
+		call opendoor;
+
+		# Place Volodnikov...
+		ClearThingFlags(volod, 0x80000);
+		AISetCutSceneMode(volod);
+		AISetMode(helmsman, 0x2000); // so idle anim will play
+	}
+
+	if (sender == startscene)
+	{
+		# Prep...
+		ResetCameraFOV(0, 0.0);
+		cutSceneState = 1;
+		curCam = GetCurrentCamera();
+		in_collType = GetCollideType(indy);
+				
+		StartCutScene(1);
+                
+                SendMessage(SEA_Deck_AI, user2);    //added by JM
+
+		SetActorFlags(player, 0x200000);
+		CopyPlayerHolsters(player, indy);
+		Sleep(1.5); # wait for indy to stand up
+
+		SetThingflags(player, 0x80000);
+		CopyOrientAndPos(in_mk_1, indy);
+		ClearThingFlags(indy, 0x80000);
+		AISetCutSceneMode(indy);
+
+		# Let actors walk thru ship door threshholds...
+		SetAdjoinFlags(hallthold1, 0x02);
+		SetAdjoinFlags(GetSurfaceAdjoin(hallthold1), 0x02);
+		SetAdjoinFlags(hallthold2, 0x02);
+		SetAdjoinFlags(GetSurfaceAdjoin(hallthold2), 0x02);
+		SetAdjoinFlags(hallthold3, 0x02);
+		SetAdjoinFlags(GetSurfaceAdjoin(hallthold3), 0x02);
+		SetAdjoinFlags(bridgethold1, 0x02);
+		SetAdjoinFlags(GetSurfaceAdjoin(bridgethold1), 0x02);
+		SetAdjoinFlags(bridgethold2, 0x02);
+		SetAdjoinFlags(GetSurfaceAdjoin(bridgethold2), 0x02);
+		SetAdjoinFlags(bridgethold3, 0x02);
+		SetAdjoinFlags(GetSurfaceAdjoin(bridgethold3), 0x02);
+	
+		# Cut to Indy advancing to the bridge door...
+		SetCameraLookInterp(2, 0); # no p & t
+		SetCameraPosInterp(2, 0); # no dolly
+		SetCameraFocus(2, cam_1);
+		SetCameraSecondaryFocus(2, ct_1a);
+		SetCurrentCamera(2);
+		SetCameraFOV(65, 0, 0.0);
+		Sleep(0.01);
+	PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+
+		AISetMoveSpeed(indy, 1.0);
+		AISetLookThingEyeLevel(indy, in_mk_2);
+		AISetMoveThing(indy, in_mk_2, 0);
+		MoveToFrame(ct_1a, 1, 0.2);
+		Sleep(1.4);
+
+		# Volodnikov: "Meroë, lieutenant...change the world..."
+	    curSound = PlayVoice(volod, vo_meroway, 1.0, 0);
+
+		# Indy eavedrops on the Russian...
+		AIWaitForStop(indy);
+		SetThingMaxHeadVel(indy, 150.0);
+		AIEnableHeadTracking(indy, vo_mk_2);
+		Sleep(0.5);
+		AIDisableHeadTracking(indy);
+		SetThingMaxRotVel(indy, 100.0);
+		AISetLookThingEyeLevel(indy, in_mk_3);
+		AISetMoveThing(indy, in_mk_3, 0);
+
+		# Pan off Indy to Volodnikov...
+		SetCameraInterpSpeed(2, 3.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		Sleep(0.1); # was 0.01
+		SetCameraSecondaryFocus(2, ct_1b);
+		SetCameraFOV(50, 1, 3.0);
+		AIWaitForStop(indy);
+		Sleep(0.5);
+
+		# Indy ducks back into an alcove...
+		SetThingMaxRotVel(indy, in_rotRate);
+		AISetMoveSpeed(indy, 2.0);
+		AISetLookThingEyeLevel(indy, in_mk_4);
+		AISetMoveThing(indy, in_mk_4, 0);
+		AIWaitForStop(indy);
+		AISetLookThingEyeLevel(indy, ct_1a);
+		Sleep(0.1);
+		SetThingMaxHeadVel(indy, 180.0);
+		AIEnableHeadTracking(indy, bridgeswitch);
+		PlayKey(volod, vo_bothup, 4, 0x12, 0);
+		Sleep(1.0);
+
+		# Dolly out to Volodnikov...
+		SetCameraInterpSpeed(2, 24.0);
+		SetCameraFocus(2, cam_2);
+		SetCameraSecondaryFocus(2, ct_2);
+		Sleep(3.0);
+		vo_keyTrack1 = PlayKey(volod, vo_armsATback, 2, 0x10, 0);
+		PlayKey(volod, vo_sideTOback, 4, 0x12, 0);
+		Sleep(1.8); # was 2.0
+		SetCameraFOV(80, 1, 12.0);
+		SetThingMaxHeadVel(volod, 150.0);
+		AIEnableHeadTracking(volod, helmsman);
+		WaitForSound(curSound);
+		Sleep(0.5);
+
+		# Volodnikov: "That's where the Babylonian secret lies..."	    
+		AIEnableHeadTracking(volod, vo_mk_1);
+		curSound = PlayVoice(volod, vo_babsecret, 1.0, 0);		
+		StopKey(volod, vo_keyTrack1, 0.0);
+		vo_keyTrack1 = PlayKey(volod, vo_armsATfold, 2, 0x10, 0);
+		PlayKey(volod, vo_handout, 4, 0x12, 1);
+		PlayKey(volod, vo_sideTOfold, 4, 0x12, 1);
+		Sleep(2.5);
+		WaitForSound(curSound);
+
+		# Volodnikov: "Somehow, no one has ever claimed the treasure..."
+	    curSound = PlayVoice(volod, vo_toodanger, 1.0, 0);
+		StopKey(volod, vo_keyTrack1, 0.0);
+		vo_keyTrack1 = PlayKey(volod, vo_armsATside, 2, 0x10, 0);
+		PlayKey(volod, vo_foldTOside, 4, 0x12, 0);
+		
+		# Tighten frame...
+		Sleep(5.0);
+		SetCameraFOV(48, 1, 4.3);
+		Sleep(0.5);
+
+		# Volodnikov... "...does the power strike the finder, like a curse?"
+		PlayKey(volod, vo_glassesL, 4, 0x12, 1);
+		StopKey(volod, vo_keyTrack1, 0.0);
+		vo_keyTrack1 = PlayKey(volod, vo_armsATfold, 2, 0x10, 0);
+		PlayKey(volod, vo_sideTOfold, 4, 0x12, 1);
+		WaitForSound(curSound);
+		Sleep(0.2);
+
+		# Cut to Volodnikov...
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, cam_3);
+		SetCameraSecondaryFocus(2, ct_3);
+		SetCameraFOV(47, 0, 0.0);
+
+		# Volodnikov: "I wonder...capture Jones...history is on our side!"
+	    PlayVoice(volod, vo_wonderthings, 1.0, 0); # 5.6 sec
+		SetCameraInterpSpeed(2, 16.0);
+		SetCameraLookInterp(2, 1);
+		Sleep(0.01);
+		SetCameraSecondaryFocus(2, ct_4);
+		SetCameraFOV(35, 1, 16.0);
+		StopKey(volod, vo_keyTrack1, 0.0);
+		vo_keyTrack1 = PlayKey(volod, vo_armsATback, 2, 0x10, 0);
+		PlayKey(volod, vo_rubHead, 4, 0x12, 1); # 3.76 sec
+		PlayKey(volod, vo_gotjones, 4, 0x12, 0); # 10.17 sec
+		Sleep(1.9);
+		PlayVoice(volod, vo_joneshistory, 1.0, 0); # 11.4 sec
+		Sleep(8.27);
+		StopKey(volod, vo_keyTrack1, 0.0);
+		Sleep(1.0);
+
+		# Volodnikov turns to go...
+		SetThingMaxRotVel(volod, 100.0);
+		AIDisableHeadTracking(volod);
+		SetThingMaxHeadVel(volod, 200.0);
+		AISetLookThingEyeLevel(volod, vo_mk_2);
+		AIWaitForStop(volod);
+	
+		# Track Volodnikov leaving the bridge...
+		AttachThingToThing(ct_5, volod);	
+//		SetThingMaxHeadVel(volod, vo_headRate);
+//		SetThingMaxRotVel(volod, vo_rotRate);
+		AISetMoveSpeed(volod, 1.0);
+		AISetMoveThing(volod, vo_mk_2, 0);
+
+		Sleep(0.5); # was 0.5
+		
+		# Cut to pick him up as he exits...
+		CopyOrientAndPos(in_mk_5, indy);
+		SetThingMaxHeadVel(indy, in_headRate);
+		AIEnableHeadTracking(indy, volod);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, cam_5);
+		SetCameraSecondaryFocus(2, ct_5);
+		SetCameraFOV(60, 0, 0.0);
+		Sleep(0.9); # was 0.5
+		AISetLookThingEyeLevel(volod, vo_mk_3);
+		AISetMoveThing(volod, vo_mk_3, 0);
+		Sleep(2.0); # was 0.5
+
+
+		# Hold on Indy and zoom in as V passes...
+		SetCameraInterpSpeed(2, 2.0);
+		SetCameraLookInterp(2, 1);
+		Sleep(0.01);
+		DetachThing(ct_5);
+		SetCameraSecondaryFocus(2, ct_6);
+		MoveToFrame(ct_6, 1, 0.31); # was 0.15
+		SetCameraFOV(20, 1, 2.5); # was 3.7
+
+		AISetLookThingEyeLevel(volod, vo_mk_4);
+		AISetMoveThing(volod, vo_mk_4, 0);
+		Sleep(2.5);
+	PlaySoundLocal(music1, 1.0, 0.0, 0x0, 0);
+
+		# Bridge door closes...
+		Sleep(0.5);
+		call closedoor;
+		Sleep(1.5);
+
+		# Restore ship doors...
+		ClearAdjoinFlags(hallthold1, 0x02);
+		ClearAdjoinFlags(GetSurfaceAdjoin(hallthold1), 0x02);
+		ClearAdjoinFlags(hallthold2, 0x02);
+		ClearAdjoinFlags(GetSurfaceAdjoin(hallthold2), 0x02);
+		ClearAdjoinFlags(hallthold3, 0x02);
+		ClearAdjoinFlags(GetSurfaceAdjoin(hallthold3), 0x02);
+		ClearAdjoinFlags(bridgethold1, 0x02);
+		ClearAdjoinFlags(GetSurfaceAdjoin(bridgethold1), 0x02);
+		ClearAdjoinFlags(bridgethold2, 0x02);
+		ClearAdjoinFlags(GetSurfaceAdjoin(bridgethold2), 0x02);
+		ClearAdjoinFlags(bridgethold3, 0x02);
+		ClearAdjoinFlags(GetSurfaceAdjoin(bridgethold3), 0x02);
+
+		# Clean up...
+		# StopKey(vo_keyTrack1, 0.0);
+		SetThingMaxRotVel(indy, in_rotRate);
+		SetCollideType(indy, in_collType);
+		CopyOrientAndPos(indy, player);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		RestoreExtCam();
+		SetCurrentCamera(curCam);
+		ResetCameraFOV(0, 0.0);
+		SetThingMaxHeadVel(indy, 50.0);
+		AIEnableHeadTracking(indy, cam_5);
+		AIClearCutSceneMode(volod);
+		DestroyThing(volod);
+		Sleep(1.0); # adjust
+
+		SetThingMaxHeadVel(indy, in_headRate);
+
+		# TO DO: a burst of particles from IMP #3 as camera settles behind Indy
+
+		# Restore control...
+		SetCollideType(bridgedoor, 3);
+		SetThingflags(indy, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		AIClearCutSceneMode(indy);
+		EndCutScene();
+                
+                SendMessage(SEA_Deck_AI, user3);    //added by JM
+	}
+
+	return;
+
+# ...................................................................
+
+opendoor:
+
+	Rotate(bridgedoor, 90, 1, 0.1);
+	MoveToFrame(bridgeswitch, 1, 1.0);
+
+	return;
+
+# ...................................................................
+
+closedoor:
+	SetCollideType(bridgedoor, 0);
+	Rotate(bridgedoor, -90, 1, duration);
+	Sleep(0.5);
+	PlaySoundThing(dr_close, bridgedoor, 1, 5, 10, 0);
+	MoveToFrame(bridgeswitch, 0, 1.0);
+
+	# Slam it closed...
+	SetThingLVecPYR(bridgedoor, v_closedDoorPYR);
+	SetThingPosEx(bridgedoor, v_closedDoorPosition, closedDoorSector);
+
+	return;
+
+end

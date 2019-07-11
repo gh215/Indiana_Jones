@@ -1,0 +1,59 @@
+# Jones 3D Cog Script
+#
+# RIV_AmbWaterFlow1.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     entered
+    
+    thing       ambientPos
+    
+    sector      sec_On1     linkID=1
+    sector      sec_On2     linkID=1
+    sector      sec_On3     linkID=1
+    
+    sector      sec_Off1    linkID=0
+    sector      sec_Off2    linkID=0
+    sector      sec_Off3    linkID=0
+
+    sound       snd_Water=riv_h20_rapid_a.wav     local
+    
+    int         looping     local
+    int         playing=0   local
+    
+    flex        vol=1.0
+    flex        min=15.0
+    flex        max=30.0
+    
+end
+
+# ========================================================================================
+
+code
+
+entered:
+
+    if((GetSenderID() == 1) && (playing == 0))
+    {
+        playing = 1;
+        Sleep(Rand());
+        looping = PlaySoundThing(snd_Water, ambientPos, vol, min, max, 0x0001);
+    }
+
+    if((GetSenderID() == 0) && (playing == 1))
+    {
+        playing = 0;
+        StopSound(looping, 2.0);
+    }
+    
+    return;
+
+# ========================================================================================
+
+end
+

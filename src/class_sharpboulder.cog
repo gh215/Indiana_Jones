@@ -1,0 +1,64 @@
+# Jones 3D Cog Script
+#
+# class_SharpBoulder.cog
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message     touched
+
+# ************************** TEMPLATE *******************
+template	tpl_rocksa=rocksa
+template	tpl_rocksb=rocksb
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_boulder	local
+thing		t_player	local
+vector		vec_look	local
+vector		vec_player	local
+int			n_damage	local
+int			semaphore=0	local
+end
+
+# ===================================================================
+
+code
+
+# ...................................................................
+touched:
+
+	if ( GetSourceRef() == GetLocalPlayerThing() && !semaphore)
+	{
+		t_boulder	= GetSenderRef();
+		t_player	= GetLocalPlayerThing();
+
+//		vec_look	= GetThingLVec( t_boulder );
+//		vec_player	= VectorSub( GetThingPos(t_boulder), GetThingPos(t_player) );
+//		vec_player	= VectorNorm( vec_player );
+
+		if ( GetThingTemplate(t_boulder) == tpl_rocksa )
+		{
+			n_damage = 10000; # 10000 is 10 percent of raft total
+		}
+		else
+		{
+			n_damage = 10000;
+		}
+//		if ( VectorDot(vec_look, vec_player) <= 0.5 )
+		{
+			semaphore=1;
+			DamageThing(t_player, n_damage, 0x00400000, t_boulder);
+			Sleep(3.0); // so we don't damage him every frame
+			semaphore=0;
+		}
+	}
+
+	return;
+
+end
+

@@ -1,0 +1,227 @@
+# Jones 3D Cog Script
+#
+# TEO_MirrorDoor.cog
+#
+# Controls the opening of the final door.
+#
+# [SXC]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message     startup
+    message     pulse
+    message     user0
+    
+    cog         hintcog
+    thing       camera0
+    thing       camera0_tgt0
+    thing       camera0_tgt1
+    thing       spritepos0
+    thing       spritepos1
+    
+    thing       actorindy
+    thing       player          local
+        
+    keyframe    in_activate=in_reach_high.key	    local
+    keyframe    in_stand1=0in_stand1.key            local
+    keyframe    in_stand4=0in_stand4.key            local
+    keyframe    in_SideToHips=0in_stand1_bd_4.key   local
+    keyframe    in_HipsToSide=0in_stand4_bd_1.key   local
+    keyframe    in_shakin=in_wobble.key             local
+        
+    thing       mirrorobj                           local
+    template    mirrortemplate
+    template    sparktemplate=redsparks             local
+    template    energytemplate=eyecandy             local
+    template    sunburst=shs_sunburst               local
+    template    glowit=+ripples                     local
+    thing       mirrorpos       
+    
+    material    beamMat=gen_a4sfx_rbbeam_b.mat      local
+    thing       lightbeam                           local
+    thing       lightshaftbeam
+    thing       finalteleportpos
+    
+    thing       shaft1
+    thing       shaft2
+    thing       shaft3
+    thing       shaft4
+    thing       shaft5                  
+    
+    thing		irisdoor0   linkid=0    mask=0x405
+	thing		irisdoor1   linkid=0    mask=0x405
+	thing		irisdoor2   linkid=0    mask=0x405
+	thing		irisdoor3	linkid=0    mask=0x405
+	thing		irisdoor4	linkid=0    mask=0x405
+	thing		irisdoor5	linkid=0    mask=0x405
+	thing		irisdoor6	linkid=0    mask=0x405
+	thing		irisdoor7	linkid=0    mask=0x405
+    
+    thing       door0
+    thing       door1
+    
+    thing       bolt0
+    thing       bolt1
+    thing       bolt2
+    thing       bolt3
+    
+    thing       originpos
+    thing       targetpos
+    thing       sparkpos
+    thing       energypos
+    thing       safepos
+    
+	flex		moveSpeed=0.5
+    
+    vector      originvec                           local
+    vector      targetvec                           local
+    vector      offsetvec                           local
+    vector      mirrorlightrgb                      local
+    vector      smallvec                            local
+    vector      largevec                            local
+    vector      medvec                              local
+                                                    
+    int         doorcount=0                         local
+    int         count=0                             local
+    int         in_track0                           local
+                                                    
+    thing       burst                               local
+    thing       glow                                local
+    thing       glow2                               local
+                                                    
+    sound       theme=mus_teo_endmirror.wav         local
+    sound       flash=teo_flash_vfx_c.wav           local
+    sound       shine=teo_liteshaft_shine_c.wav     local
+    sound       mirror_place=teo_mirror_place_c.wav local
+    sound       boltsound=teo_sundoor_bolts_c.wav   local
+    sound       doorslide=olv_quetzdoor_move_c.wav  local
+    sound       doorstop=olv_quetzdoor_stop_c.wav   local
+    sound       boltstop=shw_grill_stop.wav         local
+    
+    int         doorchan_slide                      local
+end
+
+# ========================================================================================
+
+code
+
+# ........................................................................................
+startup:
+	player = GetLocalPlayerThing();
+    ThingFadeAnim(lightshaftbeam, 1, 0, 0.1, 0);
+    smallvec = VectorSet(0.01, 0.01, 1);
+    medvec = VectorSet(0.4, 0.4, 0);
+    largevec = VectorSet(1.0, 1.0, 0);
+	return;
+
+# ........................................................................................
+user0:
+
+    StartCutscene(1);
+    SetActorFlags(player, 0x200000);
+    SendMessage(hintcog, user1);
+    CopyPlayerHolsters(player, actorindy);
+    TeleportThing(player, safepos);    
+    //SetThingFlags(player, 0x80000);
+    ClearThingFlags(actorindy, 0x80000);
+    
+    //cut to indy placing object camera
+    SetCameraLookInterp(2, 0);
+    SetCameraPosInterp(2, 0);
+    
+    SetCameraFocus(2, camera0);
+    SetCameraSecondaryFocus(2, camera0_tgt0);
+    SetCurrentCamera(2);
+    SetCameraFOV(80, 0, 0);
+    Sleep(0.5);
+    
+    //play the key of him placing the object
+    PlayKey(actorindy, in_activate, 4, 0x12, 1);
+        
+    //create the object
+    mirrorobj = CreateThing(mirrortemplate, mirrorpos);
+    CaptureThing(mirrorobj);
+    ChangeInv(player, 63, -1);
+    PlaySoundThing(mirror_place, mirrorobj, 1, 10, 20, 0);
+    Sleep(0.5);
+    ThingFadeAnim(lightshaftbeam, 0, 1, 0.5, 0);
+    PlaySoundThing(shine, lightshaftbeam, 1, 10, 20, 0);
+    PlaySoundLocal(theme, 1, 0, 0x0, 0);
+    
+    //do the effects
+    AISetMoveSpeed(actorindy, 1);
+    AISetLookThing(actorindy, camera0_tgt1);
+    SetCameraLookInterp(2, 1);
+    SetCameraInterpSpeed(2, 3);
+    Sleep(0.5);
+    SetCameraSecondaryFocus(2, camera0_tgt1);
+    //SetCameraFOV(90, 1, 2);
+    AISetMoveSpeed(actorindy, 3);
+    AISetMoveFrame(actorindy, 1);
+    AIWaitForStop(actorindy);
+    Sleep(1);
+    in_track0 = PlayKey(actorindy, in_stand4, 2, 0x00, 0);
+    PlayKey(actorindy, in_SideToHips, 4, 0x12, 0);
+    SetCameraFOV(60, 1, 5);
+    //Sleep(2);
+    
+    PlaySoundThing(boltsound, bolt3, 1, 10, 20, 0);
+    For(count = 0; count <= 4; count=count + 1)
+        {
+            MoveToFrame(bolt0[count], 1, moveSpeed);
+        }
+    WaitForStop(bolt3);
+    PlaySoundThing(boltstop, bolt3, 1, 10, 20, 0);
+    burst=CreateThing(sunburst, spritepos0);
+    CaptureThing(burst);
+    PlaySoundThing(flash, burst, 1, 10, 20, 0);
+    AnimateSpriteSize(burst, smallvec, medvec, 0.25);
+    CreateThing(energytemplate, spritepos0);
+    Sleep(0.25);
+    glow=CreateThing(glowit, spritepos1);
+    CaptureThing(glow);
+    AnimateSpriteSize(glow, smallvec, largevec, 0.5);
+    Sleep(0.2);
+    glow2=CreateThing(glowit, spritepos1);
+    CaptureThing(glow2);
+    AnimateSpriteSize(glow2, smallvec, largevec, 0.5);
+    MoveToFrame(door0, 1, moveSpeed);
+    MoveToFrame(door1, 1, moveSpeed);
+    doorchan_slide = PlaySoundThing(doorslide, door0, 1, 10, 20, 1);
+    for (doorcount=0; doorcount<=7; doorcount=doorcount+1)
+		{
+		    MoveToFrame(irisdoor0[doorcount], 0, 2);
+		}
+    Sleep(0.5);
+    //DestroyThing(lightbeam);
+    //SetPulse(0);
+    ThingFadeAnim(lightshaftbeam, 1, 0, 0.5, 0);
+    for (count=0; count<=4; count=count+1)
+        {
+            ThingFadeAnim(shaft1[count], 1, 0, 0.1, 0);
+        }
+    StopKey(actorindy, in_track0, 0.5);          
+    WaitForStop(door0);
+    StopSound(doorchan_slide, 0);
+    PlaySoundThing(doorstop, door0, 1, 10, 20, 0);
+    SetCameraLookInterp(2, 0);
+    SetCameraInterpSpeed(2, 0);
+    SetCameraPosInterp(2, 0);           
+    Sleep(1);
+    CopyOrient(actorindy, player);
+    TeleportThing(player, actorindy);         
+    //ClearThingFlags(player, 0x80000);            
+    SetThingFlags(actorindy, 0x80000);
+    SetCurrentCamera(1);
+    SetCameraFOV(90, 0, 0);                         
+    EndCutscene();                  
+    ClearActorFlags(player, 0x200000);             
+    
+return;
+
+# ........................................................................................
+
+end
+

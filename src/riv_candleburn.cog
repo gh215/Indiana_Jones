@@ -1,0 +1,80 @@
+# Jones 3D Cog Script
+#
+# Riv_CandleBurn.cog
+#
+# light & blow out candles upon notice from Riv_Candelabra.cog
+#
+# [HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		user1
+	message		user2
+	message		user3
+
+	thing		candleflame								nolink
+	thing       smoke									local
+
+	cog			candelabracog
+	
+	template	tpl_Smoke=dustcloud						local
+
+	material	mat_Smoke=gen_a4sfx_dustcloud.mat	    local
+    
+    sound       sfx_Light=riv_candle_light_c.wav        local
+
+	int			sleepytime								local
+
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	SetThingFlags(candleflame, 0x80000);
+
+	return;
+
+# ..............................................................................
+
+user1:
+
+	# light candle
+	ClearThingFlags(candleflame, 0x80000);
+    PlaySoundLocal(sfx_Light, 1.0, 0.0, 0x0, 0);
+	
+	# animate smoke
+	smoke = CreateThing(tpl_Smoke, candleflame);
+    CaptureThing(smoke);
+    SetMaterialCel(mat_Smoke, 0);
+    MaterialAnim(mat_Smoke, 4.0, 1);
+    AnimateSpriteSize(smoke, '0.05 0.05 0.08', '0.2 0.2 0.0', 2.0);
+
+	return;
+
+# ..............................................................................
+
+user2:
+
+	# wait
+	Sleep(RandBetween(5, 10));
+	
+user3:
+
+	# blow out candle	
+	SetThingFlags(candleflame, 0x80000);
+	SendMessage(candelabracog, user0);
+
+	return;
+
+# ..............................................................................
+
+end

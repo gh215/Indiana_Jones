@@ -1,0 +1,108 @@
+# Jones 3D Cog Script
+#
+# TEM_MeltMaze2.cog
+#
+# [RT] [MDR] [TRM]
+#
+# Cog to control the movement of the lava rocks in Palawan Melt Maze.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+	
+    thing		rock0
+	thing		rock1
+	thing		rock2
+    
+    thing       normThing
+    thing       revThing
+    
+    flex		uptime=5.0
+	flex 		delay=4.0
+	flex		speed=1.0
+	flex		startTime=1.0
+
+	int		    numRocks=3          local
+	int			nCrntRock			local
+	int			nNextRock			local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+	// Initialize states
+    for (nCrntRock = 1; nCrntRock < numRocks; nCrntRock = nCrntRock + 1) 
+    {
+        MoveToFrame(rock0[nCrntRock], 1, .01);
+    }
+	nCrntRock = 0;
+	nNextRock = 1;
+	global0 = 1;
+
+    Sleep(startTime);
+
+    while (1) 
+    {
+		// Animate current and next rock in line
+		Sleep(uptime);
+        MoveToFrame(rock0[nNextRock], 0, speed);
+        Sleep(delay);
+        MoveToFrame(rock0[nCrntRock], 1, speed);
+
+		// update rock controller values
+		nCrntRock = nCrntRock + global0;
+
+		if ( nCrntRock < 0 )
+		{
+			nCrntRock = numRocks-1;
+		}
+		if ( nCrntRock >= numRocks )
+		{
+			nCrntRock = 0;
+		}
+
+		nNextRock = nCrntRock + global0;
+        
+        if ( nNextRock < 0 )
+		{
+			nNextRock = numRocks-1;
+		}
+		if ( nNextRock >= numRocks )
+		{
+			nNextRock = 0;
+		}
+	}
+
+    return;
+
+# ========================================================================================
+
+entered:
+
+    if(GetSenderRef() == normThing)
+    {
+        Print("MM2: normal");
+        global0 = 1;
+    }
+        
+    if(GetSenderRef() == revThing)
+    {
+        Print("MM2: reverse");
+        global0 = -1;
+    }
+        
+    return;
+
+# ========================================================================================
+
+end
+

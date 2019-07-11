@@ -1,0 +1,123 @@
+# Jones 3D Cog Script
+#
+# actor_StickyIceMonster.cog
+#
+# [PKM]	[RT]
+#
+# For the sticky ice monster only!  He'll jump off wall or ceiling when he sees Indy.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+	message		aievent
+	message		damaged
+
+# ************************** TEMPLATES *************************
+
+	sound		detachSound=fol_si_detach.wav	local
+
+	template	tpl_Monster=ice_monster		   	local
+	template	tpl_IceShower=+ice_exp_blast_sm	local
+
+# *********************** MISC LOCAL VARS **********************
+
+	thing		newMonster					   	local
+	thing		sender						   	local
+	cog			cog_capture					   	local
+	vector		vec_vel						   	local
+
+# ******************** MISSING LOCAL VARS :) *******************
+
+	flex		floorDistance					local
+	vector		thingPos						local
+
+# ************************ SUBROUTINES *************************
+
+	flex		drop							local
+
+end
+
+# ===================================================================
+
+code
+
+aievent:
+
+	sender = GetSenderRef();
+
+	if ( GetParam(0) == 0x100 )									#---- EVENT_MODECHANGED
+	{																# Switched to MODE_ATTACKING?
+		if ( BITTEST(GetParam(1), 0x02) && !BITTEST(GetParam(2), 0x02) )
+		{
+			if ( GetAttachFlags(sender) != 0 )
+			{
+				Sleep(0.1);
+				PlaySoundThing(detachSound, sender, 1.0, 5.0, 10.0, 0x80);
+				call drop;
+			}
+		}
+	}
+
+	if (BITTEST(GetParam(0), 0x100e04))
+	{
+		# We've reached our movement goal, or we hit a wall, floor, or thing - explode!
+        newMonster = CreateThing(tpl_Monster, sender);
+        if ( newMonster > -1 )
+		{
+			# Give new AI time to "reach the floor" before it starts moving
+			AIPauseMove(newMonster, 250);
+
+			# If "pupal" ice monster had a capture COG, pass on to the "butterfly"
+			cog_capture = GetThingCaptureCog(sender);
+			if ( cog_capture > -1 )
+			{
+				SetThingCaptureCog(newMonster, cog_capture);
+			}
+		}
+
+        CreateThing(tpl_IceShower, sender);
+		DestroyThing(sender);
+	}
+
+	return;
+
+
+# -------------------------------------------------------------------
+
+damaged:
+
+	sender = GetSenderRef();
+
+	if (GetSourceRef() != GetLocalPlayerThing())
+	{
+		ReturnEx(0);
+		return;
+	}
+
+	if (GetAttachFlags(sender) != 0)
+	{
+		Sleep(0.1);
+        call drop;
+	}
+
+	return;
+
+# -------------------------------------------------------------------
+
+drop:
+
+	DetachThing(sender);
+	floorDistance = CheckFloorDistance(sender);
+	thingPos = GetThingPos(sender);
+	thingPos = VectorSet(VectorX(thingPos), VectorY(thingPos), VectorZ(thingPos) - floorDistance);
+	SetPhysicsFlags(sender, 0x2000);
+	AISetMovePos(sender, thingPos, 0);
+	AISetMoveSpeed(sender, 0.5);
+
+	return;
+
+end
+

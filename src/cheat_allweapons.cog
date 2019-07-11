@@ -1,0 +1,91 @@
+# Jones 3D Cog Script
+#
+# cheat_AllWeapons.cog
+#
+# [RT]
+#
+# All weapons cheat script.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message	selected
+	
+	thing	indy		local
+        thing player local
+        thing shirtplayer local
+        thing mineplayer local
+        thing jeepplayer local
+
+end
+
+# ===================================================================
+
+code
+
+selected:
+
+	indy = GetSourceRef();
+
+	# Tokarev / ammo
+	SetInv(indy, 4, 500);                           
+	SetInvAvailable(indy, 4, 1);                                      
+																	  
+    # Mauser / ammo
+    SetInv(indy, 5, 500);                          
+	SetInvAvailable(indy, 5, 1);                                    
+
+    # Simonov / ammo
+	SetInv(indy, 6, 500);
+	SetInvAvailable(indy, 6, 1);
+
+    # Machete
+    SetInv(indy, 7, 1);
+	SetInvAvailable(indy, 7, 1);
+
+    # Submachine / ammo
+    SetInv(indy, 8, 1000);
+	SetInvAvailable(indy, 8, 1);
+
+    # Shotgun / ammo
+    SetInv(indy, 9, 50);
+	SetInvAvailable(indy, 9, 1);
+
+    # Bazooka / ammo
+    SetInv(indy, 10, 50);
+	SetInvAvailable(indy, 10, 1);
+
+    # Grenades
+    SetInv(indy, 11, 20);
+	SetInvAvailable(indy, 11, 1);
+
+    # Satchel Charges
+	SetInv(indy, 12, 20);
+	SetInvAvailable(indy, 12, 1);
+
+
+indy = GetSourceRef();
+player = GetSourceRef();
+shirtplayer = GetSourceRef();
+mineplayer = GetSourceRef();
+jeepplayer = GetSourceRef();
+
+SetCollideType(indy, 0);
+SetCollideType(player, 0);
+SetCollideType(shirtplayer, 0);
+SetCollideType(mineplayer, 0);
+SetCollideType(jeepplayer, 0);
+
+SetThingAlpha(indy, 0.5);
+SetThingAlpha(player, 0.5);
+SetThingAlpha(shirtplayer, 0.5);
+SetThingAlpha(mineplayer, 0.5);
+SetThingAlpha(jeepplayer, 0.5);
+
+	return;
+
+end
+

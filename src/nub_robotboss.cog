@@ -1,0 +1,384 @@
+# Jones 3D Cog Script
+#
+# nub_RobotBoss.cog
+#
+# AI enhancements for Nub's Tomb Robot Boss
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+# ===================================================================
+symbols
+
+message		startup
+message		aievent
+message		arrivedwpnt
+message		timer
+message		pulse
+message		entered
+message		exited
+message		user0
+message		user1
+
+# ************************** SUBROUTINES ***********************
+flex		BeginWpntPatrol			local
+
+# ************************** TEMPLATES *************************
+template	tpl_Boss=robot_boss		local
+
+# ************************** MISC LINKED GEOM ******************
+int			n_NumWpnts=14			local
+thing		t_Wpnt00
+thing		t_Wpnt01
+thing		t_Wpnt02
+thing		t_Wpnt03
+thing		t_Wpnt04
+thing		t_Wpnt05
+thing		t_Wpnt06
+thing		t_Wpnt07
+thing		t_Wpnt08
+thing		t_Wpnt09
+thing		t_Wpnt10
+thing		t_Wpnt11
+thing		t_Wpnt12
+thing		t_Wpnt13
+
+thing		t_LookCenter
+thing		hint52					#added 10/17/99 GGJ
+
+sector		sec_upperTnl
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_player				local
+thing		t_boss					local
+
+int			TIMERID_STUN=1			local
+
+int			n_eventType				local
+int			n_param					local
+int			n_CrntAIMode			local
+
+int			n_crntWpnt				local
+int			n_nextWpnt				local
+int			n_marchToWpnt			local
+
+int			b_IndyInTunnel			local
+
+int			n_damage				local
+int			n_idx					local
+flex		f_val					local
+flex		f_distToPlayer			local
+flex		f_distClearPath			local
+flex		DIST_MINCHECK			local
+flex		DIST_MINPATH			local
+flex		SPEED_MAX				local
+
+vector		vec_pos					local
+
+end
+
+
+# ===================================================================
+code
+
+# ...................................................................
+startup:
+
+#		HACK!
+#	t_player = GetLocalPlayerThing();
+#	ChangeInv(t_Player, 78, 1.0);
+#	SetInvAvailable(t_Player, 78, 1);
+#	JonesInvItemChanged(78);
+
+	return;
+
+
+# ...................................................................
+aievent:
+
+	if ( GetSenderRef() != t_boss ) return;
+
+	n_eventType		= GetParam(0);
+	n_CrntAIMode	= GetParam(1);
+	n_param			= GetParam(2);							# Value depends on n_eventType
+
+	if ( n_eventType == 0x100 )								#---- EVENT_MODECHANGED
+	{															# n_param == old AI mode
+		if ( !BITTEST(n_param, 0x4) && BITTEST(n_crntAIMode, 0x4) )
+		{														# Switched to MODE_SEARCHING?
+#			DEBUGPRINT("AIEVENT:: Switched to SEARCH mode");
+			call BeginWpntPatrol;
+		}
+	}
+
+	if ( BITTEST(n_eventType, 0x600) )						#---- SITHAI_EVENTHIT(WALL|CLIFF) ----
+	{
+		if ( BITTEST(AIGetMode(t_boss), 0x4000000) )			# Traversing waypoints?
+		{
+			ReturnEx(1);
+		}
+	}
+
+	if ( n_eventType == 0x4 )								#---- EVENT_TOUCHED ----
+	{															# n_param == touched THING index
+		if ( n_param == t_player )
+		{
+			StopThing(t_player);
+		}
+
+		ReturnEx(1);
+	}
+
+	return;
+
+
+# ...................................................................
+pulse:
+
+	if ( t_boss == -1 )
+	{
+		SetPulse(0);
+		return;
+	}
+
+	AISetMoveSpeed(t_boss, SPEED_MAX);
+
+	if ( b_IndyInTunnel == 1 )
+		return;
+
+	if ( BITTEST(GetActorFlags(t_boss), 0x40000) )					# AF_IMMOBILE?
+		return;
+
+	if ( IsModePlaying(t_boss, 67) )								# Firing ranged weapon?
+		return;
+
+	f_distToPlayer = VectorLen( VectorSub(GetThingPos(t_boss), GetThingPos(t_player)) );
+#	DEBUGFLEX(f_distToPlayer, "Dist to player =");
+	if ( f_distToPlayer > DIST_MINCHECK )
+	{
+		f_distClearPath = CheckPathToPoint(t_boss, GetThingPos(t_player), 0, 0);
+#		DEBUGFLEX(f_distClearPath, "Clear dist to player =");
+
+		if ( !BITTEST(AIGetMode(t_boss), 0x4000000) )				# !Already in MODE_TRAVERSEWPNTS?
+		{
+			if ( (f_distClearPath < DIST_MINPATH) || !IsThingMoving(t_boss) )
+			{
+				AISetSubMode(t_boss, 0x8000);						# Set SUBMODE_CONTINUOUSWPNTMOTION
+				AIWpntHuntTarget(t_boss, SPEED_MAX, 0);
+#				DEBUGPRINT("PULSE:: Started HUNT");
+				return;
+			}
+		}
+	}
+	else
+	{
+		AIClearSubMode(t_boss, 0x8000);								# Clear SUBMODE_CONTINUOUSWPNTMOTION
+		AIClearTraverseWpnts(t_boss);								# Clear wpnt status
+	}
+#	DEBUGPRINT("---------");
+
+	return;
+
+
+# ...................................................................
+arrivedwpnt:
+
+	n_crntWpnt = GetParam(0);
+	n_nextWpnt = GetParam(1);
+
+#	DEBUGPRINT("---------");
+#	DEBUGFLEX(n_crntWpnt, "Arrived Wpnt");
+
+	if ( n_crntWpnt == n_marchToWpnt )
+	{
+		n_marchToWpnt = -1;
+
+		AIClearSubMode(t_boss, 0x8000);							# Clear SUBMODE_CONTINUOUSWPNTMOTION
+		AIStopFlee(t_boss);
+		AISetLookThing(t_boss, t_LookCenter);
+		AISetFireTarget(t_boss, t_player);
+
+#		DEBUGPRINT("---------");
+		return;
+	}
+
+	f_distToPlayer = VectorLen( VectorSub(GetThingPos(t_boss), GetThingPos(t_player)) );
+#	DEBUGFLEX(f_distToPlayer, "Dist to player =");
+
+	if ( f_distToPlayer <= DIST_MINCHECK )
+	{
+		AIClearSubMode(t_boss, 0x8000);							# Clear SUBMODE_CONTINUOUSWPNTMOTION
+		AIClearTraverseWpnts(t_boss);							# Clear wpnt status
+
+#		DEBUGPRINT("---------");
+		return;
+	}
+
+	f_distClearPath = CheckPathToPoint(t_boss, GetThingPos(t_player), 0, 0);
+#	DEBUGFLEX(f_distClearPath, "Clear dist to player =");
+
+	if ( f_distClearPath >= DIST_MINPATH )
+	{
+		AIClearSubMode(t_boss, 0x8000);							# Clear SUBMODE_CONTINUOUSWPNTMOTION
+		AIClearTraverseWpnts(t_boss);							# Clear wpnt status
+#		DEBUGPRINT("---------");
+	}
+
+	return;
+
+
+# ...................................................................
+timer:
+
+	if ( GetSenderID() == TIMERID_STUN )
+	{
+		AIClearCutsceneMode(t_boss);						# Clear cutscene mode
+		ClearActorFlags(t_boss, 0x40000);					# Clear AF_IMMOBILE while stunned
+		call BeginWpntPatrol;
+	}
+
+	return;
+
+
+# ...................................................................
+entered:
+
+	if ( GetSenderRef() == sec_upperTnl )
+	{
+		b_IndyInTunnel = 1;
+		AISetSubMode(t_boss, 0x8000);							# Set SUBMODE_CONTINUOUSWPNTMOTION
+
+		n_nextWpnt = AIFindNearestWpnt(t_boss);
+		if ( n_nextWpnt>=0 && n_nextWpnt<=2 )
+		{
+			n_marchToWpnt = 1;
+		}
+		else
+		{
+			n_marchToWpnt = 4;
+		}
+
+		AIFleeToWpnt(t_boss, n_marchToWpnt);
+
+		AIEnableInstinct(t_boss, "basicfollow", 0);
+		AIEnableInstinct(t_boss, "primaryfire", 0);
+	}
+
+	return;
+
+
+# ...................................................................
+exited:
+
+	if ( GetSenderRef() == sec_upperTnl )
+	{
+		b_IndyInTunnel = 0;
+		AIClearSubMode(t_boss, 0x8000);							# Clear SUBMODE_CONTINUOUSWPNTMOTION
+		AIStopFlee(t_boss);
+
+		AIEnableInstinct(t_boss, "basicfollow", 1);
+		AIEnableInstinct(t_boss, "primaryfire", 1);
+	}
+
+	return;
+
+
+# ...................................................................
+# Create a Boss Robot at location-THING == GetParam(0)		[must be a valid THING]
+user0:
+
+	t_boss = CreateThing(tpl_Boss, GetParam(0));
+//	AttachThingToThing(hint52, t_boss);				#added 10/17/99 GGJ
+	vec_pos = VectorAdd(GetThingPos(t_boss), '0 0 0.3');
+	SetThingPosEx(hint52, vec_pos, FindNewSectorFromThing(t_boss, vec_pos));
+	AttachThingToThing(hint52, t_boss);				#added 10/17/99 GGJ
+
+	CaptureThing(t_boss);
+	AISetInstinctWpntMode(t_boss);
+	AISetSubMode(t_boss, 0x8000);							# Set SUBMODE_CONTINUOUSWPNTMOTION
+
+	# Initialize waypoint system for this section
+	for ( n_idx = 0; n_idx < n_NumWpnts; n_idx = n_idx + 1 )
+	{
+		AISetWpnt(t_Wpnt00[n_idx], n_idx);
+	}
+
+	AIConnectWpnts(0, 7);
+	AIConnectWpnts(7, 1);
+	AIConnectWpnts(1, 6);
+	AIConnectWpnts(6, 2);
+	AIConnectWpnts(2, 13);
+	AIConnectWpnts(13, 12);
+	AIConnectWpnts(12, 3);
+	AIConnectWpnts(3, 11);
+	AIConnectWpnts(11, 4);
+	AIConnectWpnts(4, 10);
+	AIConnectWpnts(10, 5);
+	AIConnectWpnts(5, 9);
+	AIConnectWpnts(9, 8);
+	AIConnectWpnts(8, 0);
+
+	t_player		= GetLocalPlayerThing();
+	n_marchToWpnt	= -1;
+	b_IndyInTunnel	= 0;
+
+	DIST_MINCHECK	= 0.4;
+	DIST_MINPATH	= 0.3;
+	SPEED_MAX		= 1.5;
+
+	SetPulse(3.0);
+
+	ReturnEx(t_boss);										# Set Boss THING index for return to caller
+
+	return;
+
+
+# ...................................................................
+# Inflict damage on Boss and temporarily 'stun' him
+user1:
+
+	n_damage = GetParam(0);
+#	DEBUGFLEX(n_damage, "Robot Boss:: Damage to boss =");
+
+	StopThing(t_boss);
+	AISetCutsceneMode(t_boss);								# Set cutscene mode while stunned
+	SetActorFlags(t_boss, 0x40000);							# Set SITH_AF_IMMOBILE while stunned
+
+	DamageThing(t_boss, n_damage, 0x100000, t_boss);		# Inflict SITH_DAMAGE_LIGHTNING on Boss
+	if ( GetThingHealth(t_boss) > 0 )
+	{
+		PlayMode(t_boss, 75, 0);							# Play SITH_PUPPETADDIN_HIT manually
+		SetTimerEx(4.0, TIMERID_STUN, 0, 0);				# Timer to clear hurt mode
+	}
+	else
+	{
+		t_boss = -1;
+	}
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+BeginWpntPatrol:
+
+	if ( BITTEST(AIGetMode(t_boss), 0x4000000) )			# Already in MODE_TRAVERSEWPNTS?
+		return;
+
+	n_nextWpnt = AIFindNearestWpnt(t_boss);
+	if ( n_nextWpnt > -1 )
+	{
+		AITraverseWpnts(t_boss, n_nextWpnt, SPEED_MAX, 0, 0);
+	}
+
+	return;
+
+
+end
+

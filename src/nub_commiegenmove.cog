@@ -1,0 +1,58 @@
+# Jones 3D Cog Script
+#
+# nub_CommieGenMove.cog
+#
+# [RD] [TL] [GGJ]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		entered
+message		arrived
+message		user0
+
+thing		generator_pos0
+thing		generator_pos1
+thing		generator_pos2
+
+template	enemy0_tpl
+template	enemy1_tpl
+template	officer_tpl
+
+int			done0=0				local
+
+int			enemy0				local
+int			enemy1				local
+int			officer0			local
+
+cog             NUB_Commie_Gen_ManagerX     #added by JM
+
+end
+
+# ========================================================================================
+code
+
+user0:
+
+if (done0 == 1) return;
+if (done0 == 0)
+{
+Print("trying to wake up commies");
+enemy0 = CreateThing(enemy0_tpl, generator_pos0);
+CaptureThing(enemy0);
+enemy1 = CreateThing(enemy1_tpl, generator_pos1);
+CaptureThing(enemy1);
+officer0 = CreateThing(officer_tpl, generator_pos2);
+CaptureThing(officer0);
+done0 = 1;
+}
+
+SendMessageEx(NUB_Commie_Gen_ManagerX, User0, officer0, enemy0, enemy1, 0);      //Added by JM
+
+return;
+
+#........................................................................................
+end
+

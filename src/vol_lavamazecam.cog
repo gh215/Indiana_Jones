@@ -1,0 +1,137 @@
+# Jones 3D Cog Script
+#
+# VOL_LavaRoom.cog
+#
+# This cog will flood an area with lava, break apart a walkway 3do, and open the exit.
+#
+# [CM]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+   
+
+	#...............MESSAGES..................
+    message  startup
+    message  entered
+	message  exited
+
+	
+	#...............ACTORS..................
+	thing   player							local
+
+
+    
+	#...............SURFACES..................
+	surface   wall0							linkID=2							
+	surface   wall1							linkID=2							
+	surface   wall2							linkID=2							
+	surface   wall3							linkID=2							
+	surface   wall4							linkID=2							
+	surface   wall5							linkID=2							
+	surface   wall6							linkID=2							
+	surface   wall7							linkID=2							
+	surface   wall8							linkID=2							
+	surface   wall9							linkID=2							
+	surface   wall10							linkID=2							
+	surface   wall11							linkID=2							
+	surface   wall12							linkID=2							
+	surface   wall13							linkID=2							
+	surface   wall14							linkID=2							
+	surface   wall15							linkID=2							
+	surface   wall16							linkID=2							
+	surface   wall17							linkID=2							
+	surface   wall18							linkID=2							
+	surface   wall19							linkID=2							
+	surface   wall20							linkID=2							
+	surface   wall21							linkID=2							
+	surface   wall22							linkID=2							
+	surface   wall23							linkID=2							
+	surface   wall24							linkID=2							
+	surface   wall25							linkID=2							
+	surface   wall26							linkID=2							
+	surface   wall27							linkID=2							
+	surface   wall28							linkID=2							
+	surface   wall29							linkID=2							
+	surface   wall30							linkID=2							
+	surface   wall31							linkID=2							
+	surface   wall32							linkID=2							
+	surface   wall33							linkID=2							
+	surface   wall34							linkID=2							
+	surface   wall35							linkID=2							
+	surface   wall36							linkID=2							
+	surface   wall37							linkID=2							
+	surface   wall38							linkID=2							
+	surface   wall39							linkID=2							
+	surface   wall40							linkID=2							
+	surface   wall41							linkID=2							
+	surface   wall42							linkID=2							
+	surface   wall43							linkID=2							
+	surface   wall44							linkID=2							
+	surface   wall45							linkID=2							
+	surface   wall46							linkID=2							
+	surface   wall47							linkID=2							
+	surface   wall48							linkID=2							
+	surface   wall49							linkID=2							
+	surface   wall50							linkID=2							
+	surface   wall51							linkID=2							
+	surface   wall52							linkID=2							
+	surface   wall53							linkID=2							
+	surface   wall54							linkID=2							
+	surface   wall55							linkID=2							
+	surface   wall56							linkID=2							
+							
+    
+
+	#...............VECTOR..................
+	vector		wallview						local
+
+
+	#...............VARIABLES..................
+	int			camMove=0						local
+
+end
+
+# ========================================================================================
+code
+startup:
+
+	player = GetLocalPlayerThing();
+return;
+
+
+# ========================================================================================
+entered:
+
+If (GetSenderID() != 2) return;
+If (camMove != 0) return;
+
+camMove = 1;
+#print("cammove has been set");
+wallview=VectorSet(0.0, -0.5, 0.2);
+SetExtCamOffset(wallview); # interp cam out to observe larger portion of the wall
+
+return;
+
+
+# ========================================================================================
+exited:
+
+If (GetSenderID() != 2) return;
+If (camMove == 0) return;
+
+If (GetMoveStatus(player) != 9)
+{
+
+camMove = 0;
+#print("camera has been reset");
+RestoreExtCam();
+}
+return;
+# ========================================================================================
+
+
+end
+
+ 

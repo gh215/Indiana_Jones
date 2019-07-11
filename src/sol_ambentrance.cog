@@ -1,0 +1,90 @@
+# Jones 3D Cog Script
+#
+# SOL_AmbEntrance.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message     startup
+    message	    entered
+    message     pulse
+
+	thing		soundPos0		nolink
+	thing		soundPos1		nolink
+	thing		soundPos2		nolink
+	thing		soundPos3		nolink
+    
+    sector      on_sec1         linkID=1
+    sector      on_sec2         linkID=1
+    sector      on_sec3         linkID=1
+    
+    sector      off_sec1        linkID=0
+    sector      off_sec2        linkID=0
+
+	sound		enhanced0=sol_ambient01_a.wav   local
+	sound		enhanced1=sol_ambient02_a.wav   local
+	sound		enhanced2=sol_ambient03_a.wav   local
+	sound		enhanced3=sol_ambient04_a.wav   local
+	sound		enhanced4=sol_ambient05_a.wav   local
+    sound		enhanced5=nub_ambient4_a.wav    local
+    
+    sound       basic0=nub_ambient1_a.wav   local
+	sound       basic1=nub_ambient2_a.wav   local
+    sound       basic2=nub_ambient3_a.wav   local
+    
+	int		    sndNum			local
+	int		    numPos=4		local
+	int		    count   		local
+
+end
+
+# ========================================================================================
+
+code
+
+startup:
+
+    global4 = 0;
+    return;
+
+# ========================================================================================
+
+entered:
+
+	if(GetSenderID() == 1)
+    {
+        setpulse(2.0);
+    }
+    
+    if(GetSenderID() == 0)
+    {
+        SetPulse(0.0);
+    }
+    
+	return;
+
+# ========================================================================================
+
+pulse:
+
+    # no commies yet
+    if(global4 == 0)
+    {
+        PlaySoundThing(basic0[RandBetween(0, 2)], soundPos0[RandBetween(0, 3)], 1.0, -1, -1, 0);
+    }
+    
+    # commies are driving around
+    else if(global4 == 1)
+    {
+        PlaySoundThing(enhanced0[RandBetween(0, 5)], soundPos0[RandBetween(0, 3)], 1.0, -1, -1, 0);
+    }
+    
+	return;
+
+# ========================================================================================
+
+end

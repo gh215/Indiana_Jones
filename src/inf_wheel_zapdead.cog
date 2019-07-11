@@ -1,0 +1,125 @@
+# Jones 3D Cog Script
+#
+# INF_IMP1_Pistons.cog
+# This is the generic door with a camera attached
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     user0
+    message     pulse
+    message     entered
+    
+    thing       player                                      local
+    
+    thing       source0
+    thing       source1
+    thing       source2
+    thing       source3
+    thing       source4
+    thing       source5
+    
+    thing       target0
+    thing       target1
+    thing       target2
+    thing       target3
+    thing       target4
+    thing       target5
+    
+    sector      dedsector
+    
+    thing       lightning_strike                            local
+    thing       strike_sector                               local
+    
+    template    sparks=bluesparks      						local
+    template    smoke0=+pistol_smoke1						local
+    template	lightzap=+lightningzap						local
+    template	lighthit=+lightninghit						local
+    
+    material	lightningmat0=inf_4sfx_lightning_a.mat	    local
+    material	lightningmat1=inf_4sfx_lightning_b.mat	    local
+    material	lightningmat2=inf_4sfx_lightning_c.mat	    local
+    material	lightningmat3=inf_4sfx_lightning_d.mat	    local
+        
+    int         pulsetime=2                                 local
+    int         cnt=0                                       local
+    int         count                                       local
+    int         solved=0                                    local
+    
+    sound		contact=gen_lightning_contact_c.wav			local
+    
+    vector      player_pos                                  local
+    
+      
+end
+
+
+code
+
+#........................................................................................
+
+startup:
+    //inital conditions
+    player = GetLocalPlayerThing();
+    
+return;
+
+#........................................................................................
+
+user0:
+    //print("pool is armed");
+    SetPulse(0.5);
+    solved = 1;
+    
+return;
+
+#........................................................................................
+
+pulse:
+    //lightning strikes
+    count = RandBetween(0, 5);
+    PlaySoundThing(contact, source0[count], 1, 2, 10, 0x0080);
+    for (cnt = 4; cnt <= RandBetween(4, 8); cnt = cnt + 1)
+    {
+        lightning_strike = CreatePolylineThing(source0[count], target0[count], '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+        Sleep(0.025); 
+    }
+        
+return;
+
+#........................................................................................
+
+entered:
+    //kill the player for a bad move
+    if ((GetSenderRef() == dedsector) && (GetSourceRef() == player) && (solved == 1))
+    {
+    
+        //print("indy gets hit");
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        player_pos = VectorAdd(GetThingPos(player), '0 0 0.05');
+        for (cnt = 4; cnt <= RandBetween(4, 8); cnt = cnt + 1)
+        {
+            CreatePolylineThing(source0[cnt], player_pos, '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+            Sleep(0.05); 
+        }
+        CreateThingAtPos(sparks, GetThingSector(player), player_pos, '0 0 0');
+	    CreateThingAtPos(lighthit, GetThingSector(player), player_pos, '0 0 0');
+        //print("damaging player");
+        DamageThing(player, 1000, 0x2, source0[cnt]);
+        Sleep(1);
+        ClearActorFlags(player, 0x200000);
+        
+    }
+    
+return;
+
+#........................................................................................
+end
+
+

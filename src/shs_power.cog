@@ -1,0 +1,487 @@
+# Jones 3D Cog Script
+#
+# shs_Power.cog     Power up the clock.  
+#
+# [JWC] [PKM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message startup
+message entered
+message exited
+message crossed
+message callback
+message touched
+
+
+sound 		music0=mus_gen_indy_B_motif1.wav		local
+sound   	powerinit=shs_power_init.wav			local
+sound   	lowerOn=nub_weight_move_c.wav         	local
+sound   	upperOn=shs_clock_gears.wav          	local
+sound   	gearClunk1=shs_gear_clunk1.wav          local
+sound   	strain=nub_bull_move3_c.wav        		local
+sound 		music1=mus_aet_pocket_riv.wav 			local
+
+surface		power_on	mask=0x080		
+surface		power_off	mask=0x080
+
+surface		gearEngaged	mask=0x080	linkid=1	# faces block can be on
+surface		blockface0  mask=0x080	linkid=1
+surface		blockface1  mask=0x080	linkid=1
+
+surface		entry
+surface		inRange
+surface   	outRange
+
+keyframe	clock_houra_k
+keyframe	clock_hourb_k
+keyframe	clock_mnut_k
+keyframe    gearBlock_k
+keyframe	clock_star_k
+keyframe 	clock_axel_k
+keyframe	clock_armb_k
+keyframe	clock_armt_k
+keyframe	clock_leverb_k
+keyframe 	clock_leverm_k
+keyframe	clock_levert_k
+keyframe	clock_padb_k
+keyframe	clock_padt_k
+keyframe	clock_wheelb_k
+keyframe	clock_wheelt_k
+keyframe	gear_tick_k
+
+keyframe	clock_gearsb_k=shs_clock_gearsb.key		local
+keyframe	clock_gearsbr_k=shs_clock_gearsbr.key	local
+keyframe	clock_axelb_k=shs_clock_axelb.key		local
+keyframe	clock_axelbr_k=shs_clock_axelbr.key		local
+
+thing	clock_houra
+thing	clock_hourb
+thing	clock_mnut
+thing	clock_star
+thing	clock_axel
+thing	clock_armb
+thing	clock_armt
+thing	clock_blockb
+thing	clock_wheelb
+thing	clock_wheelt
+thing	clock_padb
+thing	clock_padt
+thing	clock_leverb
+thing	clock_leverm
+thing	clock_levert
+thing	clock_gearsb
+
+thing	gearBlock
+
+
+thing	axelPos0
+thing	axelPos1
+thing	musicledge
+
+thing	clock_padb_ghost
+thing	clock_padt_ghost
+thing	player					local
+
+# camera stuff
+thing	cam1spot				nolink
+thing	cam1look				nolink
+thing	offsetcam	  			nolink
+thing	offsettarg   			nolink
+
+flex	viewangle				local
+
+int		clock_houra_track		local
+int		clock_hourb_track		local
+int		clock_mnut_track		local
+int		gearBlock_track			local
+int		clock_star_track		local
+int		clock_axel_track		local
+int		clock_axelb_track		local
+int		clock_armb_track		local
+int		clock_armt_track		local
+int		clock_blockb_track		local
+int		clock_blockt_track		local
+int		clock_wheelb_track		local
+int		clock_wheelt_track		local
+int		clock_padb_track		local
+int		clock_padt_track		local
+int		clock_leverb_track		local
+int		clock_leverm_track		local
+int		clock_levert_track		local
+int		clock_gearsb_track		local
+#int		gearTick_track			local
+int		played=0				local	# tracks music upon exiting
+int		played1=0				local	# tracks music upon entrance
+
+int		bPowerIsOn=0			local
+int		bGearBlockInPlace=0		local
+int		oldCollideType			local
+int		oldMoveSize				local
+int 	curcam					local
+
+int		upperloop=-1			local
+int		upperloop1				local	# gearBlock
+int		upperloop2				local	# gearTick
+int		lowerloop=-1			local
+int		lowerloop1=-1			local	# clock_leverm
+
+int		upstairsStateStopped=0	local
+int		upstairsStateRunning=1	local
+int		upstairsStateStarting=2	local
+int		upstairsStateStopping=3	local
+int		upstairsAnimState=0		local
+
+vector	tempPos					local
+  
+cog		clockCog
+
+# SUBROUTINES
+
+flex	startdownstairsanim		local
+flex	stopdownstairsanim		local
+flex	pausedownstairsanim		local
+flex	resumedownstairsanim	local	
+flex	startupstairsanim		local
+flex	stopupstairsanim		local
+flex	returncontrol			local
+flex	camera					local
+
+
+end
+														
+# ========================================================================================
+
+code
+
+startup:
+	call startDownstairsAnim;
+	call pauseDownstairsAnim;
+	player = GetLocalPlayerThing();
+	#SetThingLight(gearTick, '0.3 0.3 0.4', 0.01, 0.1);
+	SetThingLight(musicledge, '0.2 0.2 0.2', 0.01, 0.01);
+	
+	clock_houra_track	= -1;
+	clock_hourb_track	= -1;
+	clock_mnut_track	= -1;
+	gearBlock_track		= -1;
+
+	return;
+     
+crossed:
+    
+	# music entering power room
+    if ((GetSenderRef() == entry) && (played1 == 0))
+	{
+		PlaySoundLocal(music1, .5, 0, 0x0000, 0);
+        played1=1;
+	}
+	
+	if ((GetSenderRef() == outRange) && (Global3 == 1))
+	{
+		if (upperLoop != -1)
+			StopSound(upperloop, 1.0);   
+		upperLoop = -1;
+    }
+
+	if ((GetSenderRef() == inRange) && (bPowerIsOn == 1))   
+	{		
+		if (upperloop == -1)
+		    upperloop = PlaySoundThing(upperOn, clock_wheelt, 1, 2, 10, 0x881);
+	}
+	return;
+
+entered:
+	
+	# check if face has been entered
+	if (GetSourceRef() == clock_blockb)
+	{
+		if (GetSenderRef() == power_on)
+		{
+			bPowerIsOn = 1;
+
+			oldCollidetype = GetCollideType(clock_axel);
+			SetCollideType(clock_axel, 0);
+			StopKey(clock_axel, clock_axelb_track, 0);
+			TeleportThing(clock_axel, axelPos1);
+			SetCollideType(clock_axel, oldCollidetype);
+
+			call resumeDownstairsAnim;
+            call returncontrol;
+			
+			# check to see if upstairs block is already in place
+			if (bGearBlockinPlace == 1)
+			{
+				upstairsAnimState = upstairsStateStarting;
+			}
+        }
+	}
+    
+	# is the block moving on to a face? 
+	if ((GetSenderId() == 1) && (GetSourceRef() == gearBlock))
+	{
+		        
+    	# is the block on the trigger?
+    	if (GetSenderRef() == gearEngaged)
+    	{
+    		bGearBlockInPlace = 1;
+    		# check if power is on
+			if (bPowerIsOn == 1)
+			{
+				upstairsAnimState = upstairsStateStarting;
+			}
+    	}
+	}
+		
+	# check if Indy lands on ledge
+	if ((GetSenderRef() == musicledge) && (bPowerIsOn == 1) && (played==0))
+    {
+		played=1;
+        # Flourish
+		PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+	}
+    return;
+	
+	
+
+
+exited:
+	# check if face has been exited
+	if (GetSourceRef() == clock_blockb)
+	{
+        oldCollideType = GetCollideType(clock_axel);
+		oldMoveSize = GetThingMoveSize(clock_axel);
+ 		
+		if (GetSenderRef() == power_on)
+		{
+			oldCollidetype = GetCollideType(clock_axel);
+			SetCollideType(clock_axel, 0);
+			StopKey(clock_axel, clock_axelb_track, 0);
+			TeleportThing(clock_axel, axelPos0);
+			SetCollideType(clock_axel, oldCollidetype);
+
+			call stopDownstairsAnim;
+			call startDownstairsAnim;
+			call pauseDownstairsAnim;
+
+			PlayKey(clock_gearsb, clock_gearsbr_k, 6, 0x12, 0);
+			clock_axelb_track = PlayKey(clock_axel, clock_axelbr_k, 6, 0x12, 0);
+
+			bPowerIsOn = 0;
+			call stopUpstairsAnim;
+			return;
+		}
+		else
+		{
+			call camera;
+			PlayKey(clock_gearsb, clock_gearsb_k, 6, 0x12, 0);
+			clock_axelb_track = PlayKey(clock_axel, clock_axelb_k, 6, 0x12, 0);
+		    PlaySoundLocal(powerinit, .3, 0, 0x0000, 0);
+		}
+
+		return;
+	}		
+	# is block moving off a face?
+	if ((GetSenderId == 1) && (GetSourceRef() == gearBlock))
+	{
+        	
+        # is block off trigger?
+		if (GetSenderRef() == gearEngaged) 
+    	{
+    		bGearBlockInPlace = 0;
+			upstairsAnimState = upstairsStateStopping;
+    	}
+	}
+	# return control to player
+	return;
+
+callback:
+	if ((upstairsAnimState == upstairsStateStarting) && (GetParam(1) == 26))
+	{
+		call startUpstairsAnim;
+		upstairsAnimState = upstairsStateRunning;
+		return;
+	}
+
+	if ((upstairsAnimState == upstairsStateRunning) && (GetParam(1) == 26))
+	{
+		PlaySoundThing(gearClunk1, gearBlock, 1, 3, 5, 0x44);
+	}
+
+	
+	if ((upstairsAnimState == upstairsStateStopping) && (GetParam(1) == 27))
+	{
+		call stopUpstairsAnim;
+		upstairsAnimState = upstairsStateStopped;
+		return;
+	}
+	return;
+
+startUpstairsAnim:
+	if (clock_houra_track == -1)
+		clock_houra_track = PlayKey(clock_houra,	clock_houra_k,	4, 0x10, 0);
+
+	if (clock_hourb_track == -1)
+		clock_hourb_track = PlayKey(clock_hourb,	clock_hourb_k,	4, 0x10, 0);
+
+	if (clock_mnut_track == -1)
+		clock_mnut_track = PlayKey(clock_mnut,	clock_mnut_k,	4, 0x10, 0);
+
+	if (gearBlock_track == -1)
+		gearBlock_track = PlayKey(gearBlock,	gearBlock_k,	4, 0x10, 0);
+		
+	SendMessage(clockCog, user1);				// Send a User1 to cogs to let it know the power is on.
+	Global3 = 1;								// Let other COGs in level know clock is running.
+	return;
+
+stopUpstairsAnim:
+	StopKey(clock_houra,	clock_houra_track,	0);
+	StopKey(clock_hourb,	clock_hourb_track,	0);
+	StopKey(gearBlock,		gearBlock_track,	0);
+	StopKey(clock_mnut,		clock_mnut_track,	0);
+
+	clock_houra_track	= -1;
+	clock_hourb_track	= -1;
+	clock_mnut_track	= -1;
+	gearBlock_track		= -1;
+   
+	if (upperLoop != -1)
+		StopSound(upperloop, 1.0);   
+	upperLoop = -1;
+
+	SendMessage(clockCog, user0);				// Send a User0 to the cogs to let it know the power is off.
+	Global3 = 0;								// Let other COGs in level know clock is stopped.
+
+	return;
+
+startDownstairsAnim:
+	clock_star_track	= PlayKey(clock_star,	clock_star_k,	4, 0x10, 0);
+	clock_axel_track	= PlayKey(clock_axel,	clock_axel_k,	4, 0x10, 0);
+	clock_armb_track	= PlayKey(clock_armb,	clock_armb_k,	4, 0x10, 0);
+	clock_armt_track	= PlayKey(clock_armt,	clock_armt_k,	4, 0x10, 0);
+	clock_leverb_track	= PlayKey(clock_leverb,	clock_leverb_k,	4, 0x10, 0);
+	clock_leverm_track	= PlayKey(clock_leverm,	clock_leverm_k,	4, 0x10, 0);
+	clock_levert_track	= PlayKey(clock_levert,	clock_levert_k,	4, 0x10, 0);
+	clock_padb_track	= PlayKey(clock_padb,	clock_padb_k,	4, 0x10, 0);
+	clock_padt_track	= PlayKey(clock_padt,	clock_padt_k,	4, 0x10, 0);
+	clock_wheelb_track	= PlayKey(clock_wheelb,	clock_wheelb_k,	4, 0x10, 0);
+	clock_wheelt_track	= PlayKey(clock_wheelt,	clock_wheelt_k,	4, 0x10, 0);
+
+	return;
+
+stopDownstairsAnim:
+	StopKey(clock_star,		clock_star_track, 0);
+	StopKey(clock_axel,		clock_axel_track, 0);
+	StopKey(clock_armb,		clock_armb_track, 0);
+	StopKey(clock_armt,		clock_armt_track, 0);
+	StopKey(clock_leverb,	clock_leverb_track, 0);
+	StopKey(clock_leverm,	clock_leverm_track, 0);
+	StopKey(clock_levert,	clock_levert_track, 0);
+	StopKey(clock_padb,		clock_padb_track, 0);
+	StopKey(clock_padt,		clock_padt_track, 0);
+	StopKey(clock_wheelb,	clock_wheelb_track, 0);
+	StopKey(clock_wheelt,	clock_wheelt_track, 0);
+
+	CopyOrientAndPos(clock_padb_ghost, clock_padb);
+	CopyOrientAndPos(clock_padt_ghost, clock_padt);
+
+	return;
+
+pauseDownstairsAnim:
+	PauseKey(clock_star,	clock_star_track);
+	PauseKey(clock_axel,	clock_axel_track);
+	PauseKey(clock_armb,	clock_armb_track);
+	PauseKey(clock_armt,	clock_armt_track);
+	PauseKey(clock_leverb,	clock_leverb_track);
+	PauseKey(clock_leverm,	clock_leverm_track);
+	PauseKey(clock_levert,	clock_levert_track);
+	PauseKey(clock_padb,	clock_padb_track);
+	PauseKey(clock_padt,	clock_padt_track);
+	PauseKey(clock_wheelb,	clock_wheelb_track);
+	PauseKey(clock_wheelt,	clock_wheelt_track);
+
+	StopSound(lowerloop, 4.0);
+	StopSound(lowerloop1, 4.0);
+		
+	// We've lost power, so pause the upstairs animations as well.
+	upstairsAnimState = upstairsStateStopping;
+
+	return;
+
+resumeDownstairsAnim:
+	ResumeKey(clock_star,	clock_star_track);
+	ResumeKey(clock_axel,	clock_axel_track);
+	ResumeKey(clock_armb,	clock_armb_track);
+	ResumeKey(clock_armt,	clock_armt_track);
+	ResumeKey(clock_leverb,	clock_leverb_track);
+	ResumeKey(clock_leverm,	clock_leverm_track);
+	ResumeKey(clock_levert,	clock_levert_track);
+	ResumeKey(clock_padb,	clock_padb_track);
+	ResumeKey(clock_padt,	clock_padt_track);
+	ResumeKey(clock_wheelb,	clock_wheelb_track);
+	ResumeKey(clock_wheelt,	clock_wheelt_track);
+	sleep(.5);
+
+	lowerloop = PlaySoundThing(lowerOn, clock_wheelb, 1, 3, 25, 0x881);
+	lowerloop1 = PlaySoundThing(strain, clock_leverm , 1, 3, 10, 0x881);
+
+	if (upperLoop == -1)
+		upperloop = PlaySoundThing(upperOn, clock_wheelt, 1, 2, 10, 0x881);
+	
+	if (bGearBlockInPlace)
+	{
+		upstairsAnimState = upstairsStateStarting;
+	}
+
+	return;
+
+Camera:
+
+	# Show power coming on
+  	
+	# Set offset camera...
+	StartCutscene(0);
+	
+    SetCameraLookInterp(2, 0);			# kill pan & tilt to lock on 2nd target
+  	SetCameraPosInterp(2, 0);			# kill dolly mode too
+	SetCameraFocus(2, cam1spot);		# cam 2 takes over here
+    SetCameraSecondaryFocus(2, cam1look); #looking same place
+	viewangle = GetCameraFOV(); # it pays to be careful
+	SetCurrentCamera(2);
+	SetCameraFOV(viewangle, 0, 0.0); # start here anyway
+	SetCameraLookInterp(2, 1);			 
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 2.3); # about right
+    Sleep(0.01);
+	SetCameraFocus(2, offsetcam);  # slide out to new spot
+	SetCameraSecondaryFocus(2, offsettarg);	# slide over to new target 
+	          
+    return;
+
+ReturnControl:
+
+	# return control to player
+	sleep(.5);
+    SetCameraLookInterp(2, 0); # kill pan & tilt mode
+	SetCameraPosInterp(2, 0); # kill dolly mode
+	SetCameraPosition(1, GetThingPos(offsetcam)); # prep to swing back to follow-cam
+	sleep(.01);
+	SetCurrentCamera(1);
+    
+	EndCutscene();
+	
+Touched:
+	if(getsenderref() == clock_blockb)
+	{
+		MakeCamera2LikeCamera1(cam1spot, cam1look);
+	}
+	return;									 
+
+end
+
+
+

@@ -1,0 +1,146 @@
+# Jones 3D Cog Script
+#
+# pyr_pitlines.cog
+#
+# A few saylines
+#
+# [RKD & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+message	entered
+
+sector	pit
+sector	badpit
+
+thing	pitcam		nolink
+thing	player		nolink	local
+thing	indyactor	nolink
+thing	indylook	nolink
+
+thing	cam1spot	local
+thing	cam1look	local
+
+sound	natural=pr03j01.wav		local
+sound	hornerdug=pr03j02.wav	local
+
+template	tpl_ghost=ghost		local
+
+vector	v_camspot		local
+
+int		pitsaid=0	local
+
+# subroutines
+flex	startscene=0	local
+flex	endscene=0		local
+flex	fixcams=0		local
+end
+
+code
+
+entered:
+# ---> pit, badpit
+		
+	player = GetLocalPlayerThing();
+	
+	# if player enters lower pit first, or enters pit with jeep, prohibit sayline
+	if ((GetSenderRef() == badpit) || (global2 == 1))
+	{
+		pitsaid = 1;
+		return;
+	}
+	
+	# if sayline locked out for any reason, exit
+	if (pitsaid) return;
+	pitsaid = 1;
+	
+	# give player a chance to get further into the area
+	Sleep(2);
+
+	# make sure he's still in a good spot
+	if (GetThingSector(player) != pit) return;
+	
+	if (GetSenderRef() == pit)
+	{
+		# prepare the player
+		if (MakeMeStop() == -1) return;
+		DeselectWeaponWait(player);
+		
+		sleep(1);
+		
+		# start cutscene, swing camera out
+		call startscene;
+
+		cam1spot = CreateThing(tpl_ghost, player);
+		CaptureThing(cam1spot);
+		cam1look = CreateThing(tpl_ghost, player);
+		CaptureThing(cam1look);
+		MakeCamera2LikeCamera1(cam1spot, cam1look);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, cam1spot);
+		SetCameraSecondaryFocus(2, cam1look);
+		SetCurrentCamera(2);
+		SetCameraFOV(90, 0, 0.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 1.5);
+		Sleep(0.01);
+		SetCameraFocus(2, pitcam);
+		SetCameraSecondaryFocus(2, indylook);
+
+		SetThingMaxRotVel(indyactor, 180);
+		AISetLookThing(indyactor, indylook);
+		AIWaitForStop(indyactor);
+	
+		Sleep(1.0);
+		PlayVoice(indyactor, natural, 1, 1);
+		Sleep(0.5);
+		PlayVoice(indyactor, hornerdug, 1, 1);
+
+		Sleep(0.5);
+		call endscene;
+	}
+
+	return;
+
+startscene:
+	call fixcams;
+
+	StartCutscene(1);
+	CopyOrientAndPos(player, indyactor);
+	CopyPlayerHolsters(player, indyactor);
+	ClearThingFlags(indyactor, 0x80000);
+	SetActorFlags(player, 0x200000);
+	SetThingFlags(player, 0x80000);
+	
+	return;
+
+endscene:
+	call fixcams;
+
+	CopyOrientAndPos(indyactor, player);
+	SetThingFlags(indyactor, 0x80000);
+	ClearThingFlags(player, 0x80000);
+
+	v_camspot = VectorAdd(VectorTransformToOrient(player, '0.3 -0.05 0.05'), GetThingPos(player));	
+	SetCameraPosition(1, v_camspot);
+	SetCurrentCamera(1);
+
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+fixcams:
+	#reset camera settings
+	ResetCameraFOV(0, 0.0);
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+
+	return;
+	
+end

@@ -1,0 +1,83 @@
+# Jones 3D Cog Script
+#
+# RIV_splashparticlemed.cog
+#
+# gimme a particle with that splash there, Guido...
+#
+#
+#
+# [PAZ] [GGJ] modified per Steve Scholl 7/7/99
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#========================================================================================
+
+symbols
+
+
+	message         created
+	message			sighted
+	message			pulse  		
+
+	thing			spritething				local
+	thing			player					local
+	
+	flex			pulsetime				local
+	
+	template		splashA=spritlemist		local
+	
+	sound			sound0=gen_waterfall_a.wav	local
+
+	
+end
+
+#........................................................................................
+
+code
+
+#........................................................................................
+
+created:
+
+	spritething = GetSenderRef();
+	#PlaySoundThing(sound0, spritething, 0.8, 1.0, 10.0, 0x01);
+	return;
+
+#........................................................................................	
+
+sighted:
+
+	spritething = GetSenderRef();
+
+	pulsetime = RandBetween(1, 4);
+	SetThingPulse(spritething, pulsetime);
+	
+	return;
+		
+#........................................................................................
+
+pulse:
+
+	player = GetLocalPlayerThing();   
+	spritething = GetSenderRef();
+
+	CreateThing(splashA, spritething);
+	pulsetime=RandBetween(1, 4);
+	
+	if (HasLOS(player, spritething) == 1)
+		{
+		SetThingPulse(spritething, pulsetime);
+		return;
+		}
+		
+	else
+		{
+		SetThingPulse(spritething, 0);
+		ClearThingFlags(spritething, 0x100000);
+		return;
+		}
+		
+	return;
+	
+#........................................................................................
+
+end

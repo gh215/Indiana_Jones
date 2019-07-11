@@ -1,0 +1,1711 @@
+# Jones 3D Cog Script
+#
+# shw_DivRoom2_sluice.cog
+#
+# Sluiceway Alternating Script
+#
+# [CMG]
+#
+# (C) 1997 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup		
+	message	activated	
+    message	user0		
+    message	user1		
+    message	pulse		
+
+#	cogs        
+	cog     troopcog
+	cog     bucketcog
+    cog     hammercamcog
+    #cog     Portcog
+    cog     Sluicecog1
+    cog     Sluicecog2
+    cog     Powerdoorcog	
+    cog     camcog	
+    #cog     hintcog	
+
+#	DivRoom1 Things
+	thing	D1sluice0
+	thing   D1indy			nolink
+    thing	D1camerapos
+    thing	D1lever
+    thing	D1camtarget
+	thing	D1waterobj1
+	thing	D1waterobj2
+	thing	D1H2Ohome1
+	thing	D1H2Ohome2
+	thing	D1splashpos
+
+    thing	D1soundobj
+    thing	D1soundobj2
+
+#	DivRoom1 waterobject sectors
+	sector  D1water1sect
+    sector  D1water2sect
+
+
+#	DivRoom2 Things
+    thing	D2sluice0
+	thing   D2indy			nolink
+    thing	D2camerapos	
+	thing	D2camtarget
+	thing	D2lever
+    thing	D2waterobj1
+	thing	D2waterobj2
+	thing	D2H2Ohome1
+	thing	D2H2Ohome2
+	thing	D2splashpos
+	
+	thing	D2soundobj
+	thing	D2soundobj2
+	
+		
+#	DivRoom2 waterobject sectors
+	sector  D2water1sect
+    sector  D2water2sect
+
+
+#	DivRoom3 Things
+    thing	D3sluice0
+    thing   D3indy			nolink
+    thing	D3camerapos	
+    thing	D3lever
+    thing	D3camtarget
+    thing	D3waterobj1
+	thing	D3waterobj2
+	thing	D3H2Ohome1
+	thing	D3H2Ohome2
+	thing	D3splashpos
+	
+
+#	DivRoom2 waterobject sectors
+    sector  D3water1sect
+    sector  D3water2sect
+    
+
+
+#	global things for creation
+    thing    splashitem			local
+
+
+#	control variables    
+    int      action=0			local
+    int      D1position=0		local
+    int      D2position=0		local
+    int      D3position=0		local
+    int      thaw=0				local
+    int      D2thaw=0				local
+    int      D3thaw=0				local
+    int      index				local
+    int      curCam				local
+    int      D1fx=0			local
+    int      D2fx=0			local
+    int      D3fx=0			local
+    int      commiecreate=0			local
+    int      sluicehint=0			local
+    
+    
+#	keyframe variables
+    int      D1sluicemove			local
+    int      D1sluicemove1			local
+    int      D2sluicemove			local
+    int      D2sluicemove1			local
+    int      D3sluicemove			local
+    int      D3sluicemove1			local
+
+#	sound variables    
+	int      gatetrack			local
+    int      rushtrack			local
+    int      geartrack			local
+    int      movetrack			local
+
+	int      D1ambloop			local
+	int      D1ambloop2			local
+	int      D1ambloop3			local
+	int      D2ambloop			local
+	int      D2ambloop2			local
+	int      D2ambloop3			local
+	int      D3ambloop			local
+
+# Indy Keyframes
+    keyframe	in_pull=in_pull_lever_down.key	    local
+	keyframe	lever_down=gen_lever.key			local
+
+# Sluice Gate keyframes        
+    keyframe	sluice_open=shw_gate_dflct.key		local
+	keyframe	sluice_close=shw_gate_open.key		local
+    keyframe	sluice2_close=shw_gate_openb.key	local
+	keyframe	sluice2_open=shw_gate_dflctb.key	local
+    
+#	templates for created objects
+    template        water1obj=15mh2o
+    template        water2obj=15mh2o
+    template        splash=TitanicH2Ofx		local
+	
+#	water sector light value    
+    vector  sect_light      local
+
+#Div1 sectors and surfs
+    sector	D1path1_sect_0
+    sector	D1path1_sect_1
+    sector	D1path1_sect_2
+    sector	D1path1_sect_3
+    sector	D1path1_sect_4
+    sector	D1path1_sect_5
+    sector	D1path1_sect_6
+    sector	D1path1_sect_7
+    sector	D1path1_sect_8
+    sector	D1path1_sect_9
+    sector	D1path1_sect_10
+    sector	D1path1_sect_11
+    sector	D1path1_sect_12
+
+    sector	D1path2_sect_0
+    
+    surface D1path2_surf_0
+    surface D1path2_surf_1
+    
+    surface D1path1_surf_0
+    surface D1path1_surf_1
+    surface D1path1_surf_2
+    surface D1path1_surf_3
+    surface D1path1_surf_4
+    surface D1path1_surf_5
+    surface D1path1_surf_6
+    surface D1path1_surf_7
+    surface D1path1_surf_8
+    surface D1path1_surf_9
+    surface D1path1_surf_10
+    surface D1path1_surf_11
+    surface D1path1_surf_12
+    surface D1path1_surf_13
+    surface D1path1_surf_14
+    surface D1path1_surf_15
+    surface D1path1_surf_16
+    surface D1path1_surf_17
+    surface D1path1_surf_18
+    surface D1path1_surf_19
+    surface D1path1_surf_20
+    surface D1path1_surf_21
+    surface D1path1_surf_22
+    surface D1path1_surf_23
+    surface D1path1_surf_24
+    surface D1path1_surf_25
+        
+#Div2 sectors and surfs
+    sector	D2path1_sect_0
+    sector	D2path1_sect_1
+    sector	D2path1_sect_2
+    
+    sector	D2path2_sect_0
+    sector	D2path2_sect_1
+    sector	D2path2_sect_2
+    sector	D2path2_sect_3
+    
+    surface D2path1_surf_0
+    surface D2path1_surf_1
+    surface D2path1_surf_2
+    surface D2path1_surf_3
+    surface D2path1_surf_4
+    surface D2path1_surf_5
+    
+    surface D2path2_surf_0
+    surface D2path2_surf_1
+    surface D2path2_surf_2
+    surface D2path2_surf_3
+    surface D2path2_surf_4
+    surface D2path2_surf_5
+    surface D2path2_surf_6
+    surface D2path2_surf_7
+
+#Div3 sectors and surfs
+    sector	D3path1_sect_0
+    sector	D3path1_sect_1
+    sector	D3path1_sect_2
+    sector	D3path1_sect_3
+    
+    sector	D3path2_sect_0
+    sector	D3path2_sect_1
+    
+    surface D3path1_surf_0
+    surface D3path1_surf_1
+    surface D3path1_surf_2
+    surface D3path1_surf_3
+    surface D3path1_surf_4
+    surface D3path1_surf_5
+    surface D3path1_surf_6
+    surface D3path1_surf_7
+    
+    surface D3path2_surf_0
+    surface D3path2_surf_1
+    surface D3path2_surf_2
+
+#	lever sound fx        
+	sound   leverpull=nub_lever_pull_c.wav          local
+    sound   leverset=nub_lever_reset_c.wav          local
+    
+#	sluice gate sound fx        
+	sound   gatestart=shw_sluice_start.wav          local
+    sound   gaterun=shw_sluice_move.wav          local
+    sound   gatestop=shw_sluice_stop.wav          local
+    
+#	environmental event sound fx        
+	sound   waterrush=nub_bull_move2_c.wav          local
+    sound   geargrind=nub_bull_move5_c.wav          local
+    sound   bigmove=nub_bull_move1_c.wav          	local
+	sound	sluicesrun=shs_h2odrain_c.wav			local
+
+
+end
+# ========================================================================================
+
+code
+startup:
+
+        #	Get local player and clear all channel sectors of water
+		sluicehint=0;
+		player = GetLocalPlayerThing();
+        call ClearAllDiv1;
+        call ClearAllDiv2;
+        call ClearAllDiv3;
+		
+        
+return;
+
+
+# ========================================================================================
+ClearAllDiv1:
+
+#	tag water objects as invisible
+SetThingFlags(D1waterobj1, 0x10);
+SetThingFlags(D1waterobj2, 0x10);
+
+#	set water sector light to nothing
+sect_light = VectorSet(0.0, 0.0, 0.0);
+
+#path1 clearing
+        for (index = 0; index < 13; index = index + 1)
+			{
+			
+			#Clearing sector water attributes
+			Setsectorlight(D1path1_sect_0[index], sect_light, 3);
+			ClearSectorFlags(D1path1_sect_0[index], 0x2);
+            ClearSectorSurfFlags(D1path1_sect_0[index], 0x20000);
+			}
+        
+		for (index = 0; index < 26; index = index + 1)
+			{
+            #setting faces to no draw
+			Setfacegeomode(D1path1_surf_0[index], 0);
+			}
+         
+         
+#path2 clearing
+        
+		for (index = 0; index < 1; index = index + 1)
+			{
+			
+			#Clearing sector water attributes
+			Setsectorlight(D1path2_sect_0[index], sect_light, 3);
+			Clearsectorflags(D1path2_sect_0[index], 0x2);
+            ClearSectorSurfFlags(D1path2_sect_0[index], 0x20000);
+			}
+        
+		for (index = 0; index < 2; index = index + 1)
+			{
+            #setting faces to no draw
+			Setfacegeomode(D1path2_surf_0[index], 0);
+			}
+return;
+
+# ========================================================================================
+ClearAllDiv2:
+
+#	tag water objects as invisible
+SetThingFlags(D2waterobj1, 0x10);
+SetThingFlags(D2waterobj2, 0x10);
+
+#	set water sector light to nothing
+sect_light = VectorSet(0.0, 0.0, 0.0);
+    
+#clearing path1
+		for (index = 0; index < 3; index = index + 1)
+			{
+            #Clearing sector water attributes
+			Setsectorlight(D2path1_sect_0[index], sect_light, 3);
+            Clearsectorflags(D2path1_sect_0[index], 0x2);
+            ClearSectorSurfFlags(D2path1_sect_0[index], 0x20000);
+			}
+       
+		for (index = 0; index < 6; index = index + 1)
+			{
+            #setting faces to no draw
+			Setfacegeomode(D2path1_surf_0[index], 0);
+			}
+    
+    
+#clearing path2
+		for (index = 0; index < 4; index = index + 1)
+			{
+            #Clearing sector water attributes
+			Setsectorlight(D2path2_sect_0[index], sect_light, 3);
+			Clearsectorflags(D2path2_sect_0[index], 0x2);
+            ClearSectorSurfFlags(D2path2_sect_0[index], 0x20000);
+			}
+
+		for (index = 0; index < 8; index = index + 1)
+			{
+            #setting faces to no draw
+			Setfacegeomode(D2path2_surf_0[index], 0);
+			}
+return;
+
+# ========================================================================================
+ClearAllDiv3:
+    
+#	tag water objects as invisible
+SetThingFlags(D3waterobj1, 0x10);
+SetThingFlags(D3waterobj2, 0x10);
+
+#	set water sector light to nothing
+sect_light = VectorSet(0.0, 0.0, 0.0);
+    
+#clearing path1
+		for (index = 0; index < 4; index = index + 1)
+			{
+			#Clearing sector water attributes
+			Setsectorlight(D3path1_sect_0[index], sect_light, 3);
+            Clearsectorflags(D3path1_sect_0[index], 0x2);
+            ClearSectorSurfFlags(D3path1_sect_0[index], 0x20000);
+			}
+       
+		for (index = 0; index < 8; index = index + 1)
+			{
+            #setting faces to no draw
+			Setfacegeomode(D3path1_surf_0[index], 0);
+			}
+    
+    
+#clearing path2
+		for (index = 0; index < 2; index = index + 1)
+			{
+			#Clearing sector water attributes
+			Setsectorlight(D3path2_sect_0[index], sect_light, 3);
+			clearsectorflags(D3path2_sect_0[index], 0x2);
+            ClearSectorSurfFlags(D3path2_sect_0[index], 0x20000);
+			}
+
+		for (index = 0; index < 3; index = index + 1)
+			{
+			#setting faces to no draw
+			Setfacegeomode(D3path2_surf_0[index], 0);
+			}
+return;
+
+
+# ========================================================================================
+
+user0:
+        #the river has been thawed       
+		thaw = 1;
+				
+return;
+
+# =========================================================================
+user1:
+               
+        #Div1 sluice filling routine gets called       
+		call D1user1;
+		D1ambloop = PlaySoundThing(sluicesrun, D1splashpos, 0.5, 5, 10, 0x1);
+        D1ambloop2 = PlaySoundThing(sluicesrun, D1soundobj, 0.5, 5, 10, 0x1);
+        D1ambloop3 = PlaySoundThing(sluicesrun, D1soundobj2, 0.5, 5, 10, 0x1);
+		
+return;
+
+# =========================================================================
+activated:
+
+	
+	if (action == 1) return;
+	action = 1;
+	if (GetSenderRef() == D1lever)	#player is in DivRoom1
+                {
+                
+				# Clear first D1lever hint
+				SendMessage(hintcog, user0);
+                call D1routines;
+                return;
+                }
+        if (GetSenderRef() == D2lever)	#player is in DivRoom3
+                {
+				# Clear hint
+				SendMessage(hintcog, user1);
+                
+				# bring commies into play
+				If (commiecreate == 0)
+                {
+                SendMessage(troopcog, user0);
+                commiecreate = 1;
+                }
+				
+				call D2routines;
+                return;
+                }
+        if (GetSenderRef() == D3lever)	#player is in DivRoom3
+                {
+                call D3routines;
+                return;
+                }
+                
+        else return;
+                
+# ........................................................................................
+        
+D1routines:        
+        
+    #Cut Scene camera
+	SetCameraFocus(2, D1camerapos);
+    SetCamerasecondaryFocus(2, D1camtarget);
+    ClearThingFlags(D1indy, 0x80000);
+    Sendmessage(camcog, user0);	#camcog makes current camera 2
+	ResetCameraFOV(0,0);
+
+    # Play the lever animations - wait for Indy's
+    PlayKey(D1indy, in_pull, 4, 0x12, 0);
+	PlayKey(D1lever, lever_down, 4, 0x12, 0);
+    Sleep(1.0);
+    PlaySoundLocal(leverpull, 1.0, 0, 0x0, 0);
+	Sleep(1.2);
+    PlaySoundLocal(leverset, 0.75, 0, 0x0, 0);
+	Sleep(1.0);
+    movetoframe(D1camtarget, 1, 1.75);
+    movetoframe(D1camerapos, 1, 1.0);
+    Sleep(3.50);
+	geartrack=PlaySoundLocal(geargrind, 4.0, -1.0, 0x8, 0);
+    Sleep(0.5);
+    movetrack = PlaySoundLocal(bigmove, 2.0, 0, 0x0, 0);
+	waitforstop(D1camtarget);
+    SetThingFlags(D1indy, 0x80000);
+
+
+    {
+        if (D1position == 0)
+		{
+			if (thaw == 1)
+			{
+				If (GetHintSolved(hint24) == 1)
+					{
+					SendMessage(hintcog, user2);
+					# clear second Div1 hint
+					}
+				D1fx = 1;
+				Call D1gate;		# gate anims play
+				D1position = 1;
+                Call D1user1;		# water levels change, water objects move
+                StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);	# if water noise is playing, stop it
+				rushtrack = -1;
+				}
+				Sleep(0.5);
+                MovetoFrame(D1camerapos, 0, 100);
+                MovetoFrame(D1camtarget, 0, 100);
+                action = 0;
+				D1fx = 0;
+				StopSound(geartrack, 0);
+				StopSound(movetrack, 0);
+                return;
+			}
+		
+			else
+			{
+                Call D1gate;
+                sleep(3.0);
+				SetPulse(0);
+                D1position = 1;
+                
+				StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);
+				rushtrack = -1;
+                }
+
+                Sleep(1.5);
+                SendMessage(camcog, user1);
+                MovetoFrame(D1camerapos, 0, 100);
+                MovetoFrame(D1camtarget, 0, 100);
+				action = 0;
+                StopSound(geartrack,0);
+				StopSound(movetrack, 0);
+                return;
+			}
+		}
+		
+        else if (D1position == 1)
+		{
+			if (thaw == 1)
+			{
+				D1fx = 1;
+				Call D1gate;
+                D1position = 0;
+                Call D1user1;
+
+				# ending gate move sounds
+                StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);
+				rushtrack = -1;
+                }
+
+                Sleep(0.5);
+                MovetoFrame(D1camerapos, 0, 50);
+                MovetoFrame(D1camtarget, 0, 50);
+				action = 0;
+				D1fx = 0;
+				StopSound(geartrack,0);
+				StopSound(movetrack, 0);
+                return;
+			}
+
+			else
+			{
+                Call D1gate;
+                sleep(3.0);
+                SetPulse(0);
+                D1position = 0;
+
+                StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);
+				rushtrack = -1;
+				}
+
+                Sleep(1.5);
+                SendMessage(camcog, user1);
+				MovetoFrame(D1camerapos, 0, 50);
+                MovetoFrame(D1camtarget, 0, 50);
+				action = 0;
+                StopSound(geartrack,0);
+				StopSound(movetrack, 0);
+                return;
+			}
+		}
+	}
+	
+return;
+
+# ........................................................................................
+D2routines:        
+        
+    
+    SetCameraFocus(2, D2camerapos);
+    SetCamerasecondaryFocus(2, D2camtarget);
+    ClearThingFlags(D2indy, 0x80000);
+    Sendmessage(camcog, user0);
+	ResetCameraFOV(0,0);
+    
+    # Play the animations - wait for Indy's
+    
+    PlayKey(D2indy, in_pull, 4, 0x12, 0);
+	PlayKey(D2lever, lever_down, 4, 0x12, 0);
+	Sleep(1.0);
+    PlaySoundLocal(leverpull, 1.0, 0, 0x0, 0);
+	Sleep(1.2);
+    PlaySoundLocal(leverset, 0.75, 0, 0x0, 0);
+    Sleep(1.0);
+    movetoframe(D2camtarget, 1, 2);
+    movetoframe(D2camerapos, 1, 1.0);
+    Sleep(1.5);
+    geartrack=PlaySoundLocal(geargrind, 4.0, -1.0, 0x8, 0);
+	Sleep(0.5);
+    movetrack = PlaySoundLocal(bigmove, 2.0, 0, 0x0, 0);
+    waitforstop(D2camtarget);
+    SetThingFlags(D2indy, 0x80000);
+        
+
+
+    {
+        if (D2position == 0)
+		{
+			if (D2thaw == 1)
+			{
+								
+				D2fx = 1;
+				Call D2gate;
+                D2position = 1;
+                Call D2user1;
+
+				# ending gate move sounds
+                StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);
+				rushtrack = -1;
+				}
+				
+				Sleep(0.5);
+                MovetoFrame(D2camerapos, 0, 50);
+                MovetoFrame(D2camtarget, 0, 50);
+                action = 0;
+				D2fx = 0;
+                StopSound(geartrack, 0);
+				StopSound(movetrack, 0);
+                return;
+			}
+		
+			else
+			{
+                Call D2gate;
+                sleep(3.0);
+				SetPulse(0);
+                D2position = 1;
+
+                StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);
+				rushtrack = -1;
+				}
+
+				Sleep(1.5);
+				SendMessage(camcog, user1);
+                MovetoFrame(D2camerapos, 0, 50);
+                MovetoFrame(D2camtarget, 0, 50);
+				action = 0;
+                StopSound(geartrack, 0);
+				StopSound(movetrack, 0);
+                return;
+			}
+		}
+		
+        else if (D2position == 1)
+		{
+			if (D2thaw == 1)
+			{
+				D2fx = 1;
+				Call D2gate;
+				D2position = 0;
+                Call D2user1;
+                
+				# stop the gate sounds and anims
+				StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);
+				rushtrack = -1;
+				}
+
+                Sleep(0.5);
+                MovetoFrame(D2camerapos, 0, 50);
+                MovetoFrame(D2camtarget, 0, 50);
+                action = 0;
+				D2fx = 0;
+                StopSound(geartrack,0);
+				StopSound(movetrack, 0);
+                return;
+			}
+
+			else
+			{
+                Call D2gate;
+                sleep(3.0);
+				SetPulse(0);
+                D2position = 0;
+                
+				# stop the gate sounds and anims
+                StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);
+				rushtrack = -1;
+				}
+                
+				Sleep(1.5);
+				SendMessage(camcog, user1);
+                MovetoFrame(D2camerapos, 0, 50);
+                MovetoFrame(D2camtarget, 0, 50);
+				action = 0;
+                StopSound(geartrack,0);
+				StopSound(movetrack, 0);
+                return;
+			}
+		}
+	}
+	
+return;
+
+
+# ........................................................................................
+
+D3routines:        
+        
+	
+    action = 1;	#lever cannot be hit again during scene
+    #StartCutscene(1);
+    SetCameraFocus(2, D3camerapos);
+    SetCamerasecondaryFocus(2, D3camtarget);
+    ClearThingFlags(D3indy, 0x80000);
+    Sendmessage(camcog, user0);
+	ResetCameraFOV(0,0);
+
+    # Play the animations - wait for Indy's
+    
+	PlayKey(D3indy, in_pull, 4, 0x12, 0);
+	PlayKey(D3lever, lever_down, 4, 0x12, 0);
+    Sleep(1.0);
+    PlaySoundLocal(leverpull, 1.0, 0, 0x0, 0);
+    Sleep(1.2);
+	PlaySoundLocal(leverset, 0.75, 0, 0x0, 0);
+    Sleep(1.0);
+	movetoframe(D3camtarget, 1, 15);
+    movetoframe(D3camerapos, 1, 10);
+    Sleep(3.5);
+	geartrack=PlaySoundLocal(geargrind, 4.0, -1.0, 0x8, 0);
+	Sleep(0.5);
+    waitforstop(D3camerapos);
+    SetThingFlags(D3indy, 0x80000);
+        
+
+if (D3position == 0)
+	{
+		if (D3thaw == 1)
+			{
+                D3fx = 1;
+				Call D3gate;
+				D3position = 1;
+                Call D3user1;
+                sleep(2.5);
+
+				# ending gate move sounds
+                StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);
+				rushtrack = -1;
+				}
+
+				MovetoFrame(D3camerapos, 0, 50);
+				MovetoFrame(D3camtarget, 0, 50);
+                Sleep(0.25);
+                action = 0;
+				D3fx = 0;
+                StopSound(geartrack, 0);
+				StopSound(movetrack, 0);
+				return;
+			}
+		
+		else
+			{
+                Call D3gate;
+                sleep(3.0);
+                D3position = 1;
+
+                StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);
+				rushtrack = -1;
+				}
+
+				SetPulse(0);
+				Sleep(1.5);
+				Sendmessage(camcog, user1);
+                MovetoFrame(D3camerapos, 0, 50);
+                MovetoFrame(D3camtarget, 0, 50);
+				action = 0;
+				D3fx = 0;
+                StopSound(geartrack, 0);
+				StopSound(movetrack, 0);
+                return;
+			}
+	}
+		
+else if (D3position == 1)
+	{
+        if (D3thaw == 1)
+			{
+                D3fx = 1;
+				Call D3gate;
+                D3position = 0;
+                Call D3user1;
+                
+                StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);
+				rushtrack = -1;
+				}
+
+                MovetoFrame(D3camerapos, 0, 50);
+                MovetoFrame(D3camtarget, 0, 50);
+                Sleep(0.25);
+				action = 0;
+                D3fx = 0;
+                StopSound(geartrack,0);
+				StopSound(movetrack, 0);
+                return;
+			}
+
+		else
+			{
+                Call D3gate;
+                sleep(3.0);
+                D3position = 0;
+
+                StopSound(gatetrack, 0);
+				PlaySoundLocal(gatestop, 4, 0, 0x0, 0);
+				If (rushtrack != -1)
+				{
+				StopSound(rushtrack, 0);
+				rushtrack = -1;
+				}
+				
+				SetPulse(0);
+				Sleep(1.5);
+                Sendmessage(camcog, user1);
+                MovetoFrame(D3camerapos, 0, 50);
+                MovetoFrame(D3camtarget, 0, 50);
+				action = 0;
+				D3fx = 0;
+                StopSound(geartrack,0);
+				StopSound(movetrack, 0);
+                return;
+			}
+	}
+
+	
+return;
+
+# ........................................................................................
+D1user1:
+
+If (D1position == 1)	#from Div3 to Div2
+	{
+			
+			Rotate(D1waterobj2, 90, 2, 0.01);		   #exp angle
+            Sleep(.01);
+			ClearThingFlags(D1waterobj2, 0x10);
+            Rotate(D1waterobj2, -90, 2, 3.5);
+			
+            ClearThingFlags(D1waterobj1, 0x10);
+			
+			
+            
+#clear path1 sector physics, sector light, & sector surf flags
+            sect_light = VectorSet(0.0, 0.0, 0.0);
+		
+	for (index = 0; index < 13; index = index + 1)
+			{
+            clearsectorflags(D1path1_sect_0[index], 0x2);
+            ClearSectorSurfFlags(D1path1_sect_0[index], 0x20000);
+		    setsectorlight(D1path1_sect_0[index], sect_light, 3);
+            }
+
+#no draw path1 sector faces
+        
+		for (index = 0; index < 26; index = index + 1)
+			{
+            setfacegeomode(D1path1_surf_0[index], 0);
+            }
+            
+			Rotate(D1waterobj1, -90, 0, 2.5);
+            
+			WaitForStop(D1waterobj2);
+
+
+
+# set path2 sectors to h2O & set sector light
+            sect_light = VectorSet(0.0, 0.5, 1.0);
+
+		for (index = 0; index < 1; index = index + 1)
+			{
+            setsectorflags(D1path2_sect_0[index], 0x2);
+		    setsectorlight(D1path2_sect_0[index], sect_light, 3);
+            SetSectorSurfFlags(D1path2_sect_0[index], 0x20000);
+            }
+
+#set path2 faces to draw & set faces to full light
+		for (index = 0; index < 2; index = index + 1)
+			{
+            setfacegeomode(D1path2_surf_0[index], 4);
+		    setfacelightmode(D1path2_surf_0[index], 0);
+            }
+            
+	        # reset D1waterobj1
+			SetThingFlags(D1waterobj1, 0x10);
+            CopyOrientAndPos(D1H2Ohome1, D1waterobj1); 
+            # reset D1waterobj2
+            SetThingFlags(D1waterobj2, 0x10);
+            CopyOrientAndPos(D1H2Ohome2, D1waterobj2); 
+            
+
+			SetPulse(0);
+			Sleep(0.5);
+            D2thaw = 1;
+            D3thaw = 0;
+			
+			# fill D2 sluices with water
+			call D2turbolevels;
+			# start D2 room sound loop
+            D2ambloop = PlaySoundThing(sluicesrun, D2splashpos, 0.5, 5, 10, 0x1);
+            D2ambloop2 = PlaySoundThing(sluicesrun, D2soundobj, 0.5, 5, 10, 0x1);
+            D2ambloop3 = PlaySoundThing(sluicesrun, D2soundobj2, 0.5, 5, 10, 0x1);
+            
+			call ClearAllDiv3;
+			If (D3ambloop != -1)
+				{
+				StopSound(D3ambloop);
+				}
+
+#send message to next cogs
+            
+			Sendmessage(bucketcog,user1);
+			Sendmessage(hammercamcog,user1);
+			#Sendmessage(Portcog,user0);
+return;	
+	}
+
+
+else If (D1position == 0)	#from Div2 to Div3
+	{
+
+            # fill sluice 1
+			Rotate(D1waterobj1, -90, 0, 0.01);		 #exp angle
+            Sleep(.01);
+			ClearThingFlags(D1waterobj1, 0x10);
+            Rotate(D1waterobj1, 90, 0, 3.5);
+            # empty sluice 2
+			ClearThingFlags(D1waterobj2, 0x10);
+            
+            
+#clear path2 sector h2o physics, sector lights, sect surf flags
+			sect_light = VectorSet(0.0, 0.0, 0.0);
+
+		for (index = 0; index < 1; index = index + 1)
+			{
+            clearsectorflags(D1path2_sect_0[index], 0x2);
+            ClearSectorSurfFlags(D1path2_sect_0[index], 0x20000);
+		    setsectorlight(D1path2_sect_0[index], sect_light, 3);
+            }
+#no draw path2 sector faces
+        
+		for (index = 0; index < 2; index = index + 1)
+			{
+            setfacegeomode(D1path2_surf_0[index], 0);
+            }
+           
+			Rotate(D1waterobj2, 90, 2, 3.0);
+            waitforstop(D1waterobj1);
+
+
+# set path1 sectors to h2O & set light
+            sect_light = VectorSet(0.0, 0.5, 1.0);
+
+		for (index = 0; index < 13; index = index + 1)
+			{
+            setsectorflags(D1path1_sect_0[index], 0x2);
+		    setsectorlight(D1path1_sect_0[index], sect_light, 3);
+            SetSectorSurfFlags(D1path1_sect_0[index], 0x20000);
+            }
+#set path1 faces to draw & set faces to full light
+		for (index = 0; index < 26; index = index + 1)
+			{
+            setfacegeomode(D1path1_surf_0[index], 4);
+            setfacelightmode(D1path1_surf_0[index], 0);
+            }
+            
+			# reset D1waterobj1
+			SetThingFlags(D1waterobj1, 0x10);
+            CopyOrientAndPos(D1H2Ohome1, D1waterobj1); 
+            # reset D1waterobj2
+            SetThingFlags(D1waterobj2, 0x10);
+            CopyOrientAndPos(D1H2Ohome2, D1waterobj2); 
+            
+            SetPulse(0);
+			# set water state variables
+            D2thaw = 0;
+            D3thaw = 1;
+            # set next room sluice states
+			call D3turbolevels;
+            # start D3 room sound loop
+            D3ambloop = PlaySoundThing(sluicesrun, D3splashpos, 0.5, 5, 10, 0x1);
+			
+			call ClearAllDiv2;
+            If (D2ambloop != -1)
+				{
+				StopSound(D2ambloop);
+				StopSound(D2ambloop2);
+				StopSound(D2ambloop3);
+				}
+
+
+#send message to next cogs
+            Sendmessage(bucketcog,user0);
+			Sendmessage(hammercamcog,user0);
+			#Sendmessage(Portcog,user1);
+
+	}    
+return;
+
+# =========================================================================    
+D2user1:
+
+    if (D2position == 1)
+    {
+               
+               
+            Rotate(D2waterobj2, 90, 2, 0.01);		   #exp angle
+            Sleep(.01);
+			ClearThingFlags(D2waterobj2, 0x10);
+            Rotate(D2waterobj2, -90, 2, 3.5);
+			
+            ClearThingFlags(D2waterobj1, 0x10);
+         
+#clear path1 sectors of h2O
+            sect_light = VectorSet(0.0, 0.0, 0.0);
+		
+		for (index = 0; index < 3; index = index + 1)
+			{
+			###print("D2user1 path1 sectors cleared");
+            clearsectorflags(D2path1_sect_0[index], 0x2);
+            ClearSectorSurfFlags(D2path1_sect_0[index], 0x20000);
+		    setsectorlight(D2path1_sect_0[index], sect_light, 3);
+            }
+
+#no draw opposing sector faces
+        for (index = 0; index < 6; index = index + 1)
+			{
+            setfacegeomode(D2path1_surf_0[index], 0);
+            }
+            
+			Rotate(D2waterobj1, -90, 0, 2.5);
+            waitforstop(D2waterobj2);
+                
+# set path2 sectors to h2O & set sector light
+            sect_light = VectorSet(0.0, 0.5, 1.0);
+
+		for (index = 0; index < 4; index = index + 1)
+			{
+            setsectorflags(D2path2_sect_0[index], 0x2);
+		    setsectorlight(D2path2_sect_0[index], sect_light, 3);
+            SetSectorSurfFlags(D2path2_sect_0[index], 0x20000);
+            }
+
+#set faces to draw & set faces to full light
+		for (index = 0; index < 8; index = index + 1)
+			{
+            setfacegeomode(D2path2_surf_0[index], 4);
+		    setfacelightmode(D2path2_surf_0[index], 0);
+            }
+                
+			# reset D1waterobj1
+			SetThingFlags(D2waterobj1, 0x10);
+            CopyOrientAndPos(D2H2Ohome1, D2waterobj1); 
+            # reset D1waterobj2
+            SetThingFlags(D2waterobj2, 0x10);
+            CopyOrientAndPos(D2H2Ohome2, D2waterobj2);
+
+
+            SetPulse(0);
+			Sleep(1.0);
+                
+#send message to next cogs
+            sendmessage(Sluicecog2, user2);
+			sendmessage(Sluicecog1, user0);
+            Sleep(.1);
+            sendmessage(Powerdoorcog, user0);
+        }
+	
+	else
+	
+        {
+                
+                
+            # fill sluice 1
+			Rotate(D2waterobj1, -90, 0, 0.01);		 #exp angle
+            Sleep(.01);
+			ClearThingFlags(D2waterobj1, 0x10);
+            Rotate(D2waterobj1, 90, 0, 3.5);
+            
+            # empty sluice 2
+			ClearThingFlags(D2waterobj2, 0x10);
+                
+                
+#clear path2 sectors of h2O clear path2 sector lights
+            sect_light = VectorSet(0.0, 0.0, 0.0);
+
+		for (index = 0; index < 4; index = index + 1)
+			{
+            clearsectorflags(D2path2_sect_0[index], 0x2);
+            ClearSectorSurfFlags(D2path2_sect_0[index], 0x20000);
+		    setsectorlight(D2path2_sect_0[index], sect_light, 3);
+            }
+
+#no draw opposing sector faces
+        
+		for (index = 0; index < 8; index = index + 1)
+			{
+            setfacegeomode(D2path2_surf_0[index], 0);
+            }
+            
+			Rotate(D2waterobj2, 90, 2, 3.0);
+            waitforstop(D2waterobj1);
+                
+# set path1 sectors to h2O & set sector light
+            sect_light = VectorSet(0.0, 0.5, 1.0);
+		
+		for (index = 0; index < 3; index = index + 1)
+			{
+			###print("D2user1 path1 sectors lit");
+		    setsectorflags(D2path1_sect_0[index], 0x2);
+		    setsectorlight(D2path1_sect_0[index], sect_light, 3);
+            }
+
+#set faces to draw & set faces to full light
+
+		for (index = 0; index < 6; index = index + 1)
+			{
+            setfacegeomode(D2path1_surf_0[index], 4);
+            setfacelightmode(D2path1_surf_0[index], 0);
+            }
+                
+			# reset D1waterobj1
+			SetThingFlags(D2waterobj1, 0x10);
+            CopyOrientAndPos(D2H2Ohome1, D2waterobj1); 
+            # reset D1waterobj2
+            SetThingFlags(D2waterobj2, 0x10);
+            CopyOrientAndPos(D2H2Ohome2, D2waterobj2); 
+            
+			# stop screenshake
+			SetPulse(0);
+			Sleep(1.0);
+                
+#send message to next cogs
+			sendmessage(Sluicecog2, user1);
+			sendmessage(Sluicecog1, user0);
+            Sleep(.1);
+            sendmessage(Powerdoorcog, user0);
+                
+        
+    }
+return;
+
+# =========================================================================
+D3user1:    
+    
+	if (D3position == 0)
+    {
+        
+        Rotate(D3waterobj1, -90, 0, 0.01);	   
+        Sleep(.01);
+		ClearThingFlags(D3waterobj1, 0x10);
+        Rotate(D3waterobj1, 90, 0, 3);        
+        
+		ClearThingFlags(D3waterobj2, 0x10);
+		
+        #clear opposing sectors of h2O clear opposing sector lights
+                sect_light = VectorSet(0.0, 0.0, 0.0);
+
+		for (index = 0; index < 2; index = index + 1)
+				{
+		        ###print("D3user1 path2 sectors clearing");
+				clearsectorflags(D3path2_sect_0[index], 0x2);
+                ClearSectorSurfFlags(D3path2_sect_0[index], 0x20000);
+		        setsectorlight(D3path2_sect_0[index], sect_light, 3);
+                }
+
+#no draw opposing sector faces
+        
+		for (index = 0; index < 3; index = index + 1)
+				{
+				###print("D3user1 path2 geomodes clearing");
+		        setfacegeomode(D3path2_surf_0[index], 0);
+                }        
+	
+				Rotate(D3waterobj2, 90, 2, 3);
+				waitforstop(D3waterobj1);
+		
+                
+# set sectors to h2O & set sector light
+                sect_light = VectorSet(0.0, 0.5, 1.0);
+		
+		for (index = 0; index < 4; index = index + 1)
+				{
+				###print("D3user1 path1 sectors lit");
+		        setsectorflags(D3path1_sect_0[index], 0x2);
+		        setsectorlight(D3path1_sect_0[index], sect_light, 3);
+                }
+
+#set faces to draw & set faces to full light
+
+		for (index = 0; index < 8; index = index + 1)
+				{
+				###print("D3user1 path1 geomodes drawn/lit");
+		        setfacegeomode(D3path1_surf_0[index], 4);
+                setfacelightmode(D3path1_surf_0[index], 0);
+                }
+                
+                SetThingFlags(D3waterobj1, 0x10);
+                CopyOrientAndPos(D3H2Ohome1, D3waterobj1); 
+				
+
+				SetThingFlags(D3waterobj2, 0x10);
+                CopyOrientAndPos(D3H2Ohome2, D3waterobj2); 
+				
+
+                SetPulse(0);
+				Sleep(.5);
+
+#send message to next cogs
+				
+				
+                sendmessage(Sluicecog1, user2);
+                sendmessage(Sluicecog2, user0);
+                Sleep(0.5);
+                sendmessage(Powerdoorcog, user0);
+                
+return;
+	}
+	
+	else
+	{
+
+        Rotate(D3waterobj2, 90, 2, 0.01);      
+        Sleep(.01);
+		ClearThingFlags(D3waterobj2, 0x10);
+        Rotate(D3waterobj2, -90, 2, 3);        
+        
+		ClearThingFlags(D3waterobj1, 0x10);
+        
+		#clear opposing sectors of h2O
+                sect_light = VectorSet(0.0, 0.0, 0.0);
+		
+		for (index = 0; index < 4; index = index + 1)
+				{
+				###print("D3user1 path1 sectors clearing");
+		        clearsectorflags(D3path1_sect_0[index], 0x2);
+                ClearSectorSurfFlags(D3path1_sect_0[index], 0x20000);
+		        setsectorlight(D3path1_sect_0[index], sect_light, 3);
+                }
+
+        #no draw opposing sector faces
+        
+		for (index = 0; index < 8; index = index + 1)
+				{
+				###print("D3user1 path1 geomodes clearing");
+		        setfacegeomode(D3path1_surf_0[index], 0);
+                }        
+
+                Rotate(D3waterobj1, -90, 0, 3);
+                waitforstop(D3waterobj2);
+				
+
+# set path2 sectors to h2O & set sector light
+                sect_light = VectorSet(0.0, 0.5, 1.0);
+
+		for (index = 0; index < 2; index = index + 1)
+				{
+				###print("D3user1 path2 sectors lit");
+		        setsectorflags(D3path2_sect_0[index], 0x2);
+		        setsectorlight(D3path2_sect_0[index], sect_light, 3);
+                }
+
+#set path2 faces to draw & set faces to full light
+		for (index = 0; index < 3; index = index + 1)
+				{
+				###print("D3user1 path1 geomodes drawn/lit");
+		        setfacegeomode(D3path2_surf_0[index], 4);
+		        setfacelightmode(D3path2_surf_0[index], 0);
+                }
+
+                SetThingFlags(D3waterobj1, 0x10);
+                CopyOrientAndPos(D3H2Ohome1, D3waterobj1); 
+				
+                SetThingFlags(D3waterobj2, 0x10);
+                CopyOrientAndPos(D3H2Ohome2, D3waterobj2); 
+				
+
+                SetPulse(0);
+				Sleep(1.5);
+                
+#send message to next cogs
+                sendmessage(Sluicecog1, user1);
+                sendmessage(Sluicecog2, user0);
+                sleep(.1);
+                sendmessage(Powerdoorcog, user0);
+                
+    }
+    return;
+
+# =========================================================================
+
+backtocamscript:
+
+           ClearThingFlags(player, 0x80000);
+           
+           action=0;
+           EndCutscene();
+return;
+
+#=======================================================================
+D1gate:
+
+        
+		SetPulse(0.1);
+		PlaySoundLocal(gatestart, 1, 0, 0x0, 0);
+		Sleep(.25);
+		gatetrack = PlaySoundThing(gaterun, D1sluice0, 1.0, 0, 20, 0);
+
+		If (thaw == 1)
+			{
+				rushtrack = PlaySoundLocal(waterrush, 1, 1, 0x1, 0);
+			}
+		If (D1position == 0)
+			{
+				If (D1sluicemove1 != -1)
+					{
+					StopKey(D1sluice0, D1sluicemove1, 0);
+					D1sluicemove1 = -1;
+					}
+				D1sluicemove = PlayKey(D1sluice0, sluice_open, 2, 0x04, 0);
+            
+            }
+
+        If (D1position ==1)
+                {
+                If (D1sluicemove != -1)
+					{
+					StopKey(D1sluice0, D1sluicemove, 0);
+					D1sluicemove = -1;
+					}
+				D1sluicemove1 = PlayKey(D1sluice0, sluice_close, 4, 0x04, 0);
+            
+				}
+		
+                
+return;
+
+#=======================================================================
+D2gate:
+
+        SetPulse(0.1);
+		PlaySoundLocal(gatestart, 1, 0, 0x0, 0);
+		Sleep(.25);
+		gatetrack = PlaySoundThing(gaterun, D1sluice0, 1.0, 0, 20, 0); 
+
+        If (D2thaw == 1)
+			{
+				rushtrack = PlaySoundLocal(waterrush, 1, 1, 0x1, 0);
+			}
+		If (D2position == 0)
+                {
+                If (D2sluicemove1 != -1)
+                        {
+                        StopKey(D2sluice0, D2sluicemove1, 0);
+                        D2sluicemove1 = -1;
+                        }
+                D2sluicemove = PlayKey(D2sluice0, sluice2_open, 2, 0x04, 0);
+                return;
+                }
+
+        If (D2position ==1)
+                {
+                If (D2sluicemove != -1)
+                        {
+                        StopKey(D2sluice0, D2sluicemove, 0);
+                        D2sluicemove = -1;
+                        }
+				D2sluicemove1 = PlayKey(D2sluice0, sluice2_close, 4, 0x04, 0);
+                return;
+                }
+                
+return;
+
+#=======================================================================
+D3gate:
+
+SetPulse(0.1);
+PlaySoundLocal(gatestart, 1, 0, 0x0, 0);
+Sleep(.25);
+gatetrack = PlaySoundThing(gaterun, D3sluice0, 1.0, 0, 20, 0); 
+
+If (D3thaw == 1)
+    {
+   	rushtrack = PlaySoundLocal(waterrush, 1, 1, 0x1, 0);
+    }
+
+If (D3position == 0)
+	{
+	If (D3sluicemove1 != -1)
+        {
+        StopKey(D3sluice0, D3sluicemove1, 0);
+        D3sluicemove1 = -1;
+        }
+		D3sluicemove = PlayKey(D3sluice0, sluice_open, 2, 0x04, 0);
+	return;
+	}
+
+If (D3position == 1)
+	{
+	If (D3sluicemove != -1)
+        {
+        StopKey(D3sluice0, D3sluicemove, 0);
+        D3sluicemove = -1;
+        }
+		D3sluicemove1 = PlayKey(D3sluice0, sluice_close, 4, 0x04, 0);
+	return;
+	}
+                
+return;
+
+
+#=======================================================================
+D2turbolevels:
+	
+	###print("D2turbolevels starting...");
+if (D2position == 1)
+    {
+     
+#send message to next cogs
+                ###print("water to sluice3 , clearing sluice4");
+                sendmessage(Sluicecog2, user2);
+                sendmessage(Sluicecog1, user0);
+                Sleep(.1);
+                sendmessage(Powerdoorcog, user0);
+         
+#clear path1 sectors of h2O
+                sect_light = VectorSet(0.0, 0.0, 0.0);
+		
+		for (index = 0; index < 3; index = index + 1)
+				{
+				###print("D2turbolvls path1 sectors clearing");
+		        clearsectorflags(D2path1_sect_0[index], 0x2);
+                ClearSectorSurfFlags(D2path1_sect_0[index], 0x20000);
+		        setsectorlight(D2path1_sect_0[index], sect_light, 3);
+                }
+
+#no draw opposing sector faces
+        for (index = 0; index < 6; index = index + 1)
+				{
+				###print("D2turbolvls path1 geomodes clearing");
+				setfacegeomode(D2path1_surf_0[index], 0);
+				}
+                
+                
+# set path2 sectors to h2O & set sector light
+                sect_light = VectorSet(0.0, 0.5, 1.0);
+
+		for (index = 0; index < 4; index = index + 1)
+				{
+				###print("D2turbolvls path2 sectors lit");
+				setsectorflags(D2path2_sect_0[index], 0x2);
+				setsectorlight(D2path2_sect_0[index], sect_light, 3);
+				}
+
+#set faces to draw & set faces to full light
+		for (index = 0; index < 8; index = index + 1)
+				{
+				###print("D2turbolvls path2 geomodes drawn/lit");
+				setfacegeomode(D2path2_surf_0[index], 4);
+				setfacelightmode(D2path2_surf_0[index], 0);
+				}
+        }
+	
+	else
+	
+        {
+#send message to next cogs
+                ###print("water to sluice4 , clearing sluice3");
+                sendmessage(Sluicecog2, user1);
+                sendmessage(Sluicecog1, user0);
+                Sleep(.1);
+                sendmessage(Powerdoorcog, user0);
+                
+#clear path2 sectors of h2O clear path2 sector lights
+                sect_light = VectorSet(0.0, 0.0, 0.0);
+
+		for (index = 0; index < 4; index = index + 1)
+				{
+				###print("D2turbolvls path2 sectors cleared");
+		        clearsectorflags(D2path2_sect_0[index], 0x2);
+                ClearSectorSurfFlags(D2path2_sect_0[index], 0x20000);
+		        setsectorlight(D2path2_sect_0[index], sect_light, 3);
+                }
+
+#no draw path2  faces
+        
+		for (index = 0; index < 8; index = index + 1)
+				{
+				###print("D2turbolvls path2 gemodes cleared");
+		        setfacegeomode(D2path2_surf_0[index], 0);
+                }
+                
+# set path1 sectors to h2O & set sector light
+                sect_light = VectorSet(0.0, 0.5, 1.0);
+		
+		for (index = 0; index < 3; index = index + 1)
+				{
+				###print("D2turbolvls path1 sectors lit");
+		        setsectorflags(D2path1_sect_0[index], 0x2);
+		        setsectorlight(D2path1_sect_0[index], sect_light, 3);
+                }
+
+#set path1 faces to draw & set faces to full light
+
+		for (index = 0; index < 6; index = index + 1)
+				{
+				###print("D2turbolvls path1 gemodes drawn/lit");
+		        setfacegeomode(D2path1_surf_0[index], 4);
+                setfacelightmode(D2path1_surf_0[index], 0);
+                }
+    }
+return;
+
+#=======================================================================
+D3turbolevels:
+	###print("D3turbolevels starting...");
+if (D3position == 1)
+    {
+     
+#send message to next cogs
+                ###print("water to sluice1 , clearing sluice2");
+                sendmessage(Sluicecog1, user1);
+                sendmessage(Sluicecog2, user0);
+                Sleep(.1);
+                sendmessage(Powerdoorcog, user0);
+         
+#clear path1 sectors of h2O
+                sect_light = VectorSet(0.0, 0.0, 0.0);
+		
+		for (index = 0; index < 4; index = index + 1)
+				{
+				###print("D3turbolvls path1 sectors cleared");
+		        clearsectorflags(D3path1_sect_0[index], 0x2);
+                ClearSectorSurfFlags(D3path1_sect_0[index], 0x20000);
+		        setsectorlight(D3path1_sect_0[index], sect_light, 3);
+                }
+
+#no draw opposing sector faces
+        for (index = 0; index < 8; index = index + 1)
+				{
+				###print("D3turbolvls path1 geomodes cleared");
+		        setfacegeomode(D3path1_surf_0[index], 0);
+                }
+                
+                
+# set path2 sectors to h2O & set sector light
+                sect_light = VectorSet(0.0, 0.5, 1.0);
+
+		for (index = 0; index < 2; index = index + 1)
+				{
+				###print("D3turbolvls path2 sectors lit");
+		        setsectorflags(D3path2_sect_0[index], 0x2);
+		        setsectorlight(D3path2_sect_0[index], sect_light, 3);
+                }
+
+        #set faces to draw & set faces to full light
+		for (index = 0; index < 3; index = index + 1)
+				{
+				###print("D3turbolvls path2 geomodes drawn/lit");
+		        setfacegeomode(D3path2_surf_0[index], 4);
+		        setfacelightmode(D3path2_surf_0[index], 0);
+                }
+        }
+	
+	else
+	
+        {
+#send message to next cogs
+	###print("water to sluice2 , clearing sluice1");
+	sendmessage(Sluicecog1, user2);
+	sendmessage(Sluicecog2, user0);
+	Sleep(.5);
+	sendmessage(Powerdoorcog, user0);
+                
+#clear path2 sectors of h2O clear path2 sector lights
+                sect_light = VectorSet(0.0, 0.0, 0.0);
+
+		for (index = 0; index < 2; index = index + 1)
+				{
+				###print("D3turbolvls path2 sectors cleared");
+		        clearsectorflags(D3path2_sect_0[index], 0x2);
+                ClearSectorSurfFlags(D3path2_sect_0[index], 0x20000);
+		        setsectorlight(D3path2_sect_0[index], sect_light, 3);
+                }
+
+#no draw opposing sector faces
+        
+		for (index = 0; index < 3; index = index + 1)
+				{
+				###print("D3turbolvls path2 geomodes cleared");
+				setfacegeomode(D3path2_surf_0[index], 0);
+				}
+                
+ # set path1 sectors to h2O & set sector light
+                sect_light = VectorSet(0.0, 0.5, 1.0);
+		
+		for (index = 0; index < 4; index = index + 1)
+				{
+				###print("D3turbolvls path1 sectors cleared");
+				setsectorflags(D3path1_sect_0[index], 0x2);
+				setsectorlight(D3path1_sect_0[index], sect_light, 3);
+				}
+
+#set faces to draw & set faces to full light
+
+		for (index = 0; index < 8; index = index + 1)
+				{
+				###print("D3turbolvls path1 geomodes drawn/lit");
+				setfacegeomode(D3path1_surf_0[index], 4);
+				setfacelightmode(D3path1_surf_0[index], 0);
+				}
+		}
+return;
+
+
+#=======================================================================
+pulse:
+
+    SetPOVShake('0.0 0.0 0.01', '0.0 0.0 0.0', 0.80, 80.0);
+	If (D1fx == 1)
+		{
+        splashitem = CreateThing(splash, D1splashpos);
+		}
+	
+	If (D2fx == 1)
+		{
+        splashitem = CreateThing(splash, D2splashpos);
+		}
+
+    If (D3fx == 1)
+		{
+        splashitem = CreateThing(splash, D3splashpos);
+        }
+	
+	
+return;
+
+#=======================================================================
+
+
+end
+
+

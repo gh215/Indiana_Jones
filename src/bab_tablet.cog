@@ -1,0 +1,968 @@
+# Jones 3D Cog Script
+#
+# BAB_Tablet.cog
+#
+# [SXC & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ==============================================================================
+
+symbols
+
+# MESSAGES *********************************************************************
+
+message		startup
+message		activate
+message		crossed
+message     blocked
+
+# KEYFRAMES ********************************************************************
+
+keyframe	in_armsCrossed=0in_stand2.key			local
+keyframe	in_crossArms=0in_stand1_bd_2.key		local
+keyframe    in_stand4=0in_stand4.key				local
+keyframe    in_SideToHips=0in_stand1_bd_4.key		local
+keyframe    in_nod=0in_nod_4_4.key					local
+keyframe    in_HipsToSide=0in_stand4_bd_1.key		local
+keyframe	in_act_med=in_activate_medium.key		local
+keyframe    in_act_high=in_reach_high.key			local
+keyframe    in_figithat=0in_figithat_4_4.key		local
+keyframe    in_scratch=0in_scrtch_1_1.key			local
+keyframe    in_reading=0in_readtablet_4_4.key		local
+keyframe	in_ltarmup=0in_leftarm_1_1.key			local
+keyframe    in_rtarmup=0in_armsout_1_1.key			local
+keyframe    in_bothup=0in_armsup_1_1.key			local
+keyframe	in_lookup=0in_stand8.key				local
+keyframe	in_lookdn=0in_stand5.key				local
+
+keyframe    elev_key=bab_elgears.key				local
+
+# SOUNDS ***********************************************************************
+
+# no budge lines...
+sound		in_cantopen=Inxj096.wav				local # can't open it
+sound		in_wontopen=Inxj097.wav				local # some reason door won't open
+sound		in_wontbudge=Inxj098.wav			local # won't budge
+sound		in_whynotopen=Inxj100.wav			local # looks like door...why not open
+sound		in_dontknowhow=Inxj101.wav			local # must be way, don't know how
+
+# curious lines...
+sound		in_interesting=Inxj001a.wav			local # looks interesting
+sound		in_whathere=Inxj005.wav				local # what have we here
+sound		in_somethinghere=Inxj141.wav		local # something here
+sound		in_lookwell=Inxj232.wav				local # well well, look this
+sound		in_important=Inxj233.wav			local # might be important
+sound		in_contraption=Inxj118.wav			local # contraption...how work
+
+# gadget lines...
+sound		in_machinery=Inxj115.wav			local # worth phd
+sound		in_shafts=Inxj116.wav				local # gears...amazing
+sound		in_gadget=Inxj117.wav				local # gadget...how work
+
+# wrong item lines...
+sound		in_wontwork=Inxj058.wav				local # that won't work
+sound		in_whoops=Inxj087.wav				local # Whoops
+sound		in_nope=Inxj088.wav					local # Nope
+sound		in_notright=Inxj060.wav				local # I don't think...right answer
+sound		in_badidea=Inxj061.wav				local # not sure good idea
+
+sound       in_giftpurpose=bb06j02.wav			local # sophia's gift has purpose
+
+sound       in_line_otis=bb05j01.wav			local # Otis not invent elevator
+
+sound       tripsound
+sound       placeItSound
+
+sound       in_line_j01=bb09j01.wav						    local
+sound       in_line_j02=bb09j02.wav						    local
+sound       in_line_j03=bb09j03.wav						    local # 3.8s
+sound       in_line_j04=bb09j04.wav						    local
+sound       in_line_j05=bb09j05.wav						    local
+sound       in_line_j06=bb09j06.wav							local
+sound       in_line_j07=bb09j07.wav							local
+sound       in_traveladvice=bb09j08.wav						local
+sound		in_getgoing=Bb09j09.wav							local
+
+sound       elev_gears_stop=nub_elev_stopecho_c.wav         local
+sound       elev_gears_moving=nub_weight_move_c.wav         local
+sound       sophia_gear_place=nub_anubisarm_place_c.wav     local
+sound       rounddoor_spin=bab_door_metal_slide_c.wav       local
+sound       rounddoor_stop=bab_door_metal_stop.wav          local
+
+sound		elev_moving=teo_spike_block_c.wav				local
+sound		elev_stop=gen_stone_stop_c.wav					local
+
+sound       doorhappy=mus_bab_tablettrans.wav               local
+sound       platformwav0=mus_gen_awesome1.wav               local
+sound       platformwav1=mus_gen_awesome2.wav               local
+
+sound	    in_nowork0=Inxj089.wav				            local # That didn't work-->in_sayline[11]
+sound	    in_nowork1=Inxj090.wav		                    local # ...something wrong.
+sound	    in_nowork2=Inxj092.wav			                local # Hmm...didn't quite work.
+sound	    in_nowork3=Inxj060.wav				            local # I don't think...right answer
+sound	    in_nowork4=Inxj095.wav				            local # Whoops.
+sound	    in_nowork5=Inxj094.wav					        local # Nope.
+sound	    in_nowork6=Inxj091.wav			                local # Of course that didn't work.
+
+# THINGS ***********************************************************************
+
+thing       player                          local
+thing       actorindy
+thing       actorindy2
+thing		tabindy							local # create on fly
+thing		elevindy							  # used on elevator
+
+thing       platform
+thing       lowerButton
+thing       upperButton
+thing       tabletAPos
+thing       tabletBPos
+thing       tabletCPos
+thing       roundmapdoor
+thing       hiddendoor
+thing       block
+
+# Cameras **********************
+
+thing       tablet_cam0						nolink
+thing       tablet_cam1						nolink
+thing       tablet_cam2						nolink
+thing       elev_cam0						nolink
+thing		door_cam0						nolink
+thing		cam1spot						nolink
+thing		cam1look						nolink
+thing		tabcam							local # create on fly
+
+# Targets **********************
+
+thing       platform_tgt0					nolink # linked to platform_tgt0
+thing       tab_tgt0						nolink
+thing       tab_tgt1						nolink
+thing       tab_tgt2						nolink # also linked to platform_tgt0 (?!)
+thing       tab_tgt3						nolink
+thing       gear_targ0						nolink
+thing		gear_targ1						nolink
+
+thing		tab_mk_1						nolink # used on elevator
+thing		tab_mk_2						nolink # used on elevator
+
+thing		tab_door_mk						nolink
+
+# Misc Things ******************
+
+thing       gear_assembly
+thing       elev_gears
+
+# WORLD & ENGINE REFS **********************************************************
+
+template    babTabletA
+template    babTabletB
+template    babTabletC
+template    elevpart=elgears				local
+template    pushblock=2x2babcrate			local
+template    tpl_Indy=indy_sh_actor			local
+template	tpl_ghost=ghost					local
+
+cog			hintcog
+
+sector		camsector						local # var
+
+surface     blocksurf						mask=0x080
+surface     blockon_surf					mask=0x080
+surface     blockoff_surf					mask=0x080
+surface     tabletsocket
+
+# VARS *************************************************************************
+
+vector		v_aimcam						local
+vector		v_campos						local
+vector		v_lookpos						local
+
+flex		setcamstuff						local # label
+flex		camfinish						local # label
+flex		tabtalkfinish					local # label
+flex		budgelines						local # label
+flex		curiouslines					local # label
+flex		gadgetlines						local # label
+flex		wrongitemlines					local # label
+flex		viewangle						local
+
+int         pulledcheck=0                   local
+int         tabletflag=0                    local
+int			gearflag=0						local
+int         turnrkeyindex=55                local
+int         tabcheck=0                      local
+int         allparts=0                      local
+int         elev_track                      local
+int         gear_track                      local
+int         in_track0                       local
+int         in_track1                       local
+int			in_track2						local
+int         curblock                        local
+int         door_chan                       local
+int         blockchek=0                     local
+int         door_stop                       local
+int			cursound						local
+int         blockon=1                       local
+int         doormusic                       local
+int			tabindyexists=0					local
+int			tabcamexists=0					local
+int			active=0						local
+int			sender							local
+int			source							local
+int			curitem							local
+int			b_oldline=50					local
+int			b_newline=50					local
+int			c_oldline=50					local
+int			c_newline=50					local
+int			g_oldline=50					local
+int			g_newline=50					local
+int			w_oldline=50					local
+int			w_newline=50					local
+int			saidbudge=0						local	
+int			saidgadget=0					local	
+int			saidgear=0						local
+int			saidtablet=0					local
+int			wronggear=0						local
+int			wrongtablet=0					local
+int         lastrand=-1                     local
+int         currand=0                       local
+
+end
+
+# ..............................................................................
+
+code
+
+startup:
+
+    SetThingFlags(actorindy, 0x80000);
+    SetThingFlags(actorindy2, 0x80000);
+	SetThingFlags(elev_gears, 0x80000);
+    player = GetLocalPlayerThing();
+    MoveToFrame(lowerButton, 1, 1);
+    MoveToFrame(upperButton, 1, 1);
+
+return;
+
+# ..............................................................................
+
+crossed:
+    
+    sender = GetSenderRef();
+	source = GetSourceRef();
+	
+	if ((sender == blockon_surf) && (source == block))
+    {
+        blockon = 1;
+    }
+    
+    if ((sender == blockoff_surf) && (source == block))
+    {
+        blockon = 0;
+    }
+
+    if ((sender == blocksurf) && (pulledcheck == 0) && (source == block))
+    {
+        # Block on elevator causes it to descend...
+		pulledcheck=1;
+        
+		# Wait for block to get pulled all the way onto platform...
+        SetActorFlags(player, 0x200000);
+		Sleep(3);
+
+        # Block is in place...
+		PlaySoundThing(tripsound, platform, 1, 3, 10, 0);
+        	
+		MakeMeStop();
+		StartCutscene(1);
+		TeleportThing(elevindy, player);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(elevindy, 0x80000);
+		CopyPlayerHolsters(player, elevindy);
+        SetExtCamOffset('0.15 -0.12 0.095');
+        AttachThingToThing(block, platform);
+		AttachThingToThingEx(tab_mk_1, platform, 0x0C);
+		AttachThingToThingEx(tab_mk_2, platform, 0x0C);
+        Sleep(1.0);
+        
+		# Lower elevator...
+		MoveToFrame(platform, 1, 2.5); # was 3.0
+
+		# TO DO: play elevator looping sound...
+
+		# Music...?
+        # PlaySoundLocal(platformwav0, 1, 0, 0, 0);
+
+		# Reposition Indy...
+		AISetMoveSpeed(elevindy, 0.8);
+		AIEnableBodyTracking(elevindy, tab_mk_2);
+		AISetMoveThing(elevindy, tab_mk_1, 0);
+		Sleep(0.5);
+		
+		# Indy: "I guess Mr. Otis didn't invent...good digger would have found this..."
+		cursound = PlayVoice(elevindy, in_line_otis, 1.0, 0);
+		Sleep(0.5);
+		in_track0 = PlayKey(elevindy, in_armscrossed, 2, 0x10, 0);
+		PlayKey(elevindy, in_crossarms, 4, 0x12, 0);
+		Sleep(3.0);
+		StopKey(elevindy, in_track0, 0.5);
+		Sleep(1.0);
+		PlayKey(elevindy, in_ltarmup, 4, 0x12, 0);
+     	WaitForSound(cursound);
+	    WaitForStop(platform);
+		PlaySoundLocal(elev_stop, 1, 0, 0x0, 0);
+        AIDisableBodyTracking(elevindy);
+		Sleep(1.0);
+
+		# Clean up & restore control...
+		v_campos =
+		VectorAdd(VectorTransformToOrient(elevindy, '-0.1 -0.25 0.1'), GetThingPos(elevindy));
+		SetCameraPosition(1, v_campos);
+		TeleportThing(player, elevindy);
+		SetThingFlags(elevindy, 0x80000);
+		ClearThingFlags(player, 0x80000);
+
+		EndCutscene();
+		DestroyThing(elevindy);
+		DestroyThing(tab_mk_1);
+		DestroyThing(tab_mk_2);
+        ClearActorFlags(player, 0x200000);
+        RestoreExtCam();
+    }        
+            
+return;
+
+# ..............................................................................
+
+activate:
+
+	if (active != 0)
+	{
+		return;
+	}
+
+	sender = GetSenderRef();
+	curitem = GetCurItem(player);
+
+    active = 1;
+
+    if (sender == roundmapdoor)
+	{
+		Call setcamstuff;
+		if (tabletflag == 0)
+		{
+			Call budgelines;
+		}
+		else
+		{
+			PlayVoice(tabindy, in_getgoing, 1.0, 1);
+		}		
+		Call camfinish;
+	}
+
+	if ((sender == gear_assembly) && (curitem == 0))
+	{	
+		Call setcamstuff;
+		if (gearflag == 0)
+		{
+			Call curiouslines;
+		}
+		else
+		{
+			Call gadgetlines;
+		}
+		Call camfinish;
+	}
+
+	if ((sender == gear_assembly) && (curitem != 0) && (curitem != 82))
+	{
+		SetActorFlags(player, 0x200000);
+		StartCutscene(0);
+		Call wrongitemlines;
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+	}
+	
+	if ((sender == gear_assembly) && (curitem == 82))
+    {
+		gearflag = 1;
+		Call setcamstuff;
+		
+        //Place & lose gear...
+		PlayKey(tabindy, in_act_high, 2, 0x12, 0);
+        Sleep(0.4);
+        SetThingFlags(gear_assembly, 0x10); # inviso
+        ClearThingFlags(elev_gears, 0x80000);
+		SetInv(player, 82, 0);
+        PlaySoundThing(sophia_gear_place, elev_gears, 1, 5, 10, 0);
+        Sleep(0.5);
+
+		//What know...Sophia's little gift has a purpose
+        PlayVoice(tabindy, in_giftpurpose, 1, 0);  # 3.4s
+
+		# Zoom in...
+		SetCameraInterpSpeed(2, 2.5);
+		SetCameraSecondaryFocus(2, gear_targ1);
+		SetCameraFOV(40, 1, 2.5);
+        PlayKey(tabindy, in_SideToHips, 4, 0x12, 1); # 0.9s
+
+        elev_track = PlayKey(elev_gears, elev_key, 4, 0x00, 0);
+        gear_track = PlaySoundThing(elev_gears_moving, elev_gears, 0.7, 1, 5, 1);
+
+        PlayKey(tabindy, in_nod, 4, 0x12, 1); # 1.6s
+        PlayKey(tabindy, in_HipsToSide, 4, 0x12, 1); # 0.9s 
+        Sleep(0.1);
+
+		SetCameraInterpSpeed(2, 2.0);
+        SetCameraSecondaryFocus(2, platform_tgt0);
+        SetCameraFOV(60, 1, 2.0);
+        MoveToFrame(platform, 2, 0.5);
+        WaitForStop(platform);
+        Sleep(1.0);
+        MoveToFrame(lowerButton, 0, 1);
+        MoveToFrame(upperButton, 0, 1);
+
+		Call camfinish;
+
+        DetachThing(block);
+        Sleep(1);
+        StopKey(elev_gears, elev_track, 0);
+        StopSound(gear_track, 0);
+        //PlaySoundThing(elev_gears_stop, elev_gears, 0.5, 5, 10, 0);
+    }
+    
+    //Tablet Check
+	if ((sender == tabletsocket) && (curitem == 0))
+	{
+		Call setcamstuff;
+		if (tabcheck == 0)
+		{
+			Call curiouslines;
+		}		
+		if ((tabcheck != 0) && (tabletflag == 0))
+		{
+			PlayVoice(tabindy, in_line_j01, 1.0, 1);
+		}
+		if ((tabcheck == 3) && (tabletflag != 0))
+		{
+			cursound = PlayVoice(tabindy, in_traveladvice, 1.0, 0);
+			Sleep(4.0);
+			PlayKey(tabindy, in_ltarmup, 4, 0x12, 1);
+			WaitForSound(cursound);
+		}
+		Call camfinish;
+	}
+
+	if ((sender == tabletsocket) && (curitem != 0) && (curitem != 69) && (curitem != 70) && (curitem != 71))
+	{
+		SetActorFlags(player, 0x200000);
+		StartCutscene(0);
+		Call wrongitemlines;
+		EndCutscene();
+		ClearActorFlags(player, 0x200000);
+	}
+
+	//Tablet A
+    if ((sender == tabletsocket) && (curitem == 69))
+    {
+		Call setcamstuff;
+		
+		tabcheck = tabcheck + 1;
+		PlayKey(tabindy, in_act_high, 4, 0x12, 0);
+		Sleep(0.5);
+        ChangeInv(player, 69, -1);
+        SetCollideType(CreateThing(babTabletA, tabletAPos), 0);
+        PlaySoundThing(placeItSound, tabletAPos, 1, 3, 10, 0);
+		if (tabcheck < 3)
+		{
+			Call tabtalkfinish;
+		}
+    }
+    
+    //Tablet B
+    if ((sender == tabletsocket) && (curitem == 70))
+    {
+		Call setcamstuff;
+
+		tabcheck = tabcheck + 1;
+		PlayKey(tabindy, in_act_high, 4, 0x12, 0);
+		Sleep(0.5);
+        ChangeInv(player, 70, -1);
+        SetCollideType(CreateThing(babTabletB, tabletBPos), 0);
+        PlaySoundThing(placeItSound, tabletBPos, 1, 3, 10, 0);
+		if (tabcheck < 3)
+		{
+			Call tabtalkfinish;
+		} 
+    }
+    
+    //Tablet C
+    if ((sender == tabletsocket) && (curitem == 71))
+    {
+		Call setcamstuff;
+
+		tabcheck = tabcheck + 1;
+		PlayKey(tabindy, in_act_high, 4, 0x12, 0);
+		Sleep(0.5);
+        ChangeInv(player, 71, -1);
+        SetCollideType(CreateThing(babTabletC, tabletCPos), 0);
+        PlaySoundThing(placeItSound, tabletAPos, 1, 3, 10, 0);
+		if (tabcheck < 3)
+		{
+			Call tabtalkfinish;
+		}     
+    }
+    
+    //When all tablets are placed continue here
+    if ((tabcheck == 3) && (tabletflag == 0))
+    {
+        tabletflag = 1;
+
+		//Zoom in...
+		Sleep(0.5);
+        SetCameraFOV(80, 1, 1.0);
+
+        in_track0 = PlayKey(tabindy, in_stand4, 2, 0x00, 0);
+        PlayKey(tabindy, in_SideToHips, 4, 0x12, 0);
+
+		//Now it starts to make sense...(3.8s)
+        cursound = PlayVoice(tabindy, in_line_j03, 1, 0);
+
+		//Dolly across...
+		SetCameraInterpSpeed(2, 35.0);
+		Sleep(1.0);
+	    SetCameraFocus(2, tablet_cam1);
+		SetCameraFOV(60, 1, 35.0);
+
+        WaitForSound(cursound);
+		Sleep(0.2);
+        in_track1 = PlayKey(tabindy, in_reading, 4, 0x12, 0);
+		Sleep(0.3);
+
+		//Make welcome...great engine...(10sec)
+        cursound = PlayVoice(tabindy, in_line_j04, 1, 0);
+        Sleep(6.8); # was 6.8
+		StopKey(tabindy, in_track0, 0.5);
+		StopKey(tabindy, in_track1, 0.5);
+		Sleep(1.0);
+		in_track2 = PlayKey(tabindy, in_bothup, 4, 0x12, 0);
+		Sleep(1.5);
+		StopKey(tabindy, in_track2, 0.5);
+
+        in_track0 = PlayKey(tabindy, in_stand4, 2, 0x00, 0);
+        PlayKey(tabindy, in_SideToHips, 4, 0x02, 0);
+	
+        WaitForSound(cursound);   
+        Sleep(0.8);
+
+        PlayKey(tabindy, in_nod, 4, 0x12, 0);
+
+		//Having no understanding...relics...(10sec)
+        cursound = PlayVoice(tabindy, in_line_j05, 1, 0);
+        Sleep(8.0);
+        in_track1 = PlayKey(tabindy, in_figithat, 4, 0x12, 0);
+        WaitForSound(cursound);
+        Sleep(0.8);
+        
+        doormusic = PlaySoundLocal(doorhappy, 0.5, 0, 0, 0);
+
+        //Wouldst tread path...urgon...shambala...mighty secret...(10sec)
+		PlayVoice(tabindy, in_line_j06, 1, 0);
+        StopKey(tabindy, in_track0, 0.5);
+        StopKey(tabindy, in_track1, 0.5);
+        Sleep(4.0);
+        PlayKey(tabindy, in_rtarmup, 4, 0x12, 0);
+        Sleep(5.0);
+        
+        //rotate door
+        Rotate(roundmapdoor, 179, 1, 5);
+        door_chan=PlaySoundThing(rounddoor_spin, roundmapdoor, 1, 3, 10, 0);
+        Sleep(0.5);
+        AISetMoveSpeed(tabindy, 1.0);
+        SetThingMaxRotVel(tabindy, 120);
+        AISetLookThing(tabindy, tab_tgt1);
+        Sleep(0.5);
+
+        SetCameraInterpSpeed(2, 3.5);
+        SetCameraSecondaryFocus(2, tab_tgt1);
+        SetCameraFOV(66, 1, 3.5);
+        WaitForStop(roundmapdoor);
+        door_stop=PlaySoundThing(rounddoor_stop, roundmapdoor, 1.0, 3, 10, 0);
+        
+        //move actor indy into shot
+        AISetMoveThing(tabindy, tab_door_mk, 1);
+        AIWaitForStop(tabindy);
+        AISetLookThing(tabindy, tab_tgt1);
+        
+        //hold for a second
+        Sleep(0.5);
+        
+        //Cut to side shot of Indy...
+        SetCameraPosInterp(2, 0);
+        SetCameraLookInterp(2, 0);
+        SetCameraInterpSpeed(2, 3);
+        Sleep(0.01);
+        SetCameraFocus(2, tablet_cam2);
+        SetCameraSecondaryFocus(2, tab_tgt3);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0); 
+        
+        //Heavenly Mountains...wonder...Tian Shan...
+        PlayKey(tabindy, in_scratch, 4, 0x12, 0);
+        PlayVoice(tabindy, in_line_j07, 1, 1);       //4sec
+        ChangeSoundVol(doormusic, 1, 1);
+
+        //pan to tight shot of door
+        SetCameraLookInterp(2, 1);
+        Sleep(0.01);
+        SetCameraSecondaryFocus(2, tab_tgt2);
+        SetCameraFOV(80, 1, 2.0);
+        
+        //finish shot
+        Sleep(3);
+        SetCollideType(hiddendoor, 0);
+        MoveToFrame(hiddendoor, 1, 1);
+        WaitForStop(hiddendoor);
+        Sleep(1.0);
+        SetCollideType(hiddendoor, 3);
+        
+		Call camfinish;
+			
+        SendMessage(hintcog, user0);
+    }
+    
+    //handles lines for locked buttons
+    if ((sender == lowerButton) &&
+        (GetCurFrame(lowerButton) == 1) && 
+        (tabcheck != 3))
+    {
+        StopThing(player);
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        PlayMode(player, 60, 0);
+        Sleep(0.5);
+        currand = RandBetween(0, 6);
+        While (lastrand == currand)
+        {
+            currand = RandBetween(0, 5);
+        }
+        PlayVoice(player, in_nowork0[currand], 1, 1);
+        lastrand = currand;
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }
+    
+    //Send Indy up...
+    if ((sender == lowerButton) &&
+        (GetCurFrame(lowerButton) == 0) && 
+        (tabcheck == 3) && 
+        (blockon == 0))
+    {
+		MakeMeStop();
+        StartCutscene(1);
+        PlayMode(player, 60, 0);
+        Sleep(0.4);
+		
+		if (tabcamexists != 0)
+		{
+			DestroyThing(tabcam);
+		}
+		tabcamexists = 1;
+		v_campos =
+			VectorAdd(VectorTransformToOrient(platform, '0.15 0.01 0.27'), GetThingPos(platform));	
+		camsector = FindNewSectorFromThing(player, v_campos);
+		tabcam =
+			CreateThingAtPos(tpl_ghost, camsector, v_campos, '0 0 0');
+		CaptureThing(tabcam);
+		AttachThingToThing(tabcam, platform);
+		SetExtCamOffsetToThing(tabcam);
+        Sleep(0.2);
+
+		MoveToFrame(lowerButton, 1, 1);
+        WaitForStop(lowerButton);
+        MoveToFrame(platform, 3, 3.5);
+        PlaySoundLocal(platformwav1, 1, 0, 0, 0);
+		in_track0 = PlayKey(player, in_lookup, 4, 0x00, 0);
+        WaitForStop(platform);
+        MoveToFrame(lowerButton, 0, 1);
+
+		RestoreExtCam();
+    	StopKey(player, in_track0, 0.5);
+		Sleep(0.5);
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }   
+    
+    //send indy down
+    if ((sender == upperButton) && (GetCurFrame(upperButton) == 0) && (tabcheck == 3))
+    {
+		MakeMeStop();
+        StartCutscene(1);
+        PlayMode(player, 60, 0);
+		Sleep(0.4);
+
+		if (tabcamexists != 0)
+		{
+			DestroyThing(tabcam);
+		}
+		tabcamexists = 1;
+		v_campos =
+			VectorAdd(VectorTransformToOrient(platform, '-0.15 0.02 0.1'), GetThingPos(platform));	
+		camsector = FindNewSectorFromThing(player, v_campos);
+		tabcam =
+			CreateThingAtPos(tpl_ghost, camsector, v_campos, '0 0 0');
+		CaptureThing(tabcam);
+		AttachThingToThing(tabcam, platform);
+		SetExtCamOffsetToThing(tabcam);
+        Sleep(0.2);
+
+        MoveToFrame(upperButton, 1, 1);
+        WaitForStop(upperButton);
+        MoveToFrame(platform, 2, 3.5);
+		in_track0 = PlayKey(player, in_lookdn, 4, 0x00, 0);
+        WaitForStop(platform);
+        MoveToFrame(upperButton, 0, 1);
+
+		RestoreExtCam();
+    	StopKey(player, in_track0, 0.5);
+		Sleep(0.5);
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+    }
+
+    active = 0;   
+	return;
+
+# ..............................................................................
+
+setcamstuff:
+
+	MakeMeStop();
+	StartCutscene(1); 
+
+	# camera offset...
+	if (tabindyexists != 0)
+	{
+		DestroyThing(tabindy);
+	}
+	tabindy = CreateThing(tpl_indy, player);
+	CaptureThing(tabindy);
+	CopyPlayerHolsters(player, tabindy);
+	tabindyexists = 1;
+	Sleep(0.01);
+	ClearThingFlags(tabindy, 0x80000);
+	if ((sender == lowerbutton) || (sender == upperbutton))
+	{
+		SetThingFlags(player, 0x10);
+		return;
+	}
+	SetThingFlags(player, 0x80000);
+	viewangle = GetCameraFOV();
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	SetCameraFOV(viewangle, 0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.8);
+	Sleep(0.01);
+	if (sender == gear_assembly)
+	{
+		SetCameraFocus(2, elev_cam0);
+        SetCameraSecondaryFocus(2, gear_targ0);
+		AISetLookThingEyeLevel(tabindy, gear_targ0);
+	}
+	if (sender == tabletsocket)
+	{
+		SetCameraFocus(2, tablet_cam0);
+		SetCameraSecondaryFocus(2, tab_tgt0);	
+		AISetLookThingEyeLevel(tabindy, tabletCPos);
+	}
+	if (sender == roundmapdoor)
+	{
+		SetCameraFocus(2, door_cam0);
+		SetCameraSecondaryFocus(2, tab_tgt3);	
+		AISetLookThingEyeLevel(tabindy, roundmapdoor);
+	}
+	AIWaitForStop(tabindy);
+
+	return;
+
+# ..............................................................................
+
+camfinish:
+
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	TeleportThing(player, tabindy);
+	SetThingFlags(tabindy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	if (sender == gear_assembly)
+	{
+		SetCameraPosition(1, GetThingPos(elev_cam0));
+	}
+	if (sender == tabletsocket)
+	{
+		if ((tabcheck != 3) || (tabletflag == 2))
+		{
+			SetCameraPosition(1, GetThingPos(tablet_cam0));
+		}
+		else
+		{		
+			SetCameraPosition(1, GetThingPos(tablet_cam2));
+			tabletflag = 2;
+		}
+	}
+	if (sender == roundmapdoor)
+	{
+		SetCameraPosition(1, GetThingPos(door_cam0));
+	}
+	Sleep(0.1);
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	Sleep(0.3);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);      
+
+	return;
+
+# ..............................................................................
+
+tabtalkfinish:
+
+    if (tabcheck == 1)
+    {
+        PlayVoice(tabindy, in_line_j01, 1, 1);
+    }
+    if (tabcheck == 2)
+    {
+        PlayVoice(tabindy, in_line_j02, 1, 1);
+    }
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	TeleportThing(player, tabindy);
+	SetThingFlags(tabindy, 0x80000);
+	ClearThingFlags(player, 0x80000);
+	SetCameraPosition(1, GetThingPos(tablet_cam0));
+	Sleep(0.1);
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+	Sleep(0.3);
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+# ..............................................................................
+
+budgelines:
+
+	while (b_newline == b_oldline)
+	{		
+		b_newline = RandBetween(0, 4);
+	}
+	if (saidbudge == 0)
+	{
+		b_newline = 3;
+		saidbudge = 1;
+	}
+	b_oldline = b_newline;	
+
+	cursound = PlayVoice(tabindy, in_cantopen[b_newline], 1.0, 0);
+	if ((b_newline == 3) || (b_newline == 4))
+	{
+		Sleep(0.5);
+		PlayKey(tabindy, in_ltarmup, 4, 0x12, 0);
+	}
+	WaitForSound(cursound);
+
+	return;
+
+# ..............................................................................
+
+curiouslines:
+
+	while (c_newline == c_oldline)
+	{		
+		c_newline = RandBetween(0, 4);
+	}
+	if ((sender == gear_assembly) && (saidgear == 0))
+	{
+		c_newline = 5;
+		saidgear = 1;
+	}
+	if ((sender == tabletsocket) && (saidtablet == 0))
+	{
+		c_newline = 4;
+		saidtablet = 1;
+	}
+	c_oldline = c_newline;
+
+	PlayVoice(tabindy, in_interesting[c_newline], 1.0, 1);
+
+	return;
+
+# ..............................................................................
+
+gadgetlines:
+
+	while (g_newline == g_oldline)
+	{		
+		g_newline = RandBetween(0, 2);
+	}
+	if (saidgadget == 0)
+	{
+		g_newline = 0;
+		saidgadget = 1;
+	}
+	g_oldline = g_newline;	
+
+	PlayVoice(tabindy, in_machinery[g_newline], 1.0, 1);
+
+	return;
+
+# ..............................................................................
+
+wrongitemlines:
+
+	while (w_newline == w_oldline)
+	{		
+		w_newline = RandBetween(0, 4);
+	}
+	if ((sender == gear_assembly) && (wronggear == 0))
+	{
+		w_newline = 3;
+		wronggear = 1;
+	}
+	if ((sender == tabletsocket) && (wrongtablet == 0))
+	{
+		w_newline = 4;
+		wrongtablet = 1;
+	}
+	w_oldline = w_newline;
+
+	Sleep(0.3);
+	cursound = PlayVoice(player, in_wontwork[w_newline], 1.0, 0);
+	PlayKey(player, in_ltarmup, 4, 0x12, 0);
+	WaitForSound(cursound);
+
+	return;
+
+# ..............................................................................
+
+blocked:
+
+    if ((GetSenderRef() == platform) && (GetCurFrame(platform) == 2) && (GetSourceRef() == block) && (blockchek == 0))
+    {
+        MoveToFrame(platform, 1, 2);
+    }
+    return;
+
+end
+
+
+

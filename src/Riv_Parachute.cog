@@ -1,0 +1,261 @@
+# Jones 3D Cog Script
+#
+# Riv_Parachute.cog
+#
+# This is the opening cutscene wherein Indy parachutes into the level.
+#
+# [PAZ] && [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#========================================================================================
+
+symbols
+
+	message		startup
+	message		user0
+	
+	thing		player							local #duh...
+	thing		chuteindy						#actor w/ chute
+	thing		chutetarget						#target for chuteindy
+	thing		chutetarg2						#where indy steps to while the chute drops
+	thing		chutetarg3						#where chuteindy lines up after keyframes are done
+	thing		cam1							#1st cutscene cam
+	thing		camtarget1						#target for cam1's focus
+	thing		cam2							#2nd cs camera
+	thing		camtarget2						#2nd cam focus
+	thing		cam3							#3rd cam
+	thing		camtarget3  					#3rd cam focus
+ 	thing		rock    						#ghost thing where the rockw/chute will be created
+    thing       chute
+	thing		chutelooktarg					#thing the chute actor looks at
+	thing		camspot							#place the cam interps to
+	thing		plane							#da plane! da plane!
+    thing       fadePlate
+    thing       fadePlate2
+	
+	template	tpl_Chute=rockchute				local
+    template    tpl_Rock=chute4rock             local
+	
+	keyframe	flail=0in_chute.key				local	#indy's animations while he drops
+	keyframe	land=0in_chute_land.key			local	#landing animation
+	keyframe	remove=0in_chute_remove.key		local	#removing the harness
+	
+	sound       snd_Plane=riv_intro_plane_c.wav local
+	sound		crunch=fol_in_landsnow.wav		local	#landing noise
+	sound		rstep=fol_in_rrunsnow.wav		local	#r step
+	sound		oomf=inxj016g.wav				local	#Indy says "oomf"
+	sound		tunes=mus_riv_intro.wav			local	#intro tunes
+	sound		whoosh=riv_parachute_whoosh.wav	local	#parachute whooshes past camera
+	sound		ruffle=riv_parachute_ruffle.wav	local	#parachute ruffles on ground
+	sound		undo=riv_parachute_unfasten.wav	local	#unfastens parachute
+    sound       sfx_FootFall=fol_in_landsnow.wav    local   # landing in snow
+    
+    # ** subroutines **
+    flex        landing     local
+    flex        ending      local
+	
+	int			start=0			local					#int to see if the cutscene has played
+	int			tracknumber		local					#return of the current keyframe track #
+#    int         dontPlay=1      local
+
+	int			bSeen=0			local
+	
+end
+
+#========================================================================================
+	
+code
+
+startup:
+
+	SetMasterCog(GetSelfCog()); # RT: Set master cog so we get autosave/restore message
+
+	Sleep(0.001); # Let engine get set up
+
+	# switch to cam1
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+    SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, camtarget1);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0);
+
+	return;
+
+# ..............................................................................
+
+user0: # RT: Indicates that autosave/restore has completed...
+
+	if (bSeen) return; # RT
+	bSeen = 1;
+
+    # switch to cam1
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+    SetCameraFocus(2, cam1);
+	SetCameraSecondaryFocus(2, camtarget1);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0);
+
+	player = GetLocalPlayerThing();
+
+	#turn on fog
+    SetFog(1, '0.5 0.5 0.6', 10, 350);
+    
+    #if(dontPlay == 1) return;
+    
+    # disable controls
+    StartCutscene(2);	
+	SetActorFlags(player, 0x200000);
+    
+    # pre-load some junk
+    ClearThingFlags(chuteindy, 0x80000);
+    PlaySoundLocal(tunes, 0.0, 0.0, 0x0, 0);
+    Sleep(0.01);
+    SetThingFlags(chuteindy, 0x80000);
+    
+    #turn off fog to see plane
+	SetFog(0, '0.5 0.5 0.6', 10, 350);
+    
+    # add some light to da plane
+    SetThingLight(plane, '0.5 0.5 0.5', 0.001, 0.1);
+
+    # turn on look interp
+    SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+    
+    # Disable and hide player
+	SetThingFlags(player, 0x80000);
+	SetThingFlags(chuteindy, 0x80000);
+
+    # fade in
+    ThingFadeAnim(fadePlate, 1, 0, 2.0, 0);
+    DestroyThing(fadePlate2);
+    
+    #c-47 cruises thru frame
+	MoveToFrame(plane, 1, 25);
+	MoveToFrame(camtarget1, 1, 0.5);
+    
+    Sleep(1.0);
+    
+    PlaySoundLocal(snd_Plane, 1.0, 0.0, 0x0, 0);
+    
+	Sleep(6.0);
+	
+	#get the keys track number
+	tracknumber=PlayKey(chuteindy, flail, 0, 0x00000001, 0);
+	
+	# reveal and float chuteindy to ground
+	SetThingMaxRotVel(chuteindy, 30);
+	ClearThingFlags(chuteindy, 0x80000);
+		
+	#tunes kick in
+	PlaySoundLocal(tunes, 1.0, 0.0, 0x0, 0);
+	
+	AISetMoveSpeed(chuteindy, 6.0);
+	AISetMoveThing(chuteindy, chutetarget, 0);
+	Sleep(0.01);
+		    
+	# Re-set FOV (pan in) as Indy comes at you
+	SetCameraFOV(70, 1, 7.0);
+	
+	#sleep 'til indy's close enough, then turn him
+	Sleep(3.5);
+	AISetLookThing(chuteindy, chutelooktarg);
+	
+	# wait for the chute get close enough
+	Sleep(1.5);
+	
+	#play sound
+	PlaySoundLocal(whoosh, 1.0, 0, 0x0000, 0);
+	Sleep(1.6);
+	
+	#turn on fog
+    SetFog(1, '0.5 0.5 0.6', 10, 350);
+	
+	Call landing;
+	
+	#destroy plane
+	DestroyThing(plane);
+	
+	Call ending;
+	
+	#reset cutscene cam
+	SetCameraPosInterp(2, 0);
+	SetCameraLookInterp(2, 0);
+  	  
+	return;
+
+#........................................................................................
+
+landing:   
+	
+	# quick cut to cam2 
+	
+	SetCameraFOV(90, 0, 0); 
+	Sleep(0.01);
+	SetCameraLookInterp(2, 0); 
+	SetCameraSecondaryFocus(2, camtarget2);
+	SetCameraFocus(2, cam2);
+	Sleep(0.01);
+
+	# Indy lands<oomf>, chute drops on rock...
+	PlaySoundLocal(oomf, 0.5, 0, 0x0000, 0);
+    PlaySoundLocal(sfx_FootFall, 1.0, 0, 0x0000, 0);
+	AIWaitForStop(chuteindy);  
+	#AISetMoveThing(chuteindy, chutetarg2, 1);
+	StopKey(chuteindy, tracknumber, 0);
+	PlayKey(chuteindy, land, 7, 0x12, 0);
+	PlaySoundLocal(ruffle, 1.0, 0, 0x0000, 0);
+    
+	SetHorizonSkyOffset('0.0 0.95 0.0');
+    
+	#sleep long enough for the chute to pass the camera, then pan in
+	Sleep(1.2);
+	SetCameraFOV(15, 1, 1.0);
+	
+	#sleep 'til end of landing animation
+	Sleep(0.5);
+	PlaySoundLocal(ruffle, 1.0, 0, 0x0000, 0);
+	 
+	#indy steps out of harness
+	PlayKey(chuteindy, remove, 7, 0x12, 0);
+	Sleep(0.25);
+	PlaySoundLocal(undo, 0.7, 0, 0x0000, 1);
+	Sleep(0.1);
+	PlaySoundLocal(rstep, 1.0, 0, 0x0000, 0);  
+	
+    #create chute and rock
+    CreateThing(tpl_Chute, chute);
+    CreateThing(tpl_Rock, rock);
+	   
+	return;
+	
+#........................................................................................
+	
+ending:
+   			
+	#Set camera 1 offset to thing	
+	SetCameraPosition(1, GetThingPOS(cam3));
+	
+	#reset cam2's FOV
+	ResetCameraFOV(0, 0.0);
+	
+	#destroy chuteindy, show player
+	DestroyThing(chuteindy);
+	ClearThingFlags(player, 0x80000); # player visible
+	
+	#cam swings into place
+    SetCurrentCamera(1);
+
+	# player in control
+	ClearActorFlags(player, 0x200000);
+	Sleep(0.01);
+	
+	#the end
+	EndCutscene();
+    
+	return;
+				
+	
+end

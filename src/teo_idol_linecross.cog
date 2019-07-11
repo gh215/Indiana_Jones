@@ -1,0 +1,101 @@
+# Jones 3D Cog Script
+#
+# TEO_Idol_LineCross.cog
+#
+# Swings Camera around to indy's side during a short sayline
+#
+# [SXC]
+#
+# 11/23/98 SXC
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     crossed
+
+    thing       player                  local
+    thing       actorindy
+    
+    thing       camera0
+    thing       camera0_tgt0
+    thing       camera0_tgt1
+    
+    keyframe    in_stand4=0in_stand4.key            local
+    keyframe    in_SideToHips=0in_stand1_bd_4.key   local
+    
+    surface     crossurf
+    
+    int         croscheck=0             local
+    int         cursound                local
+    int         in_track                local
+    int         in_track0               local
+    
+    sound       indyline0=to06j01.wav   local
+    sound       indyline1=to06j02.wav   local
+             
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    player = GetLocalPlayerThing();
+    return;
+           
+# ========================================================================================
+crossed:
+    If ((GetSenderRef() == crossurf) && (croscheck == 0))
+    {
+        croscheck = 1;
+        MakeMeStop();
+        DeselectWeaponWait(player);
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        CopyPlayerHolsters(player, actorindy);
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(actorindy, 0x80000);
+        
+        SetCameraFocus(2, camera0);
+        SetCameraSecondaryFocus(2, camera0_tgt0);
+        SetCurrentCamera(2);
+        SetCameraFOV(60, 0, 0);
+        
+        AISetMoveSpeed(actorindy, 1);
+        AISetMoveFrame(actorindy, 1);
+        AIWaitForStop(actorindy);
+        
+        in_track0 = PlayKey(actorindy, in_stand4, 2, 0x00, 0);
+        PlayKey(actorindy, in_SideToHips, 4, 0x12, 0);
+        cursound=PlayVoice(actorindy, indyline0, 1, 0);
+        Sleep(1);
+        SetCameraLookInterp(2, 1);
+        SetCameraInterpSpeed(2, 3);
+        Sleep(0.01);
+        SetCameraSecondaryFocus(2, camera0_tgt1);
+        SetCameraFOV(100, 1, 2);
+        WaitForSound(cursound);
+        StopKey(actorindy, in_track0, 0.5);
+        Sleep(1);
+        
+        SetCameraLookInterp(2, 0);
+        SetCameraInterpSpeed(2, 0);
+        SetCameraPosInterp(2, 0);
+        sleep(0.01);
+        
+        CopyOrientAndPos(actorindy, player);         
+        ClearThingFlags(player, 0x80000);            
+        SetThingFlags(actorindy, 0x80000);                                    
+        SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0);                         
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);                               
+    }
+    
+return;
+        
+end

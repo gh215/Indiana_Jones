@@ -1,0 +1,90 @@
+# Jones 3D Cog Script
+#
+# item_Shotgun.cog
+#
+# [RT]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	activated
+message	touched
+message	taken
+
+sound	foundSnd=INXJ159.wav	local
+
+thing	player					local
+
+int		bin=9					local
+int		bFound=0				local
+int		amount=5				local
+
+int		bUnderwater				local
+
+end
+
+# ===================================================================
+
+code
+
+activated:
+
+    player = GetSourceRef();
+
+	StartCutscene(0);
+
+	if (Rand() < 0.5)
+	{
+		SetExtCamOffset('0.15 -0.05 0.04');
+	}
+	else
+	{
+		SetExtCamOffset('-0.15 -0.05 0.04');
+	}
+	SetExtCamLookOffset('0.0 0.02 -0.01');
+
+	return;
+
+# -------------------------------------------------------------------
+
+touched:
+
+	player = GetSourceRef();
+
+	if (GetInv(player, bin) < GetInvMax(player, bin))
+	{
+		TakeItem(GetSenderRef(), player);
+	}
+    else
+	{
+		EndCutscene();
+	}
+	
+	return;
+
+# -------------------------------------------------------------------
+
+taken:
+
+	player = GetSourceRef();
+	bFound = IsItemFound(bin);
+    bUnderwater = BitTest(GetThingFlags(player), 0x02000000);
+
+	JonesInvItemChanged(bin);
+	ChangeInv(player, bin, amount);
+	SetInvAvailable(player, bin, 1);
+
+	if (!bFound && !bUnderwater)
+	{
+		Sleep(1.0);
+		PlayVoice(player, foundSnd, 1.0, 0);
+	}
+
+	EndCutscene();
+
+	return;
+
+end

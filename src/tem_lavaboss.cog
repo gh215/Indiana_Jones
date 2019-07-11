@@ -1,0 +1,699 @@
+# Jones 3D Cog Script
+#
+# TEM_LavaBoss.cog
+#
+# AI enhancements for TEM Lava Boss
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+#	#####  COG Notes  #####
+#	The following functionality can be controlled with USER msgs sent to this COG
+#
+#	USER0 - Create Boss (param0 = Ghost THING used as position to be created at).
+#	USER1 - Reset Boss' height to normal.
+#	USER2 - Initialize Boss for play
+#	USER3 - Instantly teleport Boss to a GHOST pos
+#
+#
+#	#####  Programming Notes  #####
+#	n_AICustomMode usuage:
+#		0x02 - MODE_CAN_ATTACK
+#		0x04 - MODE_SUBMERGED
+#
+# ===================================================================
+
+# ===================================================================
+symbols
+
+message		removed
+message		entered
+message		timer
+message		pulse
+message		user0
+message		user1
+message		user2
+message		user3
+
+# ************************** LINKED ITEMS **********************
+thing		t_trgr00
+thing		t_trgr01
+thing		t_trgr02
+thing		t_trgr03
+thing		t_trgr04
+thing		t_trgr05
+thing		t_trgr06
+thing		t_trgr07
+thing		t_trgr08
+thing		t_trgr09
+thing		t_trgr10
+thing		t_trgr11
+thing		t_trgr12
+thing		t_trgr13
+thing		t_trgr14
+thing		t_trgr15
+thing		t_trgr16
+thing		t_trgr17
+thing		t_trgr18
+thing		t_trgr19
+thing		t_trgr20
+
+thing		t_ghostPos00
+thing		t_ghostPos01
+thing		t_ghostPos02
+thing		t_ghostPos03
+thing		t_ghostPos04
+thing		t_ghostPos05
+thing		t_ghostPos06
+thing		t_ghostPos07
+thing		t_ghostPos08
+thing		t_ghostPos09
+thing		t_ghostPos10
+thing		t_ghostPos11
+thing		t_ghostPos12
+thing		t_ghostPos13
+thing		t_ghostPos14
+thing		t_ghostPos15
+
+surface		srf_trgr01				linkid=2
+surface		srf_trgr02				linkid=2
+surface		srf_trgr03				linkid=2
+surface		srf_trgr04				linkid=2
+surface		srf_trgr05				linkid=2
+
+thing		t_ghostLookPos00
+
+# ************************** TEMPLATES *************************
+template	tpl_Boss=lava_boss					local
+
+sound		mus_imp2=mus_gen_Machinepart.wav	local
+int			b_PlayedImpSND						local
+
+# ************************** MOVE VARS *************************
+int			n_idxStackTop				local
+thing		t_moveToPos00				local			
+thing		t_moveToPos01				local			
+thing		t_moveToPos02				local			
+thing		t_moveToPos03				local			
+thing		t_moveToPos04				local			
+thing		t_moveToPos05				local
+thing		t_moveToPos06				local
+thing		t_moveToPos07				local
+
+int			n_idx						local
+int			b_BossMoving				local
+
+int			b_gotGuardTrgr				local
+int			b_hghtAdjust				local
+flex		f_upperHDelta				local
+flex		f_lowerHDelta				local
+flex		f_hghtStep					local
+
+thing		t_newPos					local
+thing		t_param						local
+thing		t_crntGoalPos				local
+thing		t_crntBossPos				local
+
+thing		t_newTrig					local
+thing		t_crntTrig					local
+
+flex		f_moveDelay					local
+
+# ************************** MISC LOCAL VARS *******************
+thing		t_boss						local
+thing		t_player					local
+thing		t_sender					local
+
+int			n_AICustomMode				local
+int			MODE_GUARDPOS=1				local
+int			MODE_CAN_ATTACK=2			local
+int			MODE_SUBMERGED=4			local
+
+int			n_idTimer					local
+int			TIMERID_SETHEIGHT=2			local
+
+flex		f_val						local
+
+vector		vec_pos						local
+vector		vec_dirA					local
+vector		vec_dirB					local
+sector		sec_atNewPos				local
+
+vector		vec_insrtOffset				local
+vector		vec_crntOffset				local
+vector		vec_guardOffset				local
+
+# ************************** SUBROUTINES *******************
+flex		ResetBossHeight				local
+flex		SubmergeBoss				local
+flex		SurfaceBoss					local
+flex		InstantBossMove				local
+flex		SetBossGuardStance			local
+flex		SetMoveGoal					local
+flex		GetMoveGoal					local
+
+end
+
+# ===================================================================
+code
+
+# ...................................................................
+removed:
+
+	Reset();
+	KillTimerEx(TIMERID_SETHEIGHT);
+	SetPulse(0);
+	t_boss = -1;
+
+	return;
+
+
+# ...................................................................
+entered:
+
+	if ( t_boss == -1 )
+		return;
+
+	t_sender = GetSourceRef();
+	if ( t_sender != t_player )
+		return;
+
+	t_newTrig = GetSenderRef();
+	if ( t_newTrig == t_crntTrig )
+		return;
+
+	b_gotGuardTrgr	= 0;
+
+	if ( t_newTrig == t_trgr01 )
+	{
+#		DEBUGPRINT("Trigger 1  On Bridge");
+		b_gotGuardTrgr	= 1;
+		if ( b_PlayedImpSND == 0 )
+		{
+			if ( BITTEST(GetActorFlags(t_player), 0x80) )		# If player has AF_INVISIBLE
+			{
+			    b_PlayedImpSND = 1;
+			    PlaySoundLocal(mus_imp2, 1, 0, 0x0, 0);
+            }
+		}
+
+		AIEnableInstinct(t_boss, "alternatefire", 0);
+		SetActorFlags(t_boss, 0xC00);							# Set DEAF and BLIND while guarding
+		return;
+	}
+
+	if ( (t_newTrig == t_trgr00) || (t_newTrig == t_trgr11) )
+	{
+#		DEBUGPRINT("Trigger 0 or 11  Pos 0 (guard pos)");
+		t_newPos		= t_ghostPos00;
+		b_gotGuardTrgr	= 1;
+
+		n_AICustomMode = BITSET(n_AICustomMode, MODE_CAN_ATTACK | MODE_GUARDPOS);
+
+		AIEnableInstinct(t_boss, "alternatefire", 0);
+		SetActorFlags(t_boss, 0xC00);							# Set DEAF and BLIND while guarding
+	}
+
+	if ( t_newTrig == t_trgr02 )
+	{
+#		DEBUGPRINT("Trigger 2  Pos 1");
+		t_newPos	= t_ghostPos01;
+	}
+	else if ( t_newTrig == t_trgr03 )
+	{
+#		DEBUGPRINT("Trigger 3  Pos 2");
+		t_newPos	= t_ghostPos02;
+	}
+	else if ( t_newTrig == t_trgr04 )
+	{
+#		DEBUGPRINT("Trigger 4  Pos 3");
+		t_newPos	= t_ghostPos03;
+	}
+	else if ( t_newTrig == t_trgr05 )
+	{
+#		DEBUGPRINT("Trigger 5  Pos 10");
+		t_newPos	= t_ghostPos10;
+	}
+	else if ( t_newTrig == t_trgr06 )
+	{
+#		DEBUGPRINT("Trigger 6  Pos 4");
+		t_newPos	= t_ghostPos04;
+	}
+	else if ( t_newTrig == t_trgr07 )
+	{
+#		DEBUGPRINT("Trigger 7  Pos 6");
+		t_newPos	= t_ghostPos06;
+	}
+	else if ( t_newTrig == t_trgr08 )
+	{
+#		DEBUGPRINT("Trigger 8  Pos 5");
+		t_newPos	= t_ghostPos05;
+	}
+	else if ( t_newTrig == t_trgr09 )
+	{
+#		DEBUGPRINT("Trigger 9  Pos 9");
+		t_newPos	= t_ghostPos09;
+	}
+	else if ( t_newTrig == t_trgr10 )
+	{
+#		DEBUGPRINT("Trigger 10  Pos 8");
+		t_newPos	= t_ghostPos08;
+	}
+
+	if ( t_newTrig == srf_trgr01 )
+	{
+		if(GetInv(GetLocalPlayerThing(), 15) > 0)
+		{
+#			DEBUGPRINT("Srf Trigger 1  Pos 7");
+    		t_newPos	= t_ghostPos07;
+		}
+	}
+	if ( t_newTrig == srf_trgr02 )
+	{
+#		DEBUGPRINT("Srf Trigger 2   No IMP2 = submerge");
+		if ( GetInv(GetLocalPlayerThing(), 15) == 0 )		# No IMP2 yet?
+		{
+			call SubmergeBoss;
+		}
+	}
+	if ( t_newTrig == srf_trgr03 )
+	{
+		if ( !BITTEST(n_AICustomMode, MODE_CAN_ATTACK) )
+			return;
+
+#		DEBUGPRINT("Srf Trigger 3  Pos 11");
+    	t_newPos	= t_ghostPos11;
+	}
+
+	if ( t_newPos != t_crntBossPos )
+	{
+		t_crntTrig = t_newTrig;
+
+		if ( b_gotGuardTrgr )
+		{
+#			DEBUGPRINT("Got guard trigger... teleporting boss.");
+			Reset();
+			t_crntGoalPos = t_newPos;
+			call InstantBossMove;
+			call SetBossGuardStance;
+
+			return;
+		}
+
+		AIEnableInstinct(t_boss, "alternatefire", 1);						# Set defaults
+		ClearActorFlags(t_boss, 0xC00);										# Clear DEAF and BLIND
+		f_moveDelay = 1.0 + ((5 - GetDifficulty()) * 0.5);					# Time influenced by Diff level
+#		DEBUGFLEX(f_moveDelay, "Set move delay =");
+
+		n_AICustomMode = BITCLEAR(n_AICustomMode, MODE_GUARDPOS);
+		call SetMoveGoal;
+	}
+
+	return;
+
+
+# ...................................................................
+pulse:
+
+	if ( t_boss == -1 )
+	{
+		SetPulse(0);
+		return;
+	}
+
+	if ( !b_BossMoving && !b_hghtAdjust )
+	{
+		if ( n_idxStackTop > -1 )
+		{
+			if ( f_moveDelay > 0 )
+			{
+				f_moveDelay = f_moveDelay - 1.0;
+#				DEBUGFLEX(f_moveDelay, "Move delay =");
+				return;
+			}
+
+			b_BossMoving = 1;
+
+			call GetMoveGoal;
+			if ( t_crntGoalPos > -1 )
+			{
+#				DEBUGPRINT("Moving boss");
+				call SubmergeBoss;
+				call SurfaceBoss;
+			}
+
+			b_BossMoving = 0;
+		}
+
+		if ( !BITTEST(n_AICustomMode, MODE_SUBMERGED) && !BITTEST(GetActorFlags(t_boss), 0xC00) )
+		{
+			if ( IsAITargetInSight(t_boss) )
+			{
+#				DEBUGPRINT("Setting standard height adjustment timer");
+				f_val = VectorZ(GetThingPos(t_player)) - VectorZ(GetThingPos(t_boss));
+				if ( f_val <= f_lowerHDelta || f_val >= f_upperHDelta )
+				{
+					SetTimerEx(0.03, TIMERID_SETHEIGHT, 0, 0);
+				}
+			}
+		}
+	}
+
+	if ( (t_crntBossPos == t_ghostPos00) && (t_crntTrig == t_trgr00 || t_crntTrig == t_trgr11) )
+	{
+#		DEBUGPRINT("Player at Boss guard pos");
+		SetActorFlags(t_boss, 0xC00);								# Set DEAF and BLIND while guarding
+
+		if ( b_hghtAdjust )
+			return;
+
+		if ( BITTEST(GetActorFlags(t_player), 0x80) )				# If player is SITH_AF_INVISIBLE
+		{
+			if ( BITTEST(n_AICustomMode, MODE_SUBMERGED) )
+				return;
+
+			b_BossMoving = 1;
+			AISetLookThingEyeLevel(t_boss, t_ghostLookPos00);
+			call SubmergeBoss;
+			b_BossMoving = 0;
+		}
+		else
+		{
+			if ( !BITTEST(n_AICustomMode, MODE_SUBMERGED) )
+			{
+				vec_dirA = VectorSub(GetThingPos(t_boss), GetThingPos(t_player));
+#				DEBUGFLEX(VectorLen(vec_dirA), "Guard dist to player =");
+
+				if ( VectorLen(vec_dirA) < 0.48 )
+				{
+#					DEBUGPRINT("Your dead... game over, man");
+					StopThing(t_player);
+					PlayMode(t_boss, 67, 0);
+					DamageThing(t_player, 1000, 0x200, t_boss);		# Inflict SITH_DAMAGE_LAVA
+				}
+
+				return;
+			}
+
+			if ( b_BossMoving )
+				return;
+
+			b_BossMoving = 1;
+			t_crntGoalPos = t_ghostPos00;
+			call SurfaceBoss;
+			call SetBossGuardStance;
+			b_BossMoving = 0;
+		}
+	}
+
+	return;
+
+
+# ...................................................................
+timer:
+
+	if ( t_boss == -1 )
+		return;
+
+	n_idTimer = GetSenderID();
+
+	if ( n_idTimer == TIMERID_SETHEIGHT )						#---- Match Player height
+	{
+		b_hghtAdjust = 0;
+
+		if ( BITTEST(GetActorFlags(t_player), 0x80) )			# If player is SITH_AF_INVISIBLE, stop
+		{
+			call ResetBossHeight;
+			return;
+		}
+
+		f_val = VectorZ(GetThingPos(t_player)) - VectorZ(GetThingPos(t_boss));
+		if ( (f_val > f_lowerHDelta) && (f_val < f_upperHDelta) )
+		{
+#			DEBUGPRINT("Boss at correct height... stopping check");
+			return;
+		}
+
+		if ( f_val < f_lowerHDelta )
+		{
+			if ( VectorZ(vec_crntOffset) <= VectorZ(vec_insrtOffset) )
+			{
+#				DEBUGPRINT("Boss cant go any lower... stopping check");
+				return;
+			}
+
+			vec_dirA = VectorSet(0, 0, -f_hghtStep);
+		}
+		else
+		{
+			if ( VectorZ(vec_crntOffset) >= 0.7 )
+			{
+#				DEBUGPRINT("Boss cant go any higher... stopping check");
+				return;
+			}
+
+			vec_dirA = VectorSet(0, 0, f_hghtStep);
+		}
+
+		b_hghtAdjust	= 1;
+		vec_dirB		= VectorAdd(vec_crntOffset, vec_dirA);
+		vec_crntOffset	= SetThingInsertOffset(t_boss, vec_dirB);
+		SetTimerEx(0.02, TIMERID_SETHEIGHT, 0, 0);
+
+#		DEBUGFLEX(VectorZ(vec_dirB), "offset z=");
+	}
+
+	return;
+
+
+# ...................................................................
+# Create a Lava Boss at location-THING == GetParam(0)			[must be a valid THING]
+user0:
+
+#	DEBUGPRINT("Creating boss");
+
+	t_player		= GetLocalPlayerThing();					# set constants
+
+	n_AICustomMode	= MODE_SUBMERGED;
+	f_upperHDelta	= -0.1;
+	f_lowerHDelta	= -0.18;
+	f_hghtStep		= 0.01;
+	b_PlayedImpSND	= 0;
+	f_moveDelay		= 0;
+	n_idxStackTop	= -1;
+	b_BossMoving	= 0;
+
+	vec_guardOffset	= VectorSet(0, 0, 0.62);
+
+	t_crntBossPos	= GetParam(0);
+	t_boss			= CreateThing(tpl_Boss, t_crntBossPos);
+	CaptureThing(t_boss);
+	ReturnEx(t_boss);											# Set Boss THING index for return to caller
+
+	t_crntTrig		= -1;
+
+	ClearThingFlags(t_boss, 0x80000);
+	AISetLookThing(t_boss, t_player);
+
+	AISetCutsceneMode(t_Boss);
+
+	vec_insrtOffset = GetThingInsertOffset(t_boss);
+	vec_crntOffset	= GetThingInsertOffset(t_boss);
+
+	t_crntGoalPos	= t_crntBossPos;
+	call SurfaceBoss;
+
+	return;
+
+
+# ...................................................................
+# Reset the Boss' height
+# ...................................................................
+user1:
+
+	SetThingInsertOffset(t_boss, vec_insrtOffset);				# Put boss back at init insert offset
+
+	return;
+
+
+# ...................................................................
+# Initialize Boss for play
+# ...................................................................
+user2:
+
+	AIClearCutsceneMode(t_Boss);
+	SetPulse(1.0);
+
+	call SubmergeBoss;
+
+	return;
+
+
+# ...................................................................
+# Instantly teleport boss to a GHOST pos
+# ...................................................................
+user3:
+
+#	DEBUGPRINT("Teleporting boss");
+	t_crntGoalPos = GetParam(0);
+	Reset();
+
+# ...................................................................
+InstantBossMove:
+
+	b_BossMoving	= 1;
+	n_idxStackTop	= -1;
+
+	if ( GetThingType(t_crntGoalPos) == 8 )						# Check for SITH_THING_GHOST
+	{
+		SetThingInsertOffset(t_boss, vec_insrtOffset);			# Put boss back at init insert offset
+
+		n_AICustomMode = BITSET(n_AICustomMode, MODE_SUBMERGED);
+		call SurfaceBoss;
+	}
+	b_BossMoving	= 0;
+
+	return;
+
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+ResetBossHeight:
+
+#	DEBUGPRINT("Reset height begin");
+	b_hghtAdjust = 1;
+
+	while ( VectorZ(vec_crntOffset) > VectorZ(vec_insrtOffset) )
+	{
+		vec_dirA		= VectorSet(0, 0, f_hghtStep);
+		vec_crntOffset	= SetThingInsertOffset(t_boss, VectorSub(vec_crntOffset, vec_dirA));
+
+		if ( BITTEST(n_AICustomMode, MODE_SUBMERGED) )
+			return;
+
+		Sleep(0.02);
+	}
+
+	SetThingInsertOffset(t_boss, vec_insrtOffset);				# Put boss back at init insert offset
+
+	b_hghtAdjust = 0;
+#	DEBUGPRINT("Reset height end");
+
+	return;
+
+
+# ...................................................................
+SetBossGuardStance:
+
+#	DEBUGPRINT("Set Guard height begin");
+	b_hghtAdjust = 1;
+
+	SetActorFlags(t_boss, 0xC00);								# Set DEAF and BLIND while guarding
+	AISetLookThingEyeLevel(t_boss, t_ghostPos01);
+
+	while ( VectorZ(vec_crntOffset) < VectorZ(vec_guardOffset) )
+	{
+		vec_dirA		= VectorSet(0, 0, f_hghtStep);
+		vec_crntOffset	= SetThingInsertOffset(t_boss, VectorAdd(vec_crntOffset, vec_dirA));
+
+		Sleep(0.02);
+	}
+
+	SetThingInsertOffset(t_boss, vec_guardOffset);				# Put boss back at init insert offset
+
+	b_hghtAdjust = 0;
+#	DEBUGPRINT("Set Guard height end");
+
+	return;
+
+
+# ...................................................................
+SubmergeBoss:
+
+	if ( BITTEST(n_AICustomMode, MODE_SUBMERGED) )
+	{
+		return;
+	}
+
+#	DEBUGPRINT("Submerge begin");
+
+	StopMode(t_boss, 68, 0.1);
+	SetActorFlags(t_boss, 0xC00);								# Set DEAF and BLIND while submerging
+
+	call ResetBossHeight;
+
+	n_AICustomMode = BITSET(n_AICustomMode, MODE_SUBMERGED);
+	PlayMode(t_boss, 71, 1);									# play PUPPETADDIN_STAND2CRAWL
+	SetThingFlags(t_boss, 0x80000);
+
+#	DEBUGPRINT("Submerge end");
+
+	return;
+
+
+# ...................................................................
+SurfaceBoss:
+
+	if ( !BITTEST(n_AICustomMode, MODE_SUBMERGED) )
+	{
+		return;
+	}
+
+#	DEBUGPRINT("Surface begin");
+
+	ClearThingFlags(t_boss, 0x80000);
+
+	t_crntBossPos = t_crntGoalPos;
+	TeleportThing(t_boss, t_crntGoalPos);
+
+	SendmessageEx(GetThingClassCog(t_boss), USER1, t_crntBossPos, 0, 0, 0);
+	PlayMode(t_boss, 72, 1);									# play PUPPETADDIN_CRAWL2STAND
+
+	n_AICustomMode = BITCLEAR(n_AICustomMode, MODE_SUBMERGED);
+	ClearActorFlags(t_boss, 0xC00);								# Clear DEAF and BLIND when surfaced
+	AISetLookThing(t_boss, GetLocalPlayerThing());
+
+#	DEBUGPRINT("Surface end");
+
+	return;
+
+
+# ...................................................................
+SetMoveGoal:
+
+	n_idxStackTop = n_idxStackTop + 1;
+	t_moveToPos00[n_idxStackTop] = t_newPos;
+
+#	DEBUGFLEX(n_idxStackTop, "PUSH:: Move stack size =");
+
+	return;
+
+
+# ...................................................................
+GetMoveGoal:
+
+	t_crntGoalPos = -1;
+
+	if ( n_idxStackTop == -1 )
+		return;
+
+	t_crntGoalPos = t_moveToPos00;
+
+	for (n_idx=0; n_idx < n_idxStackTop; n_idx = n_idx + 1)
+	{
+		t_moveToPos00[n_idx] = t_moveToPos00[n_idx+1];
+	}
+
+	n_idxStackTop = n_idxStackTop - 1;
+#	DEBUGFLEX(n_idxStackTop, "POP:: Move stack size =");
+
+	return;
+
+
+# ===================================================================
+end
+

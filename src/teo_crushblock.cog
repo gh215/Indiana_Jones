@@ -1,0 +1,107 @@
+# Jones 3D Cog Script
+#
+# TEO_CrossBlocks.cog
+#
+# Crushing Block script
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+    message     startup
+	message     exited          
+	message     timer
+	message     entered
+	message     arrived
+    message     blocked
+
+	surface     exitsurf    	mask=0x400
+	sound       clicksound
+	sound       slidesound
+	sound       crushsound
+	sound       sndstop=gen_stone_stop_c.wav
+        
+	thing		crushblock	linkid=0 mask=0x405
+    thing       player0         local
+    thing       deadIndy        local
+    
+    template    temDeadIndy=indy_sh_actor   local
+    keyframe    deathKeyAnim=in_die_buckle.key  local
+
+	flex		moveSpeed=10.0
+        
+	int         resettime=3.0
+	int         soundthing      local
+	int         crushlock=0     local
+    int         clicklock       local
+    int         damagecheck=0   local
+
+end
+
+# ========================================================================================
+
+code
+
+# ........................................................................................
+startup:
+    player0 = GetLocalPlayerThing();
+    return;
+    
+# ........................................................................................
+entered:
+	if ((GetSenderRef() == exitsurf) && (clicklock == 0))
+	{
+	    clicklock = 1;
+		PlaySoundLocal(clicksound, 0.7, 0, 0x0, 0);        
+	}
+	return;                
+# ........................................................................................
+
+exited:
+	if ((GetSenderRef() == exitsurf) && (crushlock == 0))
+	{
+	    crushlock = 1;
+		MoveToFrame(crushblock, 1, moveSpeed);   
+		PlaySoundLocal(crushsound, 0.7, 0, 0x0, 0);
+		SetTimer(resetTime);
+	}
+	return;
+
+# ........................................................................................
+timer:
+	MoveToFrame(crushblock, 0, (moveSpeed/10));
+	soundthing = PlaySoundLocal(slidesound, 0.7, 0, 0x0001, 0);
+	return;
+        
+
+# ........................................................................................
+arrived:
+	if ((GetCurFrame(crushblock) == 0) && (GetSenderRef() == crushblock) && (crushlock == 1))
+	{
+		StopSound(soundthing, 0);
+		PlaySoundThing(sndstop, crushblock, 1, 3, 10, 0);
+		clicklock = 0;
+		crushlock = 0;
+	}
+	return;
+
+# ........................................................................................
+blocked:
+    if ((GetSenderRef() == crushblock) && (damagecheck == 0))
+    {
+        damagecheck = 1;
+        //print("Damaging Indy");
+        DamageThing(player0, 1000, 0x1, crushblock);
+        SetThingFlags(player0, 0x80000);
+        deadIndy = CreateThing(temDeadIndy, player0);
+        CaptureThing(deadIndy);
+        CopyPlayerHolsters(player0, deadIndy);
+        ClearThingFlags(deadIndy, 0x80000);
+        PlayKey(deadIndy, deathKeyAnim, 4, 0x14, 0);
+    }
+    return;
+                
+end
+

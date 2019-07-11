@@ -1,0 +1,322 @@
+# Jones 3D Cog Script
+#
+# BAB_Commie_Grid.cog
+# 
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+
+message         startup
+message         entered
+message         crossed
+message         killed 
+message         damaged
+
+# ========================================================================================
+
+flex            MakeGrid        local
+flex            EnableAI        local
+flex            DisableAI       local
+flex            Blind           local
+flex            Unblind         local
+
+# =============================== WORLD REFERENCES ==========================
+
+sector          EnableGrid00    LinkID=1
+sector          EnableGrid01    LinkID=1
+
+surface         EnableGrid02    LinkID=1
+surface         EnableGrid03    LinkID=1
+
+surface         DisableGrid00   LinkID=2
+surface         DisableGrid01   LinkID=2        
+
+surface         Blind00         LinkID=3
+surface         Blind01         LinkID=3
+
+surface         UnBlind00       LinkID=4
+surface         UnBlind01       LinkID=4
+surface         UnBlind02       LinkID=4
+surface         UnBlind03       LinkID=4
+surface         UnBlind04       LinkID=4
+surface         UnBlind04       LinkID=4
+surface         UnBlind05       LinkID=4
+
+# =============================== MISC LOCAL VARIABLES ======================
+
+int             counter         local
+int             GridOn=0        local      # 1 == on, 0 == off
+
+int             Blinded=0       local
+
+int             HasBeenDamaged=0    local
+                                          
+# =============================== CONSTANTS ==============================
+
+int             CLEAR_WAYPOINTS=60          local
+int             NUMBER_OF_WAYPOINTS=28      local
+int             NUMBER_OF_COMMIES=5         local
+
+# ================================== COMMIES =================================
+
+thing           TempCommie      local
+
+thing           Commie00        mask=0x448  
+thing           Commie01        mask=0x448  
+thing           Commie02        mask=0x448  
+thing           Commie03        mask=0x448  
+thing           Commie04        mask=0x448  
+#thing           Commie05        mask=0x448
+#thing           Commie06        mask=0x448
+
+# ============================== WAYPOINTS - GHOST OBJECTS ===============
+
+thing           TempWpnt
+
+thing           wpnt00
+thing           wpnt01
+thing           wpnt02
+thing           wpnt03
+thing           wpnt04
+thing           wpnt05
+thing           wpnt06
+thing           wpnt07
+thing           wpnt08
+thing           wpnt09
+thing           wpnt10
+thing           wpnt11
+thing           wpnt12
+thing           wpnt13
+thing           wpnt14
+thing           wpnt15
+thing           wpnt16
+thing           wpnt17
+thing           wpnt18
+thing           wpnt19
+thing           wpnt20
+thing           wpnt21
+thing           wpnt22
+thing           wpnt23
+thing           wpnt24
+thing           wpnt25
+thing           wpnt26
+thing           wpnt27
+
+# ======================================================================
+end
+# ======================================================================
+# ============================ CODE ====================================
+# ======================================================================
+code
+# ======================================================================
+startup:
+
+    Call Blind;
+    
+    return;
+
+# ======================================================================
+entered:
+    
+    if(GetsenderID() == 1 && GridOn == 0)   
+     {
+        GridOn = 1;
+        Call MakeGrid;
+        Call EnableAI;
+    }
+    
+    if(GetSenderID() == 4)
+    {
+        Call Unblind;
+    }
+    
+    return;
+    
+# ======================================================================
+crossed:
+    
+    if(GetSenderID() == 1 && GridOn == 0)
+    {
+        GridOn = 1;
+        Call MakeGrid;
+        Call EnableAI;           
+    }
+
+    else if(GetSenderID() == 2 && GridOn == 1)
+    {
+        GridOn = 0;
+        Call DisableAI;
+    }
+    
+    else if(GetSenderID() == 3)
+    {
+        Call Blind;
+    }
+    
+    else if(GetSenderID() == 4)
+    {
+        Call UnBlind;
+    }
+    
+    return;
+
+# ======================================================================
+killed:
+    
+    TempCommie = GetSenderRef();
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+    {
+        if(Commie00[counter] == TempCommie) Commie00[counter] = -1;
+    }           
+
+    return;
+    
+# ======================================================================
+damaged:
+
+    if(HasBeenDamaged == 1) return;
+        
+    if(Blinded == 1) Call Unblind;
+    
+    HasBeenDamaged = 1;
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+    {
+        if(Commie00[counter] != -1)
+        {
+            if(RandBetween(0, 2) == 2)
+            {
+                AIWpntHuntTarget(Commie00[counter], 1.6, 0.0);
+            }
+            else if(RandBetween(0, 2) <= 2)
+            {
+                AIEnableInstinct(Commie00[counter], "roam", 1);
+            }
+        }
+    }
+    
+
+    return;
+
+# =============================== SUBROUTINES ==========================
+EnableAI:
+
+    for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+    {
+        if(Commie00[counter] != -1)
+        {
+            AISetInstinctWpntMode(Commie00[counter]);
+        }
+    }
+    
+    return;
+    
+# ======================================================================    
+DisableAI:
+
+    for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+    {
+        if(Commie00[counter] != -1)
+        {
+            AIClearInstinctWpntMode(Commie00[counter]);
+        }
+    }
+    
+    return;
+    
+# ======================================================================    
+MakeGrid:
+
+    for(counter = 0; counter < CLEAR_WAYPOINTS; counter = counter + 1)
+    {
+        //For loop to clear any pre-existing waypoints
+        AISetWpnt(TempWpnt, counter);
+    }
+
+    for(counter = 0; counter < NUMBER_OF_WAYPOINTS; counter = counter + 1)
+    {
+        AISetWpnt(Wpnt00[counter], counter);
+    }
+    
+    AIConnectWpnts(0, 1);
+    AIConnectWpnts(1, 2);
+    AIConnectWpnts(2, 3);
+    AIConnectWpnts(3, 4);
+    AIConnectWpnts(4, 5);
+    AIConnectWpnts(5, 6);
+    AIConnectWpnts(6, 7);
+    AIConnectWpnts(7, 8);
+    //AIConnectWpnts(8, 9);
+    AIConnectWpnts(8, 14);
+    //AIConnectWpnts(9, 10);
+    //AIConnectWpnts(10, 11);
+    //AIConnectWpnts(10, 12);
+    //AIConnectWpnts(12, 13);
+    AIConnectWpnts(14, 15);
+    AIConnectWpnts(15, 16);
+    AIConnectWpnts(16, 17);
+    AIConnectWpnts(16, 20);
+    AIConnectWpnts(17, 20);
+    AIConnectWpnts(18, 21);
+    AIConnectWpnts(18, 22);
+    AIConnectWpnts(19, 22);
+    AIConnectWpnts(19, 23);
+    AIConnectWpnts(20, 21);
+    AIConnectWpnts(20, 27);
+    AIConnectWpnts(21, 27);
+    AIConnectWpnts(21, 23);
+    AIConnectWpnts(22, 24);
+    AIConnectWpnts(24, 25);
+    AIConnectWpnts(25, 26);
+    AIConnectWpnts(26, 27);
+    
+    return;
+
+# ======================================================================    
+Blind:
+    
+    if(Blinded == 1) return;
+    
+    if(HasBeenDamaged == 1) return;
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+    {
+        if(Commie00[counter] != -1)
+        {
+            SetActorFlags(Commie00[counter], 0x800);    //Blind
+            SetActorFlags(Commie00[counter], 0x400);    //Deaf
+        }
+    }
+    
+    Blinded = 1;
+
+    return;
+
+# ======================================================================    
+UnBlind:
+
+    if(Blinded == 0) return;
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+    {
+        if(Commie00[counter] != -1)
+        {
+            ClearActorFlags(Commie00[counter], 0x800);
+            ClearActorFlags(Commie00[counter], 0x400);
+        }
+    }
+    
+    Blinded = 0;
+    
+    return;
+    
+# ======================================================================    
+end
+
+

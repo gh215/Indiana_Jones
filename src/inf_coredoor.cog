@@ -1,0 +1,72 @@
+# Jones 3D Cog Script
+#
+# INF_CoreDoor.cog
+#
+# This is the generic door with a camera attached
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     activate
+    
+    thing       coredoor
+    thing       doorbutn
+    
+    cog         cutscenecog
+    
+    sector      doorsector     
+    
+    thing       player      local
+    
+    int         bmoved=0    local
+      
+end
+
+# ========================================================================================
+
+code
+
+#........................................................................................
+startup:
+
+    player = GetLocalPlayerThing();
+    SetSectorAdjoins(doorsector, 0);
+    
+    return;
+
+#........................................................................................
+activate:
+
+    if ((GetSenderRef() == doorbutn) && (bmoved != 1))
+    {
+        bmoved = 1;
+        StopThing(player);
+        SetActorFlags(player, 0x200000);
+        PlayMode(player, 61, 0);
+        Sleep(0.35);
+        MoveToFrame(doorbutn, 1, 1);
+        WaitForStop(doorbutn);
+        WaitForStop(doorbutn);
+        SetSectorAdjoins(doorsector, 1);
+        MoveToFrame(coredoor, 1, 1);
+        WaitForStop(coredoor);
+        Sleep(1);
+        //For HAL-start the Turner cutscene here
+        //SendMessage(cutscenecog, user0);
+        //Print("Play Turner Cutscene Now");
+        ClearActorFlags(player, 0x200000);
+        
+    }
+    return;   
+    
+    
+#........................................................................................					
+
+end
+
+

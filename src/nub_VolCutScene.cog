@@ -1,0 +1,592 @@
+# Jones 3D Cog Script
+#
+# nub_VolCutScene.cog
+#
+# [TL]	[GGJ]  [HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		entered
+	message		activated
+	message		callback
+	message		user0
+	message		user1
+
+# ................................ ANIMATIONS ..................................
+
+	keyframe	volDrop=0vo_geardrop_3.key			local # mk @ x90/cb16
+	keyframe	voluse=0vo_handoutR_2_3.key			local # mk @ x10/cb16
+	keyframe	indyGesture=0in_armsout_1_1.key		local
+####	keyframe	in_gunOut=in_walk_w_gun.key			local # in_attack_pull_gun.key
+	keyframe	in_gunOut=in_attack_pull_gun.key	local # TEST!
+	keyframe	in_gunaway=in_attack_put_gun.key	local # 32x
+	keyframe	in_actlow=in_reach_low.key			local # 56x (act=83x)
+	keyframe	kneel=0in_stand1_bd_6.key		   	local # 32x
+	keyframe	standUp=0in_stand6_bd_1.key			local # 53x
+
+# ................................. MODELS .....................................
+	
+	model		mod_vo_gearhand=hand_vo_turtgear.3do	local
+	model		mod_in_revolver=weap_revolver.3do	local
+	model		mod_in_tokarev=weap_tokarev.3do		local
+	model		mod_in_mauser=weap_mauser.3do		local
+
+# ................................. SOUNDS .....................................
+
+	sound		in_badidea0=Inxj058.wav				local # won't work
+	sound		in_badidea1=Inxj060.wav				local # not right answer
+	sound		in_badidea2=Inxj061.wav				local # not good idea
+	sound		in_badidea3=Inxj260.wav				local # could be useful elsewhere
+	
+	sound		voice0=NB04V01.WAV					local
+	sound		voice1=inxj268.WAV					local # inxj233.wav					local
+	sound		voice2=INXJ136.WAV					local
+	sound		voice3=INXJ132.WAV					local
+	sound		surrenderSnd=nb05V04.wav			local # Don't shoot!  It's only a bronze gear.  You can have it!
+	sound		gotYou=nb05j01.wav					local # Volodnikov!  Now I've got you!
+	sound		dropSnd=nub_gear_drop.wav			local		
+	sound		click=nub_anubisarm_place_c.wav		local
+	sound		gearSnd=INXJ147.wav					local # Aha...  (Was INXJ196.wav- A bronze gear...)
+	sound		put=gen_pistol_put.wav				local
+	sound		pull=gen_pistol_pull.wav			local
+
+# .................................. THINGS ....................................
+
+	thing		player								local
+
+	thing		cam0								nolink
+	thing		cam1								nolink
+	thing		cam2								nolink
+	thing		cam3								nolink
+	thing		cam4								nolink
+	thing		cam5								nolink
+	thing		centerCam							nolink
+	thing		varcam								local # var
+
+	thing		mazeTarg							nolink
+	thing		cam0Targ							nolink
+	thing		cam1Targ							nolink
+	thing		cam3Targ							nolink
+	thing		centerHiTarg						nolink
+	thing		centerMedTarg						nolink
+	thing		centerLoTarg						nolink
+
+	thing		indy
+	thing		indy2
+	thing		indy3
+	thing		vol
+	thing		vol2
+	thing		vol3
+	thing		indyactor							local # var
+			
+	thing		gear
+	thing		post
+	thing		postInvisibox
+
+	thing		gearItem							# dropped by Vol
+
+	thing		indyGhostNorth						nolink
+	thing		indyGhostSouth						nolink
+	thing		grab_mk_N							nolink
+	thing		grab_mk_S							nolink
+	thing		indymark							local # var
+	thing		grabmark							local # var
+	thing		volmark								local # var
+
+	thing		waypoint19
+	thing		waypoint20
+
+	thing		ladder1
+    thing		generator_pos0
+	thing		enemy0								local
+
+# ........................... WORLD REFERENCES .................................
+
+	surface		ladderface_1
+	surface		ladderface_2
+
+	sector		startsector
+
+# ........................... ENGINE REFERENCES ................................
+
+	cog 		catchvol
+	cog			hint
+
+	template	enemy0_tpl
+	template    actortpl=indy_sh_actor				local
+
+# ............................... VARIABLES ....................................
+
+	vector		v_targetpos							local
+
+	flex		getgear								local # label
+
+	int			tempActor							local
+
+	int			done0=0								local
+	int			swapevent=0							local
+	int			in_swapItem1						local
+	int			vo_swapItem1						local
+	int			vo_swapItem2						local
+	int			in_keyTrack1						local
+	int			vo_keyTrack1						local
+	int			cursound							local
+	int			whichway							local
+	int			newline=50							local
+	int			oldline=50							local
+	int			firstline=0							local
+        
+    cog                     NUB_Commie_Grid         #added by JM
+
+	AI          AI_Sniper=com_2Hsniper.ai   local
+
+end
+
+# ==============================================================================
+
+code
+
+startup:
+	SetCollideType(post, 3);
+    
+	player = GetLocalPlayerThing();
+
+	ClearSurfaceFlags(ladderface_1, 0x2000);
+    ClearSurfaceFlags(ladderface_2, 0x2000);
+	SetCollideType(ladder1, 0);
+    SetThingFlags(ladder1, 0x80000);
+
+	#make hangable.
+	SetSurfaceFlags(ladderface_1, 0x1000000);
+    
+	SetThingFlags(indy, 0x80000);
+	SetThingFlags(vol, 0x80000);
+
+	SetThingLight(gear, '0.5 0.5 0.5', 0.1, 1.0);
+	SetThingLight(post, '0.5 0.5 0.5', 0.1, 1.0);
+	SetThingFlags(gearItem, 0x80000);
+
+return;
+
+# ..............................................................................
+
+entered:
+
+if (GetSourceRef() == player)
+{
+    if (done0 == 1) return;
+
+	if (GetSenderRef() == startsector)
+	{
+		done0 = 1;
+        
+		SetActorFlags(player, 0x200000);
+		StartCutscene(1);
+
+		if ((GetMoveStatus(player) == 1) || (GetMoveStatus(player) == 2))
+        {
+			StopThing(player);
+        }
+
+		# Prep...
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		CopyPlayerHolsters(player, indy);
+		ClearThingFlags(vol, 0x80000);
+
+        # Indy looks cam rt...
+		tempActor = CreateThing(actorTpl, player);
+		CaptureThing(tempActor);
+		CopyPlayerHolsters(player, tempActor);
+		ClearThingFlags(tempActor, 0x80000);
+        SetThingFlags(player, 0x80000);
+        SetThingMaxRotVel(tempActor, 100.0);
+		AISetLookThing(tempActor, cam3);
+		Sleep(0.5);
+		DestroyThing(tempActor);
+
+        # Cut to shot of Indy from stair top ...
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, cam0);
+		SetCameraSecondaryFocus(2, cam0Targ);
+        SetCurrentCamera(2);
+		SetCameraFOV(65, 0, 0.0); # was 60
+		
+		# Walk Indy to cam...
+        ClearThingFlags(indy, 0x80000);
+		AttachThingToThing(cam0Targ, indy);
+		AISetMoveSpeed(indy, 1.0);
+		AISetLookThingEyeLevel(indy, mazeTarg);
+		AISetMoveThing(indy, mazeTarg, 0);
+		Sleep(0.01);
+		SetCameraFOV(55, 1, 3.0);
+		AIWaitForStop(indy);
+
+        # Indy: "Hmmm"
+		AISetLookThing(indy, vol);
+        PlayVoice(indy, voice1, 1.0, 0);
+		Sleep(0.2);
+
+		# Dolly to V...
+ 		SetCameraInterpSpeed(2, 2.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		Sleep(0.01);
+		SetCameraFocus(2, cam3);
+		SetCameraSecondaryFocus(2, cam1Targ);
+        SetCameraFOV(25, 1, 2.0);
+		Sleep(2.5);
+
+		# Cut to CU of Vol...
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, cam1);
+		SetCameraSecondaryFocus(2, cam3Targ);
+		SetCameraFOV(45, 0, 0.0);
+		Sleep(0.1);
+        		
+		# Indy: "Dr. Volodnikov!"
+		cursound = PlayVoice(indy, voice3, 1.0, 0);
+		PlayKey(indy, indyGesture, 4, 0x12, 0);
+		Sleep(0.3);
+
+		# V turns...
+		SetThingMaxRotVel(vol, 180.0);
+		AISetLookThing(vol, indy);
+		WaitForSound(cursound);
+		AIWaitForStop(vol);
+		Sleep(0.1);
+		AISetLookThingEyeLevel(vol, gear);
+		Sleep(0.3);
+
+		# Vol: "Bozhemoi!"
+		PlayVoice(vol, voice0, 0.5, 0);
+		
+		# Vol takes gear (see callback)...
+		AIWaitForStop(vol);
+		swapevent = 1;
+		PlayKey(vol, voluse, 1, 0x2, 0); 
+		Sleep(0.5);
+
+		# Run Vol away...
+		AISetLookFrame(vol, 1);
+		Sleep(0.5);
+		AISetMoveSpeed(vol, 1.7);
+		AISetMoveFrame(vol, 1);
+		Sleep(1.0);
+
+        # New Vol...
+		ClearThingFlags(vol3, 0x80000);
+		SetThingFlags(vol3, 0x10);
+		vo_swapItem1 = SetThingMesh(vol3, 8, mod_vo_gearhand, 0);
+		AISetLookFrame(vol3, 1);
+		AISetMoveSpeed(vol3, 2.0);
+		Sleep(0.2);
+		AISetMoveFrame(vol3, 1);
+        
+        # Back to top of stairs...
+		DestroyThing(vol);
+		ClearThingFlags(vol3, 0x10);
+		AIEnableBodyTracking(indy, vol3);
+		SetCameraFocus(2, cam3);
+		SetCameraSecondaryFocus(2, vol3);
+		SetCameraFOV(45, 0, 0.0);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 1.5);
+		Sleep(0.01);
+		
+		# Dolly back...
+		SetCameraFocus(2, cam5);
+		SetCameraFOV(90, 1, 1.5);
+		Sleep(1.5);
+		DestroyThing(vol3); 
+		Sleep(0.5);
+
+		# Indy: "wonder what V up to now..."
+		PlayVoice(indy, voice2, 1.0, 0);
+		TeleportThing(player, indy);
+		Sleep(2.0);
+ 		DetachThing(Cam0Targ);
+		DestroyThing(indy);
+		ClearThingFlags(player, 0x80000);
+		       
+		# Clean up...
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraPosition(1, GetThingPos(cam5));
+		SetCurrentCamera(1);
+
+		ClearActorFlags(player, 0x200000);
+		EndCutScene();
+	}
+}
+
+return;
+
+# ..............................................................................
+
+activated:
+
+    if ((GetSenderRef() == postInvisibox) && (GetCurItem(player) == 67))
+	{
+		
+        While (newline == oldline)
+		{
+			newline = Randbetween(0, 3);
+			if (firstline == 0 && newline == 3)
+			{
+				newline == oldline;
+			}
+		}
+		firstline = 1;
+		oldline = newline;
+		Sleep(0.5);
+		PlayVoice(player, in_badidea0[newline], 1, 1);
+		Sleep(0.2);
+	}			
+
+	return;
+
+# ..............................................................................
+
+user0:
+
+	# Received when South entrance is blocked...
+
+	whichway = 0;
+	indyactor = indy3;
+	varcam = cam4;
+	indymark = indyGhostNorth;
+	grabmark = grab_mk_N;
+	volmark = waypoint20;
+	goto getgear;
+
+	return;
+
+# ..............................................................................
+
+user1:
+
+	whichway = 1;
+	indyactor = indy2;
+	varcam = cam2;
+	indymark = indyGhostSouth;
+	grabmark = grab_mk_S;
+	volmark = waypoint19;
+	goto getgear;
+
+	return;
+
+# ..............................................................................
+
+getgear:
+
+	# Hide player and reveal actor...
+	StartCutscene(1);
+	SetActorFlags(player, 0x200000);
+
+    if ((GetMoveStatus(player) == 1) || (GetMoveStatus(player) == 2))
+	{
+		StopThing(player);
+    }
+
+
+
+	MakeMeStop();
+	DeselectWeaponWait(player);
+	CopyPlayerHolsters(player, indyactor);
+	AISetCutsceneMode(indyactor);
+	SetThingFlags(player, 0x80000);
+	ClearThingFlags(indyactor, 0x80000);
+	AISetCutsceneMode(vol2);
+	SetCollideType(vol2, 0);
+	ClearThingFlags(vol2, 0x80000);
+	vo_swapItem2 = SetThingMesh(vol2, 8, mod_vo_gearhand, 0);
+	AISetLookThingEyeLevel(indyactor, indymark);
+
+	# TO DO: Randy!  Indy should pull current 1h weap...
+
+	swapevent = 3;
+	in_keyTrack1 = PlayKey(indyactor, in_gunout, 0, 0x14, 0); # see callback
+
+	# Cut to V & Indy...
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, varcam);
+	SetCameraSecondaryFocus(2, indyactor);	
+	SetCurrentCamera(2);
+	SetCameraFOV(38 , 0, 0.0);
+
+	# Indy walks in...
+	AISetMoveSpeed(indyactor, 1.1);
+	AISetMoveThing(indyactor, indymark, 0);
+	SetCameraLookInterp(2, 1);
+	SetCameraInterpSpeed(2, 1.5);
+	Sleep(0.01);
+
+	# Pan to include V...
+	SetCameraSecondaryFocus(2, centerHiTarg);
+	SetCameraFOV(85, 1, 1.5);
+
+	Sleep(0.5);
+	AIEnableHeadTracking(indyactor, vol2);
+	AIEnableHeadTracking(vol2, indyactor);
+	AIWaitForStop(indyactor);
+
+	# Indy faces V...
+	AIDisableHeadTracking(vol2);
+	AIDisableHeadTracking(indyactor);
+	AISetLookThing(vol2, indyactor);
+	AISetLookThing(indyactor, vol2);
+	 
+	# Indy: "now got you..."
+	PlayVoice(indyactor, gotYou, 1.0, 1);
+
+	# Cut to V...
+	SetCameraLookInterp(2, 0);
+	SetCameraFocus(2, centerCam);
+	SetCameraSecondaryFocus(2, centerHiTarg);
+	SetCameraFOV(28, 0, 0.0);
+
+	# Vol: "you can have...gear"
+	PlayVoice(vol2, surrenderSnd, 1.0, 0);
+	Sleep(0.2);
+
+	# V drops gear (see callback)...
+	swapevent = 2;
+	vo_keyTrack1 = PlayKey(vol2, volDrop, 4, 0x12, 0);
+	Sleep(3.6); # was 3.5
+
+	# Pan down to gear...
+	SetCameraLookInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.5);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, centerLoTarg);
+	Sleep(0.3);
+	
+	AISetLookThingEyeLevel(vol2, volmark);
+	AISetMoveSpeed(vol2, 2.5);
+	AISetMoveThing(vol2, volmark, 0);
+	Sleep(1.0);
+	DestroyThing(vol2);
+
+	# Instantly putaway gun (Randy, fix holster to show current 1h weap) ...
+	AISetLookThing(indyactor, gearItem);
+	swapevent = 4;
+	StopKey(indyactor, in_keyTrack1, 0.0);
+	PlayKey(indyactor, in_gunaway, 4, 0x12, 1);
+	#RestoreThingMesh(indyactor, in_swapItem1);
+
+	# Indy picks up gear...
+	AISetMoveThing(indyactor, grabmark, 1);
+	PlayKey(indyactor, in_actlow, 4, 0x12, 0);
+
+	# Widen out to frame him...
+	SetCameraInterpSpeed(2, 2.0);
+	Sleep(0.01);
+	SetCameraSecondaryFocus(2, centerMedTarg);
+	SetCameraFOV(55, 1, 2.0);
+	Sleep(0.5);
+
+	# Indy: "Aha..."
+	PlayVoice(indyactor, gearSnd, 1.0, 0);
+	Sleep(0.5);
+
+	DestroyThing(gearitem);
+	ChangeInv(player, 67, 1.0);
+	SetInvAvailable(player, 67, 1);
+	JonesInvItemChanged(67);
+
+	TeleportThing(player, indyactor);
+	Sleep(2.0);
+
+	# Make campos...
+	if (whichway == 0)
+	{
+		v_targetpos = VectorAdd(VectorTransformToOrient(player, '0.25 -0.1 0.0'), GetThingPos(player));	
+	}
+	else
+	{
+		v_targetpos = VectorAdd(VectorTransformToOrient(player, '-0.25 -0.1 0.0'), GetThingPos(player));	
+	}
+	SetCameraPosition(1, v_targetpos);
+
+	SetCurrentCamera(1);
+	ResetCameraFOV(0, 0.0);
+
+	DestroyThing(indy2);
+	DEstroyThing(indy3);
+
+	ClearThingFlags(player, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	EndCutScene();
+
+	#make un-hangable...
+	ClearSurfaceFlags(ladderface_1, 0x1000000);
+
+	SetSurfaceFlags(ladderface_1, 0x2000);
+	SetSurfaceFlags(ladderface_2, 0x2000);
+	ClearThingFlags(ladder1, 0x80000);
+    enemy0 = CreateThing(enemy0_tpl, generator_pos0);
+	CaptureThing(enemy0);
+
+	AISetClass(enemy0, AI_sniper);
+
+	ClearThingFlags(enemy0, 0x80000);
+	
+	SendMessage(NUB_Commie_Grid, User5);        //added by JM       
+	SendMessage(hint, User4);
+	
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+
+return;
+
+# ..............................................................................
+
+callback:
+
+	if (swapevent == 1)
+	{
+		vo_swapItem1 = SetThingMesh(vol, 8, mod_vo_gearhand, 0);
+		PlaySoundThing(click, gear, 1.0, -1, -1, 0);
+		DestroyThing(gear);
+		swapevent = 0; # reset
+	}
+
+	if (swapevent == 2)
+	{
+		RestoreThingMesh(vol2, vo_swapItem2);
+		PlaySoundThing(dropSnd, gearItem, 1, -1, -1, 0x80);
+		ClearThingFlags(gearItem, 0x80000);
+		swapevent = 0;
+	}
+
+	if (swapevent == 3)
+	{
+		ResetHolsterModel(indyactor, 2);
+		PlaySoundThing(pull, indyactor, 1, -1, -1, 0x80);
+		SetWeaponModel(indyactor, GetLastPistol(player));
+		Print("pull gun");
+		#in_swapItem1 = SetThingMesh(indyactor, 15, mod_in_revolver, 0);
+		swapevent = 0; # reset
+	}
+	if (swapevent == 4)
+	{
+        # Indy holsters revolver...
+        SetHolsterModel(indyactor, GetLastPistol(player), 17);
+		PlaySoundThing(put, indyactor, 1, -1, -1, 0x80);
+		ResetWeaponModel(indyactor);
+		swapevent = 0;
+	}
+
+	return;
+
+end
+

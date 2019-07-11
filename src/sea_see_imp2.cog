@@ -1,0 +1,71 @@
+# Jones 3D Cog Script
+#
+# sea_see_imp2.cog
+#
+# [DS]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		entered
+	message		exited
+	message		sighted
+	message		user0
+
+	thing		mp2
+	sector	trigger_sect
+	sound		see_mp2=inxj231.wav			local
+	thing		player					local
+	int		seen=1					local
+
+end
+
+# ------------------------------------------------------------------------------
+
+code
+
+startup:
+	sleep(0.1);
+	player = GetLocalPlayerThing();
+	return;
+
+entered:
+	if(seen == 2) return;
+	if(GetSenderRef()  == trigger_sect)
+	{
+	ClearThingFlags(mp2, 0x100000);
+	seen=0;
+	}
+	return;
+
+exited:
+	if(seen == 2) return;
+	if(GetSenderRef()  == trigger_sect)
+	{
+	seen=1;
+	}
+	return;
+
+sighted:
+	if(seen != 0) return;
+	if(GetSenderRef()  == mp2)
+	{
+	PlayVoice(player, see_mp2, 1.0, 0);
+	seen=2;
+	}
+	return;
+
+user0:
+	seen=2;
+	return;
+
+
+end
+
+
+
+

@@ -1,0 +1,44 @@
+# Jones 3D Cog Script
+#
+# lag_SectorThrust.cog
+#
+# generic sector thrust script
+#
+#  Modified from gen_SectorThrust.cog
+#
+# [YB&DS]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+	message	startup
+	message	entered
+		
+
+	vector	vec0			desc=thrust_direction
+	float		speed=0.5		local		desc=thrust_speed
+
+	sector	sector0		
+	sector	sector1 
+	sector	sector2
+	sector	sector3
+end
+
+
+code
+
+# ........................................................................................
+
+startup:
+	if (sector0 >= 0) SetSectorThrust(sector0, vec0, speed);
+	if (sector1 >= 0) SetSectorThrust(sector1, vec0, speed);
+	if (sector2 >= 0) SetSectorThrust(sector2, vec0, speed);
+	if (sector3 >= 0) SetSectorThrust(sector3, vec0, speed);
+	return;
+
+entered:
+	Print("The current is too rough");
+	return;
+
+end

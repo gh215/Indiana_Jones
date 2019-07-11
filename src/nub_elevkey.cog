@@ -1,0 +1,140 @@
+# Jones 3D Cog Script
+#
+# nub_ElevKey.cog
+#
+# [TL]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+#
+# ========================================================================================
+symbols
+
+message		activated
+message		startup
+
+thing		player								local
+thing		keyhole0
+thing		gate0
+thing		gate1
+thing		lockCam
+thing		actor
+thing		key
+
+sound		voice0=INXJ082.WAV					local
+sound		voice1=INXJ105.WAV					local
+sound		voice2=INXJ100.WAV					local
+sound		click=tem_monkeykey_unlock_c.wav	local
+sound		gatesound=nub_gate_open_c.wav		local
+keyframe	opengate=nub_gate_elvatr.key		local
+keyframe	unlock=in_activate_medium.key		local
+
+int			unlocked0=0							local
+int			tracknum0							local
+int			curcam								local
+int			track0								local
+int			track1								local
+
+end
+
+# ========================================================================================
+code
+
+startup:
+StartCutscene(0);
+EndCutscene();
+
+player = GetLocalPlayerThing();
+SetThingFlags(gate1, 0x80000);
+SetThingFlags(key, 0x80000);
+SetCollideType(key, 0);
+
+return;
+
+# ........................................................................................
+activated:
+
+if (GetSenderRef() == gate0)
+{
+	MakeMeStop();
+	DeselectWeaponWait(player);
+    StartCutscene(1);
+	PlayVoice(player, voice2, 1.0, 1);
+	ClearActorFlags(player, 0x200000);
+	EndCutscene();
+}
+if (GetSenderRef() == keyhole0)
+{
+	if (unlocked0 == 1)	return;
+	curcam = GetCurrentCamera();
+    if (GetCurItem(player) != 68)
+	{
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutscene(1);
+        PlayVoice(player, voice0, 1.0, 1);
+        ClearActorFlags(player, 0x200000);
+		EndCutscene();
+	}
+	if (GetCurItem(player) == 68)
+	{
+		MakeMeStop();
+        DeselectWeaponWait(player);
+		StartCutscene(1);
+        CopyPlayerHolsters(player, actor);
+
+        SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		Sleep(0.01);
+		
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(actor, 0x80000);
+		ResetThing(player);
+        
+		SetCameraFocus(2, lockCam);
+		SetCameraSecondaryFocus(2, keyHole0);
+        SetCameraLookInterp(2, 1);
+		SetCurrentCamera(2);
+		SetCameraFOV(60, 0, 0.0);
+		
+        PlayKey(actor, unlock, 4, 0x12, 0);
+		
+        Sleep(0.75);
+	    track0 = PlaySoundThing(click, keyhole0, 1.0, -1, -1, 0);
+		ClearThingFlags(key, 0x80000);
+		WaitForSound(track0);
+		
+        SetCameraSecondaryFocus(2, gate1);
+		SetCameraFOV(90, 1, 1.0);
+		Sleep(0.25);
+		
+		ChangeInv(player, 68, -1);
+		DestroyThing(gate0);
+		ClearThingFlags(gate1, 0x80000);
+        
+		tracknum0=PlayKey(gate1, opengate, 4, 0x4, 0);
+	    track1 = PlaySoundThing(gatesound, gate1, 1.0, -1, -1, 0);
+		WaitForSound(track1);
+		unlocked0 = 1;
+		PlayVoice(player, voice1, 1.0, 1);
+		Sleep(1.0);
+        
+		SetCameraPosition(1, GetThingPos(lockCam));
+		SetCurrentCamera(1);
+		ResetCameraFOV(0, 0.0);
+		SetCameraLookInterp(2, 0);
+		
+		
+        CopyOrientandPos(actor, player);
+		ClearActorFlags(player, 0x200000);
+		ClearThingFlags(player, 0x80000);
+		SetThingFlags(actor, 0x80000);
+		StopAnim(tracknum0);
+        EndCutScene();
+	}
+}
+
+return;
+
+# ........................................................................................
+end
+

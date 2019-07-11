@@ -1,0 +1,105 @@
+# Jones 3D Cog Script
+#
+# converted from item_Propeller.cog
+#
+# [RT & DS & MR]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	startup
+message	activate
+
+thing		Prop
+thing		indyactor
+thing		campos
+thing		player						local
+int		bin=94						local
+int		showing=0						local
+int		curcam						local
+keyframe	pullit=in_uw_pullswitch.key			local
+keyframe	in_smack=0in_uw_hammer.key			local
+keyframe	in_swim=in_uw_float.key				local
+
+# --------- Hammer hand ---------------------
+	model		hammerhnd=hand_in_hammer.3do		local
+	int		swapRef					local
+sound		smakit=lag_hammer_uw.wav			local
+sound		creaky=lag_propcreak_c.wav			local
+sound		breakit=lag_propbreak_c.wav			local
+
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+	player = GetLocalPlayerThing();
+	return;
+
+activate:
+	if(GetSenderRef() != Prop) return;
+	curCam = GetCurrentCamera();
+	SetThingFlags(player, 0x80000);
+	SetActorFlags(player, 0x200000);
+	CopyPlayerHolsters(player, indyactor);
+	ClearThingFlags(indyactor, 0x80000);
+	StartCutscene(0);
+	SetCameraLookInterp(2, 0);			# turns off interp to lookthing.
+	SetCameraFocus(2, campos);
+	SetCameraSecondaryFocus(2, indyactor);
+	SetCurrentCamera(2);
+	SetCameraFOV(90, 0, 0);				# makes sure set to default.
+		
+    if (GetCurItem(player) == 93)				#hammer.
+	{
+
+	# Put the hammer in Indy's hand (15 is his right hand mesh)
+	swapRef = SetThingMesh(indyactor, 15, hammerhnd, 0);
+
+		PlayKey(indyactor, in_swim, 4, 0x14, 0);
+		PlayKey(indyactor, in_smack, 10, 0x12, 0);
+		sleep(1.5);
+		PlaySoundThing(smakit, Prop, 1.0, 25, 50, 0);
+		sleep(1.0);
+		PlaySoundThing(smakit, Prop, 1.0, 25, 50, 0);
+		sleep(1.0);
+		PlaySoundThing(smakit, Prop, 1.0, 25, 50, 0);
+		sleep(0.5);		
+		PlaySoundThing(breakit, Prop, 1.0, 15, 30, 0);
+		DestroyThing(Prop);
+		sleep(0.5);
+		ChangeInv(player, bin, 1.0);
+		SetInvAvailable(player, bin, 1);
+		JonesInvItemChanged(bin);
+	}
+	else
+	{
+		PlayKey(indyactor, pullit, 4, 0x12, 0);
+		sleep(1.5);
+		PlaySoundThing(creaky, Prop, 1.0, 15, 30, 0);
+		sleep(2.0);
+		print("Propeller is stuck");
+	}
+
+	EndCutscene();
+	SetCurrentCamera(curCam);
+	SetThingFlags(indyactor, 0x80000);
+	ClearActorFlags(player, 0x200000);
+	ClearThingFlags(player, 0x80000);
+
+	return;
+
+end
+
+
+
+
+
+
+

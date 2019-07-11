@@ -1,0 +1,123 @@
+# Jones 3D Cog Script
+#
+# TEM_CamFalls.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     crossed
+    message     entered
+    message     pulse
+
+    thing       player          local
+    thing       ghostcampos     nolink
+        
+    surface     on0
+    surface     on1
+    surface     on2
+    
+    sector      off0
+    sector      off1
+    sector      off2
+    sector      off3
+    sector      off4
+    
+    sound       in_Falling=Inxj007.wav      local
+    
+    # ** music **
+    sound       mus_Cue=mus_flourish.wav    local
+    
+    int         sender          local
+    int         set=0           local
+    int         set2=0          local
+    int         saidIt=0        local
+    int         sndChannel      local
+    int         ready=0         local
+    int         curCam          local                    
+
+    flex        fov=45
+    flex        wait=0.5
+
+end
+
+# ========================================================================================
+
+code
+
+crossed:
+
+    sender = GetSenderRef();
+    player = GetLocalPlayerThing();
+    curCam = GetCurrentCamera();
+        
+    if((sender == on0) || (sender == on1) || (sender == on2))
+    {
+        ready = 1;
+        
+        # play music cue
+        PlaySoundLocal(mus_Cue, 1.0, 0.0, 0x0, 0);
+        
+        # do cutscene stuff
+        StartCutscene(0);
+        SetActorFlags(player, 0x200000);
+    
+        SetCameraFocus(2, ghostcampos);
+        SetCameraSecondaryFocus(2, player);
+        SetCurrentCamera(2);
+        SetCameraFOV(fov, 0, 0.0);
+        
+        #SetPulse(0.1);
+    }
+    
+    return;
+
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    sender = GetSenderRef();
+    
+    if((sender == off0) || (sender == off1) || (sender == off2) || (sender == off3) || (sender == off4))
+    {
+        if(ready == 1)
+        {
+            saidIt = 1;
+            
+            Sleep(1.0);
+            
+            SetCameraFOV(90, 0, 0.0);
+            SetCurrentCamera(curCam);
+            ClearActorFlags(player, 0x200000);
+            EndCutscene();
+        }                    
+    }
+        
+    return;
+        
+# ========================================================================================
+
+pulse:
+
+    if((GetMoveStatus(player) == 15) && (saidIt == 0))
+    {
+        saidIt = 1;
+        #PlayVoice(player, in_Falling, 1.0, 0);
+        #sndChannel = PlaySoundThing(in_Falling, player, 1.0, 15.0, 20.0, 0x0);
+        #sndChannel = PlayVoice(player, in_Falling, 1.0, 0);
+        #Sleep(0.5);
+        #ChangeSoundPitch(sndChannel, 0.8, 1.0);
+        SetPulse(0.0);
+    }
+        
+    
+    return;
+
+# ========================================================================================    
+
+end
+

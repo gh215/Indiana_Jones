@@ -1,0 +1,90 @@
+# Jones 3D Cog Script
+#
+# actor_IndyMine.cog
+#
+# [PDL]
+#
+# Indy's script while driving the mine car.
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+	message     damaged
+	message		boarded
+	message		user0
+	message		user1
+
+	thing		indy							local
+	int			damageType						local
+	int			damage							local 
+	sound		ricochet=gen_ricochet_mc.wav	local
+
+	# Loaded for engines benefit
+	template	sparks=minecarsparks			local
+
+end
+
+# ===================================================================
+
+code
+
+user0:
+
+	StartCutScene(2);
+	return;
+
+# -------------------------------------------------------------------
+
+user1:
+	EndCutScene();
+	return;
+
+# -------------------------------------------------------------------
+
+boarded:
+
+	CopyPlayerHolsters(GetSourceRef(), GetSenderRef());
+
+	return;
+
+# -------------------------------------------------------------------
+
+damaged:
+	damageType = GetParam(1);
+	indy = GetLocalPlayerThing();
+	damage = GetParam(0);
+
+	if (BITTEST(damageType, 0x5)) // fire and impact only
+	{
+		if (IsCrouching(Indy))
+		{
+			damage = 0;
+//			PRINT("Missed Me - ducking");
+		}
+		else if (RandBetween(1,2) == 1)
+		{
+			damage = 0;
+//			PRINT("Missed Me - random");
+		}
+	}
+	else if (!BITTEST(damageType, 0x4000100)) // not bonk damage or poison
+	{
+//		PRINT("Can't hurt Me");
+		damage = 0;
+	}
+
+	if (BITTEST(damageType, 0x1) && damage == 0)
+	{
+		// play richochet sound
+//		PRINT("ka-ching");
+	    PlaySoundThing(ricochet, indy, 1.0, 0.0, 10.0, 0x880);
+	}
+
+	ReturnEx(damage);
+	return;
+
+end
+

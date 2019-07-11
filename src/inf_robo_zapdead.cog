@@ -1,0 +1,129 @@
+# Jones 3D Cog Script
+#
+# INF_IMP1_Pistons.cog
+# This is the generic door with a camera attached
+#
+# [SXC]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    message     pulse
+    message     crossed
+    
+    thing       player                                      local
+    
+    thing       source0
+    thing       source1
+    thing       source2
+    thing       source3
+    
+    thing       target0
+    thing       target1
+    thing       target2
+    thing       target3
+    
+    sector      dedsector
+    
+    surface     crostrigger
+    
+    thing       lightning_strike                            local
+    thing       strike_sector                               local
+    
+    template    sparks=bluesparks      						local
+    template    smoke0=+pistol_smoke1						local
+    template	lightzap=+lightningzap						local
+    template	lighthit=+lightninghit						local
+    
+    material	lightningmat0=inf_4sfx_lightning_a.mat	    local
+    material	lightningmat1=inf_4sfx_lightning_b.mat	    local
+    material	lightningmat2=inf_4sfx_lightning_c.mat	    local
+    material	lightningmat3=inf_4sfx_lightning_d.mat	    local
+        
+    int         pulsetime=2                                 local
+    int         cnt=0                                       local
+    int         count                                       local
+    int         trigger=0                                   local
+    
+    vector      player_pos                                  local
+    
+    sound		contact0=gen_lightning_contact_c.wav		local
+    sound       contact1=gen_lightning_contact_c.wav        local
+    sound       contact2=aet_lightning_04.wav               local
+    
+      
+end
+
+
+code
+
+#........................................................................................
+
+startup:
+    //inital conditions
+    player = GetLocalPlayerThing();
+
+return;
+
+#........................................................................................
+
+crossed:
+    if ((GetSenderRef() == crostrigger) && (trigger == 0))
+    {
+        SetPulse(1.1);
+        trigger=1;
+    }
+    
+return;        
+
+#........................................................................................
+
+pulse:
+    //lightning strikes
+    count = RandBetween(0, 3);
+    PlaySoundThing(contact0[RandBetween(0, 2)], source0[count], 1, 5, 15, 0);
+    for (cnt = 4; cnt <= RandBetween(4, 12); cnt = cnt + 1)
+    {
+        lightning_strike = CreatePolylineThing(source0[count], target0[count], '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+        Sleep(0.05); 
+    }
+        
+return;
+
+#........................................................................................
+
+entered:
+    //kill the player for a bad move
+    if ((GetSenderRef() == dedsector) && (GetSourceRef() == player))
+    {
+    
+        //print("indy gets hit");
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        player_pos = VectorAdd(GetThingPos(player), '0 0 0.05');
+        for (cnt = 4; cnt <= RandBetween(4, 8); cnt = cnt + 1)
+        {
+            CreatePolylineThing(source0[count], player_pos, '0 0 0', lightningmat0[RandBetween(0, 3)], 0.05, 0.05, 0.05);
+            Sleep(0.05); 
+        }
+        CreateThingAtPos(sparks, GetThingSector(player), player_pos, '0 0 0');
+	    CreateThingAtPos(smoke0, GetThingSector(player), player_pos, '0 0 0');
+	    CreateThingAtPos(lighthit, GetThingSector(player), player_pos, '0 0 0');
+	    //CreateThingAtPos(lightzap, GetThingSector(player), player_pos, '0 0 0');
+        DamageThing(player, 1000, 0x2, source0[count]);
+        //PlayKey(player, inShocked, 4, 0x12, 0);
+        Sleep(1);
+        ClearActorFlags(player, 0x200000);
+        
+    }
+    
+return;
+
+#........................................................................................
+end
+
+

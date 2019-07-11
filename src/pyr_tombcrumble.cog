@@ -1,0 +1,336 @@
+# Jones 3D Cog Script
+#
+# pyr_tombcrumble.cog
+#
+# Use Imp#1 to open the ceiling of the gold idol crypt
+#
+# [RKD]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+# ==============================================================================
+
+symbols
+message	startup
+message	damaged
+message	activated
+message	pulse
+
+# world things
+thing  	bombpos		nolink
+thing	goldidol	nolink
+thing	dustgen		nolink
+thing	player		local
+thing	dustthing	local	
+
+# cameras and lookthings
+thing	rumblecam
+thing	rumblecamlook
+thing	cam1spot	local
+thing	cam1look	local
+
+# surfaces
+surface	crackedwall		mask=0x408
+surface	crackedwall2	mask=0x408
+surface	ceiling			nolink
+surface	roof1			nolink
+surface	roof2			nolink
+
+# sectors
+sector	noseesector		nolink
+sector	tombtop1		nolink
+sector	tombtop2		nolink
+
+# templates
+template	debris=stoneshrapa	local
+template	dust=dustcloud4ever	local
+
+# materials
+material	dustmat=gen_a4sfx_dustcloud.mat	local
+
+# sounds and fury
+sound	crunch=pru_boulder_crash_c.wav		local
+sound	crash=sol_block_crash_c.wav			local
+sound	boom=olv_quetzdoor_stop_c.wav		local
+sound	rumble=imp1_wall_break.wav			local
+sound	explosion=shw_wall_crash.wav		local
+sound	imp1Charge=imp1_chargeup.wav		local
+
+# indy saylines
+sound	crumble=inxj025.wav		local
+sound	vibrate=inxj026.wav		local
+
+# variables
+int		i=0				local
+int		locked=0		local
+int		fragment=0		local
+int		counter=0		local
+int		quivercam=0		local
+flex	shakefactor=0	local
+
+# subroutines
+flex	blowitup=0.0	local
+end
+
+code
+startup:
+	Sleep(.01);
+	
+	# make various faces drawn and no-move
+	ClearAdjoinFlags(crackedwall, 2);
+	ClearAdjoinFlags(ceiling, 2);
+	ClearAdjoinFlags(roof1, 2);
+	ClearAdjoinFlags(roof2, 2);
+	SetFaceGeoMode(crackedwall, 4);
+	SetFaceGeoMode(ceiling, 4);
+	SetFaceGeoMode(roof1, 4);
+	SetFaceGeoMode(roof2, 4);
+	
+	SetSectorAdjoins(noseesector, 0);
+	SetSectorAdjoins(tombtop1, 0);
+	SetSectorAdjoins(tombtop2, 0);
+	return;
+
+activated:
+# --- > cracked wall (and crackedwall2, which is a ceiling)
+
+	if ((GetSenderRef() != crackedwall) && (GetSenderRef() != crackedwall2)) return;
+	if (locked) return;
+
+	player = GetLocalPlayerThing();
+	
+	# if holding IMP1, make it a damage event
+	if ((GetCurWeapon(player) == 14) || (InEditor()))
+	{
+		call blowitup;
+		return;
+	}
+
+    # if not holding IMP1, use saylines instead
+	if (MakeMeStop() == -1) return;
+	DeselectWeaponWait(player);
+
+	StartCutscene(0);
+	
+	# setup offset camera
+	cam1spot = CreateThing(GetThingTemplate(rumblecam), rumblecam);
+	cam1look = CreateThing(GetThingTemplate(rumblecam), rumblecam);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+	SetCameraFocus(2, rumblecam);
+	SetCameraSecondaryFocus(2, rumblecamlook);
+	
+    # say line shifts with every activation
+    Sleep(0.3);
+	if (i == 0)
+	{
+		PlayVoice(player, vibrate, 1.0, 1);
+	}
+	else
+	{
+		PlayVoice(player, crumble, 1.0, 1);
+	}
+
+	i = 1 - i;
+
+    # restore controls and camera
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(rumblecam));
+	SetCurrentCamera(1);
+	DestroyThing(cam1spot);
+	DestroyThing(cam1look);
+
+	# finish up
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+
+damaged:
+# --- > cracked wall (and crackedwall2, which is a ceiling)
+	
+	player = GetLocalPlayerThing();
+	
+	# quit out if damage isn't caused by IMP1
+	if (GetParam(1) != 0x1000) return;
+	if ((GetSenderRef() != crackedwall) && (GetSenderRef() != crackedwall2)) return;
+
+blowitup:	
+	# if already blown, skip it
+	if (locked) return;
+	
+	# do cutscene stuff
+	if (MakeMeStop() == -1) return;
+
+	StartCutscene(1);
+	locked = 1;
+	
+	# deal with adjoins
+	SetSectorAdjoins(noseesector, 1);
+	SetSectorAdjoins(tombtop1, 1);
+	SetSectorAdjoins(tombtop2, 1);
+
+	# setup offset camera
+	cam1spot = CreateThing(GetThingTemplate(rumblecam), rumblecam);
+	cam1look = CreateThing(GetThingTemplate(rumblecam), rumblecam);
+	MakeCamera2LikeCamera1(cam1spot, cam1look);
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraFocus(2, cam1spot);
+	SetCameraSecondaryFocus(2, cam1look);
+	SetCurrentCamera(2);
+	ResetCameraFOV(0, 0.0);
+	SetCameraLookInterp(2, 1);
+	SetCameraPosInterp(2, 1);
+	SetCameraInterpSpeed(2, 0.7);
+	Sleep(0.01);
+	SetCameraFocus(2, rumblecam);
+	SetCameraSecondaryFocus(2, rumblecamlook);
+
+	# start camera quiver
+	quivercam = 1;
+	SetPulse(0.05);
+
+	# alter fov for zoom-in effect
+	SetCameraFOV(70, 1, 2.5);
+
+	# play chargeup effect and light up the player
+	PlaySoundThing(imp1charge, player, 1.0, 10.0, 20.0, 0);
+	SetThingLight(bombpos, '0.25 0.55 1.0', 5.0, 2.0);
+	Sleep(1.5);
+	
+	# play crackling effect
+	PlaySoundThing(rumble, bombpos, 1.0, 10.0, 20.0, 0);
+	Sleep(1);
+	
+	# reset fov
+	SetCameraFOV(90, 0, 0.0);
+
+	# kill dynamic light
+	SetThingLight(bombpos, '0.0 0.0 0.0', 5.0, 2.0);
+
+	shakefactor = 4;
+	quivercam = 0;
+	SetPulse(.1);
+
+	PlaySoundLocal(explosion, 1, 0, 0x0, 0);
+	
+	# create debris
+	for(i=0; i<8; i=i+1)                                                        	
+	{
+		fragment = CreateThing(debris, bombpos);
+		SetThingVel(fragment, VectorScale(VectorAdd(RandVec(), '-0.5 -0.1 0.0'), 1));
+		SetThingRotVel(fragment, VectorScale(VectorAdd(RandVec(), '0.0 0.0 0.0'), 200.0));
+		Sleep(0.025);
+	}
+	
+	# make various faces invisible and traversible
+	SetAdjoinFlags(crackedwall, 2);
+	SetAdjoinFlags(ceiling, 2);
+	SetAdjoinFlags(roof1, 2);
+	SetAdjoinFlags(roof2, 2);
+	SetFaceGeoMode(crackedwall, 0);
+	SetFaceGeoMode(ceiling, 0);
+	SetFaceGeoMode(roof1, 0);
+	SetFaceGeoMode(roof2, 0);
+		
+	# light up the idol
+	SetThingLight(goldidol, '.4 .4 1', .001, .01);
+	
+	# create and animate the dust sprites
+	SetMaterialCel(dustmat, 0);
+	MaterialAnim(dustmat, 1.0, 1);
+	dustthing = CreateThing(dust, rumblecamlook);
+	AnimateSpriteSize(dustthing, '0.2 0.2 0.5', '0.6 0.6 0.0', 4.0);
+	sleep(.3);
+	dustthing = CreateThing(dust, bombpos);
+	AnimateSpriteSize(dustthing, '0.2 0.2 0.5', '0.6 0.6 0.0', 4.0);
+	
+	# rest for a bit
+	Sleep(0.5);
+
+	sleep(1);
+	PlaySoundThing(boom, goldidol, 1, -1, -1, 0);
+	sleep(.2);
+	PlaySoundThing(crunch, goldidol, 1, -1, -1, 0);
+	PlaySoundThing(crash, goldidol, 1, -1, -1, 0);
+
+	# restore camera
+	SetCameraPosition(1, GetThingPos(rumblecam));
+	SetCurrentCamera(1);
+
+	# more dust!
+	SetMaterialCel(dustmat, 0);
+	MaterialAnim(dustmat, 1.0, 1);
+	dustthing = CreateThing(dust, dustgen);
+	AnimateSpriteSize(dustthing, '0.2 0.2 0.5', '0.6 0.6 0.0', 4.0);
+	sleep(.3);
+	dustthing = CreateThing(dust, bombpos);
+	AnimateSpriteSize(dustthing, '0.2 0.2 0.5', '0.6 0.6 0.0', 4.0);
+
+    # restore camera
+	SetCameraLookInterp(2, 0);
+	SetCameraPosInterp(2, 0);
+	SetCameraPosition(1, GetThingPos(rumblecam));
+	SetCurrentCamera(1);
+	DestroyThing(cam1spot);
+	DestroyThing(cam1look);
+	
+	# restore controls
+	EndCutscene();
+	ClearActorFlags(player, 0x200000);
+
+	return;
+
+pulse:
+	if (quivercam)
+	{
+		SetPOVShake('0.0 0.0 0.001', '0.0 0.0 0.0', 80.0, 0.8);
+		return;
+	}
+
+	if (counter < 10)
+	{
+		counter = counter + 1;
+		shakefactor = shakefactor - .4;
+
+		SetPOVShake(VectorScale(VectorSet(RandBetween(-1, 1), RandBetween(-1, 1), RandBetween(-1, 1)), .0005 * shakefactor),
+					VectorScale(VectorSet(RandBetween(-6, 6), RandBetween(-4, 4), RandBetween(-2, 2)), .05 * shakefactor),
+					10, 180);
+	}
+
+	if (counter == 10) shakefactor = 10;
+	
+	if ((counter >= 10) && (counter < 35))
+	{
+		counter = counter + 1;
+		shakefactor = shakefactor - .3;
+
+		SetPOVShake(VectorScale(VectorSet(RandBetween(-1, 1), RandBetween(-1, 1), RandBetween(-1, 1)), .0005 * shakefactor),
+					VectorScale(VectorSet(RandBetween(-6, 6), RandBetween(-4, 4), RandBetween(-2, 2)), .05 * shakefactor),
+					10, 180);
+	}
+	
+	if (counter == 35)
+	{
+		SetPulse(0);
+		counter=0;
+	}
+
+	return;
+
+end
+
+
+
+

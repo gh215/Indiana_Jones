@@ -1,0 +1,72 @@
+# Jones 3D Cog Script
+#
+# E-3 Items cog
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+symbols
+
+message	startup
+
+int	machette=0
+int	mp1=0
+int	mp2=0
+int	mp3=0
+
+# Change to 1 for unwanted items.
+
+thing		player						local
+int		machettebin=7					local
+int		imp1bin=14						local
+int		imp2bin=15						local
+int		imp3bin=16						local
+
+
+end
+
+# ===================================================================
+
+code
+
+startup:
+	sleep(0.01);
+	player = GetLocalPlayerThing();
+    
+    Sleep(1.0);
+    
+	if(machette == 0)
+    {
+        ChangeInv(player, machettebin, 1.0);
+        SetInvAvailable(player, machettebin, 1);
+        #JonesInvItemChanged(machettebin);
+    }
+	if(mp1 == 0)
+    {
+        ChangeInv(player, imp1bin, 1.0);
+        SetInvAvailable(player, imp1bin, 1);
+        #JonesInvItemChanged(imp1bin);
+    }
+	if(mp2 == 0)
+	{
+        ChangeInv(player, imp2bin, 1.0);
+        SetInvAvailable(player, imp2bin, 1);
+        #JonesInvItemChanged(imp2bin);
+    }
+	if(mp3 == 0)
+	{
+        ChangeInv(player, imp3bin, 1.0);
+        SetInvAvailable(player, imp3bin, 1);
+        #JonesInvItemChanged(imp3bin);
+    }
+	return;
+
+end
+
+
+
+
+
+
+

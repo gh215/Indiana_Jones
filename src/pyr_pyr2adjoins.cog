@@ -1,0 +1,54 @@
+# Jones 3D Cog Script
+#
+# pyr_pyr2adjoins.cog
+#
+# Adjoin control at the entrance to pyramid 2
+#
+# [RKD]
+#
+# (C) 1998 LucasArts Entertainment Company LLC. All Rights Reserved
+# ========================================================================================
+symbols
+message	startup
+message entered
+
+sector	triggeron	linkid=1
+sector	triggeron2	linkid=1
+sector	triggeron3	linkid=1
+sector	triggeron4	linkid=1
+sector	triggeron5	linkid=1
+sector	triggeron6	linkid=1
+
+sector	triggeroff	linkid=0
+sector	triggeroff2	linkid=0
+sector	triggeroff3	linkid=0
+sector	triggeroff4	linkid=0
+sector	triggeroff5	linkid=0
+sector	triggeroff6	linkid=0
+
+sector	bottleneck1	linkid=2
+sector	bottleneck2	linkid=2
+end
+
+code
+startup:
+	Sleep(.001);
+	SetSectorAdjoins(bottleneck1, 0);
+	SetSectorAdjoins(bottleneck2, 0);
+	return;
+
+entered:
+	if (GetSenderID() == 2)
+	{
+		SetSectorAdjoins(bottleneck1, 1);
+		SetSectorAdjoins(bottleneck2, 1);
+		return;
+	}
+	else
+	{
+		SetSectorAdjoins(bottleneck1, GetSenderID());
+		SetSectorAdjoins(bottleneck2, GetSenderID());
+	}
+	return;
+
+end

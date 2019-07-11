@@ -1,0 +1,554 @@
+# Jones 3D Cog Script
+#
+# sea_boat_endlevel.cog
+#
+# [DS & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ==============================================================================
+
+symbols
+
+	message		startup
+	message		activate
+	message		entered
+	message		callback
+	message		timer
+
+# ................................ KEYFRAMES ...................................
+
+	keyframe	crankit=in_turn_crank2.key				local
+	keyframe	startcrnk=in_stand_bd_turn_crank2.key	local
+	keyframe	stopcrnk=in_turn_bd_stand_crank2.key	local
+	keyframe	boatin=0in_boat.key						local
+	keyframe	crankmove=sea_hoist_crnk_wheel.key		local
+	keyframe	hoistmove=sea_hoist_crnk.key			local
+	keyframe	in_slide=in_whipclimb_idle.key			local
+
+# ............................. INDY SAYLINES ..................................
+
+# wrong item...
+	sound		in_itemline=Inxj089.wav				local # That didn't work.
+	sound		in_itemline1=Inxj090.wav			local # ...something wrong.
+	sound		in_itemline2=Inxj092.wav			local # Hmm...didn't quite work.
+	sound		in_itemline3=Inxj060.wav			local # I don't think...right answer.
+	sound		in_itemline4=Inxj087.wav			local # Whoops.
+	sound		in_itemline5=Inxj088.wav			local # Nope.
+	sound		in_itemline6=Inxj091.wav			local # Of course that didn't work.
+
+# boat lines...	
+	sound		in_lowerlaunch=se06j01a.wav			local	# this launch...need to lower..
+	sound		in_dropwater=se06j02a.wav			local	# this boat...drop into water..
+
+# hoist lines...
+	sound		in_wellook=Inxj232.wav				local # Well...look at this...
+	sound		in_important=Inxj233.wav			local # Hmm, this might be important.
+
+# .............................. OTHER SOUNDS ..................................
+
+	sound		attach=sea_launch_wheel_attach.wav		local
+	sound		takeoff=sea_launch_boat_takeoff.wav		local
+	sound		splash_snd=sea_launch_splash_c.wav		local
+	sound		boatstart=sea_launch_boat_start.wav		local
+	sound		wheelturn=sea_launch_wheel_turn.wav		local
+	sound		music0=mus_gen_indy_a_theme1.wav		local
+	sound		hoist_start=sea_hook_start_c.wav		local
+	sound		hoist_snd=sea_hook_move_c.wav			local
+	sound		hoist_stop=sea_hook_stop_c.wav			local
+
+# .................................. THINGS ....................................
+
+	thing		player									local
+	thing		camindy									local
+	thing		crank0									local
+	thing		hoistcam								local
+	thing		campos0									nolink
+	thing		campos1									nolink
+	thing		campos2									nolink
+	thing		cam_tgt0								nolink
+	thing		hoist_ct0								nolink
+	thing		boat_cam0								nolink
+	thing		boat_ct0								nolink
+	thing		cam1spot								nolink
+	thing		cam1lookspot							nolink
+	thing		indyactor
+	thing		boat
+	thing		hoist
+	thing		crankpos								nolink
+	thing		boatactor
+	thing		boattarg0								nolink
+	thing		boattarg1								nolink
+	thing		splash									nolink
+	thing		fader									nolink	# gen_fadeplat thing
+
+# ....polyline and endpoints....
+
+	thing		srcthing0								nolink
+	thing		srcthing1								nolink
+	thing		endhook0								nolink
+	thing		endhook1								nolink
+
+# ........................... ENGINE & WORLD REFS ..............................
+	
+	cog			hintcog
+
+	sector		seen_it
+	sector		camsector								local # var
+
+	template	crank
+    template    tpl_Indy=indy_actor				        local
+	template	tpl_ghost=ghost							local
+
+	material	cablemat=fhead_rope_sde.mat				local
+	material	splashmat=gen_a4sfx_splash.mat			local
+
+# ................................ VARIABLES ...................................
+
+	vector		v_cpos									local
+	vector		v_hlvec									local
+	vector		v_aimhi									local
+
+	flex		randwrongitemlines						local
+	flex		f_dotl									local
+	
+	int			boat_run								local
+	int			boat_start								local
+	int			playmusic								local
+	int			crankn									local
+	int			crankn_w								local
+	int			crankn_h								local
+	int			active=0								local
+	int			splush									local
+	int			wi_newline=50							local
+	int			wi_oldline=50							local
+	int			lineindex								local # indexes sound array
+	int			in_track0								local
+	int			in_track1								local
+	int			curcam									local
+	int			sender									local
+	int			curitem=0								local
+	int			sayhoist=0								local
+	int			sayboat=0								local
+	int			startit									local
+	int			moveit									local
+	int			stopit									local
+	int			speak0									local
+	int			lookhoisthappened=0						local
+	int			spot									local
+
+        cog                     SEA_Deck_AI
+
+# ------ From Chris's Cog vol_boatmover.cog -----------------
+thing	boatringpos
+thing	boatring								local
+template	ring=+ripples						local
+vector	boatstart	  						local
+vector	boatend							local
+int		wake								local
+
+    
+end
+
+# ================================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+	player = GetLocalPlayerThing();
+	CreatePolylineThing(srcthing0, endhook0, '0 0 0', cablemat, .002, .002, 0);
+	CreatePolylineThing(srcthing1, endhook1, '0 0 0', cablemat, .002, .002, 0);
+	AttachThingToThing(endhook0, boat);
+	AttachThingToThing(endhook1, boat);	
+	SetThingFlags(splash, 0x80000);
+	SetThingAlpha(fader, 0.0);
+	SetThingLight(boat, '0.2 0.3 0.3', 0.01, 0.01);
+	global14=0;
+
+	return;
+
+# ..............................................................................
+
+entered:
+
+	#--has seen boat---
+	if(GetSenderRef() == seen_it)
+	{
+		global14=1;
+	}
+	return;
+
+# ..............................................................................
+
+activate:
+
+	if (active == 1)
+	{
+		return;
+	}
+
+	sender = GetSenderRef();
+	curitem = GetCurItem(player);
+
+	#### curitem = 0; # TEMP TEST ONLY!!!
+
+	if (sender == hoist && curitem == 113)
+	{
+		active = 1;
+		SendMessageEx(hintcog, user4, 1, 0, 0, 0); # param0=1; solved
+                
+                SendMessage(SEA_Deck_AI, user1);  //added by JM
+                
+		MakeMeStop();
+		SetThingFlags(player, 0x80000);
+		SetActorFlags(player, 0x200000); # no control
+		CopyPlayerHolsters(player, indyactor);
+		startcutscene(1);
+		AttachThingToThing(fader, campos2);
+		ClearThingFlags(indyactor, 0x80000);
+		
+		# Shot of Indy at the crankwheel post...
+		SetCameraFocus(2, campos0);
+		SetCameraSecondaryFocus(2, hoist_ct0);
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCurrentCamera(2);
+		SetCameraFOV(60, 0, 0.0);
+		PlayMode(indyactor, 60, 0);
+		Sleep(0.5);
+
+		crank0=CreateThing(crank, crankpos);
+		CaptureThing(crank0);
+		PlaySoundThing(attach, crank0, 1.0, 5, 20, 0);
+		Sleep(0.5);
+
+		PlayKey(indyactor, startcrnk, 4, 0x12, 1);
+		crankn = PlayKey(indyactor, crankit, 4, 0x10, 0);
+		crankn_w = PlayKey(crank0, crankmove, 4, 0x10, 0);
+		crankn_h = PlayKey(hoist, hoistmove, 4, 0x10, 0);
+		Sleep(2.3);
+
+		# Cut to shot of boat descending into water...
+		AttachThingToThing(cam_tgt0, boat);
+		SetCameraFocus(2, campos1);
+		SetCameraSecondaryFocus(2, cam_tgt0);
+		startit = PlaySoundThing(hoist_start, hoist, 1, 10, 30, 0);
+		WaitForSound(startit);
+		
+		# Down boat...
+		MoveToFrame(boat, 1, 1.0);
+		moveit = PlaySoundThing(hoist_snd, hoist, 1, 10, 30, 1);
+		WaitforStop(boat);
+		PlaySoundThing(splash_snd, splash, 1.0, 15, 30, 0);
+		SetThingLight(splash, '0.2 0.3 0.3', 0.01, 0.01);
+		ClearThingFlags(splash, 0x80000);
+		splush=MaterialAnim(splashmat, 8.0, 0);
+
+		# Indy slides down aft polyline...
+		StopKey(indyactor, crankn, 0.0);
+		StopKey(crank0, crankn_w, 0.0);
+		StopKey(hoist, crankn_h, 0.0);
+		Sleep(0.5);
+		ClearPhysicsFlags(indyactor, 0x01); # no gravity
+		TelePortThing(indyactor, srcthing1);
+		in_track0 = PlayKey(indyactor, in_slide, 4, 0x10, 0);
+		MoveThingToPos(indyactor, GetThingPos(endhook1), 2.0);
+
+		# TO DO:  add some rings after the splash...
+
+		WaitForAnimStop(splush);
+		DestroyThing(splash);
+		DetachThing(endhook0);
+		DetachThing(endhook1);
+		DetachThing(cam_tgt0);
+		Stopsound(moveit, 0.1);
+		stopit = PlaySoundThing(hoist_stop, hoist, 1.0, 5, 20, 0);
+		Sleep(1.5);
+		StopKey(indyactor, in_track0, 0.0);
+
+	#	DestroyThing(Boat);
+		SetThingFlags(Boat, 0x80000);
+	
+		DestroyThing(indyactor);
+		SetThingLight(boatactor, '0.3 0.4 0.4', 0.01, 0.01);
+		ClearThingFlags(boatactor, 0x80000);
+		AttachThingToThing(cam_tgt0, boatactor);
+
+		# Cut to shot of Indy in the boat...
+		SetCameraFocus(2, campos2);
+		SetCameraSecondaryFocus(2, cam_tgt0);
+		SetCameraFOV(40, 0, 0.0);
+		PlayKey(boatactor, boatin, 4, 0x10, 0);
+		playmusic = PlaySoundLocal(music0, 1.0, 0.0, 0x0, 0);
+
+		AttachThingToThing(boatringpos, boatactor);
+		SetTimer(0.1);
+
+		Sleep(0.4);
+		boat_start=PlaySoundThing(boatstart, boatactor, 1.0, 55, 100, 0);
+		sleep(0.1);
+
+		# Indy is free...
+		boat_run=PlaySoundThing(takeoff, boatactor, 1.0, 45, 100, 0x0081);
+		SetThingMaxRotVel(boatactor, 25);
+		AISetMoveSpeed(boatactor, 1.5);
+		AISetLookThing(boatactor, boattarg0);
+		AISetMoveThing(boatactor, boattarg0, 0);
+		SetCameraFOV(20, 1, 1.5);
+		Sleep(0.2);
+		AISetMoveSpeed(boatactor, 2.0);
+		Sleep(0.3);
+		AISetMoveSpeed(boatactor, 2.5);
+		Sleep(0.5);
+		AISetMoveSpeed(boatactor, 3.0);
+		Sleep(0.5);
+		AISetMoveSpeed(boatactor, 3.5);
+
+		# Boom up to watch boat escape...
+		MoveToFrame(campos2, 1, 0.71);
+		SetCameraFOV(100, 1, 10.0);
+		Sleep(0.5);
+		AISetMoveSpeed(boatactor, 4.0);
+		AISetLookThing(boatactor, boattarg1);
+		AISetMoveThing(boatactor, boattarg1, 1);
+
+		# Fade out...
+		ChangeSoundVol(playmusic, 0.0, 2.0);
+		ChangeSoundVol(boat_run, 0.0, 2.0);
+		ThingFadeAnim(fader, 0.0, 1.0, 1.0, 0); # fade out in 1 sec!
+		Sleep(2.0);
+		SetCameraLookInterp(2, 0);			#reset default
+		ResetCameraFOV(0, 0.0);				#reset default
+		SetCameraInterpSpeed(2, 1);			#reset default
+		active = 0;
+		endcutscene();
+		JonesEndLevel();					# On to the next level
+	}
+
+	if (sender == hoist && curitem != 113)
+	{
+		# Has seen boat...	
+		global14=1;
+
+		active = 1;
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutScene(1);
+
+		# Locate player...
+		spot = 0;
+		v_hlvec = GetThingLVec(hoist);
+		v_aimhi = VectorSub((GetThingPos(hoist)), (GetThingPos(player)));
+		f_dotl = VectorDot(VectorNorm(v_aimhi), v_hlvec);
+		if (f_dotl > 0)
+		{
+			spot = 1; # outboard
+		}
+		
+		# prep
+		if (lookhoisthappened != 0)
+		{
+			DestroyThing(camindy);
+			DestroyThing(hoistcam);
+		}
+		camindy = CreateThing(tpl_Indy, player);
+		CaptureThing(camindy);
+		ClearThingFlags(camindy, 0x80000);
+		SetCollideType(camindy, 0);
+		CopyPlayerHolsters(player, camindy);
+		SetThingFlags(player, 0x80000);
+		AISetLookThing(camindy, hoist);
+		AIWaitForStop(camindy);
+		if (spot == 0)
+		{
+			v_cpos =
+			VectorAdd(VectorTransformToOrient(camindy, '-0.2 0.05 0.15'), GetThingPos(player));
+		}
+		else
+		{
+			v_cpos =
+			VectorAdd(VectorTransformToOrient(camindy, '0.2 0.05 0.15'), GetThingPos(player));
+		}
+		camsector = FindNewSectorFromThing(camindy, v_cpos);
+		hoistcam = CreateThingAtPos(tpl_ghost, camsector, v_cpos, '0 0 0');
+		CaptureThing(hoistcam);
+		lookhoisthappened = 1;
+		
+		# Set cam...
+		curcam = GetCurrentCamera();
+		MakeCamera2LikeCamera1(cam1spot, cam1lookspot);
+		SetCameraFocus(2, cam1spot);
+		SetCameraSecondaryFocus(2, cam1lookspot);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 0.7);
+		Sleep(0.01);
+		SetCameraFocus(2, hoistcam);
+		SetCameraSecondaryFocus(2, hoist);
+		Sleep(0.7);
+
+		# player is using a wrong item
+	    if (curitem >= 1)
+		{
+			PlayMode(player, 60, 0);
+			call randwrongitemlines;
+		}
+		else
+		{
+			# player isn't using anything
+			if (sayhoist == 0)
+			{
+				speak0 = PlayVoice(player, in_wellook, 1.0, 0);
+			}
+			else
+			{
+				speak0 = PlayVoice(player, in_important, 1.0, 0);
+			}
+			sayhoist = 1;
+		}
+		WaitForSound(speak0);
+
+		# Clean up...
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraPosition(1, GetThingPos(hoistcam));
+		SetCurrentCamera(curcam);
+		ResetCameraFOV(0, 0.0);
+		SetThingFlags(camindy, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		EndCutscene();
+
+		ClearActorFlags(player, 0x200000);
+		active = 0;
+	}
+
+	if (sender == boat)
+	{
+		# Has seen boat...	
+		global14=1;
+
+		active = 1;
+		MakeMeStop();
+		DeselectWeaponWait(player);
+		StartCutScene(1);
+
+		# Set cam...
+		curcam = GetCurrentCamera();
+		MakeCamera2LikeCamera1(cam1spot, cam1lookspot);
+		SetCameraFocus(2, cam1spot);
+		SetCameraSecondaryFocus(2, cam1lookspot);
+		SetCurrentCamera(2);
+		ResetCameraFOV(0, 0.0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+		SetCameraInterpSpeed(2, 0.7);
+		Sleep(0.01);
+		SetCameraFocus(2, boat_cam0);
+		SetCameraSecondaryFocus(2, boat_ct0);
+		Sleep(0.7);
+		
+		# player is using a wrong item
+	    if (GetCurItem(player) >= 1)
+		{
+			PlayMode(player, 60, 0);
+			call randwrongitemlines;
+		}
+		else
+		{
+			# player isn't using anything
+			if (sayboat == 0)
+			{
+				speak0 = PlayVoice(player, in_lowerlaunch, 1.0, 0);
+			}
+			else
+			{
+				speak0 = PlayVoice(player, in_dropwater, 1.0, 0);
+			}
+			sayboat = 1;
+		}
+		WaitForSound(speak0);
+
+		# Clean up...
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);				
+		SetCameraPosition(1, GetThingPos(boat_cam0));
+		SetCurrentCamera(curcam);
+		ResetCameraFOV(0, 0.0);
+
+		EndCutScene();
+		ClearActorFlags(player, 0x200000);
+		active = 0;
+	}
+
+	return;
+
+# ..............................................................................
+
+callback:
+
+    if (GetParam(1) == 16)
+	{
+        PlaySoundThing(wheelturn, crank0, 1.0, -1, -1, 0x0);
+	}
+
+	return;
+
+# ..............................................................................
+
+randwrongitemlines:
+
+	while (wi_newline == wi_oldline)
+	{		
+		wi_newline = RandBetween(0, 19);
+		if (wi_newline < 15)
+		{	
+			wi_newline = RandBetween(0, 3); # ~1/5 chance for lines 0 thru 3
+		}
+		if (wi_newline == 19)
+		{
+			wi_newline = 6; # 1/20 chance for line 6 
+		}
+		if (wi_newline > 16)
+		{
+			wi_newline = 5; # 1/10 chance for line 5 
+		}
+		if (wi_newline > 14)
+		{
+			wi_newline = 4; # 1/10 chance for line 4
+		}
+	}
+	wi_oldline = wi_newline;
+	speak0 = PlayVoice(player, in_itemline[wi_newline], 1, 0);
+
+	return;
+
+# ..............................................................................
+timer:
+		boatstart	= VectorSet(0.25, 0.25, 0.7);
+		boatend	= VectorSet(0.6, 0.6, 0.0);
+
+		wake=randbetween(0, 4);
+		if(wake == 4)
+		{
+		setTimer(0.1);	
+		return;
+		}
+		# water rings at the base of the boat
+		boatring = CreateThing(ring, boatringpos);
+		CaptureThing(boatring);
+		AnimateSpriteSize(boatring, boatstart, boatend, 1.5);
+		SetTimer(0.1);
+        return;
+
+end
+
+
+
+
+
+

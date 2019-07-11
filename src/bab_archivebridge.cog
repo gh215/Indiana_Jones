@@ -1,0 +1,425 @@
+# Jones 3D Cog Script
+#
+# BAB_ArchiveBridge.cog
+#
+# Controls the behaviour of the uppermost bridge in the Babylon Archives
+#
+# [SXC & revised by HB]
+#
+# (C) 1998 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+# MESSAGES ########################################################
+
+message     startup
+message     entered
+message		user6
+message     pulse
+
+# THINGS ##########################################################
+
+thing       player          local          
+thing       frag0           linkid=3
+thing       frag1           linkid=3
+thing       frag2           linkid=3
+thing       frag3           linkid=3
+thing       frag4           linkid=3
+thing       firstblock      linkid=3
+thing       keystone
+thing       marduk_button
+thing       marduk_door
+thing       safepos1
+thing       safepos2
+
+# CUTSCENE GEAR AND ACTORS ########################################
+
+thing       camera0								nolink
+thing       camera1								nolink
+thing		camera2								nolink
+
+thing       cam0resetpos						nolink
+thing       cam1resetpos						nolink
+
+thing       actorindy0
+thing       actorindy1
+
+thing       marduk_col_actor
+thing       mdk_column_cam						nolink
+thing       mdk_column_cam2						nolink
+thing       mdk_column_tgt						nolink
+thing       mardukdoor_tgt						nolink
+thing       mdk_resetpos						nolink
+
+thing       target0
+thing       target1
+thing       target2
+thing		br_mk_1
+
+cog			tabpickupcog
+
+# SOUNDS ##########################################################
+
+sound       rumble=nub_bull_move1_c.wav         local
+sound       click=olv_quetzdoor_stop_c.wav      local
+sound       crashrumble=olv_rockhead_roll_c.wav local
+sound       bigcrash=pru_boulder_crash_c.wav    local
+   
+sound       indylineb0=inxj058.wav      local
+sound       indylineb1=inxj059.wav      local
+sound       indylineb2=inxj060.wav      local
+sound       indylineb3=inxj061.wav      local
+sound       indylineb4=inxj090.wav      local
+sound       indylineb5=inxj095.wav      local
+
+# MISC ############################################################
+
+int         bridgeflag0=0   local
+int         timerflag=0     local
+int         takenflag=0     local
+int         keystoneflag=0  local
+int         buttonflag=0    local
+int         shake           local
+int         rumblechannel   local
+int         crashrumblchan  local
+int         bigcrashchanl   local
+int         cursound        local
+int         intrack         local
+int         vibe            local
+int         lastrand=-1     local
+int         currand=0       local
+
+int         smoke0          local
+int         smoke1          local
+int         smoke2          local
+int         smoke3          local
+int         smoke4          local
+int         smoke5          local
+
+thing       smoketarget0
+thing       smoketarget1
+thing       smoketarget2
+thing       smoketarget3
+thing       smoketarget4
+thing       smoketarget5
+
+vector      posOffset       local      
+vector      angOffset       local
+
+template    smoketemplate=+bouldersmoke_spr     local
+
+surface     mardukdoorsurf
+
+# KEYFRAME ########################################################
+
+keyframe    in_kneel=0in_stand6.key             local
+keyframe    in_stand2kneel=0in_stand1_bd_6.key  local
+keyframe    in_kneeltostand=0in_stand6_bd_1.key local
+
+###################################################################
+
+end
+
+# ========================================================================================
+code
+
+#----------------------------------------------------------------------------------------
+
+startup:
+
+    player = GetLocalPlayerThing();
+    SetThingFlags(actorindy0, 0x80000);
+
+return;
+
+#----------------------------------------------------------------------------------------
+
+entered:
+
+	// Door to Marduk idol    
+    if ((GetSenderRef() == marduk_button) && (buttonflag == 0))
+    {
+        //start cutscene
+        buttonflag = 1;
+        SetCameraLookInterp(2, 1);
+        SetCameraInterpSpeed(2, 2.5);
+        Sleep(0.001);
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        StopThing(player);
+        CopyOrient(player, marduk_col_actor);
+        TeleportThing(player, safepos1);
+        CopyPlayerHolsters(player, marduk_col_actor);
+        
+        //prep camera
+        SetCameraSecondaryFocus(2, mdk_column_tgt);
+        SetCameraFocus(2, mdk_column_cam);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0);
+        
+        //play landing anims
+        ClearThingFlags(marduk_col_actor, 0x80000); //bring in stunt indy
+        AISetCutsceneMode(marduk_col_actor);
+        PlayMode(marduk_col_actor, 55, 0);
+        Sleep(0.5);
+        
+        //play clicking sound
+        PlaySoundThing(click, marduk_button, 1, 10, 20, 0x0);
+        MoveToFrame(marduk_button, 1, 0.5);
+        WaitForStop(marduk_button);
+        AISetLookThing(marduk_col_actor, marduk_door);
+        Sleep(0.5);
+        SetCameraPosInterp(2, 1);
+        Sleep(0.1);
+        SetCameraFocus(2, mdk_column_cam2);
+        SetCameraSecondaryFocus(2, mardukdoor_tgt);
+        SetCameraFOV(70, 1, 2);
+        Sleep(2.0);
+        MoveToFrame(marduk_door, 1, 1);
+        WaitForStop(marduk_door);
+        ClearAdjoinFlags(mardukdoorsurf, 0x2);
+        Sleep(2);
+        
+        //clear out all camera modes and bring back the player
+        TeleportThing(player, marduk_col_actor);
+        SetThingFlags(marduk_col_actor, 0x80000);
+
+		SetCameraPosition(1, GetThingPos(mdk_resetpos));
+        SetCurrentCamera(1);
+
+        EndCutscene();
+        ClearActorFlags(player, 0x200000);
+		SetCameraLookInterp(2, 0);
+	    SetCameraPosInterp(2, 0);
+    }
+    
+	// Places Block for final piece      
+    if ((GetSenderRef() == keystone) && (takenflag == 1) && (keystoneflag == 0))
+    {
+        //Prep work
+        keystoneflag = 1;
+        StartCutscene(1);
+        SetActorFlags(player, 0x200000);
+        TeleportThing(player, safepos2);
+        CopyPlayerHolsters(player, actorindy1);
+        ClearThingFlags(actorindy1, 0x80000);
+        AISetCutsceneMode(actorindy1);
+        
+        //Prep Cameras & cut
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+		SetCameraFocus(2, camera1);
+        SetCameraSecondaryFocus(2, target2);
+        SetCurrentCamera(2);
+        SetCameraFOV(80, 0, 0);
+		SetCameraLookInterp(2, 1);
+		SetCameraPosInterp(2, 1);
+        SetCameraInterpSpeed(2, 1.0);
+        Sleep(0.01);
+        
+        //Make actor kneel and get up
+        PlayMode(actorindy1, 55, 0);
+        Sleep(0.5);
+        
+        //Start Rumble
+        SetPulse(0.1);
+        crashrumblchan = PlaySoundLocal(crashrumble, 1, 0, 0x1, 0);
+        
+        //camera shake
+        Sleep(0.5);
+        AISetLookThing(actorindy1, frag4);
+
+		//pan to block...
+		SetCameraFocus(2, camera2);
+        SetCameraSecondaryFocus(2, frag4);
+        SetCameraFOV(90, 1, 1.0);
+        Sleep(1.0);
+
+        SetCameraLookInterp(2, 0);
+		Sleep(0.01);		
+        SetCollideType(frag4, 0);
+        MoveToFrame(frag4, 1, 10);
+        Sleep(0.25);
+        MoveToFrame(frag4, 2, 20);
+        ClearThingFlags(frag4, 0x40000000);
+        Sleep(0.8);
+        StopSound(crashrumblchan, 0);
+        PlaySoundLocal(bigcrash, 1, 0, 0x0, 0);
+        SetPulse(0);
+        //Sleep(1.0);
+        
+        smoke3 = CreateThing(smoketemplate, smoketarget3);
+        AnimateSpriteSize(smoke3, '0.5 0.5 0.5', '1.5 1.5 0.0', 3.0);
+        ThingFadeAnim(smoke3, 0.5, 0, 0.5, 0);
+		Sleep(0.5);
+        
+        smoke4 = CreateThing(smoketemplate, smoketarget4);
+        AnimateSpriteSize(smoke4, '0.75 0.75 0.5', '2.0 2.0 0.0', 3.0);
+        ThingFadeAnim(smoke4, 0.5, 0, 0.5, 0);
+        Sleep(0.5);
+        
+        smoke5 = CreateThing(smoketemplate, smoketarget5);
+        AnimateSpriteSize(smoke5, '0.25 0.25 0.5', '1.25 1.25 0.0', 3.0);
+        ThingFadeAnim(smoke5, 0.5, 0, 0.5, 0);
+        
+        //back out of cutscene
+        TeleportThing(player, actorindy1);
+        SetThingFlags(actorindy1, 0x80000);
+        SetCameraPosition(1, GetThingPos(camera2));
+        SetCurrentCamera(1);
+        SetCameraFOV(90, 0, 0);
+        EndCutscene();
+        SetCameraPosInterp(2, 0);
+        SetCameraInterpSpeed(2, 0);
+        Sleep(0.01);
+        ClearActorFlags(player, 0x200000);
+        SetCollideType(frag4, 3);
+    }        
+            
+return;
+
+#----------------------------------------------------------------------------------------
+
+user6:
+
+	# NOTE: received from tab A pickup cog
+    
+        SetActorFlags(player, 0x200000);
+        SetPulse(0.1);
+        crashrumblchan = PlaySoundLocal(crashrumble, 1, 0, 0x1, 0);
+        Sleep(0.5);
+
+        takenflag=1;
+        
+        // camera setup
+		SetCameraLookInterp(2, 0);
+		SetCameraPosInterp(2, 0);
+        SetCameraFocus(2, camera0);
+        SetCameraSecondaryFocus(2, target0);
+        SetCurrentCamera(2);
+        SetCameraFOV(90, 0, 0);
+		SetCameraLookInterp(2, 1);
+        SetCameraInterpSpeed(2, 1.5);
+        Sleep(0.01);
+        
+        // start the debris cut
+        CopyPlayerHolsters(player, actorindy0);
+        SetThingFlags(player, 0x80000);
+        ClearThingFlags(actorindy0, 0x80000);
+        AISetCutsceneMode(actorindy0);
+        
+        //quakin and crashin
+        Sleep(0.3);
+        AISetMoveSpeed(actorindy0, 0.8);
+        AISetLookThing(actorindy0, target1);
+		AISetMoveThing(actorindy0, br_mk_1, 0);
+        Sleep(1.0);
+
+        SetCameraSecondaryFocus(2, target1);
+        SetCameraFOV(100, 1, 1.5);
+        
+        //falling pieces
+        SetCollideType(frag0, 0);
+        SetCollideType(frag1, 0);
+        SetCollideType(frag2, 0);
+        SetCollideType(frag3, 0);
+        MoveToFrame(frag0, 1, 5);
+        MoveToFrame(frag1, 1, 5);
+        MoveToFrame(frag2, 1, 5);
+        MoveToFrame(frag3, 1, 5);
+        Sleep(0.5);
+        AttachThingToThing(target1, frag0);
+        Sleep(0.3);
+        MoveToFrame(frag0, 2, 25);
+        MoveToFrame(frag1, 2, 25);
+        MoveToFrame(frag2, 2, 25);
+        MoveToFrame(frag3, 2, 25);
+        WaitForStop(frag2);
+        PlaySoundLocal(bigcrash, 1, 0, 0x0, 0);
+        StopSound(crashrumblchan, 0);
+        SetPulse(0);
+        
+        smoke0 = CreateThing(smoketemplate, smoketarget0);
+        AnimateSpriteSize(smoke0, '0.5 0.5 0.5', '1 1 0.0', 3.0);
+        ThingFadeAnim(smoke0, 0.5, 0, 0.5, 0);
+		Sleep(0.5);
+        smoke1 = CreateThing(smoketemplate, smoketarget1);
+        AnimateSpriteSize(smoke1, '0.75 0.75 0.5', '1.75 1.75 0.0', 3.0);
+        ThingFadeAnim(smoke0, 0.5, 0, 0.5, 0);
+        Sleep(0.5);
+        smoke2 = CreateThing(smoketemplate, smoketarget2);
+        AnimateSpriteSize(smoke2, '1 1 0.5', '2 2 0.0', 3.0);
+        ThingFadeAnim(smoke0, 0.5, 0, 0.5, 0);
+
+        SetCollideType(frag0, 3);
+        SetCollideType(frag1, 3);
+        SetCollideType(frag2, 3);
+        SetCollideType(frag3, 3);
+        
+        //reset cameras and actors
+        ClearThingFlags(player, 0x80000);
+        SetThingFlags(actorindy0, 0x80000);
+        CopyOrientAndPos(actorindy0, player);
+
+        SetCameraLookInterp(2, 0);
+        SetCameraPOSInterp(2, 0);
+        SetCameraPosition(1, GetThingPos(cam0resetpos));
+        SetCurrentCamera(1);
+        ResetCameraFOV(0, 0.0);
+
+		SendMessage(tabpickupcog, user7); # done over here
+        ClearActorFlags(player, 0x200000);
+
+return;
+
+    # HB: I don't understand this...
+	
+	## if ((GetCurItem(player) != 0) && (GetSenderID() == 1))
+    ## {
+    #    StopThing(player);
+    #    StartCutscene(1);
+    #    SetActorFlags(player, 0x200000);
+    #    currand = RandBetween(0, 5);
+    #    While (lastrand == currand)
+    #    {
+    #        currand = RandBetween(0, 5);
+    #    }
+    #    PlayVoice(player, indylineb0[currand], 1, 1);
+    #    lastrand = currand;
+    #    EndCutscene();
+    #    ClearActorFlags(player, 0x200000);
+    ## }
+
+#-----------------------------------------------------------------------------------------
+
+pulse:
+
+	vibe = RandBetween(1, 4);
+	if (vibe == 1)
+	{
+		posOffset = '-0.005 0.00 -0.002';
+		angOffset = '0.00 -0.002 0.002';
+	}
+	if (vibe == 2)
+	{
+		posOffset = '0.005 -0.005 0.002';
+		angOffset = '0.002 0.00 -0.002';
+	}
+	if (vibe == 3)
+	{
+		posOffset = '0.002 0.005 -0.005';
+		angOffset = '-0.002 0.002 -0.002';
+	}
+	if (vibe == 4)
+	{
+		posOffset = '-0.002 0.00 0.005';
+		angOffset = '0.00 0.00 0.002';
+	}
+
+	SetPOVShake(posOffSet, angOffSet, 200.0, 200.0);
+
+return;
+
+end
+

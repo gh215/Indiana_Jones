@@ -1,0 +1,417 @@
+# Jones 3D Cog Script
+#
+# SOL_ComEntrance.cog
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+    message     entered
+    
+    # ** local things **
+    thing       player          local
+    thing       car             local
+    
+    # ** things **
+    thing       comCar
+    thing       minePlayer
+    
+    # ** cameras **
+    thing       cr_cam1
+    thing       er_cam1
+    thing       er_cam2
+    thing       er_cam3
+    thing       cam_Reset
+    
+    # ** camera targets **
+    thing       camTarg1
+    
+    # ** dummy move targets **
+    thing       dummy_Targ1
+    
+    # ** biped commies **
+    thing       khaki1
+    thing       khaki2
+    thing       khaki3
+    thing       khaki4
+    thing       bruiser1
+    thing       bruiser2
+    thing       volod
+    
+    # ** cross over commies **
+    thing       coCom1
+    thing       coCom2
+    
+    # ** exit complex commies **
+    thing       exitCom1
+    thing       exitCom2
+    thing       exitCom3
+    
+    # ** exit complex items **
+    thing       exit_Satchel
+    
+    # ** final room commies **
+    thing       finalCom1
+    thing       finalCom2
+    
+    # ** biped commie targets **
+    thing       khaki1_Targ1
+    thing       khaki1_Targ2
+    thing       khaki2_Targ1
+    thing       khaki2_Targ2
+    thing       volod_Targ1
+    thing       bruiser1_Targ1
+    thing       bruiser2_Targ1
+    
+    # ** player triggers **
+    surface     cr_Indy_Trig1
+    surface     cr_Indy_Trig2
+    surface     er_Indy_Trig1
+    surface     er_Indy_Trig2
+    surface     er_Indy_Trig3
+    surface     er_Indy_Trig4
+    surface     er_Indy_Trig5
+    
+    # ** commie triggers **
+    surface     er_Com_Trig1    mask=0x004      # destroy comCar
+    
+    # ** misc surfaces **
+    surface     switch1
+    surface     stopface
+    
+    # ** voice lines
+    #sound       volod_line1=Inxv002.wav     local
+    sound       volod_line1=Bb08v02.wav     local
+    
+    # ** music **
+    sound       mus_Volod=mus_gen_russbold_shrt1.wav     local
+    
+    # ** cogs **
+    cog         mineDoors
+    cog         masterCtrl
+    cog         panelSay
+    cog         comControl
+    
+    # ** types **
+    AI			ai_sniper=com_1HGrndSniper.ai	local
+    
+    # ** ints **
+    int         firstTime=0     local
+    int         done=0          local
+    int         here=0          local
+    int         animId          local
+    int         chnl_PreLoad    local
+    
+end
+
+# ========================================================================================
+
+code
+
+startup:
+    
+    # hide comCar at start
+    SetThingFlags(comCar, 0x80000);
+    
+    # hide khaki commies
+    SetThingFlags(Khaki1, 0x80000);
+    SetThingFlags(Khaki2, 0x80000);
+    SetThingFlags(Khaki3, 0x80000);
+    SetThingFlags(Khaki4, 0x80000);
+    
+    # hide bruiser commies
+    SetThingFlags(bruiser1, 0x80000);
+    SetThingFlags(bruiser2, 0x80000);
+    
+    # hide volod
+    SetThingFlags(volod, 0x80000);
+    
+    # hide cross over commies
+    SetThingFlags(coCom1, 0x80000);
+    SetThingFlags(coCom2, 0x80000);
+    
+    # hide exit complex commies
+    SetThingFlags(exitCom1, 0x80000);
+    SetThingFlags(exitCom2, 0x80000);
+    SetThingFlags(exitCom3, 0x80000);
+    
+    # hide exit comp items
+    SetThingFlags(exit_Satchel, 0x80000);
+    
+    # hide final room commies
+    SetThingFlags(finalCom1, 0x80000);
+    SetThingFlags(finalCom2, 0x80000);
+    
+    # prepare all commies for cutscene
+    AISetCutsceneMode(comCar);
+    AISetCutsceneMode(Khaki1);    
+    AISetCutsceneMode(Khaki2);
+    AISetCutsceneMode(Khaki3);    
+    AISetCutsceneMode(Khaki4);
+    AISetCutsceneMode(bruiser1);
+    AISetCutsceneMode(bruiser2);    
+    AISetCutsceneMode(volod);
+    
+    return;
+    
+# ========================================================================================
+
+entered:
+
+    player = GetLocalPlayerThing();
+    car = GetSourceRef();
+
+    if((BitTest(GetPhysicsFlags(car), 0x01000000)) && (GetWallCel(switch1) == 2) && (done == 0))
+    {
+        # pre-load junk
+        if(GetSenderRef() == cr_Indy_Trig1)
+        {
+            # pre-load volod intro music
+            chnl_PreLoad = PlaySoundLocal(mus_Volod, 0.0, 0.0, 0x0, 0);
+            
+            # turn on track surface in front of mine door
+            SetSurfaceFlags(stopface, 0x4000);
+        }
+        
+        # cut to camera in oil key room and watch
+        # indy come thru mine doors.
+        else if(GetSenderRef() == cr_Indy_Trig2)
+        {
+            # turn on enhanced ambients
+            global4 = 1;
+            
+            # disable player and start cutscene
+            StartCutscene(0);
+            SetActorFlags(player, 0x200000);
+            
+            # Cut to er_cam1
+            SetCameraFocus(2, er_cam1);
+            SetCameraSecondaryFocus(2, player);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+        }
+        
+        # cut to entrance cam over trestle and watch
+        # indy come down the hill.
+        else if(GetSenderRef() == er_Indy_Trig1)
+        {
+            # slow down player
+            SetThingThrust(player, '0.0 2.0 0.0');
+            
+            # Cut to er_cam2
+            SetCameraFocus(2, er_cam2);
+            SetCameraSecondaryFocus(2, camTarg1);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+        }
+        
+        # attach camTarg1 to player and keep tracking it.
+        # move er_cam2 to frame1.
+        else if(GetSenderRef() == er_Indy_Trig2)
+        {
+            # attach camTarg1 to player
+            AttachThingToThing(camTarg1, player);
+            
+            # move er_Cam2 to frame1
+            MoveToFrame(er_cam2, 1, 3.0);
+        }
+        
+        # player goes zipping by.
+        # detach camTarg1 from player and unleash commies.
+        else if(GetSenderRef() == er_Indy_Trig3)
+        {
+            # wait for er_Cam2 to reach frame1
+            WaitForStop(er_Cam2);
+            
+            # detach camTarg1 from player
+            DetachThing(camTarg1);
+            
+            # show biped commies
+            ClearThingFlags(Khaki1, 0x80000);
+            ClearThingFlags(Khaki2, 0x80000);
+            ClearThingFlags(Khaki3, 0x80000);
+            ClearThingFlags(Khaki4, 0x80000);
+            ClearThingFlags(bruiser1, 0x80000);
+            ClearThingFlags(bruiser2, 0x80000);
+            ClearThingFlags(volod, 0x80000);
+            
+            # show comCar
+            ClearThingFlags(comCar, 0x80000);
+            
+            # open mine safety doors
+            SendMessage(mineDoors, user0);
+            
+            # move camTarg1 down under trestle (mabye?)
+            animId = MoveThingToPos(camTarg1, GetThingPos(dummy_Targ1), 2.0);
+            
+            # zoom er_Cam2 under trestle and towards mine door
+            MoveToFrame(er_Cam2, 2, 4.0);
+            
+            Sleep(1.0);
+            SetCameraFOV(70, 1, 6.0);
+            
+            # give camera some time to move in
+            #Sleep(1.0);
+            
+            # play volod intro music
+            #PlaySoundLocal(mus_Volod, 1.0, 0.0, 0x0, 0);
+            
+            # send Khaki1 running in before comCar
+            AISetMoveSpeed(khaki1, 3.0);
+            AISetLookThing(khaki1, khaki1_Targ1);
+            AISetMoveThing(khaki1, khaki1_Targ1, 0);
+            
+            # send Khaki2 running in before comCar
+            AISetMoveSpeed(khaki2, 3.0);
+            AISetLookThing(khaki2, khaki2_Targ1);
+            AISetMoveThing(khaki2, khaki2_Targ1, 0);
+            
+            # wait for khaki1 to reach khaki1_Targ1
+            #AIWaitForStop(khaki1);
+            
+            # send khaki1 to khaki1_Targ2
+            AISetMoveSpeed(khaki1, 3.0);
+            AISetLookThing(khaki1, khaki1_Targ2);
+            AISetMoveThing(khaki1, khaki1_Targ2, 0);
+            
+            # send khaki2 to khaki2_Targ2
+            AISetMoveSpeed(khaki2, 3.0);
+            AISetLookThing(khaki2, khaki2_Targ2);
+            AISetMoveThing(khaki2, khaki2_Targ2, 0);
+            
+            Sleep(1.0);
+            
+            # start comCar
+            SetThingThrust(comCar, '0.0 2.0 0.0');
+            
+            # send khaki3 to khaki1_Targ2
+            AISetMoveSpeed(khaki3, 3.0);
+            AISetLookThing(khaki3, khaki1_Targ2);
+            AISetMoveThing(khaki3, khaki1_Targ2, 0);
+            
+            # send khaki4 to khaki2_Targ2
+            AISetMoveSpeed(khaki4, 3.0);
+            AISetLookThing(khaki4, khaki2_Targ2);
+            AISetMoveThing(khaki4, khaki2_Targ2, 0);
+            
+            # send volod to volod_Targ1
+            AISetMoveSpeed(volod, 1.0);
+            AISetLookThing(volod, volod_Targ1);
+            AISetMoveThing(volod, volod_Targ1, 0);
+            
+            # send bruiser1 to bruiser1_Targ1
+            AISetMoveSpeed(bruiser1, 1.0);
+            AISetLookThing(bruiser1, bruiser1_Targ1);
+            AISetMoveThing(bruiser1, bruiser1_Targ1, 0);
+            
+            # send bruiser2 to bruiser2_Targ1
+            AISetMoveSpeed(bruiser2, 1.0);
+            AISetLookThing(bruiser2, bruiser2_Targ1);
+            AISetMoveThing(bruiser2, bruiser2_Targ1, 0);
+            
+            Sleep(2.0);
+            # play volod intro music
+            StopSound(chnl_PreLoad, 0.0);
+            PlaySoundLocal(mus_Volod, 1.0, 0.0, 0x0, 0);
+            
+            AIWaitForStop(volod);
+            
+            # so mine doors don't collide with them
+            SetCollideType(volod, 0);
+            SetCollideType(bruiser1, 0);
+            SetCollideType(bruiser2, 0);
+            Sleep(0.1);
+            
+            # close mine doors
+            SendMessage(mineDoors, user1);
+            
+            Sleep(1.0);
+            
+            PlayVoice(volod, volod_line1, 1.0, 1);
+            
+            Sleep(0.5);
+            
+            # get player moving again
+            SetThingThrust(player, '0.0 3.0 0.0');
+            
+            # Cut to er_cam3 and watch player enter ruins
+            SetCameraFocus(2, er_cam3);
+            SetCameraSecondaryFocus(2, player);
+            SetCurrentCamera(2);
+            SetCameraFOV(90, 0, 0.0);
+            
+            # stop comcar sounds
+            StopAllSoundsThing(comCar);
+            
+            # destroy all the evidence
+            DestroyThing(comCar);
+            DestroyThing(Khaki1);    
+            DestroyThing(Khaki2);
+            DestroyThing(Khaki3);    
+            DestroyThing(Khaki4);
+            DestroyThing(bruiser1);
+            DestroyThing(bruiser2);    
+            DestroyThing(volod);
+        }
+        
+        # stop player in his tracks
+        else if(GetSenderRef() == er_Indy_Trig4)
+        {   
+            # stop the player for a bit
+            StopThing(player);
+            Sleep(1.0);
+            StopAllSoundsThing(player);
+        }    
+            
+        # return camera and controls to player
+        else if(GetSenderRef() == er_Indy_Trig5)
+        {
+            # turn on mastercontrol, panelsay
+            SendMessage(masterCtrl, user0);
+            SendMessage(panelSay, user0);
+            
+            # turn on ctrl room commies
+            SendMessage(comControl, user1);
+            
+            # show cross over commies
+            ClearThingFlags(coCom1, 0x80000);
+            ClearThingFlags(coCom2, 0x80000);
+            
+            # show exit complex commies
+            ClearThingFlags(exitCom1, 0x80000);
+            ClearThingFlags(exitCom2, 0x80000);
+            ClearThingFlags(exitCom3, 0x80000);
+            
+            # turn exitCom2 into a sniper
+            AISetClass(exitCom2, ai_sniper);
+            
+            # show exit comp items
+            ClearThingFlags(exit_Satchel, 0x80000);
+            
+            # show final room commies
+            ClearThingFlags(finalCom1, 0x80000);
+            ClearThingFlags(finalCom2, 0x80000);
+            
+            # return camera to player
+            SetCameraFOV(90, 0, 0.0);
+            SetCameraPosition(1, GetThingPos(cam_Reset));
+            SetCurrentCamera(1);
+            
+            # restore player controls
+            ClearActorFlags(player, 0x200000);
+            EndCutscene();
+            
+            done = 1;
+        }
+    }
+    
+    return;
+       
+# ========================================================================================
+
+end
+

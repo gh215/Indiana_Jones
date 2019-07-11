@@ -1,0 +1,179 @@
+
+# Jones 3D Cog Script
+#
+# SEA_Cabin_Commie_AI.cog
+# 
+# Controls the AI and population of the corridor patrolling commies on the Pudovkin
+# 
+#
+# [JM]
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ========================================================================================
+
+symbols
+
+message         startup
+message         crossed
+message         killed
+
+# ==================== SUBROUTINES ===================
+
+flex            NewSailor           local
+flex            RandomSailorPicker  local
+
+# =================== REFERENCES ===============================
+
+thing           Commie00            LinkID=1         
+thing           Commie01=-1         LinkID=1        local #Does not start as a thing... but wil be created later
+
+thing           CommieGhost00       
+thing           CommieGhost01
+
+surface         AdjoinAIOn0         LinkID=2
+surface         AdjoinAIOn1         LinkID=2
+surface         AdjoinAIOn2         LinkID=2
+surface         AdjoinAIOn3         LinkID=2
+         
+surface         AdjoinAIOff0        LinkID=3 
+surface         AdjoinAIOff1        LinkID=3
+surface         AdjoinAIOff2        LinkID=3
+surface         DeckAdjoinAIOff3    LinkID=3    #this one is the first time the player goes above deck, and will start the commie generation process
+
+surface         WakeCommie00        LinkID=4
+
+
+# ===================== MISC LOCAL VARIABLES ===================
+
+int         counter             local
+int         TempCommie          local
+int         StartCheck=0        local
+
+int         WakeCheck=0         local
+
+int         CommieGrowthCounter=0       local
+
+
+# ==================== CONSTANTS ==========================
+
+int         NUMBER_OF_COMMIES=2             local
+int         COMMIE_GROWTH_LIMIT=4           local
+
+# ======================== COMMIE TEMPLATES =======================
+
+template        TokarevTPL02=Sailor_Tokarev3    local
+template        TokarevTPL03=Sailor_Tokarev4    local
+
+
+# =========================================================
+end
+
+# ======================= CODE =============================
+code
+
+# =========================================================
+startup:
+
+    AISetCutsceneMode(Commie00);
+             
+    return;
+
+# =========================================================
+crossed:
+    
+    if(GetSenderID() == 4 && WakeCheck == 0)
+    {
+        AIClearCutsceneMode(Commie00);
+        WakeCheck = 1;
+    }
+    
+    if(WakeCheck == 0) return;
+    
+    if(GetSenderID() == 2)
+    {
+        for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1) 
+        {
+            if(Commie00[counter] != -1)
+            {
+                AISetInstinctWpntMode(Commie00[counter]);
+                AIEnableInstinct(Commie00[counter], "roam", 1);
+            }
+        }
+    }
+    else if(GetSenderID() == 3)
+    {
+        for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+        {
+            if(Commie00[counter] != -1)
+            {
+                AIClearInstinctWpntMode(Commie00[counter]);
+                AIEnableInstinct(Commie00[counter], "roam", 0);
+            }
+        }
+        
+        if(CommieGrowthCounter >= COMMIE_GROWTH_LIMIT)
+        {
+            Call NewSailor;
+        }        
+    }
+    
+    if(StartCheck == 1) return;
+    
+    else if(GetSenderRef() == DeckAdjoinAIOff3)
+    {
+        StartCheck = 1;
+        Call NewSailor;
+    }
+
+    
+    return;
+    
+# =========================================================
+killed:
+
+    TempCommie = GetSenderRef();
+        
+    for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+    {
+        if(Commie00[counter] == TempCommie)
+        {
+            Commie00[counter] = -1;
+        }
+    }
+    
+    return;
+
+# ============================================================
+//Makes a new Commie if one of the two commies in the hallways have died.   
+NewSailor:
+    
+    if(StartCheck == 0) return;
+    
+//  if(RandBetween(0, 2) > 1) return;
+    
+    for(counter = 0; counter < NUMBER_OF_COMMIES; counter = counter + 1)
+    {
+        if(Commie00[counter] == -1)
+        {
+            Commie00[counter] = CreateThing(TokarevTPL03, CommieGhost00[counter]);
+            
+            if (Commie00[counter] == -1)
+    	    {
+                sleep(10);
+                Call NewSailor;
+                  
+	        return;
+            }         
+            
+            CaptureThing(Commie00[counter]);
+            
+            CommieGrowthCounter = CommieGrowthCounter + 1;
+        }
+    }
+    
+    return;
+
+# ============================================================
+
+end

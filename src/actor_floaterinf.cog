@@ -1,0 +1,132 @@
+# Jones 3D Cog Script
+#
+# actor_FloaterINF.cog
+#
+# Allows the Infernal Machine floater to do his thang...
+#
+# [MDR]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+	message		startup
+	message		sighted
+	message		created
+	message		aievent
+	message		killed
+	message		callback
+
+# ************************** TEMPLATES *************************
+	template	tpl_glow=+robotglow_sm	local
+	template	blast=+ExpFloaterSpr	local		# MDR: Used by explosion -- don't remove!
+
+# *********************** MISC LOCAL VARS **********************
+	thing		t_sender				local
+	thing		t_glow					local
+
+	int			eventType				local
+	flex		f_userData				local
+	int			projectile				local
+	vector		vec_pos					local
+
+	int			FLAG_FIRE				local
+
+end
+
+# ========================================================================================
+code
+
+# ........................................................................................
+startup:
+
+	FLAG_FIRE		= 0x20;
+
+	return;
+
+
+# ........................................................................................
+sighted:
+
+	t_sender = GetSenderRef();
+	PlaySoundClass(t_sender, 1);						# Play create sound
+
+	return;
+
+
+# ........................................................................................
+created:
+
+	t_sender = GetSenderRef();
+
+	AISetMode(t_sender, 0x8000000);						# Set MODE_ARMOREDSKIN
+	AISetMode(t_sender, 0x2000000);						# Set MODE_NOCHASING
+
+	vec_pos	= VectorAdd( GetThingPos(t_sender), '0 0 0.023' );
+	t_glow	= CreateThingAtPos(tpl_glow, FindNewSectorFromThing(t_sender, vec_pos), vec_pos, '0 0 0');
+	if ( t_glow > -1 )
+	{
+		AttachThingToThingEx(t_glow, t_sender, 0x08);
+	}
+
+	SetThingUserData(t_sender, 0);
+
+	return;
+
+
+# ........................................................................................
+aievent:
+
+	t_sender	= GetSenderRef();
+	eventType	= GetParam(0);
+
+	f_userData	= GetThingUserData(t_sender);
+
+	if ( eventType == 0x4000 )							#---- EVENT_FIRE
+	{
+		f_userData = BITSET(f_userData, FLAG_FIRE);			# Set "shot pending" flag
+	}
+
+	SetThingUserData(t_sender, f_userData);					# Record flag settings
+
+	return;
+
+
+# ........................................................................................
+killed:
+
+	t_sender	= GetSenderRef();
+
+	t_glow = GetThingAttachedThing(t_sender, 13);
+	if ( t_glow > -1 )
+	{
+		DestroyThing(t_glow);
+	}
+
+	return;
+
+
+# ........................................................................................
+callback:
+
+	t_sender	= GetSenderRef();
+	f_userData	= GetThingUserData(t_sender);
+
+	if ( BITTEST(f_userData, FLAG_FIRE) )
+	{
+		projectile = GetActorWeapon(t_sender);
+
+		FireProjectile(t_sender, projectile, -1, -1, '0 0 0', '0 0 0', 1.0, 0, 0, 0);
+		f_userData = BITCLEAR(f_userData, FLAG_FIRE);				# Clear "shot pending" flag
+	}
+
+	SetThingUserData(t_sender, f_userData);						# Record flag settings
+
+	return;
+
+# ........................................................................................
+
+end
+
+

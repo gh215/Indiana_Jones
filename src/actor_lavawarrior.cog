@@ -1,0 +1,292 @@
+# Jones 3D Cog Script
+#
+# actor_LavaWarrior.cog
+#
+# [RT] [MDR]
+#
+# 1) Opens Lava Warrior's eyes when he wakes up, closes 'em when he goes back to sleep.
+# 2) Converts a slap attack into self inflicted damage if player moves out of range\angle
+#
+# ### Programming note ###
+# f_hitDist is from Lava Warrior's center pos, which does not match values set in .AI file.
+#
+# (C) 1999 LucasArts Entertainment Company LLC. All Rights Reserved
+#
+# ===================================================================
+
+# ===================================================================
+symbols
+
+	message		aievent
+	message		damaged
+	message		missed
+	message		fire
+	message		callback
+	message		timer
+
+# ************************** JUMP LABELS ************************
+	flex		BackfireAttack					local
+
+# ************************** AI CLASSES ************************
+	ai			awake=lavawarrior.ai			local
+	ai			asleep=lavawarrior_sleep.ai		local
+	
+# ************************** TEMPLATES *************************
+	template	tpl_PrimaryWeapon=+lavahit_md	local
+
+	material	face=lwhdfr.mat					local
+
+	model		wakingHead=head_lw_waking.3do	local
+	model		awakeHead=head_lw_awake.3do		local
+
+# ************************** MISC LOCAL VARS *******************
+	thing		t_lavaDude						local
+	thing		t_bullet						local
+
+	flex		f_hitDot=0.4					local
+	flex		f_hitDist=0.20					local
+	int			TIMERID_FACIAL=1				local
+	int			TIMERID_SHAKE=2					local
+
+	vector		vec_ToTrgt						local
+	int			n_damage						local
+				
+	int			n_eventType						local
+	int			n_newMode						local
+	int			n_param							local
+
+	int			n_idxShake						local
+	vector		vec_pos							local
+	vector		vec_dir							local
+
+end
+
+
+# ===================================================================
+code
+
+# ...................................................................
+aievent:
+
+	n_eventType	= GetParam(0);
+	n_param		= GetParam(2);										# Value depends on n_eventType
+
+	t_lavaDude	= GetSenderRef();
+
+	if ( n_eventType == 0x100 )										#---- EVENT_MODECHANGED
+	{
+		n_newMode = GetParam(1);
+
+		if ( !BITTEST(n_param, 0x2) && BITTEST(n_newMode, 0x2) )		# Switched to MODE_ATTACKING
+		{
+            # We can target him now
+			ClearActorFlags(t_lavaDude, 0x100000);
+
+			# Set the "awake" ai
+			AISetClass(t_lavaDude, awake);
+			
+			# Swap in the head with the animated material
+			SetThingMesh(t_lavaDude, 1, wakingHead, 0);
+
+			# Play the anim and wait
+			MaterialAnim(face, 8.0, 0x0);
+
+			SetTimerEx(0.5, TIMERID_FACIAL, t_lavaDude, 0);
+		}
+
+		if ( !BITTEST(n_param, 0x4) && BITTEST(n_newMode, 0x4) )		# Switched to MODE_SEARCHING
+		{
+			# No targeting while he's stoned, plus he's immobile.
+			SetActorFlags(t_lavaDude, 0x140000);
+
+			# Set the "asleep" ai
+			AISetClass(t_lavaDude, asleep);
+
+			# Stop him so he's not walking around with his eyes closed
+			StopThing(t_lavaDude);
+
+			# Turn off his headlight
+			#SetHeadlightIntensity(t_lavaDude, '0.0 0.0 0.0');
+
+			# Restore the head
+			RestoreThingMesh(t_lavaDude, -99);
+		}
+
+		if ( !BITTEST(n_param, 0x1) && BITTEST(n_newMode, 0x1) )	# Switched to MODE_MOVING
+		{
+			if ( IsModePlaying(t_lavaDude, 75) > 0 )
+			{
+				StopThing(t_lavaDude);								# If stunned, no moving
+			}
+		}
+	}
+	else if (n_eventType == 0x10000)							#---- SITHAI_EVENTPREFIRE ----
+	{
+		if ( IsModePlaying(t_lavaDude, 75) > 0 )
+		{
+			SetActorWeapon(t_lavaDude, -1);							# If stunned, no firing
+			return;
+		}
+
+		if ( BITTEST(n_param, 0x0010) )							#---- SITHAIUTIL_FIRE_PRIMARY ----
+		{
+			SetThingUserData(t_lavaDude, 1);						# Set "primary fire in progress"
+		}
+	}
+	else if (n_eventType == 0x20000)							#---- SITHAI_EVENTPOSTFIRE ----
+	{
+		SetActorWeapon(t_lavaDude, tpl_PrimaryWeapon);				# Restore primary weapon
+		SetThingUserData(t_lavaDude, 0);							# Clear "primary fire in progress"
+	}
+
+	return;
+
+# ...................................................................
+fire:
+
+	t_lavaDude	= GetSenderRef();
+	t_bullet	= GetSourceRef();
+	n_damage	= GetParam(0);
+
+	StopThing(t_lavaDude);
+
+	vec_ToTrgt	= VectorSub( GetThingPos(GetLocalPlayerThing()), GetThingPos(t_lavaDude) );
+	if ( VectorLen(vec_ToTrgt) > f_hitDist )
+	{
+#		DEBUGFLEX(VectorLen(vec_ToTrgt), "Out of range");
+		DestroyThing(t_bullet);									# remove the bullet
+		call BackfireAttack;									# feel the pain
+		return;
+	}
+
+	vec_ToTrgt	= VectorNorm( vec_ToTrgt );
+	if ( VectorDot(GetThingLVec(t_lavaDude), vec_ToTrgt) < f_hitDot )
+	{
+#		DEBUGFLEX(VectorDot(GetThingLVec(t_lavaDude), vec_ToTrgt), "Out of angle");
+		DestroyThing(t_bullet);									# remove the bullet
+		call BackfireAttack;									# feel the pain
+	}
+
+	return;
+
+
+# ...................................................................
+damaged:
+
+	t_lavaDude = GetSenderRef();
+	n_param = GetParam(1);
+
+	# SITH_DAMAGE_IMP1?
+	if (n_param == 0x1000)
+	{
+		SetTimerEx(0.1, TIMERID_SHAKE, 10, 0);
+
+		StopThing(t_lavaDude);
+		ResetThing(t_lavaDude);
+		DamageThing(t_lavaDude, 75, 0x80, GetLocalPlayerThing());
+
+		PlaySoundClass(t_lavaDude, 124);						# Play RESERVED2
+		PlaySoundClass(t_lavaDude, 125);						# Play RESERVED3
+
+		return;
+	}
+
+	# SITH_DAMAGE_CRUSH?
+	if (n_param == 0x80)
+	{
+		return;
+	}
+
+	# DAMAGE_IMPACT?
+	if ( n_param == 0x01 )
+	{
+		PlaySoundClass(t_lavaDude, 85);							# Play a SITHSOUNDCLASS_DEFLECTED sound
+	}
+
+	ReturnEx(0);											# Prevent default hit sound from playing
+
+	return;
+
+
+# ...................................................................
+timer:
+
+	if ( GetSenderID() == TIMERID_SHAKE )
+	{
+		n_idxShake = GetParam(0);
+		if ( n_idxShake > 0 )
+		{
+			n_idxShake = n_idxShake - 1;
+
+			vec_pos	= VectorSet(RandBetween(-1, 1), RandBetween(-1, 1), RandBetween(-1, 1));
+			vec_dir	= VectorSet(RandBetween(-6, 6), RandBetween(-4, 4), RandBetween(-2, 2));
+			SetPOVShake( VectorScale(vec_pos, 0.0005 * n_idxShake), VectorScale(vec_dir, 0.05 * n_idxShake), 5, 45);
+
+			if ( n_idxShake > 0 )
+			{
+				SetTimerEx(0.1, TIMERID_SHAKE, n_idxShake, 0);
+			}
+		}
+	}
+	else if ( GetSenderID() == TIMERID_FACIAL )
+	{
+		t_lavaDude = GetParam(0);
+
+		# Swap in the "real" head & store the value in the thing struct
+		SetThingMesh(t_lavaDude, 1, awakeHead, 0);
+
+		# We're able to move now.
+		ClearActorFlags(t_lavaDude, 0x40000);
+	}
+
+	return;
+
+
+# ...................................................................
+missed:
+
+	t_lavaDude	= GetSenderRef();
+	n_damage	= GetParam(0);
+
+	call BackfireAttack;
+
+	return; 
+
+# ...................................................................
+callback:
+
+	t_lavaDude	= GetSenderRef();
+    n_param		= GetParam(1);
+
+	if ( n_param == 21 )									# SITH_PUPPETCALLBACK_SENDMESSAGE1?
+	{
+		PlaySoundClass(t_lavaDude, 123);					# Play SITHSOUNDCLASS_RESERVED1
+	}
+
+	return;
+
+# ===================================================================
+#	Subroutines
+# ===================================================================
+
+# ...................................................................
+# t_lavaDude MUST be initialized before this call!
+# ...................................................................
+BackfireAttack:
+
+	if ( GetThingUserData(t_lavaDude) == 1 )					# Is "primary fire in progress?"
+	{
+#		DEBUGPRINT("Lava warrior damaging self");
+		SetThingUserData(t_lavaDude, 0);						# Clear "primary fire in progress"
+		StopThing(t_lavaDude);									# Stop motion
+		SynchMode(t_lavaDude, 67, 75, 0, 0);					# Synch FIRE3 to HIT
+
+		DamageThing(t_lavaDude, n_damage, 0x80, t_lavaDude);	# Self-inflict SITH_DAMAGE_CRUSH
+		PlaySoundClass(t_lavaDude, 124);						# Play RESERVED2
+	}
+
+	return;
+
+# ===================================================================
+end
+

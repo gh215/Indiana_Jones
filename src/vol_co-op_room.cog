@@ -1,0 +1,953 @@
+# Jones 3D Cog Script
+#
+# Vol_CO-op_Room.cog
+#
+# Sophia helps Indy through a critical gate
+#
+# [CMG & revised by HB]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+# ................... MESSAGES ...................
+
+	message	damaged
+	message	startup		
+	message	crossed	
+    message	activated		
+    message	user0		
+    message	entered
+	
+# ................. COGS ....................
+	cog		hintcog
+
+# ................. KEYFRAMES ....................
+
+	keyframe	in_pushHat=0in_figithat_4_4.key			local
+	keyframe	in_rtarmup=0in_armsout_1_1.key			local
+	keyframe	in_botharmsup=0in_armsup_1_1.key		local
+	keyframe	in_ltarmup=0in_leftarm_1_1.key			local
+    
+	keyframe	in_handsSide=0in_stand1.key				local
+	keyframe	in_armsCrossed=0in_stand2.key			local
+	keyframe	in_handsOnHips=0in_stand4.key			local
+	keyframe	in_crossArms=0in_stand1_bd_2.key	   	local
+	keyframe	in_handsToHips=0in_stand1_bd_4.key	   	local
+	keyframe	in_handsToSide=0in_stand4_bd_1.key	   	local
+	keyframe	in_activate=in_activate_medium.key		local
+	
+	keyframe	in_free=in_reach_low.key				local
+	keyframe	in_getdown=0in_stand1_bd_6.key			local
+	keyframe	in_getup=0in_stand6_bd_1.key			local
+	keyframe	in_releasing=0in_stand6.key				local
+
+	keyframe	in_leftarm=0in_leftup_1_1.key			local
+	keyframe	in_brushoff=0in_cleanspants_1_1.key		local
+	keyframe	chinrub=0in_thinking_4_4.key			local
+	keyframe	in_grunt=0in_bar_attempt_1_1.key		local
+
+	keyframe	so_nospook=0so_nothingspooky_2_2.key	local
+	keyframe	so_whatswitch=0so_whatswitch_2_2.key	local
+	keyframe	so_youokay=0so_youokay_2_2.key			local
+	keyframe	so_pushbutton=0so_activate_med_2_2.key	local
+	keyframe	so_ltwave=0so_leftwave_2_2.key			local
+
+# ................. SAY LINES ....................
+
+	sound	in_sturdygate=VL04J01.WAV			local # that gate looks pretty sturdy...	
+	sound	in_needhelp=VL04J02.WAV				local # That was fast. I'll need help...
+	sound	in_nowork=Inxj089.wav				local # That didn't work.
+	sound	in_notquitework=Inxj092.wav			local # Hmm, that didn't quite work.
+	sound	in_differentway=Inxj095.wav			local # There must be a...different way.
+	sound	in_goodidea=Inxj093.wav				local # Good idea, but not good enough.
+	sound	in_cantopen=Inxj096.wav				local # I can't open it.
+	sound	in_nobudge=Inxj098.wav				local # It won't budge.
+	sound	in_holdingdoor=Inxj099.wav			local # Something is holding this door closed.
+	sound   in_doorislocked=INXJ076.WAV			local # This door is locked.
+    sound   in_itslocked=INXJ077.WAV			local # It's locked.
+	
+	sound	in_line1=VL06J01.WAV				local # Here you are...
+	sound	in_opengate=Vl06j04a.wav			local # it opens the gate up there.
+	sound	in_workpush=Vl06j04b.wav			local # let me work into pos...then push.
+	sound	in_line3=VL06J06.WAV				local # push, sophia.
+	sound	in_line4=VL06J08.WAV				local # I can't open it from here...
+	sound	in_line5=VL06J10.WAV				local # wait! premonition...?
+	sound	in_line6=VL06J12.WAV				local # I like her optimism!
+	
+	sound	so_line1=VL06S02.WAV				local # nothing spooky...
+	sound	so_line2=VL06S03.WAV				local # what's this switch?
+	sound	so_line3=VL06S05.WAV				local # say when...
+	sound	so_line4=VL06S07.WAV				local # Indy, you ok?
+	sound	so_line5=VL06S09.WAV				local # doesn't matter, I'm spying....
+	sound	so_line6=VL06S11.WAV				local # yes, but the danger is further ahead...
+
+# ............... SOUND EFFECTS ..................
+
+	sound	squeak=shs_creaky_a2.wav			local
+	sound	whip_cue=mus_gen_indy_a_weird.wav	local
+	sound	fear_cue=mus_gen_awesome3.wav		local
+	
+	sound	gatestart=shw_grill_start.wav		local
+	sound	gatemove=shw_grill_move.wav       	local
+	sound	gatestop=shw_grill_stop.wav			local
+ 	
+# .................. OBJECTS .....................	
+
+	thing		gate
+    ### thing		invisiblock_4					nolink
+	thing		strut							# mask=0x08
+
+# .................. ACTORS ......................
+		
+    thing		player							local
+    thing		sophia          
+    thing		button          
+    thing		indy          
+             
+# .............. CAMERA THINGS ...................
+
+	thing	cam1								nolink
+	thing	cam2								nolink
+	thing	cam3								nolink
+	thing	cam4								nolink
+	thing	cam5								nolink
+	thing	cam5a								nolink
+	thing	cam6								nolink
+	thing	cam7								nolink
+	thing	cam8								nolink
+	thing	cam9								nolink
+	thing	cam10								nolink
+	thing	cam11								nolink
+	thing	cam12								nolink
+
+	thing	slewcam								local # var
+
+# ........... CAMERA TARGET THINGS ...............
+
+	thing	camtarget1							nolink
+	thing	camtarget2							nolink
+	thing	camtarget3							nolink
+	thing	camtarget4							nolink
+	thing	camtarget5							nolink
+	thing	camtarget6							nolink
+	thing	camtarget7							nolink
+	
+	thing	spot_object							nolink
+	thing	finalshot_targ						nolink
+
+# ............ ACTOR TARGET THINGS ...............
+
+	thing	in_move1							nolink
+	thing	in_move2							nolink
+	thing	in_move3							nolink
+	thing	in_move4							nolink
+	thing	in_move5							nolink
+	thing	in_move6							nolink
+	thing	in_move7							nolink
+	thing	in_nohitspot						nolink
+	
+	thing	so_switchpos						nolink
+	thing	so_move1							nolink
+	thing	so_move2							nolink
+	thing	so_move3							nolink
+	thing	so_move4							nolink
+	thing	so_move5							nolink
+
+	thing	inso_look_1							nolink
+
+# .................... ROUTINES ......................
+	flex	randneglines						local
+	flex	randnobudgelines					local
+
+
+# ...... MISCELLANEOUS ENGINE REFERENCES .........
+
+	sector		scenesect
+	sector	    doorSector
+
+	surface		rockface
+
+	template	tempRefIndy=ghost				local
+
+# ................. VARIABLES ....................
+
+	vector	camPos								local
+	
+	
+	vector	v_clvec								local	# look vector of the spotobject
+	vector	v_crvec								local	# right vector of the spot object
+	vector	v_aimci								local	# aim vector between spot object and player
+
+	int		i_spot_NSorient						local	# int for player position storage
+	int		i_spot_WEorient						local	# int for player position storage
+	
+	flex	f_dotl								local	# quadrant calculation
+	flex	f_dotr								local   # quadrant calculation
+
+	flex	openspeed=1.0						local 	# was 2.0
+	flex	shutspeed=6.0						local
+
+	flex	in_rotRate							local
+	flex	so_rotRate							local
+	flex	sophiaMass							local
+	flex	newline								local
+	flex	oldline								local
+
+    int		in_keyTrack1						local
+	int		in_keyTrack2						local
+
+	int		so_keyTrack1						local
+
+	int		curCam								local
+	int		curSound							local
+	
+	int		open=0								local
+    int		whipsaid=0							local
+    int		gatesaid=0							local
+    int		inthezone=0							local
+    int		switchTalkState=0					local
+    int		beyondgate=0						local
+    
+	# sound hack workaround						10/12/99 cmg
+	int		gate_snd0							local
+    
+	int		fadechan							local		#for fading down last ominous music cue
+	
+end
+
+# ==============================================================================
+
+code
+
+# ..............................................................................
+
+startup:
+
+    player = GetLocalPlayerThing();
+	
+	sophiaMass = GetThingMass(sophia);
+
+	SetThingFlags(sophia, 0x80000);
+	SetThingFlags(indy, 0x80000);
+	
+
+	return;
+
+# ..............................................................................
+
+user0:
+
+	# NOTE: sent by cog that runs the cutscene when Sophia is freed
+	
+	inthezone = 1;
+	ClearThingFlags(sophia, 0x80000); # now she's standing by the switch
+    SetThingMass(sophia, 0);
+	AIClearMode(sophia, 0x2000);
+
+	return;
+
+# ..............................................................................
+
+activated:
+
+	If (GetSenderRef() == button && inthezone == 0)
+	{
+		# Indy pushes the button to open the gate
+
+		# Prep...
+		StartCutScene(1);
+		StopThing(player);
+		SetActorFlags(player, 0x200000);
+		DeselectWeaponWait(player); # stow any weapon or lighter
+		
+        
+		Sleep(0.5); # wait a beat
+		CopyPlayerHolsters(player, indy); # make sure actor has matching props
+		in_rotRate = GetThingMaxRotVel(player);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indy, 0x80000);
+		SetThingMaxRotVel(indy, 200.0);
+		TeleportThing(indy, in_move1); # align Indy			
+		curCam = GetCurrentCamera();
+		SetCameraPosInterp(2, 0); # no dolly
+		SetCameraLookInterp(2, 0); # no pan & tilt
+		
+		# Cut to side shot from left...
+		SetCameraFocus(2, cam1);
+		SetCameraSecondaryFocus(2, camtarget1);
+		SetCurrentCamera(2);
+		SetCameraFOV(50, 0, 0.0);
+		Sleep(0.2);
+
+		# Indy punches the button...
+		PlayKey(indy, in_activate, 4, 0x12, 0);
+		Sleep(0.2);
+		MoveToFrame(button, 1, 0.5);
+		Sleep(1.0);
+
+		# Show gate open & close...
+		If (gatesaid == 0)
+		{
+			# Slew camera the first time...
+			SetCameraPosInterp(2, 1); # dolly
+			SetCameraLookInterp(2, 1); # pan & tilt
+			SetCameraInterpSpeed(2, 2.5);
+			Sleep(0.01);
+			SetCameraFocus(2, cam2);
+			SetCameraSecondaryFocus(2, camtarget2);
+			SetCameraFOV(30, 1, 5.3);
+		}
+		else
+		{
+			# And cut thereafter...
+			SetCameraFocus(2, cam2);
+			SetCameraSecondaryFocus(2, camtarget2);
+			SetCameraFOV(30, 1, 5.0);
+			Sleep(0.01);
+		}
+
+		# Indy looks toward gate offscreen...
+		AISetLookThing(indy, inso_look_1); # cheat look to gate
+
+        
+		# Gate opens...
+		PlaySoundLocal(gatestart, 1.0, 0.0, 0x0, 0);
+        MoveToFrame(gate, 1, openspeed);
+		gate_snd0=PlaySoundLocal(gatemove, 1.0, 0.0, 0x1, 0);
+		WaitForStop(gate);
+		StopSound(gate_snd0, 0.0);
+        PlaySoundLocal(gatestop, 1.0, 0.0, 0x0, 0);
+		Sleep(1.0);
+		
+		# Fix stuff offscreen...
+		MoveToFrame(button, 0, 3.0);
+		TeleportThing(indy, in_move2); # re-spot actor
+		AISetLookThing(indy, inso_look_1);
+
+		# Gate closes...
+        PlaySoundLocal(gatestart, 1.0, 0.0, 0x0, 0);
+		MoveToFrame(gate, 0, shutspeed);
+		gate_snd0=PlaySoundLocal(gatemove, 1.0, 0.0, 0x1, 0);
+		WaitForStop(gate);
+		StopSound(gate_snd0, 0.0);
+        PlaySoundLocal(gatestop, 1.0, 0.0, 0x0, 0);
+		Sleep(0.5);	
+	
+		If (gatesaid == 0)
+		{
+			# Cut to Indy...
+			SetCameraPosInterp(2, 0); # kill dolly
+			SetCameraLookInterp(2, 0); # kill pan & tilt
+			SetCameraFocus(2, cam3);
+			SetCameraSecondaryFocus(2, camtarget1);
+			SetCameraFOV(55, 0, 0.0);
+			Sleep(0.01);
+			SetCameraFOV(45, 1, 3.0); # zoom in
+	
+			# Indy: "Uh-oh.  That was fast...need some help..."
+			in_keyTrack1 = PlayKey(indy, in_armsCrossed, 2, 0x10, 0);
+			PlayKey(indy, in_crossArms, 4, 0x12, 0);
+			Sleep(0.2);
+			PlayVoice(indy, in_needhelp, 2, 1);
+		}
+
+		# Cut back to follow camera...
+		TeleportThing(indy, in_move2); # align Indy on gate
+		TeleportThing(player, indy); # match 'em
+		camPos = GetThingPos(cam1);
+		SetCameraPosition(1, camPos); # prep to swing back to follow-cam
+		SetCurrentCamera(curCam);
+		ResetCameraFOV(0, 0.0);
+		RestoreExtCam();
+		
+		# Indy's residual commentary...
+		if (gatesaid == 1)
+		{
+			call randneglines;
+			in_keyTrack1 = PlayKey(indy, in_rtarmup, 4, 0x12, 1);	
+		}
+
+		WaitForSound(curSound);
+
+		if (gatesaid == 0)
+		{
+			StopKey(indy, in_keyTrack1, 0.5);
+			Sleep(0.5);
+		}
+		else
+		{
+			StopKey(indy, in_keyTrack1, 0.0);
+		}
+
+		SetThingMaxRotVel(indy, in_rotRate);
+		SetThingFlags(indy, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000); # restore control
+		gatesaid = 1;
+		EndCutScene();
+	}
+
+	if (GetSenderRef() == sophia)
+	{
+		# Indy chats with Sophia near the switch
+
+		# find indy's position relative to sophia
+		v_clvec = GetThingLVec(spot_object);
+		v_crvec = GetThingRVec(spot_object);
+		v_aimci = VectorSub((GetThingPos(spot_object)), (GetThingPos(player)));
+
+		f_dotl = VectorDot(VectorNorm(v_aimci), v_clvec);
+		f_dotr = VectorDot(VectorNorm(v_aimci), v_crvec);
+
+		if (f_dotl < 0)
+			{
+				if (f_dotr < 0)
+				{
+				i_spot_WEorient = 0; #east
+				}
+				
+				else if (f_dotr > 0)
+				{
+				i_spot_WEorient = 1; #west
+				}
+            }
+		else 
+			{
+	            if (f_dotr < 0)
+				{
+				i_spot_NSorient = 0; #south
+				}
+				
+				else if (f_dotr > 0)
+				{
+				i_spot_NSorient = 1; #north
+				}
+            }
+		
+		# Prep...
+		curCam = GetCurrentCamera();
+		StartCutScene(1);
+		StopThing(player);
+		SetActorFlags(player, 0x200000);
+		AISetMode(sophia, 0x2000);
+		DeselectWeaponWait(player); # stow any weapon or lighter
+		
+        
+		Sleep(0.5); # wait a beat
+		CopyPlayerHolsters(player, indy); # make sure actor has matching props
+		in_rotRate = GetThingMaxRotVel(player);
+		so_rotRate = GetThingMaxRotVel(sophia);
+		SetThingMass(sophia, sophiaMass);
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indy, 0x80000);
+		SetThingMaxRotVel(indy, 200.0);
+		SetThingMaxRotVel(sophia, 100.0);
+		TeleportThing(indy, player);
+
+#		send message to hint cog to clear hint 40
+		SendMessage(hintcog, user0);
+
+		# Slew follow camera to observe the scene from a known position			
+		if (i_spot_NSorient == 1)
+		{
+            SetExtCamOffsetToThing(cam5);
+		}
+
+        if (i_spot_NSorient == 0)
+		{
+            SetExtCamOffsetToThing(cam5a);
+		}
+	
+		
+        Sleep(0.5);
+
+		# Line up actors...
+		AISetLookThing(sophia, indy);
+		AISetLookThing(indy, sophia);
+		AIWaitForStop(sophia);
+
+		if (switchTalkState == 0)
+		{
+			switchTalkState = 1;
+
+			# Indy: "Here you are.  Find anything?"
+			PlayVoice(indy, in_line1, 1.0, 1);
+   
+			# Sophia: "Nothing spooky, if that's what you mean."
+			PlayKey(Sophia, so_nospook, 4, 0x12, 0);
+			PlayVoice(sophia, so_line1, 1.0, 1);
+			
+			# PlayKey(sophia, so_armup, 4, 0x0, 0);
+    
+			# Sophia: "What's this switch?"
+			PlayKey(sophia, so_whatswitch, 4, 0x12, 0);
+			PlayVoice(sophia, so_line2, 1.0, 1);
+
+			If (gatesaid == 0)
+			{
+				# NOTE: demo gate if player has never tried to open it
+				
+				
+                # Cut to side shot from left...
+				SetCameraFocus(2, cam1);
+				SetCameraSecondaryFocus(2, camtarget1);
+				SetCurrentCamera(2);
+				SetCameraFOV(50, 0, 0.0);
+				
+				# teleport indy to a spot so as not to collide with sophia while using button
+				TeleportThing(indy, in_nohitspot);
+				Sleep(0.2);
+
+                # Move actors into position...
+				AISetLookThing(sophia, indy);
+				AISetMoveThing(sophia, so_move1, 0);
+				AISetLookThing(indy, button);
+				AISetMoveThing(indy, in_move1, 0);
+		
+				# Indy: "It opens the gate up there."
+				PlayVoice(indy, in_opengate, 1.0, 0);
+				AIWaitForStop(indy);
+				AISetLookThing(sophia, indy);
+	
+				# Indy punches the button...
+				PlayKey(indy, in_activate, 4, 0x12, 0);
+				Sleep(0.2);
+				MoveToFrame(button, 1, 0.5);
+				Sleep(1.0);
+
+				# Slew camera...
+				SetCameraPosInterp(2, 1); # dolly
+				SetCameraLookInterp(2, 1); # pan & tilt
+				SetCameraInterpSpeed(2, 2.5);
+				Sleep(0.01);
+				SetCameraFocus(2, cam2);
+				SetCameraSecondaryFocus(2, camtarget2);
+				SetCameraFOV(30, 1, 5.3);
+	
+				# Indy and Sophia look toward gate offscreen...
+				AISetLookThing(indy, inso_look_1); # target *seems* like look-to-gate
+				AISetLookThing(sophia, gate);
+
+				# Gate opens...
+				PlaySoundLocal(gatestart, 1.0, 0.0, 0x0, 0);
+				MoveToFrame(gate, 1, openspeed);
+				gate_snd0=PlaySoundLocal(gatemove, 1.0, 0.0, 0x1, 0);
+				WaitForStop(gate);
+				StopSound(gate_snd0, 0.0);
+				PlaySoundLocal(gatestop, 1.0, 0.0, 0x0, 0);
+				Sleep(1.0);
+				
+				# Fix stuff offscreen...
+				MoveToFrame(button, 0, 3.0);
+				TeleportThing(sophia, so_move2);
+				TeleportThing(indy, in_move3);
+				AISetLookThing(indy, inso_look_1); # make sure he swiveled all the way
+				AISetLookThing(sophia, gate);
+
+				# Gate closes...
+				PlaySoundLocal(gatestart, 1.0, 0.0, 0x0, 0);
+				MoveToFrame(gate, 0, shutspeed);
+				gate_snd0=PlaySoundLocal(gatemove, 1.0, 0.0, 0x1, 0);
+				WaitForStop(gate);
+				StopSound(gate_snd0, 0.0);
+				PlaySoundLocal(gatestop, 1.0, 0.0, 0x0, 0);
+				Sleep(0.5);
+
+				# Cut back to actors...
+				SetCameraPosInterp(2, 0); # no dolly
+				SetCameraLookInterp(2, 0); # no pan & tilt
+				#PRINT("CAM 2 AT POSITION CAM5");
+				SetCameraSecondaryFocus(2, finalshot_targ);
+				SetCameraFocus(2, cam5);
+				SetCurrentCamera(2);
+				SetCameraFOV(80, 0, 0);
+                #SetCurrentCamera(curCam);
+
+				gatesaid = 1;			
+			}
+			else
+			{
+				AISetLookThing(indy, inso_look_1);
+				PlayKey(indy, in_rtarmup, 4, 0x12, 0);
+				Sleep(0.5);
+				AISetLookThing(sophia, gate);
+    
+				# Indy: "It opens the gate up there."
+				PlayVoice(indy, in_opengate, 1.0, 1);
+			}
+			
+			# Indy: "Let me work my way into position, then push."
+			PlayKey(indy, in_rtarmup, 4, 0x12, 0);
+			PlayVoice(indy, in_workpush, 1.0, 1);
+
+			# She turns back toward Indy...
+			AISetLookThing(sophia, indy);
+			
+			# Sophia: "Say when."
+			PlayKey(sophia, so_ltwave, 4, 0x12, 0);
+			PlayVoice(sophia, so_line3, 1.0, 1);
+		}
+		else
+		{
+			# Sophia: "What's this switch?"
+			PlayKey(sophia, so_whatswitch, 4, 0x12, 0);
+			PlayVoice(sophia, so_line2, 1.0, 1);
+			Sleep(0.25);
+			
+			# They turn toward the gate...
+			AISetLookThing(indy, inso_look_1);
+			AISetLookThing(sophia, gate);
+
+			
+			# Indy: "It opens the gate up there."
+			PlayVoice(indy, in_opengate, 1.0, 1);
+			Sleep(0.25);
+			
+			# Sophia: "Say when."
+			AISetLookThing(sophia, indy);
+			PlayKey(sophia, so_ltwave, 4, 0x12, 0);
+			PlayVoice(sophia, so_line3, 1.0, 1);			
+		}
+					
+		# clean up...	
+		TeleportThing(indy, in_move3); # align on gate
+		TeleportThing(player, indy); # align player too
+		SetThingFlags(indy, 0x80000);
+		ClearThingFlags(player, 0x80000);		
+		camPos = GetThingPos(cam1);
+		SetCurrentCamera(1);
+		SetCameraPosition(1, camPos); # prep to swing back to follow-cam
+		RestoreExtCam();
+		SetThingMaxRotVel(indy, 300);
+		SetThingMaxRotVel(sophia, so_rotRate);
+		SetThingMass(sophia, 0);
+        AIClearMode(sophia, 0x2000); # put her back in watch-indy mode
+		ClearActorFlags(player, 0x200000);
+		EndCutScene();
+	}
+
+	if (GetSenderRef() == gate)
+	{
+		# Indy notes that the gate will be tough to open
+
+		StartCutScene(1); # change to 0 when it works!
+		StopThing(player);
+		SetActorFlags(player, 0x200000);
+
+		# TO DO: substitute Matt R's new verb here...
+
+		# Slew follow camera to observe the scene from a known position
+		if (beyondgate == 0)
+		{
+			slewcam = cam4;
+		}
+		else
+		{
+			slewcam = cam12;
+		}
+		SetExtCamOffsetToThing(slewcam);
+		Sleep(0.5);
+
+		# Indy comments on unbreachable barrier...
+		if (whipsaid == 0)
+		{
+			# Indy: "That gate looks pretty sturdy...not sure smash..."
+			PlayVoice(player, in_sturdygate, 2, 1);
+			Sleep(0.5);
+		}
+		else
+		{
+			call randnobudgelines;
+			WaitForSound(curSound);
+		}
+
+		RestoreExtCam();
+		whipsaid = 1;
+		ClearActorFlags(player, 0x200000);
+		EndCutScene();
+	}
+
+	return;
+
+# ..............................................................................
+
+damaged:
+
+	if ((GetSenderRef() == strut) && (GetParam(1) == 0x10) && (switchTalkState > 0))
+	{
+		# Indy whips across the gap...
+		
+		# Prep...
+		StartCutScene(1);
+		curCam = GetCurrentCamera();
+		SetCameraPosInterp(2, 0); # kill dolly
+		SetCameraLookInterp(2, 0); # kill pan & tilt
+
+		beyondgate = 1;
+		
+		# Cut to Indy as he swings over the lava...
+		SetCameraFocus(2, cam6);
+		SetCameraSecondaryFocus(2, player);
+		SetCurrentCamera(2);
+		SetCameraFOV(70, 0, 0.0);
+		
+		# heroic music cue
+		PlaySoundLocal(whip_cue, 1.0, 0.0, 0x0, 0);
+
+		Sleep(0.01);
+		SetCameraFOV(40, 1, 11.5);
+		MoveToFrame(cam6, 1, 0.3);
+	}
+
+	return;
+
+# ..............................................................................
+
+entered:
+
+	if ((GetSenderRef() == rockface) && (switchTalkState > 0))
+	{       
+		# Sophia activates the gate and Indy runs through
+
+		SetActorFlags(player, 0x200000);
+		DeselectWeapon(player); # stow any weapon or lighter
+		Sleep(0.8); # wait a beat
+		CopyPlayerHolsters(player, indy); # make sure actor has matching props
+		SetThingFlags(player, 0x80000);
+		ClearThingFlags(indy, 0x80000);
+		TeleportThing(indy, player);
+
+		# Indy lands just outside the gate and turns toward Sophia...
+		Sleep(0.2);
+		AISetLookThing(indy, sophia);
+		AIWaitForStop(indy);
+		PlayKey(indy, in_brushoff, 4, 0x12, 1);
+
+		
+		PlayKey(indy, in_ltarmup, 4, 0x12, 0);
+		Sleep(0.3);
+
+		# Indy: "Push, Sophia."
+		PlayVoice(indy, in_line3, 2, 1);
+		Sleep(0.2);
+
+		# Cut to Sophia as she moves into position...
+		SetCameraFocus(2, cam1);
+		SetCameraSecondaryFocus(2, button);
+		SetCameraFOV(30, 0, 0.0);
+		AISetLookThing(sophia, button);
+		AISetMoveSpeed(sophia, 1);
+		AISetMoveThing(sophia, so_switchpos, 0);
+		Sleep(1.0);
+
+		# Sophia pushes the button...
+		PlayKey(sophia, so_pushbutton, 4, 0x12, 0);
+		Sleep(0.2);
+		MoveToFrame(button, 1, 0.5);
+
+		# Turn Indy around...
+		AISetLookThing(indy, in_move4);
+		Sleep(0.5);
+
+		# Sophia walks toward bridge...
+		AISetMoveSpeed(sophia, 1.2);
+		AISetLookThing(sophia, so_move3);
+		AISetMoveThing(sophia, so_move3, 0);
+		Sleep(1.0);
+
+		# Cut to Indy from beyond gate...
+		SetCameraFocus(2, cam7);
+    	SetCameraSecondaryFocus(2, camtarget3);
+		SetCameraFOV(65, 0, 0.0);
+
+		# The Gate opens...
+		PlaySoundLocal(gatestart, 1.0, 0.0, 0x0, 0);
+		MoveToFrame(gate, 1, openspeed);
+		gate_snd0=PlaySoundLocal(gatemove, 1.0, 0.0, 0x1, 0);
+		Sleep(0.5);
+		
+		# Indy runs through...
+		AISetMoveSpeed(indy, 3.2); # make him run
+		AISetMoveThing(indy, in_move4, 0);
+        # partition next sleep for accurate timing
+		Sleep(1.5);
+        StopSound(gate_snd0, 0.0);
+        PlaySoundLocal(gatestop, 1.0, 0.0, 0x0, 0);
+		
+		# The gate closes...
+        PlaySoundLocal(gatestart, 1.0, 0.0, 0x0, 0);
+		MoveToFrame(gate, 0, shutspeed);
+		gate_snd0=PlaySoundLocal(gatemove, 1.0, 0.0, 0x1, 0);
+		Sleep(0.5);	#this sleep may need to be extended	for accurate timing
+		StopSound(gate_snd0, 0.0);
+        PlaySoundLocal(gatestop, 1.0, 0.0, 0x0, 0);
+		AIWaitForStop(indy); # he runs out of frame right
+		
+		# Cut to Sophia through the closed gate...
+		SetCameraFocus(2, cam8);
+		SetCameraSecondaryFocus(2, camtarget4);
+		SetCameraFOV(20, 0, 0.0); # temp FOV
+
+		# Move Indy offscreen...
+		TeleportThing(indy, in_move5);
+		AIWaitForStop(sophia);
+		AISetLookThing(sophia, indy);
+		
+		# Sophia: "Indy, you okay?"
+		curSound = PlayVoice(sophia, so_line4, 1, 0);
+		PlayKey(sophia, so_youokay, 4, 0x12, 0);
+
+		# Indy approaches the gate...
+		AISetLookThing(indy, sophia);
+		AISetMoveSpeed(indy, 1.2);
+		AISetMoveThing(indy, in_move6, 1);
+		WaitForSound(curSound);
+		
+		# Indy: "I can't open it from this side."
+		PlayKey(indy, in_grunt, 4, 0x12, 0);
+		Sleep(1.0);
+		PlayVoice(indy, in_line4, 1, 1);
+		
+		# Sophia: "Doesn't matter.  I've got some spying to do."
+		curSound = PlayVoice(sophia, so_line5, 1, 0);
+
+		# She starts to leave...
+		AISetLookThing(sophia, so_move4);
+		AISetMoveSpeed(sophia, 1.0);
+		AISetMoveThing(sophia, so_move4, 0);
+		WaitForsound(curSound);
+
+		# Cut to Indy behind bars...
+		StopThing(sophia); # cheat her to an unseen stop
+		SetCameraFocus(2, cam9);
+		SetCameraSecondaryFocus(2, camtarget5);
+		SetCameraFOV(25, 0, 0.0);
+		Sleep(0.5);
+
+		# Indy: "Wait...premonition...still got it?"			
+		curSound = PlayVoice(indy, in_line5, 1, 0);
+		PlayKey(indy, in_rtarmup, 4, 0x12, 0);
+		WaitForSound(curSound);
+
+		
+
+		# Cut back to Sophia...
+		AISetMoveThing(sophia, so_move4, 0); # she resumes her exit
+		SetCameraFocus(2, cam10);
+		SetCameraSecondaryFocus(2, camtarget6);
+		SetCameraFOV(45, 0, 0.0);
+		Sleep(0.01);
+		SetCameraFOV(30, 1, 4.8); # was 4.5
+
+        
+		# Sophia: "Yes...danger farther...you'll be fine...for now."
+		curSound = PlayVoice(sophia, so_line6, 1, 0);
+		Sleep(3.5);
+
+        # play fear cue as she alludes to fire beast
+        fadechan=PlaySoundLocal(fear_cue, 0.5, 0.0, 0x0, 0);
+		
+		# She moves out of sight around the corner...
+		AISetLookThing(sophia, so_move5);
+		AISetMoveThing(sophia, so_move5, 0);
+		WaitForSound(curSound);
+
+        # fade music down
+		ChangeSoundVol(fadechan, 0.3, 1.0);
+
+		# Cut to Indy...
+		TeleportThing(indy, in_move7);
+		SetCameraFocus(2, cam11);
+		SetCameraSecondaryFocus(2, camtarget7);
+		SetCameraFOV(50, 0, 0.0);
+		
+		# Indy: "I like her optimism."
+		curSound = PlayVoice(indy, in_line6, 1, 0);
+		PlayKey(indy, chinrub, 4, 0x12, 0);		
+		WaitForSound(curSound);
+    
+		# Clean up...
+		DestroyThing(sophia);
+		TeleportThing(player, indy);
+		SetThingFlags(indy, 0x80000);
+		ClearThingFlags(player, 0x80000);
+		ClearActorFlags(player, 0x200000);
+		camPos = GetThingPos(cam11);
+		SetCameraPosition(1, camPos); # prep to swing back to follow-cam
+		SetCurrentCamera(curCam);
+		RestoreExtCam();
+		ReSetCameraFOV(0, 0.0);
+		EndCutScene();
+	}
+
+	return;
+
+# ..............................................................................
+
+randneglines:
+
+	# NOTE: Player-Indy randomly complains about the gate
+	# without ever saying the same line twice in a row
+	
+	while (newline == oldline)
+	{	
+		newline = RandBetween(1, 3); # pick new line
+	}
+	oldline = newline; # remember what got picked
+
+	if (newline == 1)
+	{
+		curSound = PlayVoice(player, in_nowork, 1.0, 0);
+	}	
+	if (newline == 2)
+	{
+		curSound = PlayVoice(player, in_notquitework, 1.0, 0);
+	}
+	if (newline == 3)
+	{
+		PlayVoice(player, in_nowork, 1.0, 1);
+		curSound = PlayVoice(player, in_differentway, 1.0, 0);
+	}
+
+	return;
+
+# ..............................................................................
+
+randnobudgelines:
+
+	# NOTE: Player-Indy randomly complains about the gate
+	# without ever saying the same line twice in a row
+	
+	while (newline == oldline)
+	{	
+		newline = RandBetween(1, 3); # pick new line
+	}
+	oldline = newline; # remember what got picked
+
+	if (newline == 1)
+	{
+		curSound = PlayVoice(player, in_cantopen, 1.0, 0);
+	}	
+	if (newline == 2)
+	{
+		curSound = PlayVoice(player, in_nobudge, 1.0, 0);
+	}
+	if (newline == 3)
+	{
+		curSound = PlayVoice(player, in_holdingdoor, 1.0, 0);
+	}
+
+	return;
+
+# ..............................................................................
+
+blocked:
+
+	#Print("Got a blocked message");
+
+	return;
+
+end
+

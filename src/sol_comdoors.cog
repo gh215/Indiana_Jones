@@ -1,0 +1,37 @@
+# Jones 3D Cog Script
+#
+# SOL_ComDoors.cog
+#
+# just lights up the mine doors in comFalls
+#
+# [TRM]
+#
+# (C) 1999 LucasArts Entertainment Co. All Rights Reserved
+# ========================================================================================
+
+symbols
+
+    message     startup
+
+    thing       doorL                              
+    thing       doorR
+   
+    vector      color       local
+    
+end
+
+# ========================================================================================
+code
+
+startup:
+
+    color = VectorSet(0.3, 0.3, 0.2);
+    SetThingLight(doorL, color, 0.001, 2.0);
+    SetThingLight(doorR, color, 0.001, 2.0);
+    
+    return;
+        
+# ========================================================================================
+
+end
+
